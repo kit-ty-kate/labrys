@@ -10,3 +10,4 @@ Executable sysfomega
   Path: src
   BuildTools: ocamlbuild
   MainIs: main.ml
+  BuildDepends: monad-exn

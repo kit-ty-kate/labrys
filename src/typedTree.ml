@@ -1,3 +1,8 @@
+module Exn = MonadExn
+
+open MonadStdlib
+open Exn.Ops
+
 type t =
   | Abs of (Value.t * Types.t * t)
   | App of (Types.t * t * t)
@@ -10,16 +15,19 @@ let rec get_type = function
 
 let rec from_parse_tree gamma = function
   | ParseTree.Abs (v, t) ->
-      let x = from_parse_tree (v :: gamma) t in
-      Abs (v, Types.Fun (snd v, get_type x), x)
+      from_parse_tree (v :: gamma) t >>= fun x ->
+      Exn.return (Abs (v, Types.Fun (snd v, get_type x), x))
   | ParseTree.App (f, x) ->
-      let f = from_parse_tree gamma f in
-      let x = from_parse_tree gamma x in
+      from_parse_tree gamma f >>= fun f ->
+      from_parse_tree gamma x >>= fun x ->
       (match get_type f with
-        | Types.Fun (ty, _) when ty = get_type x -> App (ty, f, x)
-        | Types.Fun _ -> failwith "Typechecker: Argument type doesn't match"
-        | Types.Ty _ -> failwith "Typechecker: Can't apply to a non-function type"
+        | Types.Fun (ty, _) when Unsafe.(ty = get_type x) ->
+            Exn.return (App (ty, f, x))
+        | Types.Fun _ ->
+            failwith "Typechecker: Argument type doesn't match"
+        | Types.Ty _ ->
+            failwith "Typechecker: Can't apply to a non-function type"
       )
   | ParseTree.Val name ->
-      let x = List.find (fun (name', _) -> name = name') gamma in
-      Val x
+      List.find (fun (name', _) -> Unsafe.(name = name')) gamma >>= fun x ->
+      Exn.return (Val x)
