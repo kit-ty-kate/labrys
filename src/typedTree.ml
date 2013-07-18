@@ -20,11 +20,17 @@ let rec from_parse_tree gamma = function
   | ParseTree.App (f, x) ->
       from_parse_tree gamma f >>= fun f ->
       from_parse_tree gamma x >>= fun x ->
+      let ty_x = get_type x in
       (match get_type f with
-        | Types.Fun (ty, _) when Unsafe.(ty = get_type x) ->
+        | Types.Fun (ty, _) when Unsafe.(ty = ty_x) ->
             Exn.return (App (ty, f, x))
-        | Types.Fun _ ->
-            failwith "Typechecker: Argument type doesn't match"
+        | Types.Fun (ty, _) ->
+            failwith
+              ("Error: This expression has type "
+               ^ Types.to_string ty_x
+               ^ " but an expression was expected of type "
+               ^ Types.to_string ty
+              )
         | Types.Ty _ ->
             failwith "Typechecker: Can't apply to a non-function type"
       )
