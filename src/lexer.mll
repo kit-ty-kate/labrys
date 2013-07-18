@@ -1,5 +1,8 @@
+{ exception Error }
+
 rule main = parse
-  | [' ' '\t' '\n'] { main lexbuf }
+  | [' ' '\t'] { main lexbuf }
+  | '\n' { Lexing.new_line lexbuf; main lexbuf }
   | "λ" { Parser.Lambda }
   | '.' { Parser.Dot }
   | ':' { Parser.DoubleDot }
@@ -9,4 +12,4 @@ rule main = parse
   | '(' { Parser.LParent }
   | ')' { Parser.RParent }
   | eof { Parser.EOF }
-  | _ { failwith (Printf.sprintf "At offset %d: unexpected character.\n" (Lexing.lexeme_start lexbuf)) }
+  | _ { raise Error }
