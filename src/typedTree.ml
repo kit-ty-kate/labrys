@@ -3,23 +3,27 @@ module Exn = MonadExn
 open MonadStdlib
 open Exn.Ops
 
+type value = (string * Types.t)
+
 type t =
-  | Abs of (Value.t * Types.t * t)
+  | Abs of (value * Types.t * t)
   | App of (Types.t * t * t)
-  | Val of Value.t
+  | Val of value
 
 let rec get_type = function
   | Abs (_, ty, _) -> ty
   | App (ty, _, _) -> ty
   | Val (_, ty) -> ty
 
-let rec from_parse_tree gamma = function
-  | ParseTree.Abs (v, t) ->
-      from_parse_tree (v :: gamma) t >>= fun x ->
-      Exn.return (Abs (v, Types.Fun (snd v, get_type x), x))
+let rec from_parse_tree gamma gammaT = function
+  | ParseTree.Abs ((name, ty), t) ->
+      Types.from_parse_tree gammaT ty >>= fun ty ->
+      let v = (name, ty) in
+      from_parse_tree (v :: gamma) gammaT t >>= fun x ->
+      Exn.return (Abs (v, Types.Fun (ty, get_type x), x))
   | ParseTree.App (f, x) ->
-      from_parse_tree gamma f >>= fun f ->
-      from_parse_tree gamma x >>= fun x ->
+      from_parse_tree gamma gammaT f >>= fun f ->
+      from_parse_tree gamma gammaT x >>= fun x ->
       let ty_x = get_type x in
       (match get_type f with
         | Types.Fun (ty, _) when Unsafe.(ty = ty_x) ->

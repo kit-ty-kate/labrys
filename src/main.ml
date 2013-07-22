@@ -3,6 +3,15 @@ module Exn = MonadExn
 open MonadStdlib
 open Exn.Ops
 
+let aux file =
+  let gamma = [] in
+  let gammaT = Types.gamma in
+  file
+  >>= ParserManager.parse
+  >>= TypedTree.from_parse_tree gamma gammaT
+  >>= fun typed_tree ->
+  Exn.return ()
+
 let () =
   let file = ref (failwith (Sys.argv.(0) ^ ": no input file")) in
   let usage =
@@ -20,8 +29,4 @@ let () =
       | `NotFound -> Unsafe.prerr_endline "Unknown identifier"
       | `SysError err -> Unsafe.prerr_endline err
     )
-    (!file
-     >>= ParserManager.parse
-     >>= TypedTree.from_parse_tree [] >>= fun typed_tree ->
-     Exn.return ()
-    )
+    (aux !file)

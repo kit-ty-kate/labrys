@@ -29,6 +29,6 @@ term:
 | LParent term = term RParent { term }
 
 typeExpr:
-| name = TypeName { Types.Ty name }
-| t1 = typeExpr Arrow t2 = typeExpr { Types.Fun (t1, t2) }
+| name = TypeName { ParseTree.Ty name }
+| t1 = typeExpr Arrow t2 = typeExpr { ParseTree.Fun (t1, t2) }
 | LParent term = typeExpr RParent { term }
