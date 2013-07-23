@@ -9,8 +9,8 @@ let aux file =
   file
   >>= ParserManager.parse
   >>= TypedTree.from_parse_tree gamma gammaT
-  >>= fun typed_tree ->
-  Exn.return ()
+  >>= Backend.from_typed_tree
+  >>= Backend.print
 
 let () =
   let file = ref (failwith (Sys.argv.(0) ^ ": no input file")) in

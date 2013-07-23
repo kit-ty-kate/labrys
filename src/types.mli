@@ -1,6 +1,6 @@
 open MonadStdlib
 
-type ty = (string * Backend.ty)
+type ty = (string * BackendType.t)
 
 type t =
   | Fun of (t * t)

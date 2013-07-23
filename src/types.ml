@@ -3,7 +3,7 @@ module Exn = MonadExn
 open MonadStdlib
 open Exn.Ops
 
-type ty = (string * Backend.ty)
+type ty = (string * BackendType.t)
 
 type t =
   | Fun of (t * t)
@@ -27,5 +27,5 @@ let from_parse_tree gamma =
   aux
 
 let gamma =
-  [ ("Int", Backend.int)
+  [ ("Int", BackendType.int)
   ]
