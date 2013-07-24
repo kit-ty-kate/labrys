@@ -20,11 +20,11 @@ let from_typed_tree tree =
         let n = string_of_int i in
         let v_name' = "@__" ^ v_name ^ "_lambda_" ^ n in
         aux (succ i) ((v_name, v_name') :: l) t >>= fun (i, t) ->
-        Exn.return (succ i, Abs (get_type ty, "@__lambda_" ^ n, (v_name', v_name, get_type v_ty), get_type ty_expr, t))
+        Exn.return (i, Abs (get_type ty, "@__lambda_" ^ n, (v_name', v_name, get_type v_ty), get_type ty_expr, t))
     | TypedTree.App (ty, f, x) ->
         aux i l f >>= fun (i, f) ->
-        aux i l x >>= fun (i, x) ->
-        Exn.return (succ i, App (get_type ty, f, x))
+        aux (succ i) l x >>= fun (i, x) ->
+        Exn.return (i, App (get_type ty, f, x))
     | TypedTree.Val (name, ty) ->
         List.find (fun x -> Unsafe.(fst x = name)) l >>= fun x ->
         Exn.return (i, Val (snd x, name, get_type ty))
@@ -50,25 +50,25 @@ let print x =
     in
     match x with
       | (App (ty_f, f, x), App (ty_x, f', x')) ->
-          let (i, name_f, f) = get_app_instr (succ i) ty (f, x) in
+          let (i, name_f, f) = get_app_instr i ty (f, x) in
           let (i, name_x, x) = get_app_instr (succ i) ty (f', x') in
-          let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
+          let (i, name, res) = normal_case (succ i) ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ x @ res)
       | (App (ty_f, f, x), Abs (ty_x, name_x, _, _, _)) ->
-          let (i, name_f, f) = get_app_instr (succ i) ty (f, x) in
-          let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
+          let (i, name_f, f) = get_app_instr i ty (f, x) in
+          let (i, name, res) = normal_case (succ i) ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
       | (App (ty_f, f, x), Val (name_x, _, ty_x)) ->
-          let (i, name_f, f) = get_app_instr (succ i) ty (f, x) in
-          let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
+          let (i, name_f, f) = get_app_instr i ty (f, x) in
+          let (i, name, res) = normal_case (succ i) ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
       | (Abs (ty_f, name_f, _, _, _), App (ty_x, f, x)) ->
-          let (i, name_x, x) = get_app_instr (succ i) ty (f, x) in
-          let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
+          let (i, name_x, x) = get_app_instr i ty (f, x) in
+          let (i, name, res) = normal_case (succ i) ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
       | (Val (name_f, _, ty_f), App (ty_x, f, x)) ->
-          let (i, name_x, x) = get_app_instr (succ i) ty (f, x) in
-          let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
+          let (i, name_x, x) = get_app_instr i ty (f, x) in
+          let (i, name, res) = normal_case (succ i) ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
       | (Abs (ty_f, name_f, _, _, _), Abs (ty_x, name_x, _, _, _))
       | (Val (name_f, _, ty_f), Val (name_x, _, ty_x))
