@@ -7,9 +7,10 @@
 %token LParent RParent
 %token EOF
 
-%left Arrow
+%right Arrow
 %left Lambda Dot
-%nonassoc TermName LParent App
+%nonassoc TermName LParent
+%nonassoc App
 
 %start main
 %type <ParseTree.t> main
