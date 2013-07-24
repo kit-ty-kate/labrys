@@ -3,12 +3,20 @@ module Exn = MonadExn
 open MonadStdlib
 open Exn.Ops
 
-type value = (string * string * BackendType.t)
+type var =
+  | Global of string
+  | Local of string
+
+type value = (var * string * BackendType.t)
 
 type t =
-  | Abs of (BackendType.t * string * value * BackendType.t * t)
+  | Abs of (BackendType.t * var * value * BackendType.t * t)
   | App of (BackendType.t * t * t)
   | Val of value
+
+let string_of_var = function
+  | Global x -> x
+  | Local x -> x
 
 let rec get_type = function
   | Types.Fun (x, ret) -> BackendType.func (get_type ret) (get_type x)
@@ -18,9 +26,9 @@ let from_typed_tree tree =
   let rec aux i l = function
     | TypedTree.Abs (ty, (v_name, v_ty), ty_expr, t) ->
         let n = string_of_int i in
-        let v_name' = "@__" ^ v_name ^ "_lambda_" ^ n in
+        let v_name' = Global ("@__" ^ v_name ^ "_lambda_" ^ n) in
         aux (succ i) ((v_name, v_name') :: l) t >>= fun (i, t) ->
-        Exn.return (i, Abs (get_type ty, "@__lambda_" ^ n, (v_name', v_name, get_type v_ty), get_type ty_expr, t))
+        Exn.return (i, Abs (get_type ty, Global ("@__lambda_" ^ n), (v_name', v_name, get_type v_ty), get_type ty_expr, t))
     | TypedTree.App (ty, f, x) ->
         aux i l f >>= fun (i, f) ->
         aux (succ i) l x >>= fun (i, x) ->
@@ -34,41 +42,45 @@ let from_typed_tree tree =
 let print x =
   let rec get_app_instr i ty x =
     let normal_case i ~ty_f ~name_f ~ty_x ~name_x =
-      let name1 = "%" ^ string_of_int i in
-      let name2 = "%" ^ string_of_int (succ i) in
-      let name3 = "%" ^ string_of_int (succ (succ i)) in
+      let get_target i = "%" ^ string_of_int i in
+      let loading i ty = function
+        | Global name ->
+            let target = get_target i in
+            (succ i, target, ["  " ^ target ^ " = load " ^ ty ^ "* " ^ name])
+        | Local name -> (i, name, [])
+      in
       let ty = BackendType.to_string_call ty in
       let ty_x = BackendType.to_string ty_x in
       let ty_f = BackendType.to_string ty_f in
-      (succ (succ i),
-       name3,
-       [ "  " ^ name1 ^ " = load " ^ ty_x ^ "* " ^ name_x
-       ; "  " ^ name2 ^ " = load " ^ ty_f ^ "* " ^ name_f
-       ; "  " ^ name3 ^ " = call " ^ ty ^ " " ^ name2 ^ "(" ^ ty_x ^ " " ^ name1 ^ ")"
-       ]
+      let (i, name1, step1) = loading i ty_x name_x in
+      let (i, name2, step2) = loading i ty_f name_f in
+      let name3 = get_target i in
+      (succ i,
+       Local name3,
+       step1 @ step2 @ ["  " ^ name3 ^ " = call " ^ ty ^ " " ^ name2 ^ "(" ^ ty_x ^ " " ^ name1 ^ ")"]
       )
     in
     match x with
       | (App (ty_f, f, x), App (ty_x, f', x')) ->
-          let (i, name_f, f) = get_app_instr i ty (f, x) in
-          let (i, name_x, x) = get_app_instr (succ i) ty (f', x') in
-          let (i, name, res) = normal_case (succ i) ~ty_f ~name_f ~ty_x ~name_x in
+          let (i, name_f, f) = get_app_instr i ty_f (f, x) in
+          let (i, name_x, x) = get_app_instr i ty_x (f', x') in
+          let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ x @ res)
       | (App (ty_f, f, x), Abs (ty_x, name_x, _, _, _)) ->
-          let (i, name_f, f) = get_app_instr i ty (f, x) in
-          let (i, name, res) = normal_case (succ i) ~ty_f ~name_f ~ty_x ~name_x in
+          let (i, name_f, f) = get_app_instr i ty_f (f, x) in
+          let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
       | (App (ty_f, f, x), Val (name_x, _, ty_x)) ->
-          let (i, name_f, f) = get_app_instr i ty (f, x) in
-          let (i, name, res) = normal_case (succ i) ~ty_f ~name_f ~ty_x ~name_x in
+          let (i, name_f, f) = get_app_instr i ty_f (f, x) in
+          let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
       | (Abs (ty_f, name_f, _, _, _), App (ty_x, f, x)) ->
-          let (i, name_x, x) = get_app_instr i ty (f, x) in
-          let (i, name, res) = normal_case (succ i) ~ty_f ~name_f ~ty_x ~name_x in
+          let (i, name_x, x) = get_app_instr i ty_x (f, x) in
+          let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
       | (Val (name_f, _, ty_f), App (ty_x, f, x)) ->
-          let (i, name_x, x) = get_app_instr i ty (f, x) in
-          let (i, name, res) = normal_case (succ i) ~ty_f ~name_f ~ty_x ~name_x in
+          let (i, name_x, x) = get_app_instr i ty_x (f, x) in
+          let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
       | (Abs (ty_f, name_f, _, _, _), Abs (ty_x, name_x, _, _, _))
       | (Val (name_f, _, ty_f), Val (name_x, _, ty_x))
@@ -79,21 +91,26 @@ let print x =
   let get_instr = function
     | Abs (_, name, (_, _, _), ty, t) ->
         let ty = BackendType.to_string ty in
+        let name = string_of_var name in
         ["  ret " ^ ty ^ " " ^ name]
     | App (ty, f, x) ->
         let (_, name, instr) = get_app_instr 1 ty (f, x) in
+        let name = string_of_var name in
         instr
         @ ["  ret " ^ BackendType.to_string ty ^ " " ^ name]
     | Val (name', name, ty) ->
         let ty = BackendType.to_string ty in
+        let name' = string_of_var name' in
         [ "  " ^ name ^ " = load " ^ ty ^ "* " ^ name'
-        ; "  ret " ^ ty ^ " " ^ name
+        ; "  ret " ^ ty ^ " " ^ name'
         ]
   in
   let rec aux = function
     | Abs (ret, name, (param', param, p_ty), _, t) ->
         let ret = BackendType.to_string ret in
         let p_ty = BackendType.to_string p_ty in
+        let name = string_of_var name in
+        let param' = string_of_var param' in
         [ param' ^ " = global " ^ p_ty ^ " undef"
         ; "define " ^ ret ^ " " ^ name ^ "(" ^ p_ty ^ " %" ^ param ^ ") {"
         ; "  store " ^ p_ty ^ " %" ^ param ^ ", " ^ p_ty ^ "* " ^ param'
