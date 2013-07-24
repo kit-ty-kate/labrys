@@ -3,6 +3,8 @@ module Exn = MonadExn
 open MonadStdlib
 open Exn.Ops
 
+let sprintf = Printf.sprintf
+
 type var =
   | Global of string
   | Local of string
@@ -25,10 +27,10 @@ let rec get_type = function
 let from_typed_tree tree =
   let rec aux i l = function
     | TypedTree.Abs (ty, (v_name, v_ty), ty_expr, t) ->
-        let n = string_of_int i in
-        let v_name' = Global ("@__" ^ v_name ^ "_lambda_" ^ n) in
+        let n = i in
+        let v_name' = Global (sprintf "@__%s_lambda_%d" v_name n) in
         aux (succ i) ((v_name, v_name') :: l) t >>= fun (i, t) ->
-        Exn.return (i, Abs (get_type ty, Global ("@__lambda_" ^ n), (v_name', v_name, get_type v_ty), get_type ty_expr, t))
+        Exn.return (i, Abs (get_type ty, Global (sprintf "@__lambda_%d" n), (v_name', v_name, get_type v_ty), get_type ty_expr, t))
     | TypedTree.App (ty, f, x) ->
         aux i l f >>= fun (i, f) ->
         aux (succ i) l x >>= fun (i, x) ->
@@ -46,7 +48,7 @@ let print x =
       let loading i ty = function
         | Global name ->
             let target = get_target i in
-            (succ i, target, ["  " ^ target ^ " = load " ^ ty ^ "* " ^ name])
+            (succ i, target, [sprintf "  %s = load %s * %s" target ty name])
         | Local name -> (i, name, [])
       in
       let ty = BackendType.to_string_call ty in
@@ -57,7 +59,7 @@ let print x =
       let name3 = get_target i in
       (succ i,
        Local name3,
-       step1 @ step2 @ ["  " ^ name3 ^ " = call " ^ ty ^ " " ^ name2 ^ "(" ^ ty_x ^ " " ^ name1 ^ ")"]
+       step1 @ step2 @ [sprintf "  %s = call %s %s(%s %s)" name3 ty name2 ty_x name1]
       )
     in
     match x with
@@ -92,17 +94,17 @@ let print x =
     | Abs (_, name, (_, _, _), ty, t) ->
         let ty = BackendType.to_string ty in
         let name = string_of_var name in
-        ["  ret " ^ ty ^ " " ^ name]
+        [sprintf "  ret %s %s" ty name]
     | App (ty, f, x) ->
         let (_, name, instr) = get_app_instr 1 ty (f, x) in
         let name = string_of_var name in
         instr
-        @ ["  ret " ^ BackendType.to_string ty ^ " " ^ name]
+        @ [sprintf "  ret %s %s" (BackendType.to_string ty) name]
     | Val (name', name, ty) ->
         let ty = BackendType.to_string ty in
         let name' = string_of_var name' in
-        [ "  " ^ name ^ " = load " ^ ty ^ "* " ^ name'
-        ; "  ret " ^ ty ^ " " ^ name'
+        [ sprintf "  %s = load %s* %s" name ty name'
+        ; sprintf "  ret %s %s" ty name'
         ]
   in
   let rec aux = function
@@ -111,9 +113,9 @@ let print x =
         let p_ty = BackendType.to_string p_ty in
         let name = string_of_var name in
         let param' = string_of_var param' in
-        [ param' ^ " = global " ^ p_ty ^ " undef"
-        ; "define " ^ ret ^ " " ^ name ^ "(" ^ p_ty ^ " %" ^ param ^ ") {"
-        ; "  store " ^ p_ty ^ " %" ^ param ^ ", " ^ p_ty ^ "* " ^ param'
+        [ sprintf "%s = global %s undef" param' p_ty
+        ; sprintf "define %s %s(%s %%%s) {" ret name p_ty param
+        ; sprintf "  store %s %%%s, %s* %s" p_ty param p_ty param'
         ]
         @ get_instr t
         @ ["}"]
