@@ -27,8 +27,8 @@ let rec from_parse_tree gamma gammaT = function
       from_parse_tree gamma gammaT x >>= fun x ->
       let ty_x = get_type x in
       (match get_type f with
-        | Types.Fun (ty, _) when Unsafe.(ty = ty_x) ->
-            Exn.return (App (ty, f, x))
+        | Types.Fun (ty, res) when Unsafe.(ty = ty_x) ->
+            Exn.return (App (res, f, x))
         | Types.Fun (ty, _) ->
             failwith
               ("Error: This expression has type "
