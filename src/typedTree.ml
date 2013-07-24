@@ -36,8 +36,14 @@ let rec from_parse_tree gamma gammaT = function
                ^ " but an expression was expected of type "
                ^ Types.to_string ty
               )
-        | Types.Ty _ ->
-            failwith "Typechecker: Can't apply to a non-function type"
+        | Types.Ty _ as ty ->
+            failwith
+              ("Typechecker: Can't apply to a non-function type ("
+               ^ Types.to_string ty
+               ^ " to "
+               ^ Types.to_string ty_x
+               ^ ")"
+              )
       )
   | ParseTree.Val name ->
       List.find (fun (name', _) -> Unsafe.(name = name')) gamma >>= fun x ->
