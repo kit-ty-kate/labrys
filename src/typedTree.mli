@@ -3,7 +3,7 @@ open MonadStdlib
 type value = (string * Types.t)
 
 type t =
-  | Abs of (value * Types.t * t)
+  | Abs of (Types.t * value * Types.t * t)
   | App of (Types.t * t * t)
   | Val of value
 
