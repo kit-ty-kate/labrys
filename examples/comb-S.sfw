@@ -1,0 +1,1 @@
+λx:Int->Int->Int.λy:Int->Int.λz:Int.x z (y z)
