@@ -40,7 +40,16 @@ let from_typed_tree tree =
         let n = i in
         let v_name' = BackendValue.global (sprintf "__%s_lambda_%d" v_name n) in
         aux (succ i) ((v_name, v_name') :: l) t >>= fun (i, t) ->
-        Exn.return (i, Abs (get_type ty, BackendValue.global (sprintf "__lambda_%d" n), (v_name', BackendValue.local v_name, get_type v_ty), get_type ty_expr, t))
+        Exn.return
+          (i,
+           Abs
+             (get_type ty,
+              BackendValue.global (sprintf "__lambda_%d" n),
+              (v_name', BackendValue.local v_name, get_type v_ty),
+              get_type ty_expr,
+              t
+             )
+          )
     | TypedTree.App (ty, f, x) ->
         aux i l f >>= fun (i, f) ->
         aux (succ i) l x >>= fun (i, x) ->
@@ -59,18 +68,18 @@ let print x =
       in
       let loading i ty =
         BackendValue.apply
-          (fun name ->
+          (fun value ->
             let target = get_target i in
-            (succ i, target, [BackendExpr.load ~target ~ty ~value:name])
+            (succ i, target, [BackendExpr.load ~target ~ty ~value])
           )
           (fun name -> (i, name, []))
       in
-      let (i, name1, step1) = loading i ty_x name_x in
-      let (i, name2, step2) = loading i ty_f name_f in
-      let name3 = get_target i in
+      let (i, param, step1) = loading i ty_x name_x in
+      let (i, f, step2) = loading i ty_f name_f in
+      let target = get_target i in
       (succ i,
-       name3,
-       step1 @ step2 @ [BackendExpr.call ~target:name3 ~ty ~f:name2 ~ty_param:ty_x ~param:name1]
+       target,
+       step1 @ step2 @ [BackendExpr.call ~target ~ty ~f ~ty_param:ty_x ~param]
       )
     in
     match x with
@@ -102,22 +111,22 @@ let print x =
           normal_case i ~ty_f ~name_f ~ty_x ~name_x
   in
   let get_instr = function
-    | Abs (_, name, (_, _, _), ty, _) ->
-        [BackendExpr.ret ~ty ~value:name]
+    | Abs (_, value, (_, _, _), ty, _) ->
+        [BackendExpr.ret ~ty ~value]
     | App (ty, f, x) ->
         let (_, name, instr) = get_app_instr 1 ty (f, x) in
         instr
         @ [BackendExpr.ret ~ty ~value:name]
-    | Val (name', name, ty) ->
-        [ BackendExpr.load ~target:name ~ty ~value:name'
-        ; BackendExpr.ret ~ty ~value:name'
+    | Val (value, target, ty) ->
+        [ BackendExpr.load ~target ~ty ~value
+        ; BackendExpr.ret ~ty ~value
         ]
   in
   let rec aux = function
     | Abs (ret, name, (param', param, p_ty), _, t) ->
         [ BackendExpr.global ~name:param' ~ty:p_ty
         ; BackendExpr.define ~ty:ret ~name ~ty_param:p_ty ~param
-            (BackendExpr.store ~ty_value:p_ty ~value:param ~ty_target:p_ty ~target:param'
+            (BackendExpr.store ~ty:p_ty ~value:param ~target:param'
              :: get_instr t
             )
         ]

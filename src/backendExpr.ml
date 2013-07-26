@@ -40,12 +40,11 @@ let call ~target ~ty ~f ~ty_param ~param =
   let param = BackendValue.to_string param in
   sprintf "  %s = call %s %s(%s %s)" target ty f ty_param param
 
-let store ~ty_value ~value ~ty_target ~target =
+let store ~ty ~value ~target =
   let target = BackendValue.to_string target in
-  let ty_target = BackendType.to_string ty_target in
-  let ty_value = BackendType.to_string ty_value in
+  let ty = BackendType.to_string ty in
   let value = BackendValue.to_string value in
-  sprintf "  store %s %s, %s* %s" ty_value value ty_target target
+  sprintf "  store %s %s, %s* %s" ty value ty target
 
 let ret ~ty ~value =
   let ty = BackendType.to_string ty in

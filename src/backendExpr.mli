@@ -37,9 +37,8 @@ val call :
   param:BackendValue.t ->
   expr
 val store :
-  ty_value:BackendType.t ->
+  ty:BackendType.t ->
   value:BackendValue.t ->
-  ty_target:BackendType.t ->
   target:BackendValue.t ->
   expr
 val ret :
