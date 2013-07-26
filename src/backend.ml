@@ -19,44 +19,46 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+module Value = BackendValue
+module Type = BackendType
+module Expr = BackendExpr
+
 open MonadOpen
 
 let sprintf = Printf.sprintf
 
-type value = (BackendValue.t * BackendValue.t * BackendType.t)
+type value = (Value.t * Value.t * Type.t)
 
-type t =
-  | Abs of (BackendType.t * BackendValue.t * value * BackendType.t * t)
-  | App of (BackendType.t * t * t)
-  | Val of value
+type t = (Type.t * Value.t * value * Type.t, Type.t, value) Ast.t
 
 let rec get_type = function
-  | Types.Fun (x, ret) -> BackendType.func (get_type ret) (get_type x)
-  | Types.Ty (_, name) -> name
+  | Ast.Fun (x, ret) -> Type.func (get_type ret) (get_type x)
+  | Ast.Ty (_, name) -> name
 
 let from_typed_tree tree =
   let rec aux i l = function
-    | TypedTree.Abs (ty, (v_name, v_ty), ty_expr, t) ->
+    | Ast.Abs ((ty, (v_name, v_ty), ty_expr), t) ->
         let n = i in
-        let v_name' = BackendValue.global (sprintf "__%s_lambda_%d" v_name n) in
+        let v_name' = Value.global (sprintf "__%s_lambda_%d" v_name n) in
         aux (succ i) ((v_name, v_name') :: l) t >>= fun (i, t) ->
         Exn.return
           (i,
-           Abs
-             (get_type ty,
-              BackendValue.global (sprintf "__lambda_%d" n),
-              (v_name', BackendValue.local v_name, get_type v_ty),
-              get_type ty_expr,
+           Ast.Abs
+             ((get_type ty,
+               Value.global (sprintf "__lambda_%d" n),
+               (v_name', Value.local v_name, get_type v_ty),
+               get_type ty_expr
+              ),
               t
              )
           )
-    | TypedTree.App (ty, f, x) ->
+    | Ast.App (ty, f, x) ->
         aux i l f >>= fun (i, f) ->
         aux (succ i) l x >>= fun (i, x) ->
-        Exn.return (i, App (get_type ty, f, x))
-    | TypedTree.Val (name, ty) ->
+        Exn.return (i, Ast.App (get_type ty, f, x))
+    | Ast.Val (name, ty) ->
         List.find (fun x -> Unsafe.(fst x = name)) l >>= fun x ->
-        Exn.return (i, Val (snd x, BackendValue.local name, get_type ty))
+        Exn.return (i, Ast.Val (snd x, Value.local name, get_type ty))
   in
   aux 1 [] tree >|= snd
 
@@ -64,13 +66,13 @@ let print x =
   let rec get_app_instr i ty x =
     let normal_case i ~ty_f ~name_f ~ty_x ~name_x =
       let get_target i =
-        BackendValue.local (string_of_int i)
+        Value.local (string_of_int i)
       in
       let loading i ty =
-        BackendValue.apply
+        Value.apply
           (fun value ->
             let target = get_target i in
-            (succ i, target, [BackendExpr.load ~target ~ty ~value])
+            (succ i, target, [Expr.load ~target ~ty ~value])
           )
           (fun name -> (i, name, []))
       in
@@ -79,59 +81,59 @@ let print x =
       let target = get_target i in
       (succ i,
        target,
-       step1 @ step2 @ [BackendExpr.call ~target ~ty ~f ~ty_param:ty_x ~param]
+       step1 @ step2 @ [Expr.call ~target ~ty ~f ~ty_param:ty_x ~param]
       )
     in
     match x with
-      | (App (ty_f, f, x), App (ty_x, f', x')) ->
+      | (Ast.App (ty_f, f, x), Ast.App (ty_x, f', x')) ->
           let (i, name_f, f) = get_app_instr i ty_f (f, x) in
           let (i, name_x, x) = get_app_instr i ty_x (f', x') in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ x @ res)
-      | (App (ty_f, f, x), Abs (ty_x, name_x, _, _, _)) ->
+      | (Ast.App (ty_f, f, x), Ast.Abs ((ty_x, name_x, _, _), _)) ->
           let (i, name_f, f) = get_app_instr i ty_f (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
-      | (App (ty_f, f, x), Val (name_x, _, ty_x)) ->
+      | (Ast.App (ty_f, f, x), Ast.Val (name_x, _, ty_x)) ->
           let (i, name_f, f) = get_app_instr i ty_f (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
-      | (Abs (ty_f, name_f, _, _, _), App (ty_x, f, x)) ->
+      | (Ast.Abs ((ty_f, name_f, _, _), _), Ast.App (ty_x, f, x)) ->
           let (i, name_x, x) = get_app_instr i ty_x (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
-      | (Val (name_f, _, ty_f), App (ty_x, f, x)) ->
+      | (Ast.Val (name_f, _, ty_f), Ast.App (ty_x, f, x)) ->
           let (i, name_x, x) = get_app_instr i ty_x (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
-      | (Abs (ty_f, name_f, _, _, _), Abs (ty_x, name_x, _, _, _))
-      | (Val (name_f, _, ty_f), Val (name_x, _, ty_x))
-      | (Abs (ty_f, name_f, _, _, _), Val (name_x, _, ty_x))
-      | (Val (name_f, _, ty_f), Abs (ty_x, name_x, _, _, _)) ->
+      | (Ast.Abs ((ty_f, name_f, _, _), _), Ast.Abs ((ty_x, name_x, _, _), _))
+      | (Ast.Val (name_f, _, ty_f), Ast.Val (name_x, _, ty_x))
+      | (Ast.Abs ((ty_f, name_f, _, _), _), Ast.Val (name_x, _, ty_x))
+      | (Ast.Val (name_f, _, ty_f), Ast.Abs ((ty_x, name_x, _, _), _)) ->
           normal_case i ~ty_f ~name_f ~ty_x ~name_x
   in
   let get_instr = function
-    | Abs (_, value, (_, _, _), ty, _) ->
-        [BackendExpr.ret ~ty ~value]
-    | App (ty, f, x) ->
+    | Ast.Abs ((_, value, (_, _, _), ty), _) ->
+        [Expr.ret ~ty ~value]
+    | Ast.App (ty, f, x) ->
         let (_, name, instr) = get_app_instr 1 ty (f, x) in
         instr
-        @ [BackendExpr.ret ~ty ~value:name]
-    | Val (value, target, ty) ->
-        [ BackendExpr.load ~target ~ty ~value
-        ; BackendExpr.ret ~ty ~value
+        @ [Expr.ret ~ty ~value:name]
+    | Ast.Val (value, target, ty) ->
+        [ Expr.load ~target ~ty ~value
+        ; Expr.ret ~ty ~value
         ]
   in
   let rec aux = function
-    | Abs (ret, name, (param', param, p_ty), _, t) ->
-        [ BackendExpr.global ~name:param' ~ty:p_ty
-        ; BackendExpr.define ~ty:ret ~name ~ty_param:p_ty ~param
-            (BackendExpr.store ~ty:p_ty ~value:param ~target:param'
+    | Ast.Abs ((ret, name, (param', param, p_ty), _), t) ->
+        [ Expr.global ~name:param' ~ty:p_ty
+        ; Expr.define ~ty:ret ~name ~ty_param:p_ty ~param
+            (Expr.store ~ty:p_ty ~value:param ~target:param'
              :: get_instr t
             )
         ]
         @ aux t
-    | App (_, f, x) -> aux f @ aux x
-    | Val _ -> []
+    | Ast.App (_, f, x) -> aux f @ aux x
+    | Ast.Val _ -> []
   in
-  print_endline (BackendExpr.to_string (aux x))
+  print_endline (Expr.to_string (aux x))

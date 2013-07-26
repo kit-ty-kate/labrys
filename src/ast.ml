@@ -21,27 +21,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type ty = (string * BackendType.t)
+type 'a ty =
+  | Fun of ('a ty * 'a ty)
+  | Ty of 'a
 
-type t = ty Ast.ty
-
-let rec to_string = function
-  | Ast.Fun (Ast.Ty (x, _), ret) -> x ^ " -> " ^ to_string ret
-  | Ast.Fun (x, ret) -> "(" ^ to_string x ^ ") -> " ^ to_string ret
-  | Ast.Ty (x, _) -> x
-
-let from_parse_tree gamma =
-  let rec aux = function
-    | Ast.Fun (x, y) ->
-        aux x >>= fun x ->
-        aux y >>= fun y ->
-        Exn.return (Ast.Fun (x, y))
-    | Ast.Ty name ->
-        List.find (fun x -> Unsafe.(fst x = name)) gamma >>= fun x ->
-        Exn.return (Ast.Ty x)
-  in
-  aux
-
-let gamma =
-  [ ("Int", BackendType.int)
-  ]
+type ('abs, 'app, 'value) t =
+  | Abs of ('abs * ('abs, 'app, 'value) t)
+  | App of ('app * ('abs, 'app, 'value) t * ('abs, 'app, 'value) t)
+  | Val of 'value

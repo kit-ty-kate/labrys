@@ -21,13 +21,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type ty =
-  | Fun of (ty * ty)
-  | Ty of string
+type ty = string Ast.ty
 
 type value = (string * ty)
 
-type t =
-  | Abs of (value * t)
-  | App of (t * t)
-  | Val of string
+type t = (value, unit, string) Ast.t
