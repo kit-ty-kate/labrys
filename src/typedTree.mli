@@ -19,7 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open MonadStdlib
+open MonadOpen
 
 type value = (string * Types.t)
 
@@ -32,4 +32,4 @@ val from_parse_tree :
   value list ->
   Types.ty list ->
   ParseTree.t ->
-  (t, [> failure | not_found ]) MonadExn.t
+  (t, [> failure | not_found ]) Exn.t

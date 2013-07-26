@@ -19,7 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open MonadStdlib
+open MonadOpen
 
 type ty = (string * BackendType.t)
 
@@ -28,5 +28,5 @@ type t =
   | Ty of ty
 
 val to_string : t -> string
-val from_parse_tree : ty list -> ParseTree.ty -> (t, [> not_found ]) MonadExn.t
+val from_parse_tree : ty list -> ParseTree.ty -> (t, [> not_found ]) Exn.t
 val gamma : ty list
