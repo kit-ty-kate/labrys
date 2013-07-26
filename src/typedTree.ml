@@ -28,7 +28,7 @@ type t =
   | App of (Types.t * t * t)
   | Val of value
 
-let rec get_type = function
+let get_type = function
   | Abs (_, _, ty, _) -> ty
   | App (ty, _, _) -> ty
   | Val (_, ty) -> ty

@@ -102,7 +102,7 @@ let print x =
           normal_case i ~ty_f ~name_f ~ty_x ~name_x
   in
   let get_instr = function
-    | Abs (_, name, (_, _, _), ty, t) ->
+    | Abs (_, name, (_, _, _), ty, _) ->
         [BackendExpr.ret ~ty ~value:name]
     | App (ty, f, x) ->
         let (_, name, instr) = get_app_instr 1 ty (f, x) in
@@ -115,7 +115,7 @@ let print x =
   in
   let rec aux = function
     | Abs (ret, name, (param', param, p_ty), _, t) ->
-        [ BackendExpr.global param' p_ty
+        [ BackendExpr.global ~name:param' ~ty:p_ty
         ; BackendExpr.define ~ty:ret ~name ~ty_param:p_ty ~param
             (BackendExpr.store ~ty_value:p_ty ~value:param ~ty_target:p_ty ~target:param'
              :: get_instr t

@@ -11,3 +11,5 @@ Executable sysfomega
   BuildTools: ocamlbuild
   MainIs: main.ml
   BuildDepends: monad-exn
+#  ByteOpt: -w A
+#  NativeOpt: -w A
