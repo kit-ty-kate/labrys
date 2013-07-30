@@ -19,7 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-module Value = BackendValue
+module Name = BackendName
 module Type = BackendType
 module Expr = BackendExpr
 
@@ -27,9 +27,9 @@ open MonadOpen
 
 let sprintf = Printf.sprintf
 
-type value = (Value.t * Value.t * Type.t)
+type value = (Name.t * Name.t * Type.t)
 
-type t = (Type.t * Value.t * value * Type.t, Type.t, value) Ast.t
+type t = (Type.t * Name.t * value * Type.t, Type.t, value) Ast.t
 
 let rec get_type = function
   | Ast.Fun (x, ret) -> Type.func (get_type ret) (get_type x)
@@ -39,14 +39,14 @@ let from_typed_tree tree =
   let rec aux i l = function
     | Ast.Abs ((ty, (v_name, v_ty), ty_expr), t) ->
         let n = i in
-        let v_name' = Value.global (sprintf "__%s_lambda_%d" v_name n) in
+        let v_name' = Name.global (sprintf "__%s_lambda_%d" v_name n) in
         aux (succ i) ((v_name, v_name') :: l) t >>= fun (i, t) ->
         Exn.return
           (i,
            Ast.Abs
              ((get_type ty,
-               Value.global (sprintf "__lambda_%d" n),
-               (v_name', Value.local v_name, get_type v_ty),
+               Name.global (sprintf "__lambda_%d" n),
+               (v_name', Name.local v_name, get_type v_ty),
                get_type ty_expr
               ),
               t
@@ -58,7 +58,7 @@ let from_typed_tree tree =
         Exn.return (i, Ast.App (get_type ty, f, x))
     | Ast.Val (name, ty) ->
         List.find (fun x -> Unsafe.(fst x = name)) l >>= fun x ->
-        Exn.return (i, Ast.Val (snd x, Value.local name, get_type ty))
+        Exn.return (i, Ast.Val (snd x, Name.local name, get_type ty))
   in
   aux 1 [] tree >|= snd
 
@@ -66,10 +66,10 @@ let print x =
   let rec get_app_instr i ty x =
     let normal_case i ~ty_f ~name_f ~ty_x ~name_x =
       let get_target i =
-        Value.local (string_of_int i)
+        Name.local (string_of_int i)
       in
       let loading i ty =
-        Value.apply
+        Name.apply
           (fun value ->
             let target = get_target i in
             (succ i, target, [Expr.load ~target ~ty ~value])

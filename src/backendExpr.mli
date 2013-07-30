@@ -25,36 +25,36 @@ type expr
 type top_expr
 
 val load :
-  target:BackendValue.t ->
+  target:BackendName.t ->
   ty:BackendType.t ->
-  value:BackendValue.t ->
+  value:BackendName.t ->
   expr
 val call :
-  target:BackendValue.t ->
+  target:BackendName.t ->
   ty:BackendType.t ->
-  f:BackendValue.t ->
+  f:BackendName.t ->
   ty_param:BackendType.t ->
-  param:BackendValue.t ->
+  param:BackendName.t ->
   expr
 val store :
   ty:BackendType.t ->
-  value:BackendValue.t ->
-  target:BackendValue.t ->
+  value:BackendName.t ->
+  target:BackendName.t ->
   expr
 val ret :
   ty:BackendType.t ->
-  value:BackendValue.t ->
+  value:BackendName.t ->
   expr
 
 val define :
   ty:BackendType.t ->
-  name:BackendValue.t ->
+  name:BackendName.t ->
   ty_param:BackendType.t ->
-  param:BackendValue.t ->
+  param:BackendName.t ->
   expr list ->
   top_expr
 val global :
-  name:BackendValue.t ->
+  name:BackendName.t ->
   ty:BackendType.t ->
   top_expr
 

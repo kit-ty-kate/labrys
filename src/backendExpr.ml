@@ -19,6 +19,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+module Name = BackendName
+module Type = BackendType
+
 open MonadOpen
 
 type expr = string
@@ -27,42 +30,42 @@ type top_expr = string list
 let sprintf = Printf.sprintf
 
 let load ~target ~ty ~value =
-  let target = BackendValue.to_string target in
-  let ty = BackendType.to_string ty in
-  let value = BackendValue.to_string value in
+  let target = Name.to_string target in
+  let ty = Type.to_string ty in
+  let value = Name.to_string value in
   sprintf "  %s = load %s* %s" target ty value
 
 let call ~target ~ty ~f ~ty_param ~param =
-  let target = BackendValue.to_string target in
-  let ty = BackendType.to_string_call ty in
-  let f = BackendValue.to_string f in
-  let ty_param = BackendType.to_string ty_param in
-  let param = BackendValue.to_string param in
+  let target = Name.to_string target in
+  let ty = Type.to_string_call ty in
+  let f = Name.to_string f in
+  let ty_param = Type.to_string ty_param in
+  let param = Name.to_string param in
   sprintf "  %s = call %s %s(%s %s)" target ty f ty_param param
 
 let store ~ty ~value ~target =
-  let target = BackendValue.to_string target in
-  let ty = BackendType.to_string ty in
-  let value = BackendValue.to_string value in
+  let target = Name.to_string target in
+  let ty = Type.to_string ty in
+  let value = Name.to_string value in
   sprintf "  store %s %s, %s* %s" ty value ty target
 
 let ret ~ty ~value =
-  let ty = BackendType.to_string ty in
-  let value = BackendValue.to_string value in
+  let ty = Type.to_string ty in
+  let value = Name.to_string value in
   sprintf "  ret %s %s" ty value
 
 let define ~ty ~name ~ty_param ~param exprs =
-  let ty = BackendType.to_string ty in
-  let name = BackendValue.to_string name in
-  let ty_param = BackendType.to_string ty_param in
-  let param = BackendValue.to_string param in
+  let ty = Type.to_string ty in
+  let name = Name.to_string name in
+  let ty_param = Type.to_string ty_param in
+  let param = Name.to_string param in
   sprintf "define %s %s(%s %s) {" ty name ty_param param
   :: exprs
   @ ["}"]
 
 let global ~name ~ty =
-  let name = BackendValue.to_string name in
-  let ty = BackendType.to_string ty in
+  let name = Name.to_string name in
+  let ty = Type.to_string ty in
   [sprintf "%s = global %s undef" name ty]
 
 let to_string x = String.concat "\n" (List.concat x)
