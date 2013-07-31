@@ -21,15 +21,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type t = (string * string)
+type t = string
 
-let int =
-  let ty = "i32" in
-  (ty, ty)
+let int = "i32"
 
-let func (ret, _) (param, _) =
-  let p = " (" ^ param ^ ")*" in
-  (ret ^ p, ret ^ p ^ p)
+let func ret param = ret ^ " (" ^ param ^ ")*"
 
-let to_string = fst
-let to_string_call = snd
+external to_string : 'a -> 'a = "%identity"
