@@ -41,11 +41,6 @@ let rec to_type = function
   | Types.Fun (x, ret) -> Type.func (to_type ret) (to_type x)
   | Types.Ty (_, name) -> name
 
-let rec get_type = function
-  | Abs ((ty, _, _, _), _) -> ty
-  | App (ty, _, _) -> ty
-  | Val (_, _, ty) -> ty
-
 let from_typed_tree tree =
   let rec aux i l = function
     | TypedTree.Abs ((ty, (v_name, v_ty), ty_expr), t) ->
