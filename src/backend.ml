@@ -29,7 +29,10 @@ let sprintf = Printf.sprintf
 
 type value = (Name.t * Name.t * Type.t)
 
-type t = (Type.t * Name.t * value * Type.t, Type.t, value) Ast.t
+type t =
+  | Abs of ((Type.t * Name.t * value * Type.t) * t)
+  | App of (Type.t * t * t)
+  | Val of value
 
 type top =
   | Value of ((Name.t * Type.t) * t)
@@ -39,19 +42,19 @@ let rec to_type = function
   | Ast.Ty (_, name) -> name
 
 let rec get_type = function
-  | Ast.Abs ((ty, _, _, _), _) -> ty
-  | Ast.App (ty, _, _) -> ty
-  | Ast.Val (_, _, ty) -> ty
+  | Abs ((ty, _, _, _), _) -> ty
+  | App (ty, _, _) -> ty
+  | Val (_, _, ty) -> ty
 
 let from_typed_tree tree =
   let rec aux i l = function
-    | Ast.Abs ((ty, (v_name, v_ty), ty_expr), t) ->
+    | TypedTree.Abs ((ty, (v_name, v_ty), ty_expr), t) ->
         let n = i in
         let v_name' = Name.global (sprintf "__%s_lambda_%d" v_name n) in
         aux (succ i) ((v_name, v_name') :: l) t >>= fun (i, t) ->
         Exn.return
           (i,
-           Ast.Abs
+           Abs
              ((to_type ty,
                Name.global (sprintf "__lambda_%d" n),
                (v_name', Name.local v_name, to_type v_ty),
@@ -60,13 +63,13 @@ let from_typed_tree tree =
               t
              )
           )
-    | Ast.App (ty, f, x) ->
+    | TypedTree.App (ty, f, x) ->
         aux i l f >>= fun (i, f) ->
         aux (succ i) l x >>= fun (i, x) ->
-        Exn.return (i, Ast.App (to_type ty, f, x))
-    | Ast.Val (name, ty) ->
+        Exn.return (i, App (to_type ty, f, x))
+    | TypedTree.Val (name, ty) ->
         List.find (fun x -> Unsafe.(fst x = name)) l >>= fun x ->
-        Exn.return (i, Ast.Val (snd x, Name.local name, to_type ty))
+        Exn.return (i, Val (snd x, Name.local name, to_type ty))
   in
   let rec top i l = function
     | TypedTree.Value ((name, ty), t) :: xs ->
@@ -101,40 +104,40 @@ let print x =
       )
     in
     match x with
-      | (Ast.App (ty_f, f, x), Ast.App (ty_x, f', x')) ->
+      | (App (ty_f, f, x), App (ty_x, f', x')) ->
           let (i, name_f, f) = get_app_instr i ty_f (f, x) in
           let (i, name_x, x) = get_app_instr i ty_x (f', x') in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ x @ res)
-      | (Ast.App (ty_f, f, x), Ast.Abs ((ty_x, name_x, _, _), _)) ->
+      | (App (ty_f, f, x), Abs ((ty_x, name_x, _, _), _)) ->
           let (i, name_f, f) = get_app_instr i ty_f (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
-      | (Ast.App (ty_f, f, x), Ast.Val (name_x, _, ty_x)) ->
+      | (App (ty_f, f, x), Val (name_x, _, ty_x)) ->
           let (i, name_f, f) = get_app_instr i ty_f (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
-      | (Ast.Abs ((ty_f, name_f, _, _), _), Ast.App (ty_x, f, x)) ->
+      | (Abs ((ty_f, name_f, _, _), _), App (ty_x, f, x)) ->
           let (i, name_x, x) = get_app_instr i ty_x (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
-      | (Ast.Val (name_f, _, ty_f), Ast.App (ty_x, f, x)) ->
+      | (Val (name_f, _, ty_f), App (ty_x, f, x)) ->
           let (i, name_x, x) = get_app_instr i ty_x (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
-      | (Ast.Abs ((ty_f, name_f, _, _), _), Ast.Abs ((ty_x, name_x, _, _), _))
-      | (Ast.Val (name_f, _, ty_f), Ast.Val (name_x, _, ty_x))
-      | (Ast.Abs ((ty_f, name_f, _, _), _), Ast.Val (name_x, _, ty_x))
-      | (Ast.Val (name_f, _, ty_f), Ast.Abs ((ty_x, name_x, _, _), _)) ->
+      | (Abs ((ty_f, name_f, _, _), _), Abs ((ty_x, name_x, _, _), _))
+      | (Val (name_f, _, ty_f), Val (name_x, _, ty_x))
+      | (Abs ((ty_f, name_f, _, _), _), Val (name_x, _, ty_x))
+      | (Val (name_f, _, ty_f), Abs ((ty_x, name_x, _, _), _)) ->
           normal_case i ~ty_f ~name_f ~ty_x ~name_x
   in
   let get_instr i = function
-    | Ast.Abs ((_, value, (_, _, _), ty), _) ->
+    | Abs ((_, value, (_, _, _), ty), _) ->
         (i, [Expr.ret ~ty ~value])
-    | Ast.App (ty, f, x) ->
+    | App (ty, f, x) ->
         let (i, name, instr) = get_app_instr i ty (f, x) in
         (i, instr @ [Expr.ret ~ty ~value:name])
-    | Ast.Val (value, _, ty) ->
+    | Val (value, _, ty) ->
         let target = get_target i in
         (i,
          [ Expr.load ~target ~ty ~value
@@ -143,7 +146,7 @@ let print x =
         )
   in
   let rec aux = function
-    | Ast.Abs ((ret, name, (param', param, p_ty), _), t) ->
+    | Abs ((ret, name, (param', param, p_ty), _), t) ->
         [ Expr.global ~name:param' ~ty:p_ty
         ; Expr.define ~ty:ret ~name ~ty_param:p_ty ~param
             (Expr.store ~ty:p_ty ~value:param ~target:param'
@@ -151,8 +154,8 @@ let print x =
             )
         ]
         @ aux t
-    | Ast.App (_, f, x) -> aux f @ aux x
-    | Ast.Val _ -> []
+    | App (_, f, x) -> aux f @ aux x
+    | Val _ -> []
   in
   let rec top = function
     | Value ((name, ty), t) :: xs ->

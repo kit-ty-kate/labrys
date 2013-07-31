@@ -46,11 +46,11 @@ main:
 
 term:
 | Lambda termName = TermName DoubleDot typeName = typeExpr Dot term = term
-    { Ast.Abs ((termName, typeName), term) }
+    { ParseTree.Abs ((termName, typeName), term) }
 | term1 = term term2 = term %prec App
-    { Ast.App ((), term1, term2) }
+    { ParseTree.App (term1, term2) }
 | termName = TermName
-    { Ast.Val termName }
+    { ParseTree.Val termName }
 | LParent term = term RParent { term }
 
 typeExpr:

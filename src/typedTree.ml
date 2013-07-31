@@ -23,30 +23,33 @@ open MonadOpen
 
 type value = (string * Types.t)
 
-type t = (Types.t * value * Types.t, Types.t, value) Ast.t
+type t =
+  | Abs of ((Types.t * value * Types.t) * t)
+  | App of (Types.t * t * t)
+  | Val of value
 
 type top =
   | Value of (value * t)
 
 let get_type = function
-  | Ast.Abs ((_, _, ty), _) -> ty
-  | Ast.App (ty, _, _) -> ty
-  | Ast.Val (_, ty) -> ty
+  | Abs ((_, _, ty), _) -> ty
+  | App (ty, _, _) -> ty
+  | Val (_, ty) -> ty
 
 let rec aux gamma gammaT = function
-  | Ast.Abs ((name, ty), t) ->
+  | ParseTree.Abs ((name, ty), t) ->
       Types.from_parse_tree gammaT ty >>= fun ty ->
       let v = (name, ty) in
       aux (v :: gamma) gammaT t >>= fun x ->
       let ty_x = get_type x in
-      Exn.return (Ast.Abs ((ty_x, v, Ast.Fun (ty, ty_x)), x))
-  | Ast.App ((), f, x) ->
+      Exn.return (Abs ((ty_x, v, Ast.Fun (ty, ty_x)), x))
+  | ParseTree.App (f, x) ->
       aux gamma gammaT f >>= fun f ->
       aux gamma gammaT x >>= fun x ->
       let ty_x = get_type x in
       (match get_type f with
         | Ast.Fun (ty, res) when Unsafe.(ty = ty_x) ->
-            Exn.return (Ast.App (res, f, x))
+            Exn.return (App (res, f, x))
         | Ast.Fun (ty, _) ->
             failwith
               ("Error: This expression has type "
@@ -63,9 +66,9 @@ let rec aux gamma gammaT = function
                ^ ")"
               )
       )
-  | Ast.Val name ->
+  | ParseTree.Val name ->
       List.find (fun (name', _) -> Unsafe.(name = name')) gamma >>= fun x ->
-      Exn.return (Ast.Val x)
+      Exn.return (Val x)
 
 let rec from_parse_tree gamma gammaT = function
   | ParseTree.Value (name, term) :: xs ->

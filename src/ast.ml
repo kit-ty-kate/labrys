@@ -24,8 +24,3 @@ open MonadOpen
 type 'a ty =
   | Fun of ('a ty * 'a ty)
   | Ty of 'a
-
-type ('abs, 'app, 'value) t =
-  | Abs of ('abs * ('abs, 'app, 'value) t)
-  | App of ('app * ('abs, 'app, 'value) t * ('abs, 'app, 'value) t)
-  | Val of 'value

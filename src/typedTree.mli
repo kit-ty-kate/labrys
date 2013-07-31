@@ -23,7 +23,10 @@ open MonadOpen
 
 type value = (string * Types.t)
 
-type t = (Types.t * value * Types.t, Types.t, value) Ast.t
+type t =
+  | Abs of ((Types.t * value * Types.t) * t)
+  | App of (Types.t * t * t)
+  | Val of value
 
 type top =
   | Value of (value * t)

@@ -25,7 +25,10 @@ type ty = string Ast.ty
 
 type value = (string * ty)
 
-type t = (value, unit, string) Ast.t
+type t =
+  | Abs of (value * t)
+  | App of (t * t)
+  | Val of string
 
 type top =
   | Value of (string * t)
