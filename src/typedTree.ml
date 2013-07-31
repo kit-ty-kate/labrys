@@ -42,22 +42,22 @@ let rec aux gamma gammaT = function
       let v = (name, ty) in
       aux (v :: gamma) gammaT t >>= fun x ->
       let ty_x = get_type x in
-      Exn.return (Abs ((ty_x, v, Ast.Fun (ty, ty_x)), x))
+      Exn.return (Abs ((ty_x, v, Types.Fun (ty, ty_x)), x))
   | ParseTree.App (f, x) ->
       aux gamma gammaT f >>= fun f ->
       aux gamma gammaT x >>= fun x ->
       let ty_x = get_type x in
       (match get_type f with
-        | Ast.Fun (ty, res) when Unsafe.(ty = ty_x) ->
+        | Types.Fun (ty, res) when Unsafe.(ty = ty_x) ->
             Exn.return (App (res, f, x))
-        | Ast.Fun (ty, _) ->
+        | Types.Fun (ty, _) ->
             failwith
               ("Error: This expression has type "
                ^ Types.to_string ty_x
                ^ " but an expression was expected of type "
                ^ Types.to_string ty
               )
-        | Ast.Ty _ as ty ->
+        | Types.Ty _ as ty ->
             failwith
               ("Typechecker: Can't apply to a non-function type ("
                ^ Types.to_string ty

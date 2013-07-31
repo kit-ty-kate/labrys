@@ -23,7 +23,9 @@ open MonadOpen
 
 type ty = (string * BackendType.t)
 
-type t = ty Ast.ty
+type t =
+  | Fun of (t * t)
+  | Ty of ty
 
 val to_string : t -> string
 val from_parse_tree : ty list -> ParseTree.ty -> (t, [> not_found ]) Exn.t

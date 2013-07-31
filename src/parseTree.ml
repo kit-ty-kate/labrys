@@ -21,7 +21,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type ty = string Ast.ty
+type ty =
+  | Fun of (ty * ty)
+  | Ty of string
 
 type value = (string * ty)
 

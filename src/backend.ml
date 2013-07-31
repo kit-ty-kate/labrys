@@ -38,8 +38,8 @@ type top =
   | Value of ((Name.t * Type.t) * t)
 
 let rec to_type = function
-  | Ast.Fun (x, ret) -> Type.func (to_type ret) (to_type x)
-  | Ast.Ty (_, name) -> name
+  | Types.Fun (x, ret) -> Type.func (to_type ret) (to_type x)
+  | Types.Ty (_, name) -> name
 
 let rec get_type = function
   | Abs ((ty, _, _, _), _) -> ty

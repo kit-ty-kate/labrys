@@ -23,22 +23,24 @@ open MonadOpen
 
 type ty = (string * BackendType.t)
 
-type t = ty Ast.ty
+type t =
+  | Fun of (t * t)
+  | Ty of ty
 
 let rec to_string = function
-  | Ast.Fun (Ast.Ty (x, _), ret) -> x ^ " -> " ^ to_string ret
-  | Ast.Fun (x, ret) -> "(" ^ to_string x ^ ") -> " ^ to_string ret
-  | Ast.Ty (x, _) -> x
+  | Fun (Ty (x, _), ret) -> x ^ " -> " ^ to_string ret
+  | Fun (x, ret) -> "(" ^ to_string x ^ ") -> " ^ to_string ret
+  | Ty (x, _) -> x
 
 let from_parse_tree gamma =
   let rec aux = function
-    | Ast.Fun (x, y) ->
+    | ParseTree.Fun (x, y) ->
         aux x >>= fun x ->
         aux y >>= fun y ->
-        Exn.return (Ast.Fun (x, y))
-    | Ast.Ty name ->
+        Exn.return (Fun (x, y))
+    | ParseTree.Ty name ->
         List.find (fun x -> Unsafe.(fst x = name)) gamma >>= fun x ->
-        Exn.return (Ast.Ty x)
+        Exn.return (Ty x)
   in
   aux
 
