@@ -27,6 +27,7 @@ type t =
 
 let global x = Global ("@" ^ x)
 let local x = Local ("%" ^ x)
+let func x = Local ("@" ^ x)
 
 let to_string = function
   | Global x -> x

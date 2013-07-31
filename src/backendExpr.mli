@@ -53,6 +53,10 @@ val define :
   param:BackendName.t ->
   expr list ->
   top_expr
+val define_init :
+  name:BackendName.t ->
+  expr list ->
+  top_expr
 val global :
   name:BackendName.t ->
   ty:BackendType.t ->

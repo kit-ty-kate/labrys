@@ -37,11 +37,11 @@ let load ~target ~ty ~value =
 
 let call ~target ~ty ~f ~ty_param ~param =
   let target = Name.to_string target in
-  let ty = Type.to_string_call ty in
+  let ty = Type.to_string ty in
   let f = Name.to_string f in
   let ty_param = Type.to_string ty_param in
   let param = Name.to_string param in
-  sprintf "  %s = call %s %s(%s %s)" target ty f ty_param param
+  sprintf "  %s = call %s (%s)* %s(%s %s)" target ty ty_param f ty_param param
 
 let store ~ty ~value ~target =
   let target = Name.to_string target in
@@ -62,6 +62,12 @@ let define ~ty ~name ~ty_param ~param exprs =
   sprintf "define %s %s(%s %s) {" ty name ty_param param
   :: exprs
   @ ["}"]
+
+let define_init ~name exprs =
+  let name = Name.to_string name in
+  sprintf "define void %s() {" name
+  :: exprs
+  @ ["  ret void"; "}"]
 
 let global ~name ~ty =
   let name = Name.to_string name in

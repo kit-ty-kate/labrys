@@ -56,7 +56,7 @@ let from_typed_tree tree =
           (i,
            Abs
              ((to_type ty,
-               Name.global (sprintf "__lambda_%d" n),
+               Name.func (sprintf "__lambda_%d" n),
                (v_name', Name.local v_name, to_type v_ty),
                to_type ty_expr
               ),
@@ -109,7 +109,7 @@ let print x =
           let (i, name_x, x) = get_app_instr i ty_x (f', x') in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ x @ res)
-      | (App (ty_f, f, x), Abs ((ty_x, name_x, _, _), _)) ->
+      | (App (ty_f, f, x), Abs ((_, name_x, _, ty_x), _)) ->
           let (i, name_f, f) = get_app_instr i ty_f (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
@@ -117,7 +117,7 @@ let print x =
           let (i, name_f, f) = get_app_instr i ty_f (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
-      | (Abs ((ty_f, name_f, _, _), _), App (ty_x, f, x)) ->
+      | (Abs ((_, name_f, _, ty_f), _), App (ty_x, f, x)) ->
           let (i, name_x, x) = get_app_instr i ty_x (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
@@ -125,10 +125,10 @@ let print x =
           let (i, name_x, x) = get_app_instr i ty_x (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
-      | (Abs ((ty_f, name_f, _, _), _), Abs ((ty_x, name_x, _, _), _))
+      | (Abs ((_, name_f, _, ty_f), _), Abs ((_, name_x, _, ty_x), _))
       | (Val (name_f, _, ty_f), Val (name_x, _, ty_x))
-      | (Abs ((ty_f, name_f, _, _), _), Val (name_x, _, ty_x))
-      | (Val (name_f, _, ty_f), Abs ((ty_x, name_x, _, _), _)) ->
+      | (Abs ((_, name_f, _, ty_f), _), Val (name_x, _, ty_x))
+      | (Val (name_f, _, ty_f), Abs ((_, name_x, _, ty_x), _)) ->
           normal_case i ~ty_f ~name_f ~ty_x ~name_x
   in
   let get_instr i = function
@@ -157,11 +157,27 @@ let print x =
     | App (_, f, x) -> aux f @ aux x
     | Val _ -> []
   in
-  let rec top = function
-    | Value ((name, ty), t) :: xs ->
-        let x = aux t in
-        let xs = top xs in
-        Expr.global ~name ~ty :: x @ xs
+  let rec get_instr_init i = function
+    | ((target, ty), Abs ((_, value,_, _), _)) :: xs ->
+        Expr.store ~ty ~value ~target :: get_instr_init i xs
+    | ((target, ty), App (ty_app, f, x)) :: xs ->
+        let (i, value, instr) = get_app_instr i ty_app (f, x) in
+        instr @ [Expr.store ~ty ~value ~target] @ get_instr_init i xs
+    | ((target, ty), Val (value, _, _)) :: xs ->
+        let tmp = get_target i in
+        [ Expr.load ~target:tmp ~ty ~value
+        ; Expr.store ~ty ~value:tmp ~target
+        ]
+        @ get_instr_init (succ i) xs
     | [] -> []
   in
-  print_endline (Expr.to_string (top x))
+  let rec top init_list = function
+    | Value (((name, ty), t) as v) :: xs ->
+        let x = aux t in
+        let xs = top (v :: init_list) xs in
+        Expr.global ~name ~ty :: x @ xs
+    | [] ->
+        let name = Name.func "__init" in
+        [Expr.define_init ~name (get_instr_init 1 init_list)]
+  in
+  print_endline (Expr.to_string (top [] x))
