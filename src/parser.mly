@@ -55,5 +55,5 @@ term:
 
 typeExpr:
 | name = TypeName { ParseTree.Ty name }
-| t1 = typeExpr Arrow t2 = typeExpr { ParseTree.Fun (t1, t2) }
+| param = typeExpr Arrow ret = typeExpr { ParseTree.Fun (param, ret) }
 | LParent term = typeExpr RParent { term }

@@ -22,15 +22,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 module Name = BackendName
 module Type = BackendType
 module Expr = BackendExpr
+module TT = TypedTree
 
 open MonadOpen
 
 let sprintf = Printf.sprintf
 
-type value = (Name.t * Name.t * Type.t)
+type value = {name : Name.t; orig_name : Name.t; ty : Type.t}
+type abs =
+  { abs_ty : Type.t
+  ; abs_name : Name.t
+  ; param : value
+  ; ty_expr : Type.t
+  }
 
 type t =
-  | Abs of ((Type.t * Name.t * value * Type.t) * t)
+  | Abs of (abs * t)
   | App of (Type.t * t * t)
   | Val of value
 
@@ -43,31 +50,32 @@ let rec to_type = function
 
 let from_typed_tree tree =
   let rec aux i l = function
-    | TypedTree.Abs ((ty, (v_name, v_ty), ty_expr), t) ->
+    | TT.Abs ({TT.abs_ty; TT.param = {TT.name; TT.ty}; TT.ty_expr}, t) ->
         let n = i in
-        let v_name' = Name.global (sprintf "__%s_lambda_%d" v_name n) in
-        aux (succ i) ((v_name, v_name') :: l) t >>= fun (i, t) ->
+        let orig_name = name in
+        let name = Name.global (sprintf "__%s_lambda_%d" orig_name n) in
+        aux (succ i) ((orig_name, name) :: l) t >>= fun (i, t) ->
         Exn.return
           (i,
            Abs
-             ((to_type ty,
-               Name.func (sprintf "__lambda_%d" n),
-               (v_name', Name.local v_name, to_type v_ty),
-               to_type ty_expr
-              ),
+             ({ abs_ty = to_type abs_ty
+              ; abs_name = Name.func (sprintf "__lambda_%d" n)
+              ; param = {name; orig_name = Name.local orig_name; ty = to_type ty}
+              ; ty_expr = to_type ty_expr
+              },
               t
              )
           )
-    | TypedTree.App (ty, f, x) ->
+    | TT.App (ty, f, x) ->
         aux i l f >>= fun (i, f) ->
         aux (succ i) l x >>= fun (i, x) ->
         Exn.return (i, App (to_type ty, f, x))
-    | TypedTree.Val (name, ty) ->
+    | TT.Val {TT.name; TT.ty} ->
         List.find (fun x -> Unsafe.(fst x = name)) l >>= fun x ->
-        Exn.return (i, Val (snd x, Name.local name, to_type ty))
+        Exn.return (i, Val {name = snd x; orig_name = Name.local name; ty = to_type ty})
   in
   let rec top i l = function
-    | TypedTree.Value ((name, ty), t) :: xs ->
+    | TT.Value ({TT.name; TT.ty}, t) :: xs ->
         aux i l t >>= fun (i, x) ->
         let v = (name, Name.global name) in
         top i (v :: l) xs >>= fun (i, xs) ->
@@ -104,35 +112,35 @@ let print x =
           let (i, name_x, x) = get_app_instr i ty_x (f', x') in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ x @ res)
-      | (App (ty_f, f, x), Abs ((_, name_x, _, ty_x), _)) ->
+      | (App (ty_f, f, x), Abs ({abs_name = name_x; abs_ty = ty_x; _}, _)) ->
           let (i, name_f, f) = get_app_instr i ty_f (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
-      | (App (ty_f, f, x), Val (name_x, _, ty_x)) ->
+      | (App (ty_f, f, x), Val {name = name_x; ty = ty_x; _}) ->
           let (i, name_f, f) = get_app_instr i ty_f (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, f @ res)
-      | (Abs ((_, name_f, _, ty_f), _), App (ty_x, f, x)) ->
+      | (Abs ({abs_name = name_f; abs_ty = ty_f; _}, _), App (ty_x, f, x)) ->
           let (i, name_x, x) = get_app_instr i ty_x (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
-      | (Val (name_f, _, ty_f), App (ty_x, f, x)) ->
+      | (Val {name = name_f; ty = ty_f; _}, App (ty_x, f, x)) ->
           let (i, name_x, x) = get_app_instr i ty_x (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
-      | (Abs ((_, name_f, _, ty_f), _), Abs ((_, name_x, _, ty_x), _))
-      | (Val (name_f, _, ty_f), Val (name_x, _, ty_x))
-      | (Abs ((_, name_f, _, ty_f), _), Val (name_x, _, ty_x))
-      | (Val (name_f, _, ty_f), Abs ((_, name_x, _, ty_x), _)) ->
+      | (Abs ({abs_name = name_f; abs_ty = ty_f; _}, _), Abs ({abs_name = name_x; abs_ty = ty_x; _}, _))
+      | (Val {name = name_f; ty = ty_f; _}, Val {name = name_x; ty = ty_x; _})
+      | (Abs ({abs_name = name_f; abs_ty = ty_f; _}, _), Val {name = name_x; ty = ty_x; _})
+      | (Val {name = name_f; ty = ty_f; _}, Abs ({abs_name = name_x; abs_ty = ty_x; _}, _)) ->
           normal_case i ~ty_f ~name_f ~ty_x ~name_x
   in
   let get_instr i = function
-    | Abs ((_, value, (_, _, _), ty), _) ->
+    | Abs ({abs_name = value; abs_ty = ty; _}, _) ->
         (i, [Expr.ret ~ty ~value])
     | App (ty, f, x) ->
         let (i, name, instr) = get_app_instr i ty (f, x) in
         (i, instr @ [Expr.ret ~ty ~value:name])
-    | Val (value, _, ty) ->
+    | Val {name = value; ty; _} ->
         let target = get_target i in
         (i,
          [ Expr.load ~target ~ty ~value
@@ -141,7 +149,7 @@ let print x =
         )
   in
   let rec aux = function
-    | Abs ((ret, name, (param', param, p_ty), _), t) ->
+    | Abs ({abs_name = name; param = {name = param'; orig_name = param; ty = p_ty}; ty_expr = ret; _}, t) ->
         [ Expr.global ~name:param' ~ty:p_ty
         ; Expr.define ~ty:ret ~name ~ty_param:p_ty ~param
             (Expr.store ~ty:p_ty ~value:param ~target:param'
@@ -153,12 +161,12 @@ let print x =
     | Val _ -> []
   in
   let rec get_instr_init i = function
-    | ((target, ty), Abs ((_, value,_, _), _)) :: xs ->
+    | ((target, ty), Abs ({abs_name = value; _}, _)) :: xs ->
         Expr.store ~ty ~value ~target :: get_instr_init i xs
     | ((target, ty), App (ty_app, f, x)) :: xs ->
         let (i, value, instr) = get_app_instr i ty_app (f, x) in
         instr @ [Expr.store ~ty ~value ~target] @ get_instr_init i xs
-    | ((target, ty), Val (value, _, _)) :: xs ->
+    | ((target, ty), Val {name = value; _}) :: xs ->
         let tmp = get_target i in
         [ Expr.load ~target:tmp ~ty ~value
         ; Expr.store ~ty ~value:tmp ~target

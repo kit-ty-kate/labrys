@@ -21,10 +21,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type value = (string * Types.t)
+type value = {name : string; ty : Types.t}
+type abs = {abs_ty : Types.t; param : value; ty_expr : Types.t}
 
 type t =
-  | Abs of ((Types.t * value * Types.t) * t)
+  | Abs of (abs * t)
   | App of (Types.t * t * t)
   | Val of value
 
@@ -32,17 +33,18 @@ type top =
   | Value of (value * t)
 
 let get_type = function
-  | Abs ((_, _, ty), _) -> ty
+  | Abs ({abs_ty; _}, _) -> abs_ty
   | App (ty, _, _) -> ty
-  | Val (_, ty) -> ty
+  | Val {ty; _} -> ty
 
 let rec aux gamma gammaT = function
   | ParseTree.Abs ((name, ty), t) ->
       Types.from_parse_tree gammaT ty >>= fun ty ->
-      let v = (name, ty) in
-      aux (v :: gamma) gammaT t >>= fun x ->
-      let ty_x = get_type x in
-      Exn.return (Abs ((ty_x, v, Types.Fun (ty, ty_x)), x))
+      let param = {name; ty} in
+      aux (param :: gamma) gammaT t >>= fun expr ->
+      let ty_expr = get_type expr in
+      let abs_ty = Types.Fun (ty, ty_expr) in
+      Exn.return (Abs ({abs_ty; param; ty_expr}, expr))
   | ParseTree.App (f, x) ->
       aux gamma gammaT f >>= fun f ->
       aux gamma gammaT x >>= fun x ->
@@ -67,13 +69,13 @@ let rec aux gamma gammaT = function
               )
       )
   | ParseTree.Val name ->
-      List.find (fun (name', _) -> Unsafe.(name = name')) gamma >>= fun x ->
+      List.find (fun x -> Unsafe.(name = x.name)) gamma >>= fun x ->
       Exn.return (Val x)
 
 let rec from_parse_tree gamma gammaT = function
   | ParseTree.Value (name, term) :: xs ->
       aux gamma gammaT term >>= fun x ->
-      let v = (name, get_type x) in
+      let v = {name; ty = get_type x} in
       from_parse_tree (v :: gamma) gammaT xs >>= fun xs ->
       Exn.return (Value (v, x) :: xs)
   | [] -> Exn.return []

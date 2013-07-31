@@ -21,10 +21,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type value = (string * Types.t)
+type value = {name : string; ty : Types.t}
+type abs = {abs_ty : Types.t; param : value; ty_expr : Types.t}
 
 type t =
-  | Abs of ((Types.t * value * Types.t) * t)
+  | Abs of (abs * t)
   | App of (Types.t * t * t)
   | Val of value
 
