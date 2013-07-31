@@ -79,11 +79,11 @@ let from_typed_tree tree =
   top 1 [] tree >|= snd
 
 let print x =
+  let get_target i =
+    Name.local (string_of_int i)
+  in
   let rec get_app_instr i ty x =
     let normal_case i ~ty_f ~name_f ~ty_x ~name_x =
-      let get_target i =
-        Name.local (string_of_int i)
-      in
       let loading i ty =
         Name.apply
           (fun value ->
@@ -128,24 +128,26 @@ let print x =
       | (Ast.Val (name_f, _, ty_f), Ast.Abs ((ty_x, name_x, _, _), _)) ->
           normal_case i ~ty_f ~name_f ~ty_x ~name_x
   in
-  let get_instr = function
+  let get_instr i = function
     | Ast.Abs ((_, value, (_, _, _), ty), _) ->
-        [Expr.ret ~ty ~value]
+        (i, [Expr.ret ~ty ~value])
     | Ast.App (ty, f, x) ->
-        let (_, name, instr) = get_app_instr 1 ty (f, x) in
-        instr
-        @ [Expr.ret ~ty ~value:name]
-    | Ast.Val (value, target, ty) ->
-        [ Expr.load ~target ~ty ~value
-        ; Expr.ret ~ty ~value
-        ]
+        let (i, name, instr) = get_app_instr i ty (f, x) in
+        (i, instr @ [Expr.ret ~ty ~value:name])
+    | Ast.Val (value, _, ty) ->
+        let target = get_target i in
+        (i,
+         [ Expr.load ~target ~ty ~value
+         ; Expr.ret ~ty ~value:target
+         ]
+        )
   in
   let rec aux = function
     | Ast.Abs ((ret, name, (param', param, p_ty), _), t) ->
         [ Expr.global ~name:param' ~ty:p_ty
         ; Expr.define ~ty:ret ~name ~ty_param:p_ty ~param
             (Expr.store ~ty:p_ty ~value:param ~target:param'
-             :: get_instr t
+             :: snd (get_instr 1 t)
             )
         ]
         @ aux t
