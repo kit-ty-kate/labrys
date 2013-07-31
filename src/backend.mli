@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type t
+type top
 
-val from_typed_tree : TypedTree.t -> (t, [> not_found ]) Exn.t
-val print : t -> (unit, [> sys_error ]) Exn.t
+val from_typed_tree : TypedTree.top list -> (top list, [> not_found ]) Exn.t
+val print : top list -> (unit, [> sys_error ]) Exn.t

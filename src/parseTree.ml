@@ -26,3 +26,6 @@ type ty = string Ast.ty
 type value = (string * ty)
 
 type t = (value, unit, string) Ast.t
+
+type top =
+  | Value of (string * t)

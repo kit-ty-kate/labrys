@@ -21,4 +21,4 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-val parse : in_channel -> (ParseTree.t, [> failure ]) Exn.t
+val parse : in_channel -> (ParseTree.top list, [> failure ]) Exn.t

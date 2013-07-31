@@ -19,6 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+%token Let Equal
 %token Lambda
 %token Dot
 %token Arrow
@@ -34,12 +35,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %nonassoc App
 
 %start main
-%type <ParseTree.t> main
+%type <ParseTree.top list> main
 
 %%
 
 main:
-| term = term EOF { term }
+| Let name = TermName Equal term = term main = main
+   { ParseTree.Value (name, term) :: main }
+| EOF { [] }
 
 term:
 | Lambda termName = TermName DoubleDot typeName = typeExpr Dot term = term

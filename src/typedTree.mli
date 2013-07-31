@@ -25,8 +25,11 @@ type value = (string * Types.t)
 
 type t = (Types.t * value * Types.t, Types.t, value) Ast.t
 
+type top =
+  | Value of (value * t)
+
 val from_parse_tree :
   value list ->
   Types.ty list ->
-  ParseTree.t ->
-  (t, [> failure | not_found ]) Exn.t
+  ParseTree.top list ->
+  (top list, [> failure | not_found ]) Exn.t

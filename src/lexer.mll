@@ -24,6 +24,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 rule main = parse
   | [' ' '\t'] { main lexbuf }
   | '\n' { Lexing.new_line lexbuf; main lexbuf }
+  | '=' { Parser.Equal }
+  | "let" { Parser.Let }
   | "λ" { Parser.Lambda }
   | '.' { Parser.Dot }
   | ':' { Parser.DoubleDot }

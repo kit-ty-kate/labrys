@@ -1,1 +1,1 @@
-λx:Int.λf:Int->Int.f x
+let app = λx:Int.λf:Int->Int.f x

@@ -25,21 +25,24 @@ type value = (string * Types.t)
 
 type t = (Types.t * value * Types.t, Types.t, value) Ast.t
 
+type top =
+  | Value of (value * t)
+
 let get_type = function
   | Ast.Abs ((_, _, ty), _) -> ty
   | Ast.App (ty, _, _) -> ty
   | Ast.Val (_, ty) -> ty
 
-let rec from_parse_tree gamma gammaT = function
+let rec aux gamma gammaT = function
   | Ast.Abs ((name, ty), t) ->
       Types.from_parse_tree gammaT ty >>= fun ty ->
       let v = (name, ty) in
-      from_parse_tree (v :: gamma) gammaT t >>= fun x ->
+      aux (v :: gamma) gammaT t >>= fun x ->
       let ty_x = get_type x in
       Exn.return (Ast.Abs ((ty_x, v, Ast.Fun (ty, ty_x)), x))
   | Ast.App ((), f, x) ->
-      from_parse_tree gamma gammaT f >>= fun f ->
-      from_parse_tree gamma gammaT x >>= fun x ->
+      aux gamma gammaT f >>= fun f ->
+      aux gamma gammaT x >>= fun x ->
       let ty_x = get_type x in
       (match get_type f with
         | Ast.Fun (ty, res) when Unsafe.(ty = ty_x) ->
@@ -63,3 +66,11 @@ let rec from_parse_tree gamma gammaT = function
   | Ast.Val name ->
       List.find (fun (name', _) -> Unsafe.(name = name')) gamma >>= fun x ->
       Exn.return (Ast.Val x)
+
+let rec from_parse_tree gamma gammaT = function
+  | ParseTree.Value (name, term) :: xs ->
+      aux gamma gammaT term >>= fun x ->
+      let v = (name, get_type x) in
+      from_parse_tree (v :: gamma) gammaT xs >>= fun xs ->
+      Exn.return (Value (v, x) :: xs)
+  | [] -> Exn.return []

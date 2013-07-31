@@ -31,9 +31,17 @@ type value = (Name.t * Name.t * Type.t)
 
 type t = (Type.t * Name.t * value * Type.t, Type.t, value) Ast.t
 
-let rec get_type = function
-  | Ast.Fun (x, ret) -> Type.func (get_type ret) (get_type x)
+type top =
+  | Value of ((Name.t * Type.t) * t)
+
+let rec to_type = function
+  | Ast.Fun (x, ret) -> Type.func (to_type ret) (to_type x)
   | Ast.Ty (_, name) -> name
+
+let rec get_type = function
+  | Ast.Abs ((ty, _, _, _), _) -> ty
+  | Ast.App (ty, _, _) -> ty
+  | Ast.Val (_, _, ty) -> ty
 
 let from_typed_tree tree =
   let rec aux i l = function
@@ -44,10 +52,10 @@ let from_typed_tree tree =
         Exn.return
           (i,
            Ast.Abs
-             ((get_type ty,
+             ((to_type ty,
                Name.global (sprintf "__lambda_%d" n),
-               (v_name', Name.local v_name, get_type v_ty),
-               get_type ty_expr
+               (v_name', Name.local v_name, to_type v_ty),
+               to_type ty_expr
               ),
               t
              )
@@ -55,12 +63,20 @@ let from_typed_tree tree =
     | Ast.App (ty, f, x) ->
         aux i l f >>= fun (i, f) ->
         aux (succ i) l x >>= fun (i, x) ->
-        Exn.return (i, Ast.App (get_type ty, f, x))
+        Exn.return (i, Ast.App (to_type ty, f, x))
     | Ast.Val (name, ty) ->
         List.find (fun x -> Unsafe.(fst x = name)) l >>= fun x ->
-        Exn.return (i, Ast.Val (snd x, Name.local name, get_type ty))
+        Exn.return (i, Ast.Val (snd x, Name.local name, to_type ty))
   in
-  aux 1 [] tree >|= snd
+  let rec top i l = function
+    | TypedTree.Value ((name, ty), t) :: xs ->
+        aux i l t >>= fun (i, x) ->
+        let v = (name, Name.global name) in
+        top i (v :: l) xs >>= fun (i, xs) ->
+        Exn.return (i, Value ((snd v, to_type ty), x) :: xs)
+    | [] -> Exn.return (i, [])
+  in
+  top 1 [] tree >|= snd
 
 let print x =
   let rec get_app_instr i ty x =
@@ -136,4 +152,11 @@ let print x =
     | Ast.App (_, f, x) -> aux f @ aux x
     | Ast.Val _ -> []
   in
-  print_endline (Expr.to_string (aux x))
+  let rec top = function
+    | Value ((name, ty), t) :: xs ->
+        let x = aux t in
+        let xs = top xs in
+        Expr.global ~name ~ty :: x @ xs
+    | [] -> []
+  in
+  print_endline (Expr.to_string (top x))
