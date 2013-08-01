@@ -1,4 +1,5 @@
 PKG monad-exn
 PKG unix
+PKG cmdliner
 S src
 B _build/src

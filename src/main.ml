@@ -19,6 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+open Cmdliner
 open MonadOpen
 
 let compile result =
@@ -33,28 +34,28 @@ let compile result =
 let aux file =
   let gamma = [] in
   let gammaT = Types.gamma in
-  file
+  open_in file
   >>= ParserManager.parse
   >>= TypedTree.from_parse_tree gamma gammaT
   >>= Backend.from_typed_tree
   >|= Backend.to_string
   >>= compile
+  >> Exn.return None
+
+let start file =
+  let catch = function
+    | `Failure s -> Some s
+    | `NotFound -> Some "Unknown identifier"
+    | `SysError err -> Some err
+  in
+  Exn.run catch (aux file)
+
+let cmd =
+  let file = Arg.(required & pos 0 (some non_dir_file) None & info []) in
+  (Term.(pure start $ file), Term.info "cervoise")
 
 let () =
-  let file = ref (failwith (Sys.argv.(0) ^ ": no input file")) in
-  let usage =
-    "System F ω compiler\n"
-    ^ "Usage: " ^ Sys.argv.(0) ^ " file.sfw\n"
-    ^ "Options are:"
-  in
-  Arg.parse
-    []
-    (fun filename -> file := open_in filename)
-    usage;
-  Exn.run
-    (function
-      | `Failure s -> Unsafe.prerr_endline s
-      | `NotFound -> Unsafe.prerr_endline "Unknown identifier"
-      | `SysError err -> Unsafe.prerr_endline err
-    )
-    (try aux !file with _ -> prerr_endline "Something bad happened")
+  match Term.eval cmd with
+    | `Ok None -> exit 0
+    | `Ok (Some x) -> Unsafe.prerr_endline x; exit 1
+    | _ -> exit 1

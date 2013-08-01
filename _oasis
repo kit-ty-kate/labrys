@@ -12,7 +12,8 @@ Executable cervoise
   MainIs: main.ml
   BuildDepends:
     monad-exn,
-    unix
+    unix,
+    cmdliner
   CompiledObject: best
 #  ByteOpt: -w A
 #  NativeOpt: -w A
