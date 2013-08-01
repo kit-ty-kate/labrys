@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 31e35217c2c6ccfb1c7d3e8d60035d8d)
+# DO NOT EDIT (digest: fec252dfaa8007028923bbfd97a9cfe7)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -15,6 +15,8 @@
 "_darcs": not_hygienic
 # Executable cervoise
 <src/main.{native,byte}>: pkg_monad-exn
+<src/main.{native,byte}>: pkg_unix
 <src/*.ml{,i}>: pkg_monad-exn
+<src/*.ml{,i}>: pkg_unix
 # OASIS_STOP
 true: use_menhir

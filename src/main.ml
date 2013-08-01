@@ -21,6 +21,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
+let compile result =
+  let output =
+    Unix.open_process_out "llc - | cc -x assembler - -o a.out"
+  in
+  output_string output result >>= fun () ->
+  match Unix.close_process_out output with
+    | Unix.WEXITED 0 -> Exn.return ()
+    | _ -> prerr_endline "\nThe compilation processes exited abnormally"
+
 let aux file =
   let gamma = [] in
   let gammaT = Types.gamma in
@@ -28,7 +37,8 @@ let aux file =
   >>= ParserManager.parse
   >>= TypedTree.from_parse_tree gamma gammaT
   >>= Backend.from_typed_tree
-  >>= Backend.print
+  >|= Backend.to_string
+  >>= compile
 
 let () =
   let file = ref (failwith (Sys.argv.(0) ^ ": no input file")) in
@@ -47,4 +57,4 @@ let () =
       | `NotFound -> Unsafe.prerr_endline "Unknown identifier"
       | `SysError err -> Unsafe.prerr_endline err
     )
-    (aux !file)
+    (try aux !file with _ -> prerr_endline "Something bad happened")

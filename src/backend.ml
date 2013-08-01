@@ -84,7 +84,7 @@ let from_typed_tree tree =
   in
   top 1 [] tree >|= snd
 
-let print x =
+let to_string x =
   let get_target i =
     Name.local (string_of_int i)
   in
@@ -183,4 +183,4 @@ let print x =
         let name = Name.func "__init" in
         [Expr.define_init ~name (get_instr_init 1 init_list)]
   in
-  print_endline (Expr.to_string (top [] x))
+  Expr.to_string (top [] x)

@@ -24,4 +24,4 @@ open MonadOpen
 type top
 
 val from_typed_tree : TypedTree.top list -> (top list, [> not_found ]) Exn.t
-val print : top list -> (unit, [> sys_error ]) Exn.t
+val to_string : top list -> string

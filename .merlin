@@ -1,3 +1,4 @@
 PKG monad-exn
+PKG unix
 S src
 B _build/src

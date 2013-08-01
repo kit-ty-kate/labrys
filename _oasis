@@ -10,7 +10,9 @@ Executable cervoise
   Path: src
   BuildTools: ocamlbuild
   MainIs: main.ml
-  BuildDepends: monad-exn
+  BuildDepends:
+    monad-exn,
+    unix
   CompiledObject: best
 #  ByteOpt: -w A
 #  NativeOpt: -w A
