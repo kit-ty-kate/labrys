@@ -1,12 +1,12 @@
 OASISFormat: 0.3
-Name: System F ω
+Name: Cervoise
 Version: 0.1
-Synopsis: A System F omega compiler
+Synopsis: A System F omega compiler (LLVM based)
 Authors: Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
 License: MIT
 Plugins: DevFiles (0.3)
 
-Executable sysfomega
+Executable cervoise
   Path: src
   BuildTools: ocamlbuild
   MainIs: main.ml
