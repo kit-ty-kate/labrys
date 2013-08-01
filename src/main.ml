@@ -22,16 +22,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open Cmdliner
 open MonadOpen
 
-let compile result =
-  let output =
-    Unix.open_process_out "llc - | cc -x assembler - -o a.out"
+let sprintf = Printf.sprintf
+
+let compile c o source result =
+  let o = match o with
+    | Some o -> o
+    | None -> if c then Utils.replace_ext source "o" else "a.out"
   in
+  let c = if c then "-c" else "" in
+  let o = Filename.quote o in
+  let command = sprintf "llc - | cc %s -x assembler - -o %s" c o in
+  let output = Unix.open_process_out command in
   output_string output result >>= fun () ->
   match Unix.close_process_out output with
     | Unix.WEXITED 0 -> Exn.return ()
     | _ -> prerr_endline "\nThe compilation processes exited abnormally"
 
-let aux file =
+let aux c o file =
   let gamma = [] in
   let gammaT = Types.gamma in
   open_in file
@@ -39,20 +46,22 @@ let aux file =
   >>= TypedTree.from_parse_tree gamma gammaT
   >>= Backend.from_typed_tree
   >|= Backend.to_string
-  >>= compile
+  >>= compile c o file
   >> Exn.return None
 
-let start file =
+let start c o file =
   let catch = function
     | `Failure s -> Some s
     | `NotFound -> Some "Unknown identifier"
     | `SysError err -> Some err
   in
-  Exn.run catch (aux file)
+  Exn.run catch (aux c o file)
 
 let cmd =
+  let c = Arg.(value & flag & info ["c"]) in
+  let o = Arg.(value & opt (some string) None & info ["o"]) in
   let file = Arg.(required & pos 0 (some non_dir_file) None & info []) in
-  (Term.(pure start $ file), Term.info "cervoise")
+  (Term.(pure start $ c $ o $ file), Term.info "cervoise")
 
 let () =
   match Term.eval cmd with
