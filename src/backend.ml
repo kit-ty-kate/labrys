@@ -60,7 +60,11 @@ let from_typed_tree tree =
            Abs
              ({ abs_ty = to_type abs_ty
               ; abs_name = Name.func (sprintf "__lambda_%d" n)
-              ; param = {name; orig_name = Name.local orig_name; ty = to_type ty}
+              ; param =
+                  { name
+                  ; orig_name = Name.local orig_name
+                  ; ty = to_type ty
+                  }
               ; ty_expr = to_type ty_expr
               },
               t
@@ -72,7 +76,10 @@ let from_typed_tree tree =
         Exn.return (i, App (to_type ty, f, x))
     | TT.Val {TT.name; TT.ty} ->
         List.find (fun x -> Unsafe.(fst x = name)) l >>= fun x ->
-        Exn.return (i, Val {name = snd x; orig_name = Name.local name; ty = to_type ty})
+        let value =
+          {name = snd x; orig_name = Name.local name; ty = to_type ty}
+        in
+        Exn.return (i, Val value)
   in
   let rec top i l = function
     | TT.Value ({TT.name; TT.ty}, t) :: xs ->
@@ -128,10 +135,13 @@ let to_string x =
           let (i, name_x, x) = get_app_instr i ty_x (f, x) in
           let (i, name, res) = normal_case i ~ty_f ~name_f ~ty_x ~name_x in
           (i, name, x @ res)
-      | (Abs ({abs_name = name_f; abs_ty = ty_f; _}, _), Abs ({abs_name = name_x; abs_ty = ty_x; _}, _))
+      | (Abs ({abs_name = name_f; abs_ty = ty_f; _}, _),
+         Abs ({abs_name = name_x; abs_ty = ty_x; _}, _))
       | (Val {name = name_f; ty = ty_f; _}, Val {name = name_x; ty = ty_x; _})
-      | (Abs ({abs_name = name_f; abs_ty = ty_f; _}, _), Val {name = name_x; ty = ty_x; _})
-      | (Val {name = name_f; ty = ty_f; _}, Abs ({abs_name = name_x; abs_ty = ty_x; _}, _)) ->
+      | (Abs ({abs_name = name_f; abs_ty = ty_f; _}, _),
+         Val {name = name_x; ty = ty_x; _})
+      | (Val {name = name_f; ty = ty_f; _},
+         Abs ({abs_name = name_x; abs_ty = ty_x; _}, _)) ->
           normal_case i ~ty_f ~name_f ~ty_x ~name_x
   in
   let get_instr i = function
@@ -149,10 +159,10 @@ let to_string x =
         )
   in
   let rec aux = function
-    | Abs ({abs_name = name; param = {name = param'; orig_name = param; ty = p_ty}; ty_expr = ret; _}, t) ->
-        [ Expr.global ~name:param' ~ty:p_ty
-        ; Expr.define ~ty:ret ~name ~ty_param:p_ty ~param
-            (Expr.store ~ty:p_ty ~value:param ~target:param'
+    | Abs ({abs_name; param = {name; orig_name; ty}; ty_expr = ret; _}, t) ->
+        [ Expr.global ~name ~ty
+        ; Expr.define ~ty:ret ~name:abs_name ~ty_param:ty ~param:orig_name
+            (Expr.store ~ty ~value:orig_name ~target:name
              :: snd (get_instr 1 t)
             )
         ]
