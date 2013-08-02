@@ -27,6 +27,8 @@ type t =
   | Fun of (t * t)
   | Ty of ty
 
+type env = (string * t)
+
 let rec to_string = function
   | Fun (Ty (x, _), ret) -> x ^ " -> " ^ to_string ret
   | Fun (x, ret) -> "(" ^ to_string x ^ ") -> " ^ to_string ret
@@ -40,10 +42,13 @@ let from_parse_tree gamma =
         Exn.return (Fun (x, y))
     | ParseTree.Ty name ->
         List.find (fun x -> Unsafe.(fst x = name)) gamma >>= fun x ->
-        Exn.return (Ty x)
+        Exn.return (snd x)
   in
   aux
 
+let equal = Unsafe.(=)
+
 let gamma =
-  [ ("Int", BackendType.int)
+  let int = "Int" in
+  [ (int, Ty (int, BackendType.int))
   ]

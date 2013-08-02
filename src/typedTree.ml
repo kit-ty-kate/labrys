@@ -50,7 +50,7 @@ let rec aux gamma gammaT = function
       aux gamma gammaT x >>= fun x ->
       let ty_x = get_type x in
       (match get_type f with
-        | Types.Fun (ty, res) when Unsafe.(ty = ty_x) ->
+        | Types.Fun (ty, res) when Types.equal ty ty_x ->
             Exn.return (App (res, f, x))
         | Types.Fun (ty, _) ->
             failwith

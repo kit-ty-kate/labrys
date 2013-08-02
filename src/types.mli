@@ -27,6 +27,9 @@ type t =
   | Fun of (t * t)
   | Ty of ty
 
+type env = (string * t)
+
 val to_string : t -> string
-val from_parse_tree : ty list -> ParseTree.ty -> (t, [> not_found ]) Exn.t
-val gamma : ty list
+val from_parse_tree : env list -> ParseTree.ty -> (t, [> not_found ]) Exn.t
+val equal : t -> t -> bool
+val gamma : env list

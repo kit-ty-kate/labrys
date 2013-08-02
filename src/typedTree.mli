@@ -34,6 +34,6 @@ type top =
 
 val from_parse_tree :
   value list ->
-  Types.ty list ->
+  Types.env list ->
   ParseTree.top list ->
   (top list, [> failure | not_found ]) Exn.t
