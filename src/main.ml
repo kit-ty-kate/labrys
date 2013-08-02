@@ -24,10 +24,12 @@ open MonadOpen
 
 let sprintf = Printf.sprintf
 
-let compile c o source result =
+type args = {c : bool; o : string option; file : string}
+
+let compile {c; o; file} result =
   let o = match o with
     | Some o -> o
-    | None -> if c then Utils.replace_ext source "o" else "a.out"
+    | None -> if c then Utils.replace_ext file "o" else "a.out"
   in
   let c = if c then "-c" else "" in
   let o = Filename.quote o in
@@ -38,15 +40,15 @@ let compile c o source result =
     | Unix.WEXITED 0 -> Exn.return ()
     | _ -> prerr_endline "\nThe compilation processes exited abnormally"
 
-let aux c o file =
+let aux args =
   let gamma = [] in
   let gammaT = Types.gamma in
-  open_in file
+  open_in args.file
   >>= ParserManager.parse
   >>= TypedTree.from_parse_tree gamma gammaT
   >>= Backend.from_typed_tree
   >|= Backend.to_string
-  >>= compile c o file
+  >>= compile args
   >> Exn.return None
 
 let start c o file =
@@ -55,7 +57,7 @@ let start c o file =
     | `NotFound -> Some "Unknown identifier"
     | `SysError err -> Some err
   in
-  Exn.run catch (aux c o file)
+  Exn.run catch (aux {c; o; file})
 
 let cmd =
   let c = Arg.(value & flag & info ["c"]) in
