@@ -24,9 +24,9 @@ open MonadOpen
 
 let sprintf = Printf.sprintf
 
-type args = {c : bool; o : string option; file : string}
+type args = {print : bool; c : bool; o : string option; file : string}
 
-let compile {c; o; file} result =
+let compile {c; o; file; _} result =
   let o = match o with
     | Some o -> o
     | None -> if c then Utils.replace_ext file "o" else "a.out"
@@ -40,6 +40,10 @@ let compile {c; o; file} result =
     | Unix.WEXITED 0 -> Exn.return ()
     | _ -> prerr_endline "\nThe compilation processes exited abnormally"
 
+let print_or_compile = function
+  | {print = true; _} -> print_endline
+  | {print = false; _} as args -> compile args
+
 let aux args =
   let gamma = [] in
   let gammaT = Types.gamma in
@@ -48,22 +52,23 @@ let aux args =
   >>= TypedTree.from_parse_tree gamma gammaT
   >>= Backend.from_typed_tree
   >|= Backend.to_string
-  >>= compile args
+  >>= print_or_compile args
   >> Exn.return None
 
-let start c o file =
+let start print c o file =
   let catch = function
     | `Failure s -> Some s
     | `NotFound -> Some "Unknown identifier"
     | `SysError err -> Some err
   in
-  Exn.run catch (aux {c; o; file})
+  Exn.run catch (aux {print; c; o; file})
 
 let cmd =
+  let print = Arg.(value & flag & info ["print"]) in
   let c = Arg.(value & flag & info ["c"]) in
   let o = Arg.(value & opt (some string) None & info ["o"]) in
   let file = Arg.(required & pos 0 (some non_dir_file) None & info []) in
-  (Term.(pure start $ c $ o $ file), Term.info "cervoise")
+  (Term.(pure start $ print $ c $ o $ file), Term.info "cervoise")
 
 let () =
   match Term.eval cmd with
