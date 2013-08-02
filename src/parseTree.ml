@@ -34,3 +34,4 @@ type t =
 
 type top =
   | Value of (string * t)
+  | Type of (string * ty)

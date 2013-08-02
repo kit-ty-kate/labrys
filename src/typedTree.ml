@@ -78,4 +78,7 @@ let rec from_parse_tree gamma gammaT = function
       let v = {name; ty = get_type x} in
       from_parse_tree (v :: gamma) gammaT xs >>= fun xs ->
       Exn.return (Value (v, x) :: xs)
+  | ParseTree.Type (name, ty) :: xs ->
+      Types.from_parse_tree gammaT ty >>= fun ty ->
+      from_parse_tree gamma ((name, ty) :: gammaT) xs
   | [] -> Exn.return []

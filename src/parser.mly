@@ -42,6 +42,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 main:
 | Let name = TermName Equal term = term main = main
    { ParseTree.Value (name, term) :: main }
+| Let name = TypeName Equal ty = typeExpr main = main
+   { ParseTree.Type (name, ty) :: main }
 | EOF { [] }
 
 term:
