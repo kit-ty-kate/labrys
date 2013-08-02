@@ -1,0 +1,7 @@
+let Id = Int -> Int
+
+let id = λx:Id.x
+
+let val = id (λx:Int.x)
+
+let idprime = id
