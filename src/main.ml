@@ -50,9 +50,8 @@ let aux args =
   open_in args.file
   >>= ParserManager.parse
   >>= TypedTree.from_parse_tree gamma gammaT
-  >>= Backend.from_typed_tree
-  >|= Backend.to_string
-  >>= print_or_compile args
+  >>= Backend.print
+(*  >>= print_or_compile args*)
   >> Exn.return None
 
 let start print c o file =

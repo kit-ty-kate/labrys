@@ -21,7 +21,4 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type top
-
-val from_typed_tree : TypedTree.top list -> (top list, [> not_found ]) Exn.t
-val to_string : top list -> string
+val print : TypedTree.top list -> (unit, [> not_found ]) Exn.t

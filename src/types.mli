@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type ty = (string * BackendType.t)
+type ty = (string * Llvm.lltype)
 
 type t =
   | Fun of (t * t)
@@ -29,7 +29,11 @@ type t =
 
 type env = (string * t)
 
+val context : Llvm.llcontext
+
 val to_string : t -> string
 val from_parse_tree : env list -> ParseTree.ty -> (t, [> not_found ]) Exn.t
 val equal : t -> t -> bool
 val gamma : env list
+val env : Llvm.lltype
+val to_llvm : t -> Llvm.lltype
