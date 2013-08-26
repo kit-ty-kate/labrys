@@ -57,8 +57,9 @@ let gamma =
 
 let env = LLVM.pointer_type (LLVM.pointer_type (LLVM.i8_type context))
 
-let rec to_llvm = function
+let rec to_llvm ?(malloc=false) = function
   | Fun (x, ret) ->
       let ty = LLVM.function_type (to_llvm ret) [| to_llvm x; env |] in
-      LLVM.struct_type context [| LLVM.pointer_type ty; env |]
+      let st = LLVM.struct_type context [| LLVM.pointer_type ty; env |] in
+      if malloc then st else LLVM.pointer_type st
   | Ty (_, ty) -> LLVM.pointer_type ty

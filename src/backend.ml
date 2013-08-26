@@ -25,39 +25,54 @@ open MonadOpen
 
 let m = LLVM.create_module Types.context "Main"
 
-let find_in_gamma name = List.find (fun x -> Unsafe.(fst x = name))
+let find_in_gamma name l =
+  let c = ref 0 in
+  List.find (fun x -> incr c; Unsafe.(fst x = name)) l >|= fun res ->
+  (res, !c)
+
+let i64 = LLVM.const_int (LLVM.i64_type Types.context)
 
 let rec lambda gammaParam gammaEnv gammaGlob builder = function
   | TT.Abs ({TT.abs_ty; TT.param; TT.ty_expr}, t) ->
       let args = [| Types.to_llvm param.TT.ty; Types.env |] in
       let ty = LLVM.function_type (Types.to_llvm ty_expr) args in
       let f = LLVM.define_function "__lambda" ty m in
+      let access =
+        LLVM.build_malloc
+          (Types.to_llvm ~malloc:true abs_ty)
+          "access_fun"
+          builder
+      in
+      (* store f and env *)
       let builder = LLVM.builder_at_end Types.context (LLVM.entry_block f) in
       let gammaP = [(param.TT.name, LLVM.param f 0)] in
-      let f = LLVM.build_gep f [||] "addr_f" builder in
-      lambda gammaP (gammaParam @ gammaEnv) gammaGlob builder t >>= fun v ->
+      let gammaE = (param.TT.name, f) in
+      lambda gammaP (gammaE :: gammaEnv) gammaGlob builder t >>= fun v ->
       ignore (LLVM.build_ret v builder);
-      Exn.return (LLVM.const_struct Types.context [| f; LLVM.const_null Types.env |])
+      Exn.return access
   | TT.App (ty, f, x) ->
-      lambda gammaParam gammaEnv gammaGlob builder f >>= fun f ->
-      let env = LLVM.build_extractvalue f 1 "env" builder in
-      let f = LLVM.build_extractvalue f 0 "f" builder in
+      lambda gammaParam gammaEnv gammaGlob builder f >>= fun boxed_f ->
+      let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
+      let f = LLVM.build_extractvalue boxed_f 0 "f" builder in
+      let env = LLVM.build_extractvalue boxed_f 1 "env" builder in
       lambda gammaParam gammaEnv gammaGlob builder x >>= fun x ->
       Exn.return (LLVM.build_call f [| x; env |] "tmp" builder)
   | TT.Val {TT.name; TT.ty} ->
-      let c = ref 0 in
-      let find gamma = incr c; find_in_gamma name gamma >|= snd in
-      let execEnv value =
-        let param = LLVM.param value 0 in
-        LLVM.build_extractvalue param 0 "from_env" builder
+      let find gamma =
+        find_in_gamma name gamma >|= fun (res, c) -> (snd res, c)
       in
-      let execGlob value =
-        LLVM.const_struct Types.context [| value; LLVM.const_null Types.env |]
+      let execEnv (f, c) =
+        let param = LLVM.param f 1 in
+        LLVM.build_load (LLVM.build_gep param [| i64 c |] "from_env" builder) "loading_from_env" builder
       in
-      let res = find gammaParam in
-      c := 0;
-      let res = Exn.catch res (fun `NotFound -> find gammaEnv >|= execEnv) in
-      c := 0;
+      let execGlob (value, _) =
+        LLVM.build_load value "glob_extract" builder
+      in
+      let cast value =
+        LLVM.build_bitcast value (Types.to_llvm ty) "cast" builder
+      in
+      let res = find gammaParam >|= fst in
+      let res = Exn.catch res (fun `NotFound -> find gammaEnv >|= execEnv >|= cast) in
       let res = Exn.catch res (fun `NotFound -> find gammaGlob >|= execGlob) in
       res
 
@@ -78,6 +93,7 @@ let print =
         let f = LLVM.define_function "__init" ty m in
         let builder = LLVM.builder_at_end Types.context (LLVM.entry_block f) in
         init [] builder (List.rev init_list) >>= fun () ->
+        ignore (LLVM.build_ret_void builder);
         LLVM.dump_module m;
         Exn.return ()
   in

@@ -36,4 +36,4 @@ val from_parse_tree : env list -> ParseTree.ty -> (t, [> not_found ]) Exn.t
 val equal : t -> t -> bool
 val gamma : env list
 val env : Llvm.lltype
-val to_llvm : t -> Llvm.lltype
+val to_llvm : ?malloc:bool -> t -> Llvm.lltype
