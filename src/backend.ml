@@ -63,7 +63,8 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
       in
       let execEnv (f, c) =
         let param = LLVM.param f 1 in
-        LLVM.build_load (LLVM.build_gep param [| i64 c |] "from_env" builder) "loading_from_env" builder
+        let from_env = LLVM.build_gep param [| i64 c |] "from_env" builder in
+        LLVM.build_load from_env "loading_from_env" builder
       in
       let execGlob (value, _) =
         LLVM.build_load value "glob_extract" builder
@@ -72,7 +73,9 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
         LLVM.build_bitcast value (Types.to_llvm ty) "cast" builder
       in
       let res = find gammaParam >|= fst in
-      let res = Exn.catch res (fun `NotFound -> find gammaEnv >|= execEnv >|= cast) in
+      let res =
+        Exn.catch res (fun `NotFound -> find gammaEnv >|= execEnv >|= cast)
+      in
       let res = Exn.catch res (fun `NotFound -> find gammaGlob >|= execGlob) in
       res
 
