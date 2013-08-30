@@ -35,13 +35,13 @@ let compile {c; o; file; _} result =
   let o = Filename.quote o in
   let command = sprintf "llc - | cc %s -x assembler - -o %s" c o in
   let output = Unix.open_process_out command in
-  output_string output result >>= fun () ->
+  Backend.output_bitcode output result >>= fun () ->
   match Unix.close_process_out output with
     | Unix.WEXITED 0 -> Exn.return ()
     | _ -> prerr_endline "\nThe compilation processes exited abnormally"
 
 let print_or_compile = function
-  | {print = true; _} -> print_endline
+  | {print = true; _} -> Backend.print
   | {print = false; _} as args -> compile args
 
 let aux args =
@@ -50,8 +50,8 @@ let aux args =
   open_in args.file
   >>= ParserManager.parse
   >>= TypedTree.from_parse_tree gamma gammaT
-  >>= Backend.print
-(*  >>= print_or_compile args*)
+  >>= Backend.make
+  >>= print_or_compile args
   >> Exn.return None
 
 let start print c o file =

@@ -21,4 +21,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-val print : TypedTree.top list -> (unit, [> not_found ]) Exn.t
+val make : TypedTree.top list -> (Llvm.llmodule, [> not_found ]) Exn.t
+val print : Llvm.llmodule -> (unit, [> sys_error ]) Exn.t
+val output_bitcode : out_channel -> Llvm.llmodule -> (unit, [> sys_error ]) Exn.t

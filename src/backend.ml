@@ -86,7 +86,7 @@ let rec init gammaGlob builder = function
       init ((name, g) :: gammaGlob) builder xs
   | [] -> Exn.return ()
 
-let print =
+let make =
   let rec top init_list = function
     | TT.Value ({TT.name; TT.ty}, t) :: xs ->
         let g = LLVM.define_global name (LLVM.undef (Types.to_llvm ty)) m in
@@ -97,7 +97,14 @@ let print =
         let builder = LLVM.builder_at_end Types.context (LLVM.entry_block f) in
         init [] builder (List.rev init_list) >>= fun () ->
         ignore (LLVM.build_ret_void builder);
-        LLVM.dump_module m;
-        Exn.return ()
+        Exn.return m
   in
   top []
+
+let print =
+  Exn.wrap1 (fun _ -> `SysError "dump_module failure") LLVM.dump_module
+let output_bitcode output m =
+  if Llvm_bitwriter.output_bitcode output m then
+    Exn.return ()
+  else
+    Exn.fail (`SysError "output_bitcode failure")

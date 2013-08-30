@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: b978102c9894cbda0ae8761c9e3fcba4)
+# DO NOT EDIT (digest: a2d591e8d390d3d6e2d445cdad748040)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -17,10 +17,12 @@
 <src/main.{native,byte}>: pkg_monad-exn
 <src/main.{native,byte}>: pkg_unix
 <src/main.{native,byte}>: pkg_cmdliner
+<src/main.{native,byte}>: pkg_llvm.bitwriter
 <src/main.{native,byte}>: pkg_llvm
 <src/*.ml{,i}>: pkg_monad-exn
 <src/*.ml{,i}>: pkg_unix
 <src/*.ml{,i}>: pkg_cmdliner
+<src/*.ml{,i}>: pkg_llvm.bitwriter
 <src/*.ml{,i}>: pkg_llvm
 # OASIS_STOP
 true: use_menhir

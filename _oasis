@@ -14,6 +14,7 @@ Executable cervoise
     monad-exn,
     unix,
     cmdliner,
+    llvm.bitwriter,
     llvm
   CompiledObject: best
 #  ByteOpt: -w A
