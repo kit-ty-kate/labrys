@@ -13,9 +13,7 @@ Executable cervoise
   BuildDepends:
     monad-exn,
     unix,
-    cmdliner,
-    llvm.bitwriter,
-    llvm
+    cmdliner
   CompiledObject: best
 #  ByteOpt: -w A
 #  NativeOpt: -w A

@@ -21,15 +21,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type ty = (string * Llvm.lltype)
+type ty = (string * LLVM.lltype)
 
 type t =
   | Fun of (t * t)
   | Ty of ty
 
 type env = (string * t)
-
-let context = LLVM.create_context ()
 
 let rec to_string = function
   | Fun (Ty (x, _), ret) -> x ^ " -> " ^ to_string ret
@@ -52,14 +50,14 @@ let equal = Unsafe.(=)
 
 let gamma =
   let int = "Int" in
-  [ (int, Ty (int, LLVM.i32_type context))
+  [ (int, Ty (int, LLVM.i32_type))
   ]
 
-let env = LLVM.pointer_type (LLVM.pointer_type (LLVM.i8_type context))
+let env = LLVM.pointer_type (LLVM.pointer_type LLVM.i8_type)
 
 let rec to_llvm ?(malloc=false) = function
   | Fun (x, ret) ->
-      let ty = LLVM.function_type (to_llvm ret) [| to_llvm x; env |] in
-      let st = LLVM.struct_type context [| LLVM.pointer_type ty; env |] in
+      let ty = LLVM.function_type (to_llvm ret) [to_llvm x; env] in
+      let st = LLVM.struct_type [LLVM.pointer_type ty; env] in
       if malloc then st else LLVM.pointer_type st
   | Ty (_, ty) -> LLVM.pointer_type ty
