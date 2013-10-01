@@ -76,7 +76,7 @@ let define_function name ty m =
     p "define %s %s(%s) {" ret name args :: !expr @ ["}"]
   ) in
   append_m m [func];
-  (Value (ty, name), builder)
+  (Value (pointer_type ty, name), builder)
 
 let build_ret value b =
   append_b b [p "  ret %s" (string_of_value value)]
@@ -105,10 +105,14 @@ let build_extractvalue (Value (ty, value)) i name b =
   in
   Value (ty, name)
 
+let build_insertvalue dst src n b =
+  let cast = string_of_value in
+  append_b b [p "  insertvalue %s, %s, %d" (cast dst) (cast src) n]
+
 let build_call f args name b =
   let name = local_name name in
   let ty = match ty_from_value f with
-    | Fun (ret, _) -> ret
+    | Fun (ret, _)
     | Pointer (Fun (ret, _)) -> ret
     | ty -> fail "call" ty
   in
@@ -141,6 +145,7 @@ let undef ty = Value (ty, "undef")
 
 let param (Value (ty, _)) i =
   let ty = match ty with
+    | Pointer (Fun (_, args))
     | Fun (_, args) -> List.nth args i
     | ty -> fail "param" ty
   in

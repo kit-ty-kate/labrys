@@ -43,7 +43,9 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
           "access_fun"
           builder
       in
-      (* store f and env *)
+      let access_loaded = LLVM.build_load access "access_loaded" builder in
+      LLVM.build_insertvalue access_loaded f 0 builder;
+      (* store env *)
       let builder = builder' in
       let gammaP = [(param.TT.name, LLVM.param f 0)] in
       let gammaE = (param.TT.name, f) in
