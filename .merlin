@@ -1,6 +1,4 @@
 PKG monad-exn
-PKG llvm
-PKG llvm.bitwriter
 PKG cmdliner
 S src
 B _build/src
