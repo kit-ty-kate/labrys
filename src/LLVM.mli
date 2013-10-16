@@ -34,5 +34,6 @@ val i32_type : lltype
 val i8_type : lltype
 val struct_type : lltype list -> lltype
 val pointer_type : lltype -> lltype
+val array_type : lltype -> int -> lltype
 
 val to_string : llmodule -> string

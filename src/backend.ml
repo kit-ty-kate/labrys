@@ -31,6 +31,7 @@ let find_in_gamma name l =
   (res, !c)
 
 let i64 = LLVM.const_int LLVM.i64_type
+let star_type = LLVM.pointer_type LLVM.i8_type
 
 let rec lambda gammaParam gammaEnv gammaGlob builder = function
   | TT.Abs ({TT.abs_ty; TT.param; TT.ty_expr}, t) ->
@@ -45,7 +46,24 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
       in
       let access_loaded = LLVM.build_load access "access_loaded" builder in
       LLVM.build_insertvalue access_loaded f 0 builder;
-      (* store env *)
+      let env_array =
+        LLVM.build_malloc
+          (LLVM.array_type star_type (List.length gammaEnv))
+          "env_array"
+          builder
+      in
+      let access_env_array =
+        LLVM.build_load env_array "access_env_array" builder
+      in
+      let fill_env i x =
+        let x = LLVM.build_bitcast x star_type "cast_x" builder in
+        LLVM.build_insertvalue access_env_array x i builder
+      in
+      List.iteri (fun i (_, x) -> fill_env i x) gammaEnv;
+      let env_array =
+        LLVM.build_gep env_array [i64 0; i64 0] "env_array_cast" builder
+      in
+      LLVM.build_insertvalue access_loaded env_array 1 builder;
       let builder = builder' in
       let gammaP = [(param.TT.name, LLVM.param f 0)] in
       let gammaE = (param.TT.name, f) in

@@ -4,6 +4,7 @@ type lltype =
   | Fun of (lltype * lltype list)
   | Pointer of lltype
   | Struct of lltype list
+  | Array of (lltype * int)
 type llvalue = Value of lltype * string
 type llmodule = Module of string list Lazy.t list ref
 type llbuilder = Builder of string list ref
@@ -34,6 +35,7 @@ let rec string_of_ty = function
   | Fun (ret, args) -> p "%s (%s)" (string_of_ty ret) (string_of_ty_list args)
   | Pointer x -> p "%s*" (string_of_ty x)
   | Struct l -> p "{ %s }" (string_of_ty_list l)
+  | Array (t, i) -> p "[%d x %s]" i (string_of_ty t)
 
 and string_of_ty_list l = concat (List.map string_of_ty l)
 
@@ -58,6 +60,8 @@ let i8_type = Int "i8"
 let struct_type l = Struct l
 
 let pointer_type x = Pointer x
+
+let array_type t i = Array (t, i)
 
 let define_global name (Value (ty, value)) m =
   let name = global_name name in
@@ -121,9 +125,13 @@ let build_call f args name b =
 
 let build_gep value idxs name b =
   let name = local_name name in
-  let ty = ty_from_value value in
   append_b b [p "  %s = getelementptr %s" name (string_of_value_list (value :: idxs))];
-  Value (ty, name)
+  let ty = ty_from_value value in
+  let aux = function (* HACK !!! *)
+    | [_; _], Pointer (Array (ty, _)) -> Pointer ty
+    | _, ty -> ty
+  in
+  Value (aux (idxs, ty), name)
 
 let build_bitcast value ty name b =
   let name = local_name name in
