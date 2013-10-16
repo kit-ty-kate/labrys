@@ -190,7 +190,14 @@ let param (Value (ty, _)) i =
   Value (ty, "%" ^ (string_of_int i))
 
 let to_string (Module l) =
-  let declare_malloc = ["declare noalias i8* @malloc(i32)"] in
+  let declare_malloc =
+    [ "declare noalias i8* @malloc(i32)"
+    ; "define void @main() {"
+    ; "  call void @__init()"
+    ; "  ret void"
+    ; "}"
+    ]
+  in
   String.concat "\n" (List.concat (declare_malloc :: List.map Lazy.force !l))
 
 (*
