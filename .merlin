@@ -1,4 +1,5 @@
 PKG monad-exn
 PKG cmdliner
+PKG batteries
 S src
 B _build/src

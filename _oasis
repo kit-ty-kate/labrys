@@ -13,7 +13,8 @@ Executable cervoise
   BuildDepends:
     monad-exn,
     unix,
-    cmdliner
+    cmdliner,
+    batteries
   CompiledObject: best
 #  ByteOpt: -w A
 #  NativeOpt: -w A

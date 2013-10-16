@@ -1,3 +1,5 @@
+open Batteries
+
 type lltype =
   | Void
   | Int of string
@@ -15,13 +17,20 @@ let fail name ty = raise (TypeMissmatch (name, ty))
 
 let p = Printf.sprintf
 
-let global_name =
-  let c = ref 0 in
-  (fun x -> incr c; "@" ^ x ^ string_of_int !c)
+let naming symbol =
+  let tbl = Hashtbl.create 15 in
+  (fun x ->
+     try
+       let c = Hashtbl.find tbl x in
+       symbol ^ x ^ string_of_int (Ref.post_incr c)
+     with
+     | Not_found ->
+         Hashtbl.add tbl x (ref 0);
+         symbol ^ x
+  )
 
-let local_name =
-  let c = ref 0 in
-  (fun x -> incr c; "%" ^ x ^ string_of_int !c)
+let global_name = naming "@"
+let local_name = naming "%"
 
 let concat = String.concat ", "
 
