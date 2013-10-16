@@ -41,11 +41,10 @@ let p = Printf.sprintf
 let naming symbol =
   let tbl = Hashtbl.create 15 in
   (fun x ->
-     try
-       let c = Hashtbl.find tbl x in
-       symbol ^ x ^ string_of_int (Ref.post_incr c)
-     with
-     | Not_found ->
+     match Hashtbl.Exceptionless.find tbl x with
+     | Some c ->
+         symbol ^ x ^ string_of_int (Ref.post_incr c)
+     | None ->
          Hashtbl.add tbl x (ref 0);
          symbol ^ x
   )
