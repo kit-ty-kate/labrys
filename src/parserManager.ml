@@ -32,5 +32,5 @@ let parse file =
   try
     Exn.return (Parser.main Lexer.main filebuf)
   with
-    | Lexer.Error -> failwith ("Lexing error at: " ^ get_offset ())
-    | Parser.Error -> failwith ("Parsing error at: " ^ get_offset ())
+  | Lexer.Error -> failwith ("Lexing error at: " ^ get_offset ())
+  | Parser.Error -> failwith ("Parsing error at: " ^ get_offset ())

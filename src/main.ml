@@ -37,8 +37,8 @@ let compile {c; o; file; _} result =
   let output = Unix.open_process_out command in
   output_string output result >>= fun () ->
   match Unix.close_process_out output with
-    | Unix.WEXITED 0 -> Exn.return ()
-    | _ -> prerr_endline "\nThe compilation processes exited abnormally"
+  | Unix.WEXITED 0 -> Exn.return ()
+  | _ -> prerr_endline "\nThe compilation processes exited abnormally"
 
 let print_or_compile = function
   | {print = true; _} -> print_endline
@@ -72,6 +72,6 @@ let cmd =
 
 let () =
   match Term.eval cmd with
-    | `Ok None -> exit 0
-    | `Ok (Some x) -> Unsafe.prerr_endline x; exit 1
-    | _ -> exit 1
+  | `Ok None -> exit 0
+  | `Ok (Some x) -> Unsafe.prerr_endline x; exit 1
+  | _ -> exit 1

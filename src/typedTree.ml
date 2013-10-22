@@ -49,25 +49,25 @@ let rec aux gamma gammaT = function
       aux gamma gammaT f >>= fun f ->
       aux gamma gammaT x >>= fun x ->
       let ty_x = get_type x in
-      (match get_type f with
-        | Types.Fun (ty, res) when Types.equal ty ty_x ->
-            Exn.return (App (res, f, x))
-        | Types.Fun (ty, _) ->
-            failwith
-              ("Error: This expression has type "
-               ^ Types.to_string ty_x
-               ^ " but an expression was expected of type "
-               ^ Types.to_string ty
-              )
-        | Types.Ty _ as ty ->
-            failwith
-              ("Typechecker: Can't apply to a non-function type ("
-               ^ Types.to_string ty
-               ^ " to "
-               ^ Types.to_string ty_x
-               ^ ")"
-              )
-      )
+      begin match get_type f with
+      | Types.Fun (ty, res) when Types.equal ty ty_x ->
+          Exn.return (App (res, f, x))
+      | Types.Fun (ty, _) ->
+          failwith
+            ("Error: This expression has type "
+             ^ Types.to_string ty_x
+             ^ " but an expression was expected of type "
+             ^ Types.to_string ty
+            )
+      | Types.Ty _ as ty ->
+          failwith
+            ("Typechecker: Can't apply to a non-function type ("
+             ^ Types.to_string ty
+             ^ " to "
+             ^ Types.to_string ty_x
+             ^ ")"
+            )
+      end
   | ParseTree.Val name ->
       List.find (fun x -> Unsafe.(name = x.name)) gamma >>= fun x ->
       Exn.return (Val x)
