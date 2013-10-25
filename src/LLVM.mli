@@ -58,3 +58,8 @@ val pointer_type : lltype -> lltype
 val array_type : lltype -> int -> lltype
 
 val to_string : llmodule -> string
+
+module Bind : sig
+  val printInt : llvalue
+  val zero : llvalue
+end

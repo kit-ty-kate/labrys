@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type value = {name : string; ty : Types.t}
+type value = Gamma.value = {name : string; ty : Types.t}
 type abs = {abs_ty : Types.t; param : value; ty_expr : Types.t}
 
 type t =

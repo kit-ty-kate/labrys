@@ -30,8 +30,8 @@ rule main = parse
   | '.' { Parser.Dot }
   | ':' { Parser.DoubleDot }
   | "->" { Parser.Arrow }
-  | ['a'-'z']+ as name { Parser.TermName name }
-  | ['A'-'Z'] ['a'-'z']* as name { Parser.TypeName name }
+  | (['a'-'z'] ['a'-'z' 'A'-'Z']*) as name { Parser.TermName name }
+  | (['A'-'Z'] ['a'-'z']*) as name { Parser.TypeName name }
   | '(' { Parser.LParent }
   | ')' { Parser.RParent }
   | eof { Parser.EOF }

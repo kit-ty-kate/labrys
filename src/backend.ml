@@ -114,7 +114,7 @@ let make =
     | [] ->
         let ty = LLVM.function_type LLVM.void_type [] in
         let (f, builder) = LLVM.define_function "__init" ty m in
-        init [] builder (List.rev init_list) >>= fun () ->
+        init Gamma.values_back builder (List.rev init_list) >>= fun () ->
         LLVM.build_ret_void builder;
         Exn.return m
   in

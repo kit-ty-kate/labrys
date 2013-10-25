@@ -32,6 +32,5 @@ type env = (string * t)
 val to_string : t -> string
 val from_parse_tree : env list -> ParseTree.ty -> (t, [> not_found ]) Exn.t
 val equal : t -> t -> bool
-val gamma : env list
 val env : LLVM.lltype
 val to_llvm : ?malloc:bool -> t -> LLVM.lltype

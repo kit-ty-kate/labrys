@@ -48,11 +48,6 @@ let from_parse_tree gamma =
 
 let equal = Unsafe.(=)
 
-let gamma =
-  let int = "Int" in
-  [ (int, Ty (int, LLVM.i32_type))
-  ]
-
 let env = LLVM.pointer_type (LLVM.pointer_type LLVM.i8_type)
 
 let rec to_llvm ?(malloc=false) = function
