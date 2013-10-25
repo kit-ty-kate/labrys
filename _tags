@@ -23,4 +23,6 @@
 <src/*.ml{,i}>: pkg_cmdliner
 <src/*.ml{,i}>: pkg_batteries
 # OASIS_STOP
+"examples": -traverse
+"examples": not_hygienic
 true: use_menhir
