@@ -21,18 +21,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 { exception Error }
 
+let alpha = ['a'-'z' 'A'-'Z']
+let term_name = (['a'-'z'] alpha*)
+let type_name = (['A'-'Z'] alpha*)
+
 rule main = parse
   | [' ' '\t'] { main lexbuf }
   | '\n' { Lexing.new_line lexbuf; main lexbuf }
   | '=' { Parser.Equal }
-  | "let" { Parser.Let }
-  | "λ" { Parser.Lambda }
   | '.' { Parser.Dot }
   | ':' { Parser.DoubleDot }
-  | "->" { Parser.Arrow }
-  | (['a'-'z'] ['a'-'z' 'A'-'Z']*) as name { Parser.TermName name }
-  | (['A'-'Z'] ['a'-'z']*) as name { Parser.TypeName name }
   | '(' { Parser.LParent }
   | ')' { Parser.RParent }
+  | "λ" { Parser.Lambda }
+  | "->" { Parser.Arrow }
+  | "let" { Parser.Let }
+  | term_name as name { Parser.TermName name }
+  | type_name as name { Parser.TypeName name }
   | eof { Parser.EOF }
   | _ { raise Error }
