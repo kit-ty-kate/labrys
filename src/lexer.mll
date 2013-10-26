@@ -36,7 +36,22 @@ rule main = parse
   | "λ" { Parser.Lambda }
   | "->" { Parser.Arrow }
   | "let" { Parser.Let }
+  | "begin" { let buffer = Buffer.create 4096 in
+              get_binding buffer lexbuf;
+              Parser.Binding (Buffer.contents buffer)
+            }
   | term_name as name { Parser.TermName name }
   | type_name as name { Parser.TypeName name }
   | eof { Parser.EOF }
   | _ { raise Error }
+
+and get_binding buffer = parse
+  | '\n' as lxm { Buffer.add_char buffer lxm;
+                  Lexing.new_line lexbuf;
+                  get_binding buffer lexbuf
+                }
+  | "end" { () }
+  | eof { raise Error }
+  | _ as lxm { Buffer.add_char buffer lxm;
+               get_binding buffer lexbuf
+             }

@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token DoubleDot
 %token <string> TermName
 %token <string> TypeName
+%token <string> Binding
 %token LParent RParent
 %token EOF
 
@@ -44,6 +45,8 @@ main:
    { ParseTree.Value (name, term) :: main }
 | Let name = TypeName Equal ty = typeExpr main = main
    { ParseTree.Type (name, ty) :: main }
+| Let name = TermName DoubleDot ty = typeExpr Equal binding = Binding main = main
+   { ParseTree.Binding (name, ty, binding) :: main }
 | EOF { [] }
 
 term:

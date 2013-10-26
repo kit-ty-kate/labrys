@@ -107,15 +107,19 @@ let rec init gammaGlob builder = function
   | [] -> Exn.return ()
 
 let make =
-  let rec top init_list = function
+  let rec top init_list gamma = function
     | TT.Value ({TT.name; TT.ty}, t) :: xs ->
         let g = LLVM.define_global name (LLVM.undef (Types.to_llvm ty)) m in
-        top ((name, g, t) :: init_list) xs
+        top ((name, g, t) :: init_list) gamma xs
+    | TT.Binding ({TT.name; TT.ty}, binding) :: xs ->
+        let ty = LLVM.pointer_type (Types.to_llvm ty) in
+        let v = LLVM.bind ~name ~ty binding m in
+        top init_list ((name, v) :: gamma) xs
     | [] ->
         let ty = LLVM.function_type LLVM.void_type [] in
         let (f, builder) = LLVM.define_function "__init" ty m in
-        init Gamma.values_back builder (List.rev init_list) >>= fun () ->
+        init gamma builder (List.rev init_list) >>= fun () ->
         LLVM.build_ret_void builder;
         Exn.return m
   in
-  top []
+  top [] []

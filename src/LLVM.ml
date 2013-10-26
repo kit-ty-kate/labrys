@@ -188,6 +188,11 @@ let param (Value (ty, _)) i =
   in
   Value (ty, "%" ^ (string_of_int i))
 
+let bind ~name ~ty binding m =
+  let name = global_name name in
+  append_m m [lazy [binding]];
+  Value (ty, name)
+
 let to_string (Module l) =
   let declare_malloc =
     [ "declare noalias i8* @malloc(i32)"
@@ -195,26 +200,9 @@ let to_string (Module l) =
     ; "  call void @__init()"
     ; "  ret void"
     ; "}"
-    ; "@msg = internal constant [3 x i8] c\"%d\\00\""
-    ; "declare i32 @printf(i8*, ...)"
-    ; "define i32* @__printInt(i32* %i, i8**) {"
-    ; "  %access = load i32* %i"
-    ; "  %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0), i32 %access)"
-    ; "  %r = inttoptr i32 %r1 to i32*"
-    ; "  ret i32* %r"
-    ; "}"
-    ; "@_printInt = global {i32* (i32*, i8**)*, i8**} {i32* (i32*, i8**)* @__printInt, i8** null}"
-    ; "@printInt = global {i32* (i32*, i8**)*, i8**}* getelementptr({i32* (i32*, i8**)*, i8**}* @_printInt)"
-    ; "@_zero = global i32 0"
-    ; "@zero = global i32* getelementptr(i32* @_zero)"
     ]
   in
   String.concat "\n" (List.concat (declare_malloc :: List.map Lazy.force !l))
-
-module Bind = struct
-  let printInt = Value (Pointer (Pointer (Struct [Pointer (Fun (Pointer (Int "i32"), [Pointer (Int "i32"); Pointer (Pointer (Int "i8"))])); Pointer (Pointer (Int "i8"))])), "@printInt")
-  let zero = Value (Pointer (Pointer (Int "i32")), "@zero")
-end
 
 (*
 TODO: sizeof malloc

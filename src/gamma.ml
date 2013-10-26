@@ -27,15 +27,7 @@ let int =
   let int = "Int" in
   (int, Types.Ty (int, LLVM.i32_type))
 
-let values =
-  [ {name = "printInt"; ty = Types.(Fun (snd int, snd int))}
-  ; {name = "zero"; ty = snd int}
-  ]
-
-let values_back =
-  [ ("printInt", LLVM.Bind.printInt)
-  ; ("zero", LLVM.Bind.zero)
-  ]
+let values = []
 
 let types =
   [ int

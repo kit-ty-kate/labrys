@@ -31,6 +31,7 @@ type t =
 
 type top =
   | Value of (value * t)
+  | Binding of (value * string)
 
 val from_parse_tree :
   value list ->

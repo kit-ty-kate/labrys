@@ -31,6 +31,7 @@ type t =
 
 type top =
   | Value of (value * t)
+  | Binding of (value * string)
 
 let get_type = function
   | Abs ({abs_ty; _}, _) -> abs_ty
@@ -81,4 +82,9 @@ let rec from_parse_tree gamma gammaT = function
   | ParseTree.Type (name, ty) :: xs ->
       Types.from_parse_tree gammaT ty >>= fun ty ->
       from_parse_tree gamma ((name, ty) :: gammaT) xs
+  | ParseTree.Binding (name, ty, binding) :: xs ->
+      Types.from_parse_tree gammaT ty >>= fun ty ->
+      let v = {name; ty} in
+      from_parse_tree (v :: gamma) gammaT xs >>= fun xs ->
+      Exn.return (Binding (v, binding) :: xs)
   | [] -> Exn.return []

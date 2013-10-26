@@ -57,9 +57,6 @@ val struct_type : lltype list -> lltype
 val pointer_type : lltype -> lltype
 val array_type : lltype -> int -> lltype
 
-val to_string : llmodule -> string
+val bind : name:string -> ty:lltype -> string -> llmodule -> llvalue
 
-module Bind : sig
-  val printInt : llvalue
-  val zero : llvalue
-end
+val to_string : llmodule -> string
