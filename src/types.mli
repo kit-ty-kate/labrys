@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type ty = (string * LLVM.lltype)
+type ty = string
 
 type t =
   | Fun of (t * t)
@@ -32,5 +32,3 @@ type env = (string * t)
 val to_string : t -> string
 val from_parse_tree : env list -> ParseTree.ty -> (t, [> not_found ]) Exn.t
 val equal : t -> t -> bool
-val env : LLVM.lltype
-val to_llvm : ?malloc:bool -> t -> LLVM.lltype

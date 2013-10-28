@@ -25,7 +25,7 @@ type value = {name : string; ty : Types.t}
 
 let int =
   let int = "Int" in
-  (int, Types.Ty (int, LLVM.i32_type))
+  (int, Types.Ty int)
 
 let values = []
 

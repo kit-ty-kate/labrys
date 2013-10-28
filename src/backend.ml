@@ -33,14 +33,23 @@ let find_in_gamma name l =
 let i64 = LLVM.const_int LLVM.i64_type
 let star_type = LLVM.pointer_type LLVM.i8_type
 
+let env = LLVM.pointer_type (LLVM.pointer_type LLVM.i8_type)
+
+let rec types_to_llvm ?(malloc=false) = function
+  | Types.Fun (x, ret) ->
+      let ty = LLVM.function_type (types_to_llvm ret) [types_to_llvm x; env] in
+      let st = LLVM.struct_type [LLVM.pointer_type ty; env] in
+      if malloc then st else LLVM.pointer_type st
+  | Types.Ty _ -> LLVM.pointer_type LLVM.i8_type
+
 let rec lambda gammaParam gammaEnv gammaGlob builder = function
   | TT.Abs ({TT.abs_ty; TT.param; TT.ty_expr}, t) ->
-      let args = [Types.to_llvm param.TT.ty; Types.env] in
-      let ty = LLVM.function_type (Types.to_llvm ty_expr) args in
+      let args = [types_to_llvm param.TT.ty; env] in
+      let ty = LLVM.function_type (types_to_llvm ty_expr) args in
       let (f, builder') = LLVM.define_function "__lambda" ty m in
       let access =
         LLVM.build_malloc
-          (Types.to_llvm ~malloc:true abs_ty)
+          (types_to_llvm ~malloc:true abs_ty)
           "access_fun"
           builder
       in
@@ -90,7 +99,7 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
         LLVM.build_load value "glob_extract" builder
       in
       let cast value =
-        LLVM.build_bitcast value (Types.to_llvm ty) "cast" builder
+        LLVM.build_bitcast value (types_to_llvm ty) "cast" builder
       in
       let res = find gammaParam >|= fst in
       let res =
@@ -109,10 +118,10 @@ let rec init gammaGlob builder = function
 let make =
   let rec top init_list gamma = function
     | TT.Value ({TT.name; TT.ty}, t) :: xs ->
-        let g = LLVM.define_global name (LLVM.undef (Types.to_llvm ty)) m in
+        let g = LLVM.define_global name (LLVM.undef (types_to_llvm ty)) m in
         top ((name, g, t) :: init_list) gamma xs
     | TT.Binding ({TT.name; TT.ty}, binding) :: xs ->
-        let ty = LLVM.pointer_type (Types.to_llvm ty) in
+        let ty = LLVM.pointer_type (types_to_llvm ty) in
         let v = LLVM.bind ~name ~ty binding m in
         top init_list ((name, v) :: gamma) xs
     | [] ->
