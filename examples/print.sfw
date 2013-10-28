@@ -1,9 +1,9 @@
 let printInt : Int -> Int = begin
-  @msg = internal constant [3 x i8] c"%d\00"
+  @msg = internal constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
   define i32* @__printInt(i32* %i, i8**) {
     %access = load i32* %i
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0), i32 %access)
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
     %r = inttoptr i32 %r1 to i32*
     ret i32* %r
   }
