@@ -3,3 +3,6 @@ setup.data
 setup.log
 main.native
 main.byte
+
+a.out
+examples/*.o
