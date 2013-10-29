@@ -21,18 +21,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type ty = string
+let fmt = Printf.sprintf
+
+type ty = string * bool (* The boolean tells if the type is polymorphic *)
 
 type t =
   | Fun of (t * t)
   | Ty of ty
+  | Forall of (string * t)
 
 type env = (string * t)
 
 let rec to_string = function
-  | Fun (Ty x, ret) -> x ^ " -> " ^ to_string ret
+  | Fun (Ty (x, _), ret) -> x ^ " -> " ^ to_string ret
   | Fun (x, ret) -> "(" ^ to_string x ^ ") -> " ^ to_string ret
-  | Ty x -> x
+  | Ty (x, _) -> x
+  | Forall (x, t) -> fmt "forall %s. %s" x (to_string t)
 
 let from_parse_tree gamma =
   let rec aux = function
@@ -46,4 +50,27 @@ let from_parse_tree gamma =
   in
   aux
 
-let equal = Unsafe.(=)
+let equal x y =
+  let rec aux = function
+    | Ty (_, true), _
+    | _, Ty (_, true) -> true
+    | Fun (param, res), Fun (param', res') -> aux (param, param') && aux (res, res')
+    | Ty (x, _), Ty (x', _) -> BatString.equal x x'
+    | Forall (_, t), Forall (_, t') -> aux (t, t')
+    | Forall _, Ty _
+    | Ty _, Fun _
+    | Ty _, Forall _
+    | Fun _, Forall _
+    | Fun _, Ty _
+    | Forall _, Fun _ -> false
+  in
+  aux (x, y)
+
+let replace ~from ~ty =
+  let rec aux = function
+    | Fun (param, ret) -> Fun (aux param, aux ret)
+    | Ty (x, _) when BatString.equal x from -> ty
+    | Ty x -> Ty x
+    | Forall (x, t) -> Forall (x, aux t)
+  in
+  aux

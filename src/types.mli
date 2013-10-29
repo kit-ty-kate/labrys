@@ -21,14 +21,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type ty = string
+type ty = string * bool
 
 type t =
   | Fun of (t * t)
   | Ty of ty
+  | Forall of (string * t)
 
 type env = (string * t)
 
 val to_string : t -> string
 val from_parse_tree : env list -> ParseTree.ty -> (t, [> not_found ]) Exn.t
 val equal : t -> t -> bool
+
+val replace : from:string -> ty:t -> t -> t

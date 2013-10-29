@@ -29,7 +29,9 @@ type value = (string * ty)
 
 type t =
   | Abs of (value * t)
+  | TAbs of (string * t)
   | App of (t * t)
+  | TApp of (t * ty)
   | Val of string
 
 type top =

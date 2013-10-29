@@ -25,7 +25,7 @@ type value = {name : string; ty : Types.t}
 
 let int =
   let int = "Int" in
-  (int, Types.Ty int)
+  (int, Types.Ty (int, false))
 
 let values = []
 

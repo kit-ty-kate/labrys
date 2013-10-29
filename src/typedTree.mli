@@ -26,7 +26,9 @@ type abs = {abs_ty : Types.t; param : value; ty_expr : Types.t}
 
 type t =
   | Abs of (abs * t)
+  | TAbs of (abs * t)
   | App of (Types.t * t * t)
+  | TApp of (Types.t * t * Types.t)
   | Val of value
 
 type top =

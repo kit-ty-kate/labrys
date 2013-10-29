@@ -41,6 +41,7 @@ let rec types_to_llvm ?(malloc=false) = function
       let st = LLVM.struct_type [LLVM.pointer_type ty; env] in
       if malloc then st else LLVM.pointer_type st
   | Types.Ty _ -> LLVM.pointer_type LLVM.i8_type
+  | Types.Forall (_, t) -> types_to_llvm ~malloc t
 
 let rec lambda gammaParam gammaEnv gammaGlob builder = function
   | TT.Abs ({TT.abs_ty; TT.param; TT.ty_expr}, t) ->
@@ -81,6 +82,7 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
       lambda gammaP (gammaE :: gammaEnv) gammaGlob builder t >>= fun v ->
       LLVM.build_ret v builder;
       Exn.return access
+  | TT.TAbs (_, t) -> lambda gammaParam gammaEnv gammaGlob builder t
   | TT.App (ty, f, x) ->
       lambda gammaParam gammaEnv gammaGlob builder f >>= fun boxed_f ->
       let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
@@ -88,6 +90,7 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
       let env = LLVM.build_extractvalue boxed_f 1 "env" builder in
       lambda gammaParam gammaEnv gammaGlob builder x >>= fun x ->
       Exn.return (LLVM.build_call f [x; env] "tmp" builder)
+  | TT.TApp (_, f, _) -> lambda gammaParam gammaEnv gammaGlob builder f
   | TT.Val {TT.name; TT.ty} ->
       let find gamma =
         find_in_gamma name gamma >|= fun (res, c) -> (snd res, c)
