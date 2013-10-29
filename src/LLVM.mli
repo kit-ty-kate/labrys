@@ -36,7 +36,7 @@ val build_ret_void : llbuilder -> unit
 val build_load : llvalue -> string -> llbuilder -> llvalue
 val build_store : llvalue -> llvalue -> llbuilder -> unit
 val build_extractvalue : llvalue -> int -> string -> llbuilder -> llvalue
-val build_insertvalue : llvalue -> llvalue -> int -> llbuilder -> unit
+val build_insertvalue : llvalue -> llvalue -> int -> string -> llbuilder -> llvalue
 val build_call : llvalue -> llvalue list -> string -> llbuilder -> llvalue
 val build_gep : llvalue -> llvalue list -> string -> llbuilder -> llvalue
 val build_malloc : lltype -> string -> llbuilder -> llvalue

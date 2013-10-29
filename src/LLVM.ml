@@ -138,9 +138,11 @@ let build_extractvalue (Value (ty, value)) i name b =
   in
   Value (ty, name)
 
-let build_insertvalue dst src n b =
+let build_insertvalue dst src n name b =
+  let name = local_name name in
   let cast = string_of_value in
-  append_b b [p "  insertvalue %s, %s, %d" (cast dst) (cast src) n]
+  append_b b [p "  %s = insertvalue %s, %s, %d" name (cast dst) (cast src) n];
+  Value (ty_from_value dst, name)
 
 let build_call f args name b =
   let name = local_name name in

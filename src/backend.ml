@@ -54,7 +54,7 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
           builder
       in
       let access_loaded = LLVM.build_load access "access_loaded" builder in
-      LLVM.build_insertvalue access_loaded f 0 builder;
+      let access_loaded = LLVM.build_insertvalue access_loaded f 0 "access_loaded_le_retour" builder in
       let env_array =
         LLVM.build_malloc
           (LLVM.array_type star_type (List.length gammaEnv))
@@ -64,15 +64,17 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
       let access_env_array =
         LLVM.build_load env_array "access_env_array" builder
       in
-      let fill_env i x =
+      let fill_env dst i x =
         let x = LLVM.build_bitcast x star_type "cast_x" builder in
-        LLVM.build_insertvalue access_env_array x i builder
+        LLVM.build_insertvalue dst x i "yet_another_fill" builder
       in
-      List.iteri (fun i (_, x) -> fill_env i x) gammaEnv;
+      let (access_env_array, _) = List.fold_left (fun (dst, i) (_, x) -> (fill_env dst i x, succ i)) (access_env_array, 0) gammaEnv in
+      LLVM.build_store access_env_array env_array builder;
       let env_array =
         LLVM.build_gep env_array [i64 0; i64 0] "env_array_cast" builder
       in
-      LLVM.build_insertvalue access_loaded env_array 1 builder;
+      let access_loaded = LLVM.build_insertvalue access_loaded env_array 1 "access_loaded_is_back_again" builder in
+      LLVM.build_store access_loaded access builder;
       let builder = builder' in
       let gammaP = [(param.TT.name, LLVM.param f 0)] in
       let gammaE = (param.TT.name, f) in
