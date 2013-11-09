@@ -1,5 +1,7 @@
 PKG monad-exn
 PKG cmdliner
+PKG llvm
+PKG llvm.irreader
 PKG batteries
 S src
 B _build/src

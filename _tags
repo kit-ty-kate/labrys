@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 83a5578ec13a028f68f93cfa9465ad64)
+# DO NOT EDIT (digest: b0b400e5f3aa058ac46188db2861a7e9)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -17,10 +17,14 @@
 <src/main.{native,byte}>: pkg_monad-exn
 <src/main.{native,byte}>: pkg_unix
 <src/main.{native,byte}>: pkg_cmdliner
+<src/main.{native,byte}>: pkg_llvm
+<src/main.{native,byte}>: pkg_llvm.irreader
 <src/main.{native,byte}>: pkg_batteries
 <src/*.ml{,i}>: pkg_monad-exn
 <src/*.ml{,i}>: pkg_unix
 <src/*.ml{,i}>: pkg_cmdliner
+<src/*.ml{,i}>: pkg_llvm
+<src/*.ml{,i}>: pkg_llvm.irreader
 <src/*.ml{,i}>: pkg_batteries
 # OASIS_STOP
 "examples": -traverse
