@@ -1,0 +1,63 @@
+=== TODO ===
+
+* Allow `forall X. X` in types
+* Datatypes
+* Pattern matching
+* Records ? [1]
+* Improve FFI [2]
+* Module and compilation definition [3]
+* System F ω
+* Pure exceptions
+* GC
+
+
+
+=== Datatypes ===
+
+Defined as:
+
+datatype Nat =
+  | O : Nat
+  | S : Nat -> Nat
+
+Arrity 0 only.
+Effects:
+
+Γty, Nat :: *
+Γdatatypes, Nat ::= O : Nat | S : Nat -> Nat
+Γ, O : Nat
+Γ, S : Nat -> Nat
+
+Compiled into {int32, i8*}* in LLVM-IR
+
+
+
+=== Pattern matching ===
+
+For example:
+
+match x with
+| O -> unit
+| S (S n) -> unit
+| S n -> unit
+| n -> unit
+
+compiled into a dataty list
+where dataty = Variant of (datatype * dataty list) | Any of string
+and datatype = {variant : string; var_params : dataty list}
+
+Merged (for compilation and checking purpose) before type checking into a
+brand new module: MergePatterns
+
+Unused or unchecked cases produces an error.
+
+Compiled into switches in LLVM-IR
+
+
+
+=== Current questions ===
+
+[1]: Should we implement records then ?
+[2]: Do we want a pure language and which level, which form ?
+[3]: How do we want to compile with multiple files ?
+     What about `main` ? (related to [2])
