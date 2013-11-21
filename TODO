@@ -1,12 +1,26 @@
 === TODO ===
 
+== Short term ==
+
 * Allow `forall X. X` in types
 * Datatypes
 * Pattern matching
 * Records ? [1]
+
+
+== Short/Medium term ==
+
+* System F ω
+
+
+== Medium term ==
+
 * Improve FFI [2]
 * Module and compilation definition [3]
-* System F ω
+
+
+== Long term ==
+
 * Pure exceptions
 * GC
 
