@@ -55,6 +55,7 @@ match x with
 | S (S n) -> unit
 | S n -> unit
 | n -> unit
+end
 
 compiled into a dataty list
 where dataty = Variant of (datatype * dataty list) | Any of string
