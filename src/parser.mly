@@ -23,6 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Lambda
 %token Dot
 %token Arrow
+%token Forall
 %token DoubleDot
 %token <string> TermName
 %token <string> TypeName
@@ -30,8 +31,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token LParent RParent
 %token EOF
 
-%right Arrow
 %left Lambda Dot
+%right Arrow
 %nonassoc TermName LParent
 %nonassoc App
 
@@ -65,4 +66,5 @@ term:
 typeExpr:
 | name = TypeName { ParseTree.Ty name }
 | param = typeExpr Arrow ret = typeExpr { ParseTree.Fun (param, ret) }
+| Forall ty = TypeName Dot ret = typeExpr { ParseTree.Forall (ty, ret) }
 | LParent term = typeExpr RParent { term }

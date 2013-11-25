@@ -2,7 +2,6 @@
 
 == Short term ==
 
-* Allow `forall X. X` in types
 * Datatypes
 * Pattern matching
 * Records ? [1]

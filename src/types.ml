@@ -37,17 +37,17 @@ let rec to_string = function
   | Ty x -> x
   | Forall (x, t) -> fmt "forall %s. %s" x (to_string t)
 
-let from_parse_tree gamma =
-  let rec aux = function
-    | ParseTree.Fun (x, y) ->
-        aux x >>= fun x ->
-        aux y >>= fun y ->
-        Exn.return (Fun (x, y))
-    | ParseTree.Ty name ->
-        List.find (fun x -> Unsafe.(fst x = name)) gamma >>= fun x ->
-        Exn.return (snd x)
-  in
-  aux
+let rec from_parse_tree gamma = function
+  | ParseTree.Fun (x, y) ->
+      from_parse_tree gamma x >>= fun x ->
+      from_parse_tree gamma y >>= fun y ->
+      Exn.return (Fun (x, y))
+  | ParseTree.Ty name ->
+      List.find (fun x -> Unsafe.(fst x = name)) gamma >>= fun x ->
+      Exn.return (snd x)
+  | ParseTree.Forall (name, ret) ->
+      from_parse_tree ((name, Ty name) :: gamma) ret >>= fun ret ->
+      Exn.return (Forall (name, ret))
 
 let equal x y =
   let rec aux = function

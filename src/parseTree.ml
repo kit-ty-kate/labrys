@@ -24,6 +24,7 @@ open MonadOpen
 type ty =
   | Fun of (ty * ty)
   | Ty of string
+  | Forall of (string * ty)
 
 type value = (string * ty)
 
