@@ -102,7 +102,7 @@ let rec aux gamma gammaT = function
       let abs_ty = Types.Fun (ty, ty_expr) in
       Exn.return (Abs ({abs_ty; param; ty_expr}, expr))
   | ParseTree.TAbs (name, t) ->
-      let ty = Types.Ty (name, true) in
+      let ty = Types.Ty name in
       let param = {name; ty} in
       aux gamma ((name, ty) :: gammaT) t >>= fun expr ->
       let ty_expr = get_type expr in
@@ -125,7 +125,9 @@ let rec aux gamma gammaT = function
       Types.from_parse_tree gammaT ty_x >>= fun ty_x ->
       begin match get_type f with
       | Types.Forall (ty, res) ->
-          Exn.return (TApp (res, transform ~from:ty ~ty:ty_x f, ty_x))
+          let res = Types.replace ~from:ty ~ty:ty_x res in
+          let f = transform ~from:ty ~ty:ty_x f in
+          Exn.return (TApp (res, f, ty_x))
       | Types.Fun (ty, _) -> type_error ~has:ty_x ~expected:ty
       | Types.Ty _ as ty -> function_type_error ~has:ty_x ~expected:ty
       end

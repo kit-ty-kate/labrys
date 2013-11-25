@@ -21,11 +21,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-type ty = string * bool
-
 type t =
   | Fun of (t * t)
-  | Ty of ty
+  | Ty of string
   | Forall of (string * t)
 
 type env = (string * t)
