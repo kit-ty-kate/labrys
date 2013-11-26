@@ -33,10 +33,12 @@ rule main = parse
   | ':' { Parser.DoubleDot }
   | '(' { Parser.LParent }
   | ')' { Parser.RParent }
+  | '|' { Parser.Pipe }
   | "λ" { Parser.Lambda }
   | "->" { Parser.Arrow }
   | "let" { Parser.Let }
   | "forall" { Parser.Forall }
+  | "datatype" { Parser.Datatype }
   | "begin" { let buffer = Buffer.create 4096 in
               get_binding buffer lexbuf;
               Parser.Binding (Buffer.contents buffer)

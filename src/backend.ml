@@ -121,6 +121,51 @@ let rec init gammaGlob builder = function
       init ((name, g) :: gammaGlob) builder xs
   | [] -> Exn.return ()
 
+let create_variants =
+  let rec create i gamma = function
+    | Types.Ty _ ->
+        LLVM.const_gep
+          (LLVM.const_struct
+             c
+             (Array.of_list
+                (LLVM.const_int (LLVM.i32_type c) i :: List.map snd gamma)
+             )
+          )
+          [||]
+    | Types.Forall (_, ret) -> create i gamma ret
+    | Types.Fun (param, Types.Ty _) ->
+        let args = [|types_to_llvm param; env|] in
+        let ty = LLVM.function_type star_type args in
+        let (f, builder) = LLVM.define_function c "__lambda" ty m in
+        let result =
+          LLVM.build_malloc
+            (LLVM.struct_type c (Array.of_list (LLVM.i32_type c :: LLVM.i8_type c :: List.map (fun _ -> LLVM.i8_type c) gamma)))
+            "result"
+            builder
+        in
+        let result_loaded = LLVM.build_load result "result_loaded" builder in
+        let result_loaded = LLVM.build_insertvalue result_loaded (LLVM.const_int (LLVM.i32_type c) i) 0 "result_loaded_is_back" builder in
+        let (result_loaded, _) = List.fold_left (fun (acc, index) x -> LLVM.build_insertvalue acc (LLVM.const_int (LLVM.i32_type c) i) index "result_loaded_is_back" builder, succ index) (result_loaded, 1) gamma in
+        LLVM.build_store result_loaded result builder;
+        let result = LLVM.build_bitcast result star_type "cast_result" builder in
+        LLVM.build_ret result builder;
+        f
+    | Types.Fun (param, ret) ->
+        let args = [|types_to_llvm param; env|] in
+        let ty = LLVM.function_type (LLVM.i8_type c) args in
+        let (f, builder) = LLVM.define_function c "__lambda" ty m in
+        LLVM.build_ret (create i gamma ret) builder;
+        f
+  in
+  let f i = function
+    | TT.Variant (name, ty) ->
+        let f = create i [] ty in
+        let g = LLVM.define_global name f m in
+        LLVM.set_global_constant true g;
+        (name, g)
+  in
+  List.mapi f
+
 let make =
   let rec top init_list gamma = function
     | TT.Value ({TT.name; TT.ty}, t) :: xs ->
@@ -129,6 +174,8 @@ let make =
     | TT.Binding ({TT.name; _}, binding) :: xs ->
         let v = LLVM.bind c ~name binding in
         top init_list ((name, v) :: gamma) xs
+    | TT.Datatype variants :: xs ->
+        top init_list (create_variants variants @ gamma) xs
     | [] ->
         let ty = LLVM.function_type (LLVM.void_type c) [||] in
         let (f, builder) = LLVM.define_function c "__init" ty m in

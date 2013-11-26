@@ -35,7 +35,11 @@ type t =
   | TApp of (t * ty)
   | Val of string
 
+type variant =
+  | Variant of (string * ty)
+
 type top =
   | Value of (string * t)
   | Type of (string * ty)
   | Binding of (string * ty * string)
+  | Datatype of (string * variant list)

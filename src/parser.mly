@@ -24,6 +24,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Dot
 %token Arrow
 %token Forall
+%token Datatype
+%token Pipe
 %token DoubleDot
 %token <string> TermName
 %token <string> TypeName
@@ -48,6 +50,8 @@ main:
    { ParseTree.Type (name, ty) :: main }
 | Let name = TermName DoubleDot ty = typeExpr Equal binding = Binding main = main
    { ParseTree.Binding (name, ty, binding) :: main }
+| Datatype name = TypeName Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
+   { ParseTree.Datatype (name, variants) :: main }
 | EOF { [] }
 
 term:
@@ -68,3 +72,6 @@ typeExpr:
 | param = typeExpr Arrow ret = typeExpr { ParseTree.Fun (param, ret) }
 | Forall ty = TypeName Dot ret = typeExpr { ParseTree.Forall (ty, ret) }
 | LParent term = typeExpr RParent { term }
+
+variant:
+| name = TypeName DoubleDot ty = typeExpr { ParseTree.Variant (name, ty) }

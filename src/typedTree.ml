@@ -19,6 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+open Batteries
 open MonadOpen
 
 let fmt = Printf.sprintf
@@ -33,9 +34,13 @@ type t =
   | TApp of (Types.t * t * Types.t)
   | Val of value
 
+type variant =
+  | Variant of (string * Types.t)
+
 type top =
   | Value of (value * t)
   | Binding of (value * string)
+  | Datatype of variant list
 
 let get_type = function
   | Abs ({abs_ty; _}, _) -> abs_ty
@@ -135,6 +140,29 @@ let rec aux gamma gammaT = function
       List.find (fun x -> Unsafe.(name = x.name)) gamma >>= fun x ->
       Exn.return (Val x)
 
+let rec mapM f = function
+  | [] -> Exn.return []
+  | x::xs ->
+      f x >>= fun x ->
+      mapM f xs >>= fun xs ->
+      Exn.return (x :: xs)
+
+let rec check_if_returns_type ~datatype = function
+  | Types.Ty x -> String.equal x datatype
+  | Types.Forall (_, ret)
+  | Types.Fun (_, ret) -> check_if_returns_type ~datatype ret
+
+let transform_variants ~datatype gammaT =
+  let aux = function
+    | ParseTree.Variant (name, ty) ->
+        Types.from_parse_tree gammaT ty >>= fun ty ->
+        if check_if_returns_type ~datatype ty then
+          Exn.return (Variant (name, ty))
+        else
+          failwith "A variant doesn't return its type"
+  in
+  mapM aux
+
 let rec from_parse_tree gamma gammaT = function
   | ParseTree.Value (name, term) :: xs ->
       aux gamma gammaT term >>= fun x ->
@@ -149,4 +177,9 @@ let rec from_parse_tree gamma gammaT = function
       let v = {name; ty} in
       from_parse_tree (v :: gamma) gammaT xs >>= fun xs ->
       Exn.return (Binding (v, binding) :: xs)
+  | ParseTree.Datatype (name, variants) :: xs ->
+      let gammaT = (name, Types.Ty name) :: gammaT in
+      transform_variants ~datatype:name gammaT variants >>= fun variants ->
+      from_parse_tree gamma gammaT xs >>= fun xs ->
+      Exn.return (Datatype variants :: xs)
   | [] -> Exn.return []

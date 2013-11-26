@@ -31,9 +31,13 @@ type t =
   | TApp of (Types.t * t * Types.t)
   | Val of value
 
+type variant =
+  | Variant of (string * Types.t)
+
 type top =
   | Value of (value * t)
   | Binding of (value * string)
+  | Datatype of variant list
 
 val from_parse_tree :
   value list ->
