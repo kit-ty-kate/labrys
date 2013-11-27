@@ -149,11 +149,13 @@ let create_variants l builder =
           | Some ((), x) -> LLVM.param x 1
           | None -> LLVM.const_null env_type
         in
-        let new_variant = LLVM.const_struct c [|i32 i; array|] in
-        LLVM.build_store new_variant variant builder;
+        let variant_loaded = LLVM.build_load variant "variant_loaded" builder in
+        let variant_loaded = LLVM.build_insertvalue variant_loaded (i32 i) 0 "variant_with_idx" builder in
+        let variant_loaded = LLVM.build_insertvalue variant_loaded array 1 "variant_with_vals" builder in
+        LLVM.build_store variant_loaded variant builder;
         LLVM.build_bitcast variant star_type "cast_variant" builder
     | Types.Forall (_, ret) -> create i gammaParam gammaEnv builder ret
-    | Types.Fun (param, ret) ->
+    | Types.Fun (_, ret) ->
         let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
         let env = create_env gammaParam gammaEnv builder in
         let closure = create_closure f env builder in
