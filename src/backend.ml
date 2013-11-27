@@ -73,14 +73,11 @@ let create_closure ty f env builder =
   LLVM.build_store loaded closure builder;
   LLVM.build_bitcast closure star_type "closure_cast" builder
 
-let insert_arg_in_env gammaParam gammaEnv builder =
-  let insert (_, f) =
-    let env = LLVM.param f 1 in
-    let env = LLVM.build_gep env [|i32 (List.length gammaEnv)|] "gep_env" builder in
-    let param = LLVM.param f 0 in
-    LLVM.build_store param env builder
-  in
-  Option.may insert gammaParam
+let insert_arg_in_env f gammaEnv builder =
+  let env = LLVM.param f 1 in
+  let env = LLVM.build_gep env [|i32 (List.length gammaEnv)|] "gep_env" builder in
+  let param = LLVM.param f 0 in
+  LLVM.build_store param env builder
 
 let rec lambda gammaParam gammaEnv gammaGlob builder = function
   | TT.Abs ({TT.abs_ty; TT.param; TT.ty_expr}, t) ->
@@ -88,7 +85,7 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
       let env = create_env gammaParam gammaEnv builder in
       let closure = create_closure abs_ty f env builder in
       let builder = builder' in
-      insert_arg_in_env gammaParam gammaEnv builder;
+      insert_arg_in_env f gammaEnv builder;
       let gammaP = (param.TT.name, f) in
       let gammaE = (param.TT.name, List.length gammaEnv) in
       lambda (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t >>= fun v ->
