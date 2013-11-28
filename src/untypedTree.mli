@@ -19,28 +19,17 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open MonadOpen
-
-type value = Gamma.value = {name : string; ty : Types.t}
-type abs = {abs_ty : Types.t; param : value; ty_expr : Types.t}
-
 type t =
-  | Abs of (abs * t)
-  | TAbs of (abs * t)
-  | App of (Types.t * t * t)
-  | TApp of (Types.t * t * Types.t)
-  | Val of value
+  | Abs of (string * t)
+  | App of (t * t)
+  | Val of string
 
 type variant =
-  | Variant of (string * Types.t)
+  | Variant of (string * int)
 
 type top =
-  | Value of (value * t)
-  | Binding of (value * string)
+  | Value of (string * t * int)
+  | Binding of (string * string)
   | Datatype of variant list
 
-val from_parse_tree :
-  value list ->
-  Types.env list ->
-  ParseTree.top list ->
-  (top list, [> failure | not_found ]) Exn.t
+val of_typed_tree : TypedTree.top list -> top list

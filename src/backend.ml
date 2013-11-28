@@ -19,7 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-module TT = TypedTree
+module UT = UntypedTree
 
 open Batteries
 open MonadOpen
@@ -44,30 +44,13 @@ let variant_type = LLVM.struct_type c [|i32_type; env_type|]
 let i64 = LLVM.const_int i64_type
 let i32 = LLVM.const_int i32_type
 
-let create_env gammaParam gammaEnv builder =
+let create_env size builder =
   let env =
     LLVM.build_malloc
-      (LLVM.array_type star_type (succ (List.length gammaEnv)))
+      (LLVM.array_type star_type size)
       "env"
       builder
   in
-  let fill_old (_, f) =
-    let loaded = LLVM.build_load env "env_loaded" builder in
-    let old = LLVM.param f 1 in
-    let fill_env dst i x =
-      let x = LLVM.build_gep old [|i32 x|] "from_env" builder in
-      let x = LLVM.build_load x "from_env_loaded" builder in
-      LLVM.build_insertvalue dst x i "fill_env" builder
-    in
-    let (loaded, _) =
-      List.fold_left
-        (fun (dst, i) (_, x) -> (fill_env dst i x, succ i))
-        (loaded, 0)
-        gammaEnv
-    in
-    LLVM.build_store loaded env builder
-  in
-  Option.may fill_old gammaParam;
   LLVM.build_gep env [|i64 0; i64 0|] "env_cast" builder
 
 let create_closure f env builder =
@@ -84,38 +67,32 @@ let insert_arg_in_env f gammaEnv builder =
   let param = LLVM.param f 0 in
   LLVM.build_store param env builder
 
-let rec lambda gammaParam gammaEnv gammaGlob builder = function
-  | TT.Abs ({TT.abs_ty; TT.param; TT.ty_expr}, t) ->
+let rec lambda env gammaParam gammaEnv gammaGlob builder = function
+  | UT.Abs (name, t) ->
       let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
-      let env = create_env gammaParam gammaEnv builder in
       let closure = create_closure f env builder in
       let builder = builder' in
       insert_arg_in_env f gammaEnv builder;
-      let gammaP = (param.TT.name, f) in
-      let gammaE = (param.TT.name, List.length gammaEnv) in
-      lambda (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t >>= fun v ->
+      let gammaP = (name, f) in
+      let gammaE = (name, List.length gammaEnv) in
+      lambda (LLVM.param f 1) (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t >>= fun v ->
       LLVM.build_ret v builder;
       Exn.return closure
-  | TT.TAbs (_, t) -> lambda gammaParam gammaEnv gammaGlob builder t
-  | TT.App (ty, f, x) ->
-      lambda gammaParam gammaEnv gammaGlob builder f >>= fun boxed_f ->
+  | UT.App (f, x) ->
+      lambda env gammaParam gammaEnv gammaGlob builder f >>= fun boxed_f ->
       let boxed_f = LLVM.build_bitcast boxed_f (LLVM.pointer_type closure_type) "extract_f_cast" builder in
       let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
       let f = LLVM.build_extractvalue boxed_f 0 "f" builder in
       let env = LLVM.build_extractvalue boxed_f 1 "env" builder in
-      lambda gammaParam gammaEnv gammaGlob builder x >>= fun x ->
+      lambda env gammaParam gammaEnv gammaGlob builder x >>= fun x ->
       Exn.return (LLVM.build_call f [|x; env|] "tmp" builder)
-  | TT.TApp (_, f, _) -> lambda gammaParam gammaEnv gammaGlob builder f
-  | TT.Val {TT.name; TT.ty} ->
+  | UT.Val name ->
       let find gamma =
         find_in_gamma name gamma >|= fun (res, c) -> (snd res, c)
       in
-      let execEnv (i, _) = match gammaParam with
-        | Some (_, f) ->
-            let param = LLVM.param f 1 in
-            let result = LLVM.build_gep param [|i32 i|] "from_env" builder in
-            LLVM.build_load result "from_env_loaded" builder
-        | None -> assert false
+      let execEnv (i, _) =
+        let result = LLVM.build_gep env [|i32 i|] "from_env" builder in
+        LLVM.build_load result "from_env_loaded" builder
       in
       let execGlob (value, _) =
         LLVM.build_load value "glob_extract" builder
@@ -132,8 +109,9 @@ let rec lambda gammaParam gammaEnv gammaGlob builder = function
       res
 
 let rec init gammaGlob builder = function
-  | `Val (name, g, t) :: xs ->
-      lambda None [] gammaGlob builder t >>= fun value ->
+  | `Val (name, g, t, size) :: xs ->
+      let env = create_env size builder in
+      lambda env None [] gammaGlob builder t >>= fun value ->
       LLVM.build_store value g builder;
       init ((name, g) :: gammaGlob) builder xs
   | `Datatype f :: xs ->
@@ -142,7 +120,7 @@ let rec init gammaGlob builder = function
   | [] -> Exn.return ()
 
 let create_variants l builder =
-  let rec create i gammaParam gammaEnv builder = function
+  let rec create i gammaParam gammaEnv env builder = function
     | 0 ->
         let variant = LLVM.build_malloc variant_type "variant" builder in
         let array = match gammaParam with
@@ -156,19 +134,19 @@ let create_variants l builder =
         LLVM.build_bitcast variant star_type "cast_variant" builder
     | n ->
         let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
-        let env = create_env gammaParam gammaEnv builder in
         let closure = create_closure f env builder in
         let builder = builder' in
         insert_arg_in_env f gammaEnv builder;
         let gammaP = ((), f) in
         let gammaE = ((), List.length gammaEnv) in
-        let v = create i (Some gammaP) (gammaE :: gammaEnv) builder (pred n) in
+        let v = create i (Some gammaP) (gammaE :: gammaEnv) (LLVM.param f 1) builder (pred n) in
         LLVM.build_ret v builder;
         closure
   in
   let f i = function
-    | TT.Variant (name, ty) ->
-        let f = create i None [] builder ty in
+    | UT.Variant (name, size) ->
+        let env = create_env size builder in
+        let f = create i None [] env builder size in
         let g = LLVM.define_global name (LLVM.undef star_type) m in
         LLVM.build_store f g builder;
         (name, g)
@@ -177,13 +155,13 @@ let create_variants l builder =
 
 let make =
   let rec top init_list gamma = function
-    | TT.Value ({TT.name; TT.ty}, t) :: xs ->
+    | UT.Value (name, t, size) :: xs ->
         let g = LLVM.define_global name (LLVM.undef star_type) m in
-        top (`Val (name, g, t) :: init_list) gamma xs
-    | TT.Binding ({TT.name; _}, binding) :: xs ->
+        top (`Val (name, g, t, size) :: init_list) gamma xs
+    | UT.Binding (name, binding) :: xs ->
         let v = LLVM.bind c ~name binding in
         top init_list ((name, v) :: gamma) xs
-    | TT.Datatype variants :: xs ->
+    | UT.Datatype variants :: xs ->
         top (`Datatype (create_variants variants) :: init_list) gamma xs
     | [] ->
         let ty = LLVM.function_type (LLVM.void_type c) [||] in

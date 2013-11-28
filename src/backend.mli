@@ -21,4 +21,4 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open MonadOpen
 
-val make : TypedTree.top list -> (LLVM.llmodule, [> not_found ]) Exn.t
+val make : UntypedTree.top list -> (LLVM.llmodule, [> not_found ]) Exn.t

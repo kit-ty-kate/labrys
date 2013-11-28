@@ -19,28 +19,45 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open MonadOpen
-
-type value = Gamma.value = {name : string; ty : Types.t}
-type abs = {abs_ty : Types.t; param : value; ty_expr : Types.t}
+open Batteries
 
 type t =
-  | Abs of (abs * t)
-  | TAbs of (abs * t)
-  | App of (Types.t * t * t)
-  | TApp of (Types.t * t * Types.t)
-  | Val of value
+  | Abs of (string * t)
+  | App of (t * t)
+  | Val of string
 
 type variant =
-  | Variant of (string * Types.t)
+  | Variant of (string * int)
 
 type top =
-  | Value of (value * t)
-  | Binding of (value * string)
+  | Value of (string * t * int)
+  | Binding of (string * string)
   | Datatype of variant list
 
-val from_parse_tree :
-  value list ->
-  Types.env list ->
-  ParseTree.top list ->
-  (top list, [> failure | not_found ]) Exn.t
+let rec of_typed_term = function
+  | TypedTree.Abs ({TypedTree.param = {TypedTree.name; _}; _}, t) ->
+      let (t, size) = of_typed_term t in
+      (Abs (name, t), succ size)
+  | TypedTree.TApp (_, t, _)
+  | TypedTree.TAbs (_, t) ->
+      of_typed_term t
+  | TypedTree.App (_, f, x) ->
+      let (f, size) = of_typed_term f in
+      let (x, size') = of_typed_term x in
+      (App (f, x), size + size')
+  | TypedTree.Val {TypedTree.name; _} ->
+      (Val name, 0)
+
+let of_typed_variant = function
+  | TypedTree.Variant (name, ty) -> Variant (name, Types.size ty)
+
+let rec of_typed_tree = function
+  | TypedTree.Value ({TypedTree.name; _}, t) :: xs ->
+      let (t, size) = of_typed_term t in
+      Value (name, t, size) :: of_typed_tree xs
+  | TypedTree.Binding ({TypedTree.name; _}, value) :: xs ->
+      Binding (name, value) :: of_typed_tree xs
+  | TypedTree.Datatype variants :: xs ->
+      Datatype (List.map of_typed_variant variants) :: of_typed_tree xs
+  | [] ->
+      []
