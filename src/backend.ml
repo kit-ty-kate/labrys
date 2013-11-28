@@ -61,10 +61,8 @@ let create_closure f env builder =
   LLVM.build_store loaded closure builder;
   LLVM.build_bitcast closure star_type "closure_cast" builder
 
-let insert_arg_in_env f gammaEnv builder =
-  let env = LLVM.param f 1 in
+let insert_arg_in_env param env gammaEnv builder =
   let env = LLVM.build_gep env [|i32 (List.length gammaEnv)|] "gep_env" builder in
-  let param = LLVM.param f 0 in
   LLVM.build_store param env builder
 
 let rec lambda env gammaParam gammaEnv gammaGlob builder = function
@@ -72,10 +70,11 @@ let rec lambda env gammaParam gammaEnv gammaGlob builder = function
       let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
       let closure = create_closure f env builder in
       let builder = builder' in
-      insert_arg_in_env f gammaEnv builder;
-      let gammaP = (name, f) in
+      let gammaP = (name, LLVM.param f 0) in
+      let env = LLVM.param f 1 in
+      insert_arg_in_env (snd gammaP) env gammaEnv builder;
       let gammaE = (name, List.length gammaEnv) in
-      lambda (LLVM.param f 1) (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t >>= fun v ->
+      lambda env (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t >>= fun v ->
       LLVM.build_ret v builder;
       Exn.return closure
   | UT.App (f, x) ->
@@ -98,8 +97,8 @@ let rec lambda env gammaParam gammaEnv gammaGlob builder = function
         LLVM.build_load value "glob_extract" builder
       in
       let res = match gammaParam with
-        | Some (name', x) when String.equal name name' ->
-            Exn.return (LLVM.param x 0)
+        | Some (name', param) when String.equal name name' ->
+            Exn.return param
         | Some _ | None -> Exn.fail `NotFound
       in
       let res =
@@ -123,23 +122,20 @@ let create_variants l builder =
   let rec create i gammaParam gammaEnv env builder = function
     | 0 ->
         let variant = LLVM.build_malloc variant_type "variant" builder in
-        let array = match gammaParam with
-          | Some ((), x) -> LLVM.param x 1
-          | None -> LLVM.const_null env_type
-        in
         let variant_loaded = LLVM.build_load variant "variant_loaded" builder in
         let variant_loaded = LLVM.build_insertvalue variant_loaded (i32 i) 0 "variant_with_idx" builder in
-        let variant_loaded = LLVM.build_insertvalue variant_loaded array 1 "variant_with_vals" builder in
+        let variant_loaded = LLVM.build_insertvalue variant_loaded env 1 "variant_with_vals" builder in
         LLVM.build_store variant_loaded variant builder;
         LLVM.build_bitcast variant star_type "cast_variant" builder
     | n ->
         let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
         let closure = create_closure f env builder in
         let builder = builder' in
-        insert_arg_in_env f gammaEnv builder;
-        let gammaP = ((), f) in
-        let gammaE = ((), List.length gammaEnv) in
-        let v = create i (Some gammaP) (gammaE :: gammaEnv) (LLVM.param f 1) builder (pred n) in
+        let gammaP = LLVM.param f 0 in
+        let env = LLVM.param f 1 in
+        insert_arg_in_env gammaP env gammaEnv builder;
+        let gammaE = List.length gammaEnv in
+        let v = create i (Some gammaP) (gammaE :: gammaEnv) env builder (pred n) in
         LLVM.build_ret v builder;
         closure
   in
