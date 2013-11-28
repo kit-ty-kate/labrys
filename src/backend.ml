@@ -143,7 +143,7 @@ let rec init gammaGlob builder = function
 
 let create_variants l builder =
   let rec create i gammaParam gammaEnv builder = function
-    | Types.Ty _ ->
+    | 0 ->
         let variant = LLVM.build_malloc variant_type "variant" builder in
         let array = match gammaParam with
           | Some ((), x) -> LLVM.param x 1
@@ -154,8 +154,7 @@ let create_variants l builder =
         let variant_loaded = LLVM.build_insertvalue variant_loaded array 1 "variant_with_vals" builder in
         LLVM.build_store variant_loaded variant builder;
         LLVM.build_bitcast variant star_type "cast_variant" builder
-    | Types.Forall (_, ret) -> create i gammaParam gammaEnv builder ret
-    | Types.Fun (_, ret) ->
+    | n ->
         let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
         let env = create_env gammaParam gammaEnv builder in
         let closure = create_closure f env builder in
@@ -163,7 +162,7 @@ let create_variants l builder =
         insert_arg_in_env f gammaEnv builder;
         let gammaP = ((), f) in
         let gammaE = ((), List.length gammaEnv) in
-        let v = create i (Some gammaP) (gammaE :: gammaEnv) builder ret in
+        let v = create i (Some gammaP) (gammaE :: gammaEnv) builder (pred n) in
         LLVM.build_ret v builder;
         closure
   in

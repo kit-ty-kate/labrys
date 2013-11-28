@@ -2,7 +2,8 @@
 
 == Short term ==
 
-* Datatypes
+* Reduce allocations for environment variables
+* Cleaning
 * Pattern matching
 * Records ? [1]
 

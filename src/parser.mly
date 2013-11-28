@@ -29,13 +29,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token DoubleDot
 %token <string> TermName
 %token <string> TypeName
+%token <string> VariantName
 %token <string> Binding
 %token LParent RParent
 %token EOF
 
 %left Lambda Dot
 %right Arrow
-%nonassoc TermName LParent
+%nonassoc TermName VariantName LParent
 %nonassoc App
 
 %start main
@@ -64,6 +65,7 @@ term:
 | term1 = term LParent ty = typeExpr RParent
     { ParseTree.TApp (term1, ty) }
 | termName = TermName
+| termName = VariantName
     { ParseTree.Val termName }
 | LParent term = term RParent { term }
 

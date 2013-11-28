@@ -32,7 +32,7 @@ type t =
   | Val of value
 
 type variant =
-  | Variant of (string * Types.t)
+  | Variant of (string * int)
 
 type top =
   | Value of (value * t)

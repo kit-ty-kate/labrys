@@ -43,6 +43,7 @@ rule main = parse
               get_binding buffer lexbuf;
               Parser.Binding (Buffer.contents buffer)
             }
+  | '`' (type_name as name) { Parser.VariantName name }
   | term_name as name { Parser.TermName name }
   | type_name as name { Parser.TypeName name }
   | eof { Parser.EOF }

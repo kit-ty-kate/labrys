@@ -35,7 +35,7 @@ type t =
   | Val of value
 
 type variant =
-  | Variant of (string * Types.t)
+  | Variant of (string * int)
 
 type top =
   | Value of (value * t)
@@ -157,7 +157,7 @@ let transform_variants ~datatype gammaT =
     | ParseTree.Variant (name, ty) ->
         Types.from_parse_tree gammaT ty >>= fun ty ->
         if check_if_returns_type ~datatype ty then
-          Exn.return (Variant (name, ty))
+          Exn.return (Variant (name, Types.size ty), {name; ty})
         else
           failwith "A variant doesn't return its type"
   in
@@ -180,6 +180,6 @@ let rec from_parse_tree gamma gammaT = function
   | ParseTree.Datatype (name, variants) :: xs ->
       let gammaT = (name, Types.Ty name) :: gammaT in
       transform_variants ~datatype:name gammaT variants >>= fun variants ->
-      from_parse_tree gamma gammaT xs >>= fun xs ->
-      Exn.return (Datatype variants :: xs)
+      from_parse_tree (List.map snd variants @ gamma) gammaT xs >>= fun xs ->
+      Exn.return (Datatype (List.map fst variants) :: xs)
   | [] -> Exn.return []

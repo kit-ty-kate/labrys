@@ -33,3 +33,5 @@ val from_parse_tree : env list -> ParseTree.ty -> (t, [> not_found ]) Exn.t
 val equal : t -> t -> bool
 
 val replace : from:string -> ty:t -> t -> t
+
+val size : t -> int

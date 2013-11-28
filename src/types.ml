@@ -73,3 +73,8 @@ let replace ~from ~ty =
     | Forall (x, t) -> Forall (x, aux t)
   in
   aux
+
+let rec size = function
+  | Fun (_, t) -> succ (size t)
+  | Ty _ -> 0
+  | Forall (_, t) -> size t
