@@ -19,6 +19,6 @@ end
 
 let id = λX.λx:X.x
 
-let test = id (Int)
+let test = id [Int]
 
 let testdeux = printInt (test zero)
