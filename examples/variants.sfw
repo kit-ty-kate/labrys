@@ -1,0 +1,11 @@
+datatype Nat =
+  | O : Nat
+  | S : Nat -> Nat
+  | D : Nat -> Nat -> Nat
+
+let test = O
+let testest = S
+let testestest = D
+let testestestest = S O
+let testestestestest = D O
+let testestestestestest = D O (S O)
