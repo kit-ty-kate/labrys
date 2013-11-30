@@ -33,6 +33,8 @@ rule main = parse
   | ':' { Parser.DoubleDot }
   | '(' { Parser.LParent }
   | ')' { Parser.RParent }
+  | '[' { Parser.LBracket }
+  | ']' { Parser.RBracket }
   | '|' { Parser.Pipe }
   | "λ" { Parser.Lambda }
   | "->" { Parser.Arrow }
@@ -43,7 +45,6 @@ rule main = parse
               get_binding buffer lexbuf;
               Parser.Binding (Buffer.contents buffer)
             }
-  | '`' (type_name as name) { Parser.VariantName name }
   | term_name as name { Parser.TermName name }
   | type_name as name { Parser.TypeName name }
   | eof { Parser.EOF }
