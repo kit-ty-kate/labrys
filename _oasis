@@ -16,7 +16,8 @@ Executable cervoise
     cmdliner,
     llvm (>= 3.4),
     llvm.irreader (>= 3.4),
-    batteries
+    batteries,
+    monomorphic
   CompiledObject: best
 #  ByteOpt: -w A
 #  NativeOpt: -w A

@@ -19,7 +19,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+open Batteries
 open MonadOpen
+open Monomorphic.None
 
 type ty =
   | Fun of (ty * ty)

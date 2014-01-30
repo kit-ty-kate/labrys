@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open Batteries
 open MonadOpen
+open Monomorphic.None
 
 let fmt = Printf.sprintf
 
@@ -43,7 +44,7 @@ let rec from_parse_tree gamma = function
       from_parse_tree gamma y >>= fun y ->
       Exn.return (Fun (x, y))
   | ParseTree.Ty name ->
-      List.find (fun x -> Unsafe.(fst x = name)) gamma >>= fun x ->
+      List.find (fun x -> String.equal (fst x) name) gamma >>= fun x ->
       Exn.return (snd x)
   | ParseTree.Forall (name, ret) ->
       from_parse_tree ((name, Ty name) :: gamma) ret >>= fun ret ->

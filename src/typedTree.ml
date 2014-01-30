@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open Batteries
 open MonadOpen
+open Monomorphic.None
 
 let fmt = Printf.sprintf
 
@@ -137,7 +138,7 @@ let rec aux gamma gammaT = function
       | Types.Ty _ as ty -> function_type_error ~has:ty_x ~expected:ty
       end
   | ParseTree.Val name ->
-      List.find (fun x -> Unsafe.(name = x.name)) gamma >>= fun x ->
+      List.find (fun x -> String.equal name x.name) gamma >>= fun x ->
       Exn.return (Val x)
 
 let rec mapM f = function

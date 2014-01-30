@@ -20,7 +20,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 open Cmdliner
+open Batteries
 open MonadOpen
+open Monomorphic.None
 
 let sprintf = Printf.sprintf
 
@@ -34,9 +36,9 @@ let compile {c; o; file; _} result =
   let c = if c then "-c" else "" in
   let o = Filename.quote o in
   let command = sprintf "llc - | cc %s -x assembler - -o %s" c o in
-  let output = Unix.open_process_out command in
+  let output = Legacy.Unix.open_process_out command in
   output_string output result >>= fun () ->
-  match Unix.close_process_out output with
+  match Legacy.Unix.close_process_out output with
   | Unix.WEXITED 0 -> Exn.return ()
   | _ -> prerr_endline "\nThe compilation processes exited abnormally"
 

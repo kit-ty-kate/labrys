@@ -19,10 +19,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+open Batteries
 open MonadOpen
+open Monomorphic.None
 
 let parse file =
-  let filebuf = Lexing.from_channel file in
+  let filebuf = Legacy.Lexing.from_channel file in
   let get_offset () =
     let pos = Lexing.lexeme_start_p filebuf in
     let open Lexing in

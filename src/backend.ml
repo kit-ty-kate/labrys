@@ -23,13 +23,14 @@ module UT = UntypedTree
 
 open Batteries
 open MonadOpen
+open Monomorphic.None
 
 let c = LLVM.create_context ()
 let m = LLVM.create_module c "Main"
 
 let find_in_gamma name l =
   let c = ref 0 in
-  List.find (fun x -> incr c; Unsafe.(fst x = name)) l >|= fun res ->
+  List.find (fun x -> incr c; String.equal (fst x) name) l >|= fun res ->
   (res, !c)
 
 let i8_type = LLVM.i8_type c

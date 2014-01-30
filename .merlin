@@ -3,5 +3,6 @@ PKG cmdliner
 PKG llvm
 PKG llvm.irreader
 PKG batteries
+PKG monomorphic
 S src
 B _build/src

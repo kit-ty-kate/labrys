@@ -1,7 +1,7 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: a5c60c3c86e7c60d5aba7668413d83a4) *)
+(* DO NOT EDIT (digest: 3768b1e49371630ef2f213c5536ec117) *)
 module OASISGettext = struct
-(* # 21 "src/oasis/OASISGettext.ml" *)
+(* # 22 "src/oasis/OASISGettext.ml" *)
 
 
   let ns_ str =
@@ -30,7 +30,7 @@ module OASISGettext = struct
 end
 
 module OASISExpr = struct
-(* # 21 "src/oasis/OASISExpr.ml" *)
+(* # 22 "src/oasis/OASISExpr.ml" *)
 
 
 
@@ -131,7 +131,7 @@ end
 
 # 132 "myocamlbuild.ml"
 module BaseEnvLight = struct
-(* # 21 "src/base/BaseEnvLight.ml" *)
+(* # 22 "src/base/BaseEnvLight.ml" *)
 
 
   module MapString = Map.Make(String)
@@ -235,7 +235,7 @@ end
 
 # 236 "myocamlbuild.ml"
 module MyOCamlbuildFindlib = struct
-(* # 21 "src/plugins/ocamlbuild/MyOCamlbuildFindlib.ml" *)
+(* # 22 "src/plugins/ocamlbuild/MyOCamlbuildFindlib.ml" *)
 
 
   (** OCamlbuild extension, copied from
@@ -368,14 +368,18 @@ module MyOCamlbuildFindlib = struct
           flag ["ocaml"; "pkg_threads"; "compile"] (S[A "-thread"]);
           flag ["ocaml"; "pkg_threads"; "doc"] (S[A "-I"; A "+threads"]);
           flag ["ocaml"; "pkg_threads"; "link"] (S[A "-thread"]);
-          flag ["ocaml"; "pkg_threads"; "infer_interface"] (S[A "-thread"])
+          flag ["ocaml"; "pkg_threads"; "infer_interface"] (S[A "-thread"]);
+          flag ["ocaml"; "package(threads)"; "compile"] (S[A "-thread"]);
+          flag ["ocaml"; "package(threads)"; "doc"] (S[A "-I"; A "+threads"]);
+          flag ["ocaml"; "package(threads)"; "link"] (S[A "-thread"]);
+          flag ["ocaml"; "package(threads)"; "infer_interface"] (S[A "-thread"]);
 
       | _ ->
           ()
 end
 
 module MyOCamlbuildBase = struct
-(* # 21 "src/plugins/ocamlbuild/MyOCamlbuildBase.ml" *)
+(* # 22 "src/plugins/ocamlbuild/MyOCamlbuildBase.ml" *)
 
 
   (** Base functions for writing myocamlbuild.ml
@@ -396,7 +400,7 @@ module MyOCamlbuildBase = struct
   type tag = string
 
 
-(* # 61 "src/plugins/ocamlbuild/MyOCamlbuildBase.ml" *)
+(* # 62 "src/plugins/ocamlbuild/MyOCamlbuildBase.ml" *)
 
 
   type t =
@@ -547,14 +551,14 @@ module MyOCamlbuildBase = struct
 end
 
 
-# 550 "myocamlbuild.ml"
+# 554 "myocamlbuild.ml"
 open Ocamlbuild_plugin;;
 let package_default =
-  {MyOCamlbuildBase.lib_ocaml = []; lib_c = []; flags = []; includes = []; }
+  {MyOCamlbuildBase.lib_ocaml = []; lib_c = []; flags = []; includes = []}
   ;;
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default package_default;;
 
-# 559 "myocamlbuild.ml"
+# 563 "myocamlbuild.ml"
 (* OASIS_STOP *)
 Ocamlbuild_plugin.dispatch dispatch_default;;
