@@ -52,8 +52,8 @@ let get_type = function
 let fail ~loc x = raise (Error.Exn (loc, x))
 let type_error_msg =
   fmt
-    "Error: This expression has type %s but an \
-     expression was expected of type %s"
+    "Error: This expression has type '%s' but an \
+     expression was expected of type '%s'"
 
 let type_error ~loc ~has ~expected =
   fail
@@ -67,7 +67,7 @@ let function_type_error ~loc ~has ~expected =
   fail
     ~loc
     (fmt
-       "Error: Can't apply %s to a non-function type %s"
+       "Error: Can't apply '%s' to a non-function type '%s'"
        (Types.to_string has)
        (Types.to_string expected)
     )
@@ -158,7 +158,7 @@ let transform_variants ~datatype gammaT =
         if check_if_returns_type ~datatype ty then
           Variant (name, ty), {name; ty}
         else
-          fail ~loc "A variant doesn't return its type"
+          fail ~loc (fmt "The variant '%s' doesn't return its type" name)
   in
   List.map aux
 
