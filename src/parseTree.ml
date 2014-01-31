@@ -29,18 +29,21 @@ type ty =
 
 type value = (string * ty)
 
+type position = {pos_lnum : int; pos_cnum : int}
+type location = {loc_start : position; loc_end : position}
+
 type t =
-  | Abs of (value * t)
-  | TAbs of (string * t)
-  | App of (t * t)
-  | TApp of (t * ty)
-  | Val of string
+  | Abs of (location * value * t)
+  | TAbs of (location * string * t)
+  | App of (location * t * t)
+  | TApp of (location * t * ty)
+  | Val of (location * string)
 
 type variant =
-  | Variant of (string * ty)
+  | Variant of (location * string * ty)
 
 type top =
-  | Value of (string * t)
-  | Type of (string * ty)
-  | Binding of (string * ty * string)
-  | Datatype of (string * variant list)
+  | Value of (location * string * t)
+  | Type of (location * string * ty)
+  | Binding of (location * string * ty * string)
+  | Datatype of (location * string * variant list)

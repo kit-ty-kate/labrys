@@ -19,6 +19,18 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+%{
+  let get_loc startpos endpos =
+    let get_pos pos =
+      { ParseTree.pos_lnum = pos.Lexing.pos_lnum
+      ; pos_cnum = pos.Lexing.pos_cnum
+      }
+    in
+    { ParseTree.loc_start = get_pos startpos
+    ; loc_end = get_pos endpos
+    }
+%}
+
 %token Let Equal
 %token Lambda
 %token Dot
@@ -46,27 +58,27 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 main:
 | Let name = TermName Equal term = term main = main
-   { ParseTree.Value (name, term) :: main }
+   { ParseTree.Value (get_loc $startpos $endpos, name, term) :: main }
 | Let name = TypeName Equal ty = typeExpr main = main
-   { ParseTree.Type (name, ty) :: main }
+   { ParseTree.Type (get_loc $startpos $endpos, name, ty) :: main }
 | Let name = TermName DoubleDot ty = typeExpr Equal binding = Binding main = main
-   { ParseTree.Binding (name, ty, binding) :: main }
+   { ParseTree.Binding (get_loc $startpos $endpos, name, ty, binding) :: main }
 | Datatype name = TypeName Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
-   { ParseTree.Datatype (name, variants) :: main }
+   { ParseTree.Datatype (get_loc $startpos $endpos, name, variants) :: main }
 | EOF { [] }
 
 term:
 | Lambda termName = TermName DoubleDot typeName = typeExpr Dot term = term
-    { ParseTree.Abs ((termName, typeName), term) }
+    { ParseTree.Abs (get_loc $startpos $endpos, (termName, typeName), term) }
 | Lambda typeName = TypeName Dot term = term
-    { ParseTree.TAbs (typeName, term) }
+    { ParseTree.TAbs (get_loc $startpos $endpos, typeName, term) }
 | term1 = term term2 = term %prec app
-    { ParseTree.App (term1, term2) }
+    { ParseTree.App (get_loc $startpos $endpos, term1, term2) }
 | term1 = term LBracket ty = typeExpr RBracket
-    { ParseTree.TApp (term1, ty) }
+    { ParseTree.TApp (get_loc $startpos $endpos, term1, ty) }
 | termName = TermName
 | termName = TypeName
-    { ParseTree.Val termName }
+    { ParseTree.Val (get_loc $startpos $endpos, termName) }
 | LParent term = term RParent { term }
 
 typeExpr:
@@ -76,4 +88,4 @@ typeExpr:
 | LParent term = typeExpr RParent { term }
 
 variant:
-| name = TypeName DoubleDot ty = typeExpr { ParseTree.Variant (name, ty) }
+| name = TypeName DoubleDot ty = typeExpr { ParseTree.Variant (get_loc $startpos $endpos, name, ty) }

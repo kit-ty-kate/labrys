@@ -30,3 +30,4 @@
 "examples": -traverse
 "examples": not_hygienic
 true: use_menhir
+<src/*.mly>: pkg_batteries

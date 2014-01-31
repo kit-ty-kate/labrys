@@ -39,17 +39,17 @@ let rec to_string = function
 
 let type_error = fmt "The type '%s' was not found in Γ"
 
-let rec from_parse_tree gamma = function
+let rec from_parse_tree ~loc gamma = function
   | ParseTree.Fun (x, y) ->
-      let x = from_parse_tree gamma x in
-      let y = from_parse_tree gamma y in
+      let x = from_parse_tree ~loc gamma x in
+      let y = from_parse_tree ~loc gamma y in
       Fun (x, y)
   | ParseTree.Ty name ->
       let x = List.find (fun x -> String.equal (fst x) name) gamma in
-      let x = Option.get_exn x (Failure (type_error name)) in
+      let x = Option.get_exn x (Error.Exn (loc, type_error name)) in
       snd x
   | ParseTree.Forall (name, ret) ->
-      let ret = from_parse_tree ((name, Ty name) :: gamma) ret in
+      let ret = from_parse_tree ~loc ((name, Ty name) :: gamma) ret in
       Forall (name, ret)
 
 let equal x y =
