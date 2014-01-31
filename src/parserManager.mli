@@ -19,6 +19,4 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open MonadOpen
-
-val parse : in_channel -> (ParseTree.top list, [> failure ]) Exn.t
+val parse : BatIO.input -> ParseTree.top list

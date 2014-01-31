@@ -19,8 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open MonadOpen
-
 type t =
   | Fun of (t * t)
   | Ty of string
@@ -29,7 +27,7 @@ type t =
 type env = (string * t)
 
 val to_string : t -> string
-val from_parse_tree : env list -> ParseTree.ty -> (t, [> not_found ]) Exn.t
+val from_parse_tree : env list -> ParseTree.ty -> t
 val equal : t -> t -> bool
 
 val replace : from:string -> ty:t -> t -> t

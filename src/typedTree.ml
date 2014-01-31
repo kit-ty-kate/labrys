@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open Batteries
-open MonadOpen
+open BatteriesExceptionless
 open Monomorphic.None
 
 let fmt = Printf.sprintf
@@ -99,54 +98,50 @@ let rec transform ~from ~ty =
   in
   aux
 
+let gamma_error = fmt "The value '%s' was not found in Γ"
+
 let rec aux gamma gammaT = function
   | ParseTree.Abs ((name, ty), t) ->
-      Types.from_parse_tree gammaT ty >>= fun ty ->
+      let ty = Types.from_parse_tree gammaT ty in
       let param = {name; ty} in
-      aux (param :: gamma) gammaT t >>= fun expr ->
+      let expr = aux (param :: gamma) gammaT t in
       let ty_expr = get_type expr in
       let abs_ty = Types.Fun (ty, ty_expr) in
-      Exn.return (Abs ({abs_ty; param; ty_expr}, expr))
+      Abs ({abs_ty; param; ty_expr}, expr)
   | ParseTree.TAbs (name, t) ->
       let ty = Types.Ty name in
       let param = {name; ty} in
-      aux gamma ((name, ty) :: gammaT) t >>= fun expr ->
+      let expr = aux gamma ((name, ty) :: gammaT) t in
       let ty_expr = get_type expr in
       let abs_ty = Types.Forall (name, ty_expr) in
-      Exn.return (TAbs ({abs_ty; param; ty_expr}, expr))
+      TAbs ({abs_ty; param; ty_expr}, expr)
   | ParseTree.App (f, x) ->
-      aux gamma gammaT f >>= fun f ->
-      aux gamma gammaT x >>= fun x ->
+      let f = aux gamma gammaT f in
+      let x = aux gamma gammaT x in
       let ty_x = get_type x in
       begin match get_type f with
       | Types.Fun (ty, res) when Types.equal ty ty_x ->
-          Exn.return (App (res, f, x))
+          App (res, f, x)
       | Types.Fun (ty, _) -> type_error ~has:ty_x ~expected:ty
       | Types.Ty _ as ty -> function_type_error ~has:ty_x ~expected:ty
       | Types.Forall (ty, _) ->
           failwith (type_error_msg (Types.to_string ty_x) ty)
       end
   | ParseTree.TApp (f, ty_x) ->
-      aux gamma gammaT f >>= fun f ->
-      Types.from_parse_tree gammaT ty_x >>= fun ty_x ->
+      let f = aux gamma gammaT f in
+      let ty_x = Types.from_parse_tree gammaT ty_x in
       begin match get_type f with
       | Types.Forall (ty, res) ->
           let res = Types.replace ~from:ty ~ty:ty_x res in
           let f = transform ~from:ty ~ty:ty_x f in
-          Exn.return (TApp (res, f, ty_x))
+          TApp (res, f, ty_x)
       | Types.Fun (ty, _) -> type_error ~has:ty_x ~expected:ty
       | Types.Ty _ as ty -> function_type_error ~has:ty_x ~expected:ty
       end
   | ParseTree.Val name ->
-      List.find (fun x -> String.equal name x.name) gamma >>= fun x ->
-      Exn.return (Val x)
-
-let rec mapM f = function
-  | [] -> Exn.return []
-  | x::xs ->
-      f x >>= fun x ->
-      mapM f xs >>= fun xs ->
-      Exn.return (x :: xs)
+      let x = List.find (fun x -> String.equal name x.name) gamma in
+      let x = Option.get_exn x (Failure (gamma_error name)) in
+      Val x
 
 let rec check_if_returns_type ~datatype = function
   | Types.Ty x -> String.equal x datatype
@@ -156,31 +151,31 @@ let rec check_if_returns_type ~datatype = function
 let transform_variants ~datatype gammaT =
   let aux = function
     | ParseTree.Variant (name, ty) ->
-        Types.from_parse_tree gammaT ty >>= fun ty ->
+        let ty = Types.from_parse_tree gammaT ty in
         if check_if_returns_type ~datatype ty then
-          Exn.return (Variant (name, ty), {name; ty})
+          Variant (name, ty), {name; ty}
         else
           failwith "A variant doesn't return its type"
   in
-  mapM aux
+  List.map aux
 
 let rec from_parse_tree gamma gammaT = function
   | ParseTree.Value (name, term) :: xs ->
-      aux gamma gammaT term >>= fun x ->
+      let x = aux gamma gammaT term in
       let v = {name; ty = get_type x} in
-      from_parse_tree (v :: gamma) gammaT xs >>= fun xs ->
-      Exn.return (Value (v, x) :: xs)
+      let xs = from_parse_tree (v :: gamma) gammaT xs in
+      Value (v, x) :: xs
   | ParseTree.Type (name, ty) :: xs ->
-      Types.from_parse_tree gammaT ty >>= fun ty ->
+      let ty = Types.from_parse_tree gammaT ty in
       from_parse_tree gamma ((name, ty) :: gammaT) xs
   | ParseTree.Binding (name, ty, binding) :: xs ->
-      Types.from_parse_tree gammaT ty >>= fun ty ->
+      let ty = Types.from_parse_tree gammaT ty in
       let v = {name; ty} in
-      from_parse_tree (v :: gamma) gammaT xs >>= fun xs ->
-      Exn.return (Binding (v, binding) :: xs)
+      let xs = from_parse_tree (v :: gamma) gammaT xs in
+      Binding (v, binding) :: xs
   | ParseTree.Datatype (name, variants) :: xs ->
       let gammaT = (name, Types.Ty name) :: gammaT in
-      transform_variants ~datatype:name gammaT variants >>= fun variants ->
-      from_parse_tree (List.map snd variants @ gamma) gammaT xs >>= fun xs ->
-      Exn.return (Datatype (List.map fst variants) :: xs)
-  | [] -> Exn.return []
+      let variants = transform_variants ~datatype:name gammaT variants in
+      let xs = from_parse_tree (List.map snd variants @ gamma) gammaT xs in
+      Datatype (List.map fst variants) :: xs
+  | [] -> []

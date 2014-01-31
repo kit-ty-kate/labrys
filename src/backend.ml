@@ -21,17 +21,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 module UT = UntypedTree
 
-open Batteries
-open MonadOpen
+open BatteriesExceptionless
 open Monomorphic.None
+
+let fmt = Printf.sprintf
 
 let c = LLVM.create_context ()
 let m = LLVM.create_module c "Main"
 
 let find_in_gamma name l =
   let c = ref 0 in
-  List.find (fun x -> incr c; String.equal (fst x) name) l >|= fun res ->
-  (res, !c)
+  Option.map
+    (fun res -> (res, !c))
+    (List.find (fun x -> incr c; String.equal (fst x) name) l)
 
 let i8_type = LLVM.i8_type c
 let i32_type = LLVM.i32_type c
@@ -75,20 +77,20 @@ let rec lambda env gammaParam gammaEnv gammaGlob builder = function
       let env = LLVM.param f 1 in
       insert_arg_in_env (snd gammaP) env gammaEnv builder;
       let gammaE = (name, List.length gammaEnv) in
-      lambda env (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t >>= fun v ->
+      let v = lambda env (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t in
       LLVM.build_ret v builder;
-      Exn.return closure
+      closure
   | UT.App (f, x) ->
-      lambda env gammaParam gammaEnv gammaGlob builder f >>= fun boxed_f ->
+      let boxed_f = lambda env gammaParam gammaEnv gammaGlob builder f in
       let boxed_f = LLVM.build_bitcast boxed_f (LLVM.pointer_type closure_type) "extract_f_cast" builder in
       let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
       let f = LLVM.build_extractvalue boxed_f 0 "f" builder in
       let env = LLVM.build_extractvalue boxed_f 1 "env" builder in
-      lambda env gammaParam gammaEnv gammaGlob builder x >>= fun x ->
-      Exn.return (LLVM.build_call f [|x; env|] "tmp" builder)
+      let x = lambda env gammaParam gammaEnv gammaGlob builder x in
+      LLVM.build_call f [|x; env|] "tmp" builder
   | UT.Val name ->
       let find gamma =
-        find_in_gamma name gamma >|= fun (res, c) -> (snd res, c)
+        Option.map (fun (res, c) -> (snd res, c)) (find_in_gamma name gamma)
       in
       let execEnv (i, _) =
         let result = LLVM.build_gep env [|i32 i|] "from_env" builder in
@@ -97,27 +99,25 @@ let rec lambda env gammaParam gammaEnv gammaGlob builder = function
       let execGlob (value, _) =
         LLVM.build_load value "glob_extract" builder
       in
-      let res = match gammaParam with
-        | Some (name', param) when String.equal name name' ->
-            Exn.return param
-        | Some _ | None -> Exn.fail `NotFound
-      in
-      let res =
-        Exn.catch res (fun `NotFound -> find gammaEnv >|= execEnv)
-      in
-      let res = Exn.catch res (fun `NotFound -> find gammaGlob >|= execGlob) in
-      res
+      match gammaParam with
+      | Some (name', param) when String.equal name name' ->
+          param
+      | Some _ | None ->
+          match find gammaEnv with
+          | Some x -> execEnv x
+          | None ->
+              execGlob (Option.default_delayed (fun () -> assert false) (find gammaGlob))
 
 let rec init gammaGlob builder = function
   | `Val (name, g, t, size) :: xs ->
       let env = create_env size builder in
-      lambda env None [] gammaGlob builder t >>= fun value ->
+      let value = lambda env None [] gammaGlob builder t in
       LLVM.build_store value g builder;
       init ((name, g) :: gammaGlob) builder xs
   | `Datatype f :: xs ->
       let gs = f builder in
       init (gs @ gammaGlob) builder xs
-  | [] -> Exn.return ()
+  | [] -> ()
 
 let create_variants l builder =
   let rec create i gammaParam gammaEnv env builder = function
@@ -163,8 +163,8 @@ let make =
     | [] ->
         let ty = LLVM.function_type (LLVM.void_type c) [||] in
         let (f, builder) = LLVM.define_function c "__init" ty m in
-        init gamma builder (List.rev init_list) >>= fun () ->
+        init gamma builder (List.rev init_list);
         LLVM.build_ret_void builder;
-        Exn.return m
+        m
   in
   top [] []

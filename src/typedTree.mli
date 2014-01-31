@@ -19,8 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open MonadOpen
-
 type value = Gamma.value = {name : string; ty : Types.t}
 type abs = {abs_ty : Types.t; param : value; ty_expr : Types.t}
 
@@ -43,4 +41,4 @@ val from_parse_tree :
   value list ->
   Types.env list ->
   ParseTree.top list ->
-  (top list, [> failure | not_found ]) Exn.t
+  top list

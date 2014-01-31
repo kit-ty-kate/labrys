@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open Batteries
-open MonadOpen
+open BatteriesExceptionless
 open Monomorphic.None
 
 let fmt = Printf.sprintf
@@ -38,17 +37,20 @@ let rec to_string = function
   | Ty x -> x
   | Forall (x, t) -> fmt "forall %s. %s" x (to_string t)
 
+let type_error = fmt "The type '%s' was not found in Γ"
+
 let rec from_parse_tree gamma = function
   | ParseTree.Fun (x, y) ->
-      from_parse_tree gamma x >>= fun x ->
-      from_parse_tree gamma y >>= fun y ->
-      Exn.return (Fun (x, y))
+      let x = from_parse_tree gamma x in
+      let y = from_parse_tree gamma y in
+      Fun (x, y)
   | ParseTree.Ty name ->
-      List.find (fun x -> String.equal (fst x) name) gamma >>= fun x ->
-      Exn.return (snd x)
+      let x = List.find (fun x -> String.equal (fst x) name) gamma in
+      let x = Option.get_exn x (Failure (type_error name)) in
+      snd x
   | ParseTree.Forall (name, ret) ->
-      from_parse_tree ((name, Ty name) :: gamma) ret >>= fun ret ->
-      Exn.return (Forall (name, ret))
+      let ret = from_parse_tree ((name, Ty name) :: gamma) ret in
+      Forall (name, ret)
 
 let equal x y =
   let rec aux = function

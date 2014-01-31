@@ -20,8 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 open Cmdliner
-open Batteries
-open MonadOpen
+open BatteriesExceptionless
 open Monomorphic.None
 
 let sprintf = Printf.sprintf
@@ -36,10 +35,10 @@ let compile {c; o; file; _} result =
   let c = if c then "-c" else "" in
   let o = Filename.quote o in
   let command = sprintf "llc - | cc %s -x assembler - -o %s" c o in
-  let output = Legacy.Unix.open_process_out command in
-  output_string output result >>= fun () ->
-  match Legacy.Unix.close_process_out output with
-  | Unix.WEXITED 0 -> Exn.return ()
+  let output = Unix.open_process_out command in
+  output_string output result;
+  match Unix.close_process_out output with
+  | Unix.WEXITED 0 -> ()
   | _ -> prerr_endline "\nThe compilation processes exited abnormally"
 
 let print_or_compile = function
@@ -50,21 +49,16 @@ let aux args =
   let gamma = Gamma.values in
   let gammaT = Gamma.types in
   open_in args.file
-  >>= ParserManager.parse
-  >>= TypedTree.from_parse_tree gamma gammaT
-  >|= UntypedTree.of_typed_tree
-  >>= Backend.make
-  >|= LLVM.to_string
-  >>= print_or_compile args
-  >> Exn.return None
+  |> ParserManager.parse
+  |> TypedTree.from_parse_tree gamma gammaT
+  |> UntypedTree.of_typed_tree
+  |> Backend.make
+  |> LLVM.to_string
+  |> print_or_compile args
 
 let start print c o file =
-  let catch = function
-    | `Failure s -> Some s
-    | `NotFound -> Some "Unknown identifier"
-    | `SysError err -> Some err
-  in
-  Exn.run catch (aux {print; c; o; file})
+  try aux {print; c; o; file}; None with
+  | Failure x -> Some x
 
 let cmd =
   let print = Arg.(value & flag & info ["print"]) in
@@ -76,5 +70,5 @@ let cmd =
 let () =
   match Term.eval cmd with
   | `Ok None -> exit 0
-  | `Ok (Some x) -> Unsafe.prerr_endline x; exit 1
+  | `Ok (Some x) -> prerr_endline x; exit 1
   | _ -> exit 1

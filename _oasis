@@ -11,12 +11,11 @@ Executable cervoise
   BuildTools: ocamlbuild
   MainIs: main.ml
   BuildDepends:
-    monad-exn,
     unix,
     cmdliner,
     llvm (>= 3.4),
     llvm.irreader (>= 3.4),
-    batteries,
+    batteries (>= 2.2),
     monomorphic
   CompiledObject: best
 #  ByteOpt: -w A
