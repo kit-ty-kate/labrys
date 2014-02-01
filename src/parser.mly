@@ -39,6 +39,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Datatype
 %token Pipe
 %token DoubleDot
+%token Star
 %token <string> TermName
 %token <string> TypeName
 %token <string> Binding
@@ -70,8 +71,8 @@ main:
 term:
 | Lambda termName = TermName DoubleDot typeName = typeExpr Dot term = term
     { ParseTree.Abs (get_loc $startpos $endpos, (termName, typeName), term) }
-| Lambda typeName = TypeName Dot term = term
-    { ParseTree.TAbs (get_loc $startpos $endpos, typeName, term) }
+| Lambda typeName = TypeName k = option(kind) Dot term = term
+    { ParseTree.TAbs (get_loc $startpos $endpos, (typeName, k), term) }
 | term1 = term term2 = term %prec app
     { ParseTree.App (get_loc $startpos $endpos, term1, term2) }
 | term1 = term LBracket ty = typeExpr RBracket
@@ -86,6 +87,11 @@ typeExpr:
 | param = typeExpr Arrow ret = typeExpr { ParseTree.Fun (param, ret) }
 | Forall ty = TypeName Dot ret = typeExpr { ParseTree.Forall (ty, ret) }
 | LParent term = typeExpr RParent { term }
+
+kind:
+| Star { ParseTree.Star }
+| k1 = kind Arrow k2 = kind { ParseTree.KFun (k1, k2) }
+| LParent k = kind RParent { k }
 
 variant:
 | name = TypeName DoubleDot ty = typeExpr { ParseTree.Variant (get_loc $startpos $endpos, name, ty) }

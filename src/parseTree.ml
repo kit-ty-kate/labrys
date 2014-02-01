@@ -29,12 +29,18 @@ type ty =
 
 type value = (string * ty)
 
+type kind =
+  | Star
+  | KFun of (kind * kind)
+
+type t_value = (string * kind option)
+
 type position = {pos_lnum : int; pos_cnum : int}
 type location = {loc_start : position; loc_end : position}
 
 type t =
   | Abs of (location * value * t)
-  | TAbs of (location * string * t)
+  | TAbs of (location * t_value * t)
   | App of (location * t * t)
   | TApp of (location * t * ty)
   | Val of (location * string)

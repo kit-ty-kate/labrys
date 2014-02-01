@@ -36,6 +36,7 @@ rule main = parse
   | '[' { Parser.LBracket }
   | ']' { Parser.RBracket }
   | '|' { Parser.Pipe }
+  | '*' { Parser.Star }
   | "λ" { Parser.Lambda }
   | "->" { Parser.Arrow }
   | "let" { Parser.Let }

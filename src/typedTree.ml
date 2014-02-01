@@ -111,7 +111,7 @@ let rec aux gamma gammaT = function
       let ty_expr = get_type expr in
       let abs_ty = Types.Fun (ty, ty_expr) in
       Abs ({abs_ty; param; ty_expr}, expr)
-  | ParseTree.TAbs (loc, name, t) ->
+  | ParseTree.TAbs (loc, (name, _), t) ->
       let ty = Types.Ty name in
       let param = {name; ty} in
       let expr = aux gamma ((name, ty) :: gammaT) t in
