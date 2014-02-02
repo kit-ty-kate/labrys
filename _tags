@@ -29,5 +29,5 @@
 # OASIS_STOP
 "examples": -traverse
 "examples": not_hygienic
-true: use_menhir
+true: use_menhir, explain
 <src/*.mly>: pkg_batteries
