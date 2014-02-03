@@ -153,11 +153,12 @@ let rec aux gamma gammaT = function
       Val x
 
 let rec check_if_returns_type ~datatype = function
+  | Types.AppOnTy (Types.Ty x, _)
   | Types.Ty x -> String.equal x datatype
   | Types.Forall (_, _, ret)
+  | Types.AppOnTy (ret, _)
   | Types.Fun (_, ret) -> check_if_returns_type ~datatype ret
   | Types.AbsOnTy _ -> false
-  | Types.AppOnTy (f, x) -> false (* TODO: Next commit *)
 
 let transform_variants ~datatype gammaT =
   let aux = function
@@ -184,8 +185,9 @@ let rec from_parse_tree gamma gammaT = function
       let v = {name; ty} in
       let xs = from_parse_tree (v :: gamma) gammaT xs in
       Binding (v, binding) :: xs
-  | ParseTree.Datatype (loc, name, variants) :: xs ->
-      let gammaT = (name, (Types.Ty name, ParseTree.Star)) :: gammaT in
+  | ParseTree.Datatype (loc, name, kind, variants) :: xs ->
+      let kind = Types.get_kind kind in
+      let gammaT = (name, (Types.Ty name, kind)) :: gammaT in
       let variants = transform_variants ~datatype:name gammaT variants in
       let xs = from_parse_tree (List.map snd variants @ gamma) gammaT xs in
       Datatype (List.map fst variants) :: xs

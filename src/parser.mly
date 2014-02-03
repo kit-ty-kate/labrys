@@ -64,8 +64,8 @@ main:
    { ParseTree.Type (get_loc $startpos $endpos, name, ty) :: main }
 | Let name = TermName DoubleDot ty = typeExpr Equal binding = Binding main = main
    { ParseTree.Binding (get_loc $startpos $endpos, name, ty, binding) :: main }
-| Datatype name = TypeName Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
-   { ParseTree.Datatype (get_loc $startpos $endpos, name, variants) :: main }
+| Datatype name = TypeName k = option(kindopt) Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
+   { ParseTree.Datatype (get_loc $startpos $endpos, name, k, variants) :: main }
 | EOF { [] }
 
 term:

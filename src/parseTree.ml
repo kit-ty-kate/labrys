@@ -54,4 +54,4 @@ type top =
   | Value of (location * string * t)
   | Type of (location * string * ty)
   | Binding of (location * string * ty * string)
-  | Datatype of (location * string * variant list)
+  | Datatype of (location * string * kind option * variant list)
