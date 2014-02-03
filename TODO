@@ -3,7 +3,7 @@
 == Short term ==
 
 * System F ω
-* Cleaning
+* Cleaning (parser, typechecker, backend, .mli everywhere, Gamma with Map ?, …)
 * Pattern matching
 
 
