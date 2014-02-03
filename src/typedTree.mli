@@ -19,18 +19,18 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type value = Gamma.value = {name : string; ty : Types.t}
-type abs = {abs_ty : Types.t; param : value; ty_expr : Types.t}
+type value = {name : string; ty : Types.ty}
+type abs = {abs_ty : Types.ty; param : value; ty_expr : Types.ty}
 
 type t =
   | Abs of (abs * t)
   | TAbs of (abs * t)
-  | App of (Types.t * t * t)
-  | TApp of (Types.t * t * Types.t)
+  | App of (Types.ty * t * t)
+  | TApp of (Types.ty * t * Types.ty)
   | Val of value
 
 type variant =
-  | Variant of (string * Types.t)
+  | Variant of (string * Types.ty)
 
 type top =
   | Value of (value * t)

@@ -46,8 +46,8 @@ let print_or_compile = function
   | {print = false; _} as args -> compile args
 
 let aux args =
-  let gamma = Gamma.values in
-  let gammaT = Gamma.types in
+  let gamma = [] in
+  let gammaT = [] in
   open_in args.file
   |> ParserManager.parse
   |> TypedTree.from_parse_tree gamma gammaT

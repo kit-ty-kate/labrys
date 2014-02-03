@@ -22,18 +22,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type ty =
-  | Fun of (ty * ty)
-  | Ty of string
-  | Forall of (string * ty)
-
-type value = (string * ty)
-
 type kind =
   | Star
   | KFun of (kind * kind)
 
 type t_value = (string * kind option)
+
+type ty =
+  | Fun of (ty * ty)
+  | Ty of string
+  | Forall of (string * kind option * ty)
+  | AbsOnTy of (string * kind option * ty)
+  | AppOnTy of (ty * ty)
+
+type value = (string * ty)
 
 type position = {pos_lnum : int; pos_cnum : int}
 type location = {loc_start : position; loc_end : position}

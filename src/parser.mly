@@ -47,10 +47,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token LBracket RBracket
 %token EOF
 
-%left Lambda Dot
+%left Lambda Dot Forall
 %right Arrow
 %nonassoc TermName TypeName LParent LBracket
-%nonassoc app
+%nonassoc app tapp
 
 %start main
 %type <ParseTree.top list> main
@@ -85,7 +85,9 @@ term:
 typeExpr:
 | name = TypeName { ParseTree.Ty name }
 | param = typeExpr Arrow ret = typeExpr { ParseTree.Fun (param, ret) }
-| Forall ty = TypeName Dot ret = typeExpr { ParseTree.Forall (ty, ret) }
+| Forall ty = TypeName k = option(kindopt) Dot ret = typeExpr { ParseTree.Forall (ty, k, ret) }
+| Lambda name = TypeName k = option(kindopt) Dot ret = typeExpr { ParseTree.AbsOnTy (name, k, ret) }
+| f = typeExpr x = typeExpr %prec tapp { ParseTree.AppOnTy (f, x) }
 | LParent term = typeExpr RParent { term }
 
 kind:
@@ -95,3 +97,6 @@ kind:
 
 variant:
 | name = TypeName DoubleDot ty = typeExpr { ParseTree.Variant (get_loc $startpos $endpos, name, ty) }
+
+kindopt:
+| DoubleDot k = kind { k }
