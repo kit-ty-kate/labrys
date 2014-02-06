@@ -1,3 +1,7 @@
+datatype Int =
+  | O : Int
+  | S : Int -> Int
+
 let printInt : Int -> Int = begin
   @msg = internal constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
@@ -17,8 +21,8 @@ let zero : Int = begin
   @zero = global i8* getelementptr(i8* @_zero)
 end
 
-let id = λX.λx:X.x
+let id = λX.λx:X.λx:X.x
 
 let test = id [Int]
 
-let testdeux = printInt (test zero)
+let testdeux = printInt (test zero zero)

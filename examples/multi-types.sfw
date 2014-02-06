@@ -1,3 +1,7 @@
+datatype Int =
+  | O : Int
+  | S : Int -> Int
+
 let Id = Int -> Int
 
 let id = λx:Id.x
