@@ -1,0 +1,40 @@
+datatype Int =
+  | O : Int
+  | S : Int -> Int
+
+let printInt : Int -> Int = begin
+  @msg = internal constant [4 x i8] c"%d\0a\00"
+  declare i32 @printf(i8*, ...)
+  define i8* @__printInt(i8* %i, i8**) {
+    %access_prim = load i8* %i
+    %access = zext i8 %access_prim to i32
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
+    %r = inttoptr i32 %r1 to i8*
+    ret i8* %r
+  }
+  @_printInt = global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__printInt, i8** null}
+  @printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
+end
+
+let zero : Int = begin
+  @_zero = global i8 0
+  @zero = global i8* getelementptr(i8* @_zero)
+end
+
+let id = λX.λx:X.λx:X.x
+
+let test = id [Int]
+
+let testdeux = printInt (test zero zero)
+
+let Id = λX.X
+
+let I = Id
+
+let Ip = Id
+
+let II = Ip Int
+
+datatype Pair : * -> * -> * = Pair : forall X. forall Y. X -> Y -> Pair X Y
+
+let test = Pair [Int] [Int] O O
