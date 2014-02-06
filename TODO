@@ -2,8 +2,7 @@
 
 == Short term ==
 
-* System F ω
-* Cleaning (parser, typechecker, backend, .mli everywhere, Gamma with Map ?, …)
+* Cleaning (parser, typechecker, backend, .mli everywhere, …)
 * Pattern matching
 
 
