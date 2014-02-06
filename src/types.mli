@@ -19,26 +19,17 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type kind = ParseTree.kind
+type t =
+  | Ty of (string * Kinds.t)
+  | Alias of (string * t)
+  | Fun of (t * t)
+  | Forall of (string * Kinds.t * t)
+  | AbsOnTy of (string * Kinds.t * t)
+  | AppOnTy of (t * t)
 
-type ty =
-  | Fun of (ty * ty)
-  | Ty of string
-  | Forall of (string * kind * ty)
-  | AbsOnTy of (string * kind * ty)
-  | AppOnTy of (ty * ty)
-
-type t = (ty * kind)
-
-type env = (string * t)
-
-val get_kind : kind option -> kind
-val kind_equal : kind -> kind -> bool
-
-val to_string : ty -> string
-val from_parse_tree : loc:ParseTree.location -> env list -> ParseTree.ty -> t
-val equal : env list -> ty -> ty -> bool
-
-val replace : from:string -> ty:ty -> ty -> ty
-
-val size : ty -> int
+val from_parse_tree :
+  loc:ParseTree.location ->
+  (t * Kinds.t) Gamma.Types.t ->
+  Kinds.t Gamma.Kinds.t ->
+  ParseTree.ty ->
+  (t * Kinds.t)

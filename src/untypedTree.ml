@@ -50,7 +50,7 @@ let rec of_typed_term = function
       (Val name, 0)
 
 let of_typed_variant = function
-  | TypedTree.Variant (name, ty) -> Variant (name, Types.size ty)
+  | TypedTree.Variant (name, ty) -> Variant (name, TypesBeta.size ty)
 
 let rec of_typed_tree = function
   | TypedTree.Value ({TypedTree.name; _}, t) :: xs ->

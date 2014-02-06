@@ -46,11 +46,12 @@ let print_or_compile = function
   | {print = false; _} as args -> compile args
 
 let aux args =
-  let gamma = [] in
-  let gammaT = [] in
+  let gamma = Gamma.Value.empty in
+  let gammaT = Gamma.Types.empty in
+  let gammaK = Gamma.Kinds.empty in
   open_in args.file
   |> ParserManager.parse
-  |> TypedTree.from_parse_tree gamma gammaT
+  |> TypedTree.from_parse_tree gamma gammaT gammaK
   |> UntypedTree.of_typed_tree
   |> Backend.make
   |> LLVM.to_string

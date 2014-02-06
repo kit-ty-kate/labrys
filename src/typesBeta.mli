@@ -19,27 +19,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type value = {name : string; ty : TypesBeta.t}
-type abs = {abs_ty : TypesBeta.t; param : value; ty_expr : TypesBeta.t}
-
 type t =
-  | Abs of (abs * t)
-  | TAbs of (abs * t)
-  | App of (TypesBeta.t * t * t)
-  | TApp of (TypesBeta.t * t * TypesBeta.t)
-  | Val of value
+  | Ty of string
+  | Fun of (t * t)
+  | Forall of (string * Kinds.t * t)
+  | AbsOnTy of (string * Kinds.t * t)
+  | AppOnTy of (t * t)
 
-type variant =
-  | Variant of (string * TypesBeta.t)
+val of_ty : Types.t -> t
 
-type top =
-  | Value of (value * t)
-  | Binding of (value * string)
-  | Datatype of variant list
+val to_string : t -> string
 
-val from_parse_tree :
-  TypesBeta.t Gamma.Value.t ->
-  (Types.t * Kinds.t) Gamma.Types.t ->
-  Kinds.t Gamma.Kinds.t ->
-  ParseTree.top list ->
-  top list
+val equal : t -> t -> bool
+
+val replace : from:string -> ty:t -> t -> t
+
+val size : t -> int

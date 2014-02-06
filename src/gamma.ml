@@ -22,14 +22,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type value = {name : string; ty : Types.t}
+module Value = struct
+  include Map.Make(String)
+  include Exceptionless
+end
 
-let int =
-  let int = "Int" in
-  (int, (Types.Ty int))
+module Types = struct
+  include Map.Make(String)
+  include Exceptionless
+  (* TODO: Override find *)
+end
 
-let values = []
-
-let types =
-  [ int
-  ]
+module Kinds = struct
+  include Map.Make(String)
+  include Exceptionless
+  (* TODO: Override find *)
+end

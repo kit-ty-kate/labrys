@@ -22,25 +22,25 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let fmt = Printf.sprintf
-
-type value = {name : string; ty : Types.ty}
-type abs = {abs_ty : Types.ty; param : value; ty_expr : Types.ty}
+type value = {name : string; ty : TypesBeta.t}
+type abs = {abs_ty : TypesBeta.t; param : value; ty_expr : TypesBeta.t}
 
 type t =
   | Abs of (abs * t)
   | TAbs of (abs * t)
-  | App of (Types.ty * t * t)
-  | TApp of (Types.ty * t * Types.ty)
+  | App of (TypesBeta.t * t * t)
+  | TApp of (TypesBeta.t * t * TypesBeta.t)
   | Val of value
 
 type variant =
-  | Variant of (string * Types.ty)
+  | Variant of (string * TypesBeta.t)
 
 type top =
   | Value of (value * t)
   | Binding of (value * string)
   | Datatype of variant list
+
+let fmt = Printf.sprintf
 
 let get_type = function
   | Abs ({abs_ty; _}, _) -> abs_ty
@@ -50,6 +50,7 @@ let get_type = function
   | Val {ty; _} -> ty
 
 let fail ~loc x = raise (Error.Exn (loc, x))
+
 let type_error_msg =
   fmt
     "Error: This expression has type '%s' but an \
@@ -59,8 +60,8 @@ let type_error ~loc ~has ~expected =
   fail
     ~loc
     (type_error_msg
-       (Types.to_string has)
-       (Types.to_string expected)
+       (TypesBeta.to_string has)
+       (TypesBeta.to_string expected)
     )
 
 let function_type_error ~loc ~has ~expected =
@@ -68,12 +69,12 @@ let function_type_error ~loc ~has ~expected =
     ~loc
     (fmt
        "Error: Can't apply '%s' to a non-function type '%s'"
-       (Types.to_string has)
-       (Types.to_string expected)
+       (TypesBeta.to_string has)
+       (TypesBeta.to_string expected)
     )
 
 let rec transform ~from ~ty =
-  let replace = Types.replace ~from ~ty in
+  let replace = TypesBeta.replace ~from ~ty in
   let transform x = transform ~from ~ty x in
   let rec aux = function
     | Abs ({abs_ty; param = {name; ty}; ty_expr}, t) ->
@@ -103,92 +104,95 @@ let rec transform ~from ~ty =
 
 let gamma_error = fmt "The value '%s' was not found in Γ"
 
-let rec aux gamma gammaT = function
+let ty_from_parse_tree ~loc gammaT gammaK ty =
+  let (ty, k) = Types.from_parse_tree ~loc gammaT gammaK ty in
+  (TypesBeta.of_ty ty, k)
+
+let rec aux gamma gammaT gammaK = function
   | ParseTree.Abs (loc, (name, ty), t) ->
-      let (ty, _) = Types.from_parse_tree ~loc gammaT ty in
+      let (ty, _) = ty_from_parse_tree ~loc gammaT gammaK ty in
+      let expr = aux (Gamma.Value.add name ty gamma) gammaT gammaK t in
       let param = {name; ty} in
-      let expr = aux (param :: gamma) gammaT t in
       let ty_expr = get_type expr in
-      let abs_ty = Types.Fun (ty, ty_expr) in
+      let abs_ty = TypesBeta.Fun (ty, ty_expr) in
       Abs ({abs_ty; param; ty_expr}, expr)
   | ParseTree.TAbs (loc, (name, k), t) ->
-      let k = Types.get_kind k in
-      let ty = (Types.Ty name, k) in
-      let param = {name; ty = fst ty} in
-      let expr = aux gamma ((name, ty) :: gammaT) t in
+      let ty = TypesBeta.Ty name in
+      let param = {name; ty = ty} in
+      let expr = aux gamma gammaT (Gamma.Kinds.add name k gammaK) t in
       let ty_expr = get_type expr in
-      let abs_ty = Types.Forall (name, k, ty_expr) in
+      let abs_ty = TypesBeta.Forall (name, k, ty_expr) in
       TAbs ({abs_ty; param; ty_expr}, expr)
   | ParseTree.App (loc, f, x) ->
-      let f = aux gamma gammaT f in
-      let x = aux gamma gammaT x in
+      let f = aux gamma gammaT gammaK f in
+      let x = aux gamma gammaT gammaK x in
       let ty_x = get_type x in
       begin match get_type f with
-      | Types.Fun (ty, res) when Types.equal gammaT ty ty_x ->
+      | TypesBeta.Fun (ty, res) when TypesBeta.equal ty ty_x ->
           App (res, f, x)
-      | Types.Fun (ty, _) -> type_error ~loc ~has:ty_x ~expected:ty
-      | Types.Ty _ as ty -> function_type_error ~loc ~has:ty_x ~expected:ty
-      | Types.Forall (ty, _, _) ->
-          fail ~loc (type_error_msg (Types.to_string ty_x) ty)
-      | Types.AbsOnTy _ -> assert false
-      | Types.AppOnTy _ -> assert false
+      | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:ty_x ~expected:ty
+      | TypesBeta.Ty _ as ty -> function_type_error ~loc ~has:ty_x ~expected:ty
+      | TypesBeta.Forall (ty, _, _) ->
+          fail ~loc (type_error_msg (TypesBeta.to_string ty_x) ty)
+      | TypesBeta.AbsOnTy _ -> assert false
+      | TypesBeta.AppOnTy _ -> assert false
       end
   | ParseTree.TApp (loc, f, ty_x) ->
-      let f = aux gamma gammaT f in
-      let (ty_x, kx) = Types.from_parse_tree ~loc gammaT ty_x in
+      let f = aux gamma gammaT gammaK f in
+      let (ty_x, kx) = ty_from_parse_tree ~loc gammaT gammaK ty_x in
       begin match get_type f with
-      | Types.Forall (ty, k, res) when Types.kind_equal k kx ->
-          let res = Types.replace ~from:ty ~ty:ty_x res in
+      | TypesBeta.Forall (ty, k, res) when Kinds.equal k kx ->
+          let res = TypesBeta.replace ~from:ty ~ty:ty_x res in
           let f = transform ~from:ty ~ty:ty_x f in
           TApp (res, f, ty_x)
-      | Types.Forall _ -> raise (Error.Exn (loc, fmt "Cannot apply"))
-      | Types.Fun (ty, _) -> type_error ~loc ~has:ty_x ~expected:ty
-      | Types.Ty _ as ty -> function_type_error ~loc ~has:ty_x ~expected:ty
-      | Types.AbsOnTy _ -> assert false
-      | Types.AppOnTy _ -> assert false
+      | TypesBeta.Forall _ -> raise (Error.Exn (loc, fmt "Cannot apply"))
+      | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:ty_x ~expected:ty
+      | TypesBeta.Ty _ as ty -> function_type_error ~loc ~has:ty_x ~expected:ty
+      | TypesBeta.AbsOnTy _ -> assert false
+      | TypesBeta.AppOnTy _ -> assert false
       end
   | ParseTree.Val (loc, name) ->
-      let x = List.find (fun x -> String.equal name x.name) gamma in
-      let x = Option.get_exn x (Error.Exn (loc, gamma_error name)) in
-      Val x
+      let ty = Gamma.Value.find name gamma in
+      let ty = Option.get_exn ty (Error.Exn (loc, gamma_error name)) in
+      Val {name; ty}
 
 let rec check_if_returns_type ~datatype = function
-  | Types.AppOnTy (Types.Ty x, _)
-  | Types.Ty x -> String.equal x datatype
-  | Types.Forall (_, _, ret)
-  | Types.AppOnTy (ret, _)
-  | Types.Fun (_, ret) -> check_if_returns_type ~datatype ret
-  | Types.AbsOnTy _ -> false
+  | TypesBeta.AppOnTy (TypesBeta.Ty x, _)
+  | TypesBeta.Ty x -> String.equal x datatype
+  | TypesBeta.Forall (_, _, ret)
+  | TypesBeta.AppOnTy (ret, _)
+  | TypesBeta.Fun (_, ret) -> check_if_returns_type ~datatype ret
+  | TypesBeta.AbsOnTy _ -> false
 
-let transform_variants ~datatype gammaT =
-  let aux = function
-    | ParseTree.Variant (loc, name, ty) ->
-        let (ty, _) = Types.from_parse_tree ~loc gammaT ty in
+let transform_variants ~datatype gamma gammaT gammaK =
+  let rec aux = function
+    | ParseTree.Variant (loc, name, ty) :: xs ->
+        let (ty, _) = ty_from_parse_tree ~loc gammaT gammaK ty in
         if check_if_returns_type ~datatype ty then
-          Variant (name, ty), {name; ty}
+          let (xs, gamma) = aux xs in
+          (Variant (name, ty) :: xs, Gamma.Value.add name ty gamma)
         else
           fail ~loc (fmt "The variant '%s' doesn't return its type" name)
+    | [] -> ([], gamma)
   in
-  List.map aux
+  aux
 
-let rec from_parse_tree gamma gammaT = function
+let rec from_parse_tree gamma gammaT gammaK = function
   | ParseTree.Value (loc, name, term) :: xs ->
-      let x = aux gamma gammaT term in
-      let v = {name; ty = get_type x} in
-      let xs = from_parse_tree (v :: gamma) gammaT xs in
-      Value (v, x) :: xs
+      let x = aux gamma gammaT gammaK term in
+      let ty = get_type x in
+      let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaK xs in
+      Value ({name; ty}, x) :: xs
   | ParseTree.Type (loc, name, ty) :: xs ->
-      let ty = Types.from_parse_tree ~loc gammaT ty in
-      from_parse_tree gamma ((name, ty) :: gammaT) xs
+      let ty = Types.from_parse_tree ~loc gammaT gammaK ty in
+      from_parse_tree gamma (Gamma.Types.add name ty gammaT) gammaK xs
   | ParseTree.Binding (loc, name, ty, binding) :: xs ->
-      let (ty, _) = Types.from_parse_tree ~loc gammaT ty in
-      let v = {name; ty} in
-      let xs = from_parse_tree (v :: gamma) gammaT xs in
-      Binding (v, binding) :: xs
+      let (ty, _) = ty_from_parse_tree ~loc gammaT gammaK ty in
+      let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaK xs in
+      Binding ({name; ty}, binding) :: xs
   | ParseTree.Datatype (loc, name, kind, variants) :: xs ->
-      let kind = Types.get_kind kind in
-      let gammaT = (name, (Types.Ty name, kind)) :: gammaT in
-      let variants = transform_variants ~datatype:name gammaT variants in
-      let xs = from_parse_tree (List.map snd variants @ gamma) gammaT xs in
-      Datatype (List.map fst variants) :: xs
+      let gammaK = Gamma.Kinds.add name kind gammaK in
+      let (variants, gamma) = transform_variants ~datatype:name gamma gammaT gammaK variants in
+      let xs = from_parse_tree gamma gammaT gammaK xs in
+      Datatype variants :: xs
   | [] -> []

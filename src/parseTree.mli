@@ -19,27 +19,32 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type value = {name : string; ty : TypesBeta.t}
-type abs = {abs_ty : TypesBeta.t; param : value; ty_expr : TypesBeta.t}
+type t_value = (string * Kinds.t)
+
+type ty =
+  | Fun of (ty * ty)
+  | Ty of string
+  | Forall of (string * Kinds.t * ty)
+  | AbsOnTy of (string * Kinds.t * ty)
+  | AppOnTy of (ty * ty)
+
+type value = (string * ty)
+
+type position = {pos_lnum : int; pos_cnum : int}
+type location = {loc_start : position; loc_end : position}
 
 type t =
-  | Abs of (abs * t)
-  | TAbs of (abs * t)
-  | App of (TypesBeta.t * t * t)
-  | TApp of (TypesBeta.t * t * TypesBeta.t)
-  | Val of value
+  | Abs of (location * value * t)
+  | TAbs of (location * t_value * t)
+  | App of (location * t * t)
+  | TApp of (location * t * ty)
+  | Val of (location * string)
 
 type variant =
-  | Variant of (string * TypesBeta.t)
+  | Variant of (location * string * ty)
 
 type top =
-  | Value of (value * t)
-  | Binding of (value * string)
-  | Datatype of variant list
-
-val from_parse_tree :
-  TypesBeta.t Gamma.Value.t ->
-  (Types.t * Kinds.t) Gamma.Types.t ->
-  Kinds.t Gamma.Kinds.t ->
-  ParseTree.top list ->
-  top list
+  | Value of (location * string * t)
+  | Type of (location * string * ty)
+  | Binding of (location * string * ty * string)
+  | Datatype of (location * string * Kinds.t * variant list)

@@ -19,27 +19,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type value = {name : string; ty : TypesBeta.t}
-type abs = {abs_ty : TypesBeta.t; param : value; ty_expr : TypesBeta.t}
+open BatteriesExceptionless
 
-type t =
-  | Abs of (abs * t)
-  | TAbs of (abs * t)
-  | App of (TypesBeta.t * t * t)
-  | TApp of (TypesBeta.t * t * TypesBeta.t)
-  | Val of value
+module Value : sig
+  include module type of Map.Make(String)
+  include module type of Exceptionless
+end
 
-type variant =
-  | Variant of (string * TypesBeta.t)
+module Types : sig
+  include module type of Map.Make(String)
+  include module type of Exceptionless
+end
 
-type top =
-  | Value of (value * t)
-  | Binding of (value * string)
-  | Datatype of variant list
-
-val from_parse_tree :
-  TypesBeta.t Gamma.Value.t ->
-  (Types.t * Kinds.t) Gamma.Types.t ->
-  Kinds.t Gamma.Kinds.t ->
-  ParseTree.top list ->
-  top list
+module Kinds : sig
+  include module type of Map.Make(String)
+  include module type of Exceptionless
+end

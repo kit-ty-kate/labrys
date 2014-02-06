@@ -64,14 +64,14 @@ main:
    { ParseTree.Type (get_loc $startpos $endpos, name, ty) :: main }
 | Let name = TermName DoubleDot ty = typeExpr Equal binding = Binding main = main
    { ParseTree.Binding (get_loc $startpos $endpos, name, ty, binding) :: main }
-| Datatype name = TypeName k = option(kindopt) Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
+| Datatype name = TypeName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
    { ParseTree.Datatype (get_loc $startpos $endpos, name, k, variants) :: main }
 | EOF { [] }
 
 term:
 | Lambda termName = TermName DoubleDot typeName = typeExpr Dot term = term
     { ParseTree.Abs (get_loc $startpos $endpos, (termName, typeName), term) }
-| Lambda typeName = TypeName k = option(kind) Dot term = term
+| Lambda typeName = TypeName k = kindopt Dot term = term
     { ParseTree.TAbs (get_loc $startpos $endpos, (typeName, k), term) }
 | term1 = term term2 = term %prec app
     { ParseTree.App (get_loc $startpos $endpos, term1, term2) }
@@ -85,18 +85,19 @@ term:
 typeExpr:
 | name = TypeName { ParseTree.Ty name }
 | param = typeExpr Arrow ret = typeExpr { ParseTree.Fun (param, ret) }
-| Forall ty = TypeName k = option(kindopt) Dot ret = typeExpr { ParseTree.Forall (ty, k, ret) }
-| Lambda name = TypeName k = option(kindopt) Dot ret = typeExpr { ParseTree.AbsOnTy (name, k, ret) }
+| Forall ty = TypeName k = kindopt Dot ret = typeExpr { ParseTree.Forall (ty, k, ret) }
+| Lambda name = TypeName k = kindopt Dot ret = typeExpr { ParseTree.AbsOnTy (name, k, ret) }
 | f = typeExpr x = typeExpr %prec tapp { ParseTree.AppOnTy (f, x) }
 | LParent term = typeExpr RParent { term }
 
 kind:
-| Star { ParseTree.Star }
-| k1 = kind Arrow k2 = kind { ParseTree.KFun (k1, k2) }
+| Star { Kinds.Star }
+| k1 = kind Arrow k2 = kind { Kinds.KFun (k1, k2) }
 | LParent k = kind RParent { k }
 
 variant:
 | name = TypeName DoubleDot ty = typeExpr { ParseTree.Variant (get_loc $startpos $endpos, name, ty) }
 
 kindopt:
+| { Kinds.Star }
 | DoubleDot k = kind { k }

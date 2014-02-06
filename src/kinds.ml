@@ -19,27 +19,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type value = {name : string; ty : TypesBeta.t}
-type abs = {abs_ty : TypesBeta.t; param : value; ty_expr : TypesBeta.t}
+open BatteriesExceptionless
+open Monomorphic.None
 
 type t =
-  | Abs of (abs * t)
-  | TAbs of (abs * t)
-  | App of (TypesBeta.t * t * t)
-  | TApp of (TypesBeta.t * t * TypesBeta.t)
-  | Val of value
+  | Star
+  | KFun of (t * t)
 
-type variant =
-  | Variant of (string * TypesBeta.t)
+let rec to_string = function
+  | Star -> "*"
+  | KFun (p, r) -> to_string p ^ " -> " ^ to_string r
 
-type top =
-  | Value of (value * t)
-  | Binding of (value * string)
-  | Datatype of variant list
-
-val from_parse_tree :
-  TypesBeta.t Gamma.Value.t ->
-  (Types.t * Kinds.t) Gamma.Types.t ->
-  Kinds.t Gamma.Kinds.t ->
-  ParseTree.top list ->
-  top list
+let rec equal x y = match x, y with
+  | Star, Star -> true
+  | KFun (p1, r1), KFun (p2, r2) -> equal p1 p2 && equal r1 r2
+  | Star, KFun _
+  | KFun _, Star -> false

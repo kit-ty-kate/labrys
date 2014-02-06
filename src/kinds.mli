@@ -19,39 +19,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
-
-type kind =
-  | Star
-  | KFun of (kind * kind)
-
-type t_value = (string * kind option)
-
-type ty =
-  | Fun of (ty * ty)
-  | Ty of string
-  | Forall of (string * kind option * ty)
-  | AbsOnTy of (string * kind option * ty)
-  | AppOnTy of (ty * ty)
-
-type value = (string * ty)
-
-type position = {pos_lnum : int; pos_cnum : int}
-type location = {loc_start : position; loc_end : position}
-
 type t =
-  | Abs of (location * value * t)
-  | TAbs of (location * t_value * t)
-  | App of (location * t * t)
-  | TApp of (location * t * ty)
-  | Val of (location * string)
+  | Star
+  | KFun of (t * t)
 
-type variant =
-  | Variant of (location * string * ty)
+val to_string : t -> string
 
-type top =
-  | Value of (location * string * t)
-  | Type of (location * string * ty)
-  | Binding of (location * string * ty * string)
-  | Datatype of (location * string * kind option * variant list)
+val equal : t -> t -> bool
