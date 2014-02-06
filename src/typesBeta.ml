@@ -73,9 +73,11 @@ let rec to_string = function
 let equal x y =
   let rec aux eq_list = function
     | Ty x, Ty x' ->
-        List.exists
-          (fun (y, y') -> String.equal x y && String.equal x' y')
-          eq_list
+        let eq = String.equal in
+        List.exists (fun (y, y') -> eq x y && eq x' y') eq_list
+        || (String.equal x x'
+            && List.for_all (fun (y, y') -> eq x y || eq x' y') eq_list
+           )
     | Fun (param, res), Fun (param', res') ->
         aux eq_list (param, param') && aux eq_list (res, res')
     | AppOnTy (f, x), AppOnTy (f', x') ->
