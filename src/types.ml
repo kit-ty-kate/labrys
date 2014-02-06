@@ -32,22 +32,33 @@ type t =
 
 let fmt = Printf.sprintf
 
-let type_error = fmt "The type '%s' was not found in Γ"
+let fail ~loc x = raise (Error.Exn (loc, x))
+
+let fail_not_star ~loc x =
+  fail ~loc (fmt "The type construct '%s' cannot be applied with kind /= '*'" x)
+
+let fail_apply ~loc x f =
+  let conv = Kinds.to_string in
+  fail ~loc (fmt "Kind '%s' can't be applied on '%s'" (conv x) (conv f))
 
 let rec from_parse_tree ~loc gammaT gammaK = function
   | ParseTree.Fun (x, y) ->
-      let (x, _) = from_parse_tree ~loc gammaT gammaK x in
-      let (y, _) = from_parse_tree ~loc gammaT gammaK y in
+      let (x, k1) = from_parse_tree ~loc gammaT gammaK x in
+      let (y, k2) = from_parse_tree ~loc gammaT gammaK y in
+      if Kinds.not_star k1 || Kinds.not_star k2 then
+        fail ~loc "->";
       (Fun (x, y), Kinds.Star)
   | ParseTree.Ty name ->
       begin match Gamma.Types.find name gammaT with
       | Some (ty, k) -> (Alias (name, ty), k)
       | None -> match Gamma.Kinds.find name gammaK with
         | Some k -> (Ty (name, k), k)
-        | None -> raise (Error.Exn (loc, type_error name))
+        | None -> fail ~loc (fmt "The type '%s' was not found in Γ" name)
       end
   | ParseTree.Forall (name, k, ret) ->
-      let (ret, _) = from_parse_tree ~loc gammaT (Gamma.Kinds.add name k gammaK) ret in
+      let (ret, kx) = from_parse_tree ~loc gammaT (Gamma.Kinds.add name k gammaK) ret in
+      if Kinds.not_star kx then
+        fail ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
   | ParseTree.AbsOnTy (name, k, ret) ->
       let (ret, kret) = from_parse_tree ~loc gammaT (Gamma.Kinds.add name k gammaK) ret in
@@ -59,14 +70,6 @@ let rec from_parse_tree ~loc gammaT gammaK = function
         match kf with
         | Kinds.KFun (p, r) when Kinds.equal p kx -> r
         | (Kinds.KFun _ as k)
-        | (Kinds.Star as k) ->
-            raise
-              (Error.Exn
-                 (loc,
-                  fmt "Kind '%s' can't be applied on '%s'"
-                    (Kinds.to_string kx)
-                    (Kinds.to_string k)
-                 )
-              )
+        | (Kinds.Star as k) -> fail_apply ~loc kx k
       in
       (AppOnTy (f, x), k)

@@ -44,7 +44,6 @@ let replace ~from ~ty =
   in
   aux
 
-(* TODO: Check kinds for all steps *)
 let rec of_ty = function
   | Types.Ty (name, _) -> Ty name
   | Types.Alias (_, t) -> of_ty t

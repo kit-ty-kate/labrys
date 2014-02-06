@@ -35,3 +35,7 @@ let rec equal x y = match x, y with
   | KFun (p1, r1), KFun (p2, r2) -> equal p1 p2 && equal r1 r2
   | Star, KFun _
   | KFun _, Star -> false
+
+let not_star = function
+  | Star -> false
+  | KFun _ -> true

@@ -108,9 +108,15 @@ let ty_from_parse_tree ~loc gammaT gammaK ty =
   let (ty, k) = Types.from_parse_tree ~loc gammaT gammaK ty in
   (TypesBeta.of_ty ty, k)
 
+let ty_from_parse_tree' ~loc gammaT gammaK ty =
+  let (ty, k) = Types.from_parse_tree ~loc gammaT gammaK ty in
+  if Kinds.not_star k then
+    fail ~loc "Values cannot be of kind /= '*'";
+  TypesBeta.of_ty ty
+
 let rec aux gamma gammaT gammaK = function
   | ParseTree.Abs (loc, (name, ty), t) ->
-      let (ty, _) = ty_from_parse_tree ~loc gammaT gammaK ty in
+      let ty = ty_from_parse_tree' ~loc gammaT gammaK ty in
       let expr = aux (Gamma.Value.add name ty gamma) gammaT gammaK t in
       let param = {name; ty} in
       let ty_expr = get_type expr in
@@ -157,7 +163,6 @@ let rec aux gamma gammaT gammaK = function
       Val {name; ty}
 
 let rec check_if_returns_type ~datatype = function
-  | TypesBeta.AppOnTy (TypesBeta.Ty x, _)
   | TypesBeta.Ty x -> String.equal x datatype
   | TypesBeta.Forall (_, _, ret)
   | TypesBeta.AppOnTy (ret, _)
@@ -167,7 +172,7 @@ let rec check_if_returns_type ~datatype = function
 let transform_variants ~datatype gamma gammaT gammaK =
   let rec aux = function
     | ParseTree.Variant (loc, name, ty) :: xs ->
-        let (ty, _) = ty_from_parse_tree ~loc gammaT gammaK ty in
+        let ty = ty_from_parse_tree' ~loc gammaT gammaK ty in
         if check_if_returns_type ~datatype ty then
           let (xs, gamma) = aux xs in
           (Variant (name, ty) :: xs, Gamma.Value.add name ty gamma)
@@ -187,7 +192,7 @@ let rec from_parse_tree gamma gammaT gammaK = function
       let ty = Types.from_parse_tree ~loc gammaT gammaK ty in
       from_parse_tree gamma (Gamma.Types.add name ty gammaT) gammaK xs
   | ParseTree.Binding (loc, name, ty, binding) :: xs ->
-      let (ty, _) = ty_from_parse_tree ~loc gammaT gammaK ty in
+      let ty = ty_from_parse_tree' ~loc gammaT gammaK ty in
       let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaK xs in
       Binding ({name; ty}, binding) :: xs
   | ParseTree.Datatype (loc, name, kind, variants) :: xs ->
