@@ -59,14 +59,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 main:
 | Let name = TermName Equal term = term main = main
-   { ParseTree.Value (get_loc $startpos $endpos, name, term) :: main }
+    { ParseTree.Value (get_loc $startpos $endpos, name, term) :: main }
 | Let name = TypeName Equal ty = typeExpr main = main
-   { ParseTree.Type (get_loc $startpos $endpos, name, ty) :: main }
+    { ParseTree.Type (get_loc $startpos $endpos, name, ty) :: main }
 | Let name = TermName DoubleDot ty = typeExpr Equal binding = Binding main = main
-   { ParseTree.Binding (get_loc $startpos $endpos, name, ty, binding) :: main }
+    { ParseTree.Binding (get_loc $startpos $endpos, name, ty, binding) :: main }
 | Datatype name = TypeName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
-   { ParseTree.Datatype (get_loc $startpos $endpos, name, k, variants) :: main }
-| EOF { [] }
+    { ParseTree.Datatype (get_loc $startpos $endpos, name, k, variants) :: main }
+| EOF
+    { [] }
 
 term:
 | Lambda termName = TermName DoubleDot typeName = typeExpr Dot term = term
@@ -80,23 +81,34 @@ term:
 | termName = TermName
 | termName = TypeName
     { ParseTree.Val (get_loc $startpos $endpos, termName) }
-| LParent term = term RParent { term }
+| LParent term = term RParent
+    { term }
 
 typeExpr:
-| name = TypeName { ParseTree.Ty name }
-| param = typeExpr Arrow ret = typeExpr { ParseTree.Fun (param, ret) }
-| Forall ty = TypeName k = kindopt Dot ret = typeExpr { ParseTree.Forall (ty, k, ret) }
-| Lambda name = TypeName k = kindopt Dot ret = typeExpr { ParseTree.AbsOnTy (name, k, ret) }
-| f = typeExpr x = typeExpr %prec tapp { ParseTree.AppOnTy (f, x) }
-| LParent term = typeExpr RParent { term }
+| name = TypeName
+    { ParseTree.Ty name }
+| param = typeExpr Arrow ret = typeExpr
+    { ParseTree.Fun (param, ret) }
+| Forall ty = TypeName k = kindopt Dot ret = typeExpr
+    { ParseTree.Forall (ty, k, ret) }
+| Lambda name = TypeName k = kindopt Dot ret = typeExpr
+    { ParseTree.AbsOnTy (name, k, ret) }
+| f = typeExpr x = typeExpr %prec tapp
+    { ParseTree.AppOnTy (f, x) }
+| LParent term = typeExpr RParent
+    { term }
 
 kind:
-| Star { Kinds.Star }
-| k1 = kind Arrow k2 = kind { Kinds.KFun (k1, k2) }
-| LParent k = kind RParent { k }
+| Star
+    { Kinds.Star }
+| k1 = kind Arrow k2 = kind
+    { Kinds.KFun (k1, k2) }
+| LParent k = kind RParent
+    { k }
 
 variant:
-| name = TypeName DoubleDot ty = typeExpr { ParseTree.Variant (get_loc $startpos $endpos, name, ty) }
+| name = TypeName DoubleDot ty = typeExpr
+    { ParseTree.Variant (get_loc $startpos $endpos, name, ty) }
 
 kindopt:
 | { Kinds.Star }
