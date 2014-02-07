@@ -2,7 +2,7 @@
 
 == Short term ==
 
-* Cleaning (parser, typechecker, backend, .mli everywhere, …)
+* Cleaning (parser, typechecker, backend, …)
 * Pattern matching
 
 
