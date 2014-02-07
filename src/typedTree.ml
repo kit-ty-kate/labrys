@@ -137,11 +137,11 @@ let rec aux gamma gammaT gammaK = function
       | TypesBeta.Fun (ty, res) when TypesBeta.equal ty ty_x ->
           App (res, f, x)
       | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:ty_x ~expected:ty
-      | TypesBeta.Ty _ as ty -> function_type_error ~loc ~has:ty_x ~expected:ty
+      | (TypesBeta.AppOnTy _ as ty)
+      | (TypesBeta.Ty _ as ty) -> function_type_error ~loc ~has:ty_x ~expected:ty
       | TypesBeta.Forall (ty, _, _) ->
           fail ~loc (type_error_msg (TypesBeta.to_string ty_x) ty)
       | TypesBeta.AbsOnTy _ -> assert false
-      | TypesBeta.AppOnTy _ -> assert false
       end
   | ParseTree.TApp (loc, f, ty_x) ->
       let f = aux gamma gammaT gammaK f in
@@ -153,9 +153,9 @@ let rec aux gamma gammaT gammaK = function
           TApp (res, f, ty_x)
       | TypesBeta.Forall _ -> raise (Error.Exn (loc, fmt "Cannot apply"))
       | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:ty_x ~expected:ty
-      | TypesBeta.Ty _ as ty -> function_type_error ~loc ~has:ty_x ~expected:ty
+      | (TypesBeta.AppOnTy _ as ty)
+      | (TypesBeta.Ty _ as ty) -> function_type_error ~loc ~has:ty_x ~expected:ty
       | TypesBeta.AbsOnTy _ -> assert false
-      | TypesBeta.AppOnTy _ -> assert false
       end
   | ParseTree.Val (loc, name) ->
       let ty = Gamma.Value.find name gamma in
