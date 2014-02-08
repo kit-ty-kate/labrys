@@ -59,17 +59,7 @@ let aux args =
 
 let start print c o file =
   try aux {print; c; o; file}; None with
-  | Error.Exn (loc, x) ->
-      let string_of_location {ParseTree.loc_start; loc_end} =
-        sprintf
-          "Error in '%s' from line %d column %d to line %d column %d:\n"
-          file
-          loc_start.ParseTree.pos_lnum
-          loc_start.ParseTree.pos_cnum
-          loc_end.ParseTree.pos_lnum
-          loc_end.ParseTree.pos_cnum
-      in
-      Some (string_of_location loc ^ "    " ^ x)
+  | Error.Exn x -> Some (Error.dump file x)
   | ParserManager.Error x -> Some x
 
 let cmd =

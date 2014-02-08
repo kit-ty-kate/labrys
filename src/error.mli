@@ -19,6 +19,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-exception Exn of (ParseTree.location * string)
+type t
+
+exception Exn of t
 
 val fail : loc:ParseTree.location -> ('a, unit, string, 'b) format4 -> 'a
+
+val dump : file:string -> t -> string

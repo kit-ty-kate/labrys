@@ -19,6 +19,23 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-exception Exn of (ParseTree.location * string)
+open BatteriesExceptionless
+open Monomorphic.None
+
+type t = (ParseTree.location * string)
+
+exception Exn of t
 
 let fail ~loc x = Printf.ksprintf (fun x -> raise (Exn (loc, x))) x
+
+let dump ~file (loc, x) =
+  let string_of_location {ParseTree.loc_start; loc_end} =
+    Printf.sprintf
+      "Error in '%s' from line %d column %d to line %d column %d:\n"
+      file
+      loc_start.ParseTree.pos_lnum
+      loc_start.ParseTree.pos_cnum
+      loc_end.ParseTree.pos_lnum
+      loc_end.ParseTree.pos_cnum
+  in
+  string_of_location loc ^ "    " ^ x
