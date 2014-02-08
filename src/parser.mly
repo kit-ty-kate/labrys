@@ -23,7 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   let get_loc startpos endpos =
     let get_pos pos =
       { ParseTree.pos_lnum = pos.Lexing.pos_lnum
-      ; pos_cnum = pos.Lexing.pos_cnum
+      ; pos_cnum = pos.Lexing.pos_cnum - pos.Lexing.pos_bol
       }
     in
     { ParseTree.loc_start = get_pos startpos
@@ -59,23 +59,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 main:
 | Let name = TermName Equal term = term main = main
-    { ParseTree.Value (get_loc $startpos $endpos, name, term) :: main }
+    { ParseTree.Value (get_loc $startpos $endpos(term), name, term) :: main }
 | Let name = TypeName Equal ty = typeExpr main = main
-    { ParseTree.Type (get_loc $startpos $endpos, name, ty) :: main }
+    { ParseTree.Type (get_loc $startpos $endpos(ty), name, ty) :: main }
 | Let name = TermName DoubleDot ty = typeExpr Equal binding = Binding main = main
-    { ParseTree.Binding (get_loc $startpos $endpos, name, ty, binding) :: main }
+    { ParseTree.Binding (get_loc $startpos $endpos(binding), name, ty, binding) :: main }
 | Datatype name = TypeName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
-    { ParseTree.Datatype (get_loc $startpos $endpos, name, k, variants) :: main }
+    { ParseTree.Datatype (get_loc $startpos $endpos(variants), name, k, variants) :: main }
 | EOF
     { [] }
 
 term:
 | Lambda termName = TermName DoubleDot typeName = typeExpr Dot term = term
-    { ParseTree.Abs (get_loc $startpos $endpos, (termName, typeName), term) }
+    { ParseTree.Abs (get_loc $startpos $endpos(typeName), (termName, typeName), term) }
 | Lambda typeName = TypeName k = kindopt Dot term = term
-    { ParseTree.TAbs (get_loc $startpos $endpos, (typeName, k), term) }
+    { ParseTree.TAbs (get_loc $startpos $endpos(k), (typeName, k), term) }
 | term1 = term term2 = term %prec app
-    { ParseTree.App (get_loc $startpos $endpos, term1, term2) }
+    { ParseTree.App (get_loc $startpos $endpos(term2), term1, term2) }
 | term1 = term LBracket ty = typeExpr RBracket
     { ParseTree.TApp (get_loc $startpos $endpos, term1, ty) }
 | termName = TermName
