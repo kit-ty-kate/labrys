@@ -24,8 +24,6 @@ module UT = UntypedTree
 open BatteriesExceptionless
 open Monomorphic.None
 
-let fmt = Printf.sprintf
-
 let c = LLVM.create_context ()
 let m = LLVM.create_module c "Main"
 

@@ -22,6 +22,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
+exception Error of string
+
 let parse file =
   let filebuf = Lexing.from_channel file in
   let get_offset () =
@@ -31,5 +33,5 @@ let parse file =
     string_of_int pos.pos_lnum ^ ":" ^ string_of_int column
   in
   try Parser.main Lexer.main filebuf with
-  | Lexer.Error -> failwith ("Lexing error at: " ^ get_offset ())
-  | Parser.Error -> failwith ("Parsing error at: " ^ get_offset ())
+  | Lexer.Error -> raise (Error ("Lexing error at: " ^ get_offset ()))
+  | Parser.Error -> raise (Error ("Parsing error at: " ^ get_offset ()))

@@ -40,8 +40,6 @@ type top =
   | Binding of (value * string)
   | Datatype of variant list
 
-let fmt = Printf.sprintf
-
 let get_type = function
   | Abs ({abs_ty; _}, _) -> abs_ty
   | TAbs ({abs_ty}, _) -> abs_ty
@@ -49,29 +47,21 @@ let get_type = function
   | TApp (ty, _, _) -> ty
   | Val {ty; _} -> ty
 
-let fail ~loc x = raise (Error.Exn (loc, x))
-
-let type_error_msg =
-  fmt
+let type_error_aux ~loc =
+  Error.fail
+    ~loc
     "Error: This expression has type '%s' but an \
      expression was expected of type '%s'"
 
 let type_error ~loc ~has ~expected =
-  fail
-    ~loc
-    (type_error_msg
-       (TypesBeta.to_string has)
-       (TypesBeta.to_string expected)
-    )
+  type_error_aux ~loc (TypesBeta.to_string has) (TypesBeta.to_string expected)
 
 let function_type_error ~loc ~has ~expected =
-  fail
+  Error.fail
     ~loc
-    (fmt
-       "Error: Can't apply '%s' to a non-function type '%s'"
-       (TypesBeta.to_string has)
-       (TypesBeta.to_string expected)
-    )
+    "Error: Can't apply '%s' to a non-function type '%s'"
+    (TypesBeta.to_string has)
+    (TypesBeta.to_string expected)
 
 let rec transform ~from ~ty =
   let replace = TypesBeta.replace ~from ~ty in
@@ -102,8 +92,6 @@ let rec transform ~from ~ty =
   in
   aux
 
-let gamma_error = fmt "The value '%s' was not found in Γ"
-
 let ty_from_parse_tree ~loc gammaT gammaK ty =
   let (ty, k) = Types.from_parse_tree ~loc gammaT gammaK ty in
   (TypesBeta.of_ty ty, k)
@@ -111,7 +99,7 @@ let ty_from_parse_tree ~loc gammaT gammaK ty =
 let ty_from_parse_tree' ~loc gammaT gammaK ty =
   let (ty, k) = Types.from_parse_tree ~loc gammaT gammaK ty in
   if Kinds.not_star k then
-    fail ~loc "Values cannot be of kind /= '*'";
+    Error.fail ~loc "Values cannot be of kind /= '*'";
   TypesBeta.of_ty ty
 
 let rec aux gamma gammaT gammaK = function
@@ -140,7 +128,7 @@ let rec aux gamma gammaT gammaK = function
       | (TypesBeta.AppOnTy _ as ty)
       | (TypesBeta.Ty _ as ty) -> function_type_error ~loc ~has:ty_x ~expected:ty
       | TypesBeta.Forall (ty, _, _) ->
-          fail ~loc (type_error_msg (TypesBeta.to_string ty_x) ty)
+          type_error_aux ~loc (TypesBeta.to_string ty_x) ty
       | TypesBeta.AbsOnTy _ -> assert false
       end
   | ParseTree.TApp (loc, f, ty_x) ->
@@ -151,16 +139,16 @@ let rec aux gamma gammaT gammaK = function
           let res = TypesBeta.replace ~from:ty ~ty:ty_x res in
           let f = transform ~from:ty ~ty:ty_x f in
           TApp (res, f, ty_x)
-      | TypesBeta.Forall _ -> raise (Error.Exn (loc, fmt "Cannot apply"))
+      | TypesBeta.Forall _ -> Error.fail ~loc "Cannot apply" (* TODO: improve the message*)
       | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:ty_x ~expected:ty
       | (TypesBeta.AppOnTy _ as ty)
       | (TypesBeta.Ty _ as ty) -> function_type_error ~loc ~has:ty_x ~expected:ty
       | TypesBeta.AbsOnTy _ -> assert false
       end
   | ParseTree.Val (loc, name) ->
-      let ty = Gamma.Value.find name gamma in
-      let ty = Option.get_exn ty (Error.Exn (loc, gamma_error name)) in
-      Val {name; ty}
+      match Gamma.Value.find name gamma with
+      | None -> Error.fail ~loc "The value '%s' was not found in Γ" name
+      | Some ty -> Val {name; ty}
 
 let rec check_if_returns_type ~datatype = function
   | TypesBeta.Ty x -> String.equal x datatype
@@ -177,7 +165,7 @@ let transform_variants ~datatype gamma gammaT gammaK =
           let (xs, gamma) = aux xs in
           (Variant (name, ty) :: xs, Gamma.Value.add name ty gamma)
         else
-          fail ~loc (fmt "The variant '%s' doesn't return its type" name)
+          Error.fail ~loc "The variant '%s' doesn't return its type" name
     | [] -> ([], gamma)
   in
   aux

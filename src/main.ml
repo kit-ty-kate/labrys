@@ -70,6 +70,7 @@ let start print c o file =
           loc_end.ParseTree.pos_cnum
       in
       Some (string_of_location loc ^ "    " ^ x)
+  | ParserManager.Error x -> Some x
 
 let cmd =
   let print = Arg.(value & flag & info ["print"]) in
