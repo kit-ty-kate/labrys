@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 04aa1b7c6e47a86f006460b17bd751ff)
+# DO NOT EDIT (digest: 1b606ac219fdc4ff435b732fd0bffd65)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -14,6 +14,10 @@
 "_darcs": -traverse
 "_darcs": not_hygienic
 # Executable cervoise
+<src/main.{native,byte}>: oasis_executable_cervoise_byte
+<src/*.ml{,i}>: oasis_executable_cervoise_byte
+<src/main.{native,byte}>: oasis_executable_cervoise_native
+<src/*.ml{,i}>: oasis_executable_cervoise_native
 <src/main.{native,byte}>: pkg_unix
 <src/main.{native,byte}>: pkg_cmdliner
 <src/main.{native,byte}>: pkg_llvm

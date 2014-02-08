@@ -42,7 +42,7 @@ type top =
 
 let get_type = function
   | Abs ({abs_ty; _}, _) -> abs_ty
-  | TAbs ({abs_ty}, _) -> abs_ty
+  | TAbs ({abs_ty; _}, _) -> abs_ty
   | App (ty, _, _) -> ty
   | TApp (ty, _, _) -> ty
   | Val {ty; _} -> ty
@@ -171,7 +171,7 @@ let transform_variants ~datatype gamma gammaT gammaK =
   aux
 
 let rec from_parse_tree gamma gammaT gammaK = function
-  | ParseTree.Value (loc, name, term) :: xs ->
+  | ParseTree.Value (name, term) :: xs ->
       let x = aux gamma gammaT gammaK term in
       let ty = get_type x in
       let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaK xs in

@@ -59,7 +59,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 main:
 | Let name = TermName Equal term = term main = main
-    { ParseTree.Value (get_loc $startpos $endpos(term), name, term) :: main }
+    { ParseTree.Value (name, term) :: main }
 | Let name = TypeName Equal ty = typeExpr main = main
     { ParseTree.Type (get_loc $startpos $endpos(ty), name, ty) :: main }
 | Let name = TermName DoubleDot ty = typeExpr Equal binding = Binding main = main

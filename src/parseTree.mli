@@ -44,7 +44,7 @@ type variant =
   | Variant of (location * string * ty)
 
 type top =
-  | Value of (location * string * t)
+  | Value of (string * t)
   | Type of (location * string * ty)
   | Binding of (location * string * ty * string)
   | Datatype of (location * string * Kinds.t * variant list)

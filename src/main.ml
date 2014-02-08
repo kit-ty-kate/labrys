@@ -59,7 +59,7 @@ let aux args =
 
 let start print c o file =
   try aux {print; c; o; file}; None with
-  | Error.Exn x -> Some (Error.dump file x)
+  | Error.Exn x -> Some (Error.dump ~file x)
   | ParserManager.Error x -> Some x
 
 let cmd =

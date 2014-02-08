@@ -118,7 +118,7 @@ let rec init gammaGlob builder = function
   | [] -> ()
 
 let create_variants l builder =
-  let rec create i gammaParam gammaEnv env builder = function
+  let rec create i gammaEnv env builder = function
     | 0 ->
         let variant = LLVM.build_malloc variant_type "variant" builder in
         let variant_loaded = LLVM.build_load variant "variant_loaded" builder in
@@ -134,14 +134,14 @@ let create_variants l builder =
         let env = LLVM.param f 1 in
         insert_arg_in_env gammaP env gammaEnv builder;
         let gammaE = List.length gammaEnv in
-        let v = create i (Some gammaP) (gammaE :: gammaEnv) env builder (pred n) in
+        let v = create i (gammaE :: gammaEnv) env builder (pred n) in
         LLVM.build_ret v builder;
         closure
   in
   let f i = function
     | UT.Variant (name, size) ->
         let env = create_env size builder in
-        let f = create i None [] env builder size in
+        let f = create i [] env builder size in
         let g = LLVM.define_global name (LLVM.undef star_type) m in
         LLVM.build_store f g builder;
         (name, g)
@@ -160,7 +160,7 @@ let make =
         top (`Datatype (create_variants variants) :: init_list) gamma xs
     | [] ->
         let ty = LLVM.function_type (LLVM.void_type c) [||] in
-        let (f, builder) = LLVM.define_function c "__init" ty m in
+        let (_, builder) = LLVM.define_function c "__init" ty m in
         init gamma builder (List.rev init_list);
         LLVM.build_ret_void builder;
         m

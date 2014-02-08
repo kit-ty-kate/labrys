@@ -18,5 +18,5 @@ Executable cervoise
     batteries (>= 2.2),
     monomorphic
   CompiledObject: best
-#  ByteOpt: -w A
-#  NativeOpt: -w A
+  ByteOpt: -w A-44-33-4
+  NativeOpt: -w A-44-33-4
