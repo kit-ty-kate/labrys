@@ -20,3 +20,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 exception Exn of (ParseTree.location * string)
+
+let fail ~loc x = Printf.ksprintf (fun x -> raise (Exn (loc, x))) x

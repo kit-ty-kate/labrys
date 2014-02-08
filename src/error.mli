@@ -20,3 +20,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 exception Exn of (ParseTree.location * string)
+
+val fail : loc:ParseTree.location -> ('a, unit, string, 'b) format4 -> 'a

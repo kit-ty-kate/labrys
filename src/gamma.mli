@@ -29,9 +29,13 @@ end
 module Types : sig
   include module type of Map.Make(String)
   include module type of Exceptionless
+
+  val add : loc:ParseTree.location -> key -> 'a -> 'a t -> 'a t
 end
 
 module Kinds : sig
   include module type of Map.Make(String)
   include module type of Exceptionless
+
+  val add : loc:ParseTree.location -> key -> 'a -> 'a t -> 'a t
 end

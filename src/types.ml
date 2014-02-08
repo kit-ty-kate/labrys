@@ -56,12 +56,12 @@ let rec from_parse_tree ~loc gammaT gammaK = function
         | None -> fail ~loc (fmt "The type '%s' was not found in Γ" name)
       end
   | ParseTree.Forall (name, k, ret) ->
-      let (ret, kx) = from_parse_tree ~loc gammaT (Gamma.Kinds.add name k gammaK) ret in
+      let (ret, kx) = from_parse_tree ~loc gammaT (Gamma.Kinds.add ~loc name k gammaK) ret in
       if Kinds.not_star kx then
         fail ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
   | ParseTree.AbsOnTy (name, k, ret) ->
-      let (ret, kret) = from_parse_tree ~loc gammaT (Gamma.Kinds.add name k gammaK) ret in
+      let (ret, kret) = from_parse_tree ~loc gammaT (Gamma.Kinds.add ~loc name k gammaK) ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
   | ParseTree.AppOnTy (f, x) ->
       let (f, kf) = from_parse_tree ~loc gammaT gammaK f in

@@ -28,13 +28,12 @@ module Value = struct
 end
 
 module Types = struct
-  include Map.Make(String)
-  include Exceptionless
-  (* TODO: Override find *)
+  include Value
+
+  let add ~loc k x map =
+    if mem k map then
+      Error.fail ~loc "A module cannot contain several times the type '%s'" k;
+    add k x map
 end
 
-module Kinds = struct
-  include Map.Make(String)
-  include Exceptionless
-  (* TODO: Override find *)
-end
+module Kinds = Types

@@ -125,7 +125,7 @@ let rec aux gamma gammaT gammaK = function
   | ParseTree.TAbs (loc, (name, k), t) ->
       let ty = TypesBeta.Ty name in
       let param = {name; ty = ty} in
-      let expr = aux gamma gammaT (Gamma.Kinds.add name k gammaK) t in
+      let expr = aux gamma gammaT (Gamma.Kinds.add ~loc name k gammaK) t in
       let ty_expr = get_type expr in
       let abs_ty = TypesBeta.Forall (name, k, ty_expr) in
       TAbs ({abs_ty; param; ty_expr}, expr)
@@ -190,13 +190,13 @@ let rec from_parse_tree gamma gammaT gammaK = function
       Value ({name; ty}, x) :: xs
   | ParseTree.Type (loc, name, ty) :: xs ->
       let ty = Types.from_parse_tree ~loc gammaT gammaK ty in
-      from_parse_tree gamma (Gamma.Types.add name ty gammaT) gammaK xs
+      from_parse_tree gamma (Gamma.Types.add ~loc name ty gammaT) gammaK xs
   | ParseTree.Binding (loc, name, ty, binding) :: xs ->
       let ty = ty_from_parse_tree' ~loc gammaT gammaK ty in
       let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaK xs in
       Binding ({name; ty}, binding) :: xs
   | ParseTree.Datatype (loc, name, kind, variants) :: xs ->
-      let gammaK = Gamma.Kinds.add name kind gammaK in
+      let gammaK = Gamma.Kinds.add ~loc name kind gammaK in
       let (variants, gamma) = transform_variants ~datatype:name gamma gammaT gammaK variants in
       let xs = from_parse_tree gamma gammaT gammaK xs in
       Datatype variants :: xs
