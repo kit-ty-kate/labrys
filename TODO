@@ -3,6 +3,7 @@
 == Short term ==
 
 * Cleaning (parser, typechecker, backend, …)
+* Unit-tests
 * Pattern matching
 
 
