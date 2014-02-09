@@ -46,6 +46,7 @@ rule main = parse
               get_binding buffer lexbuf;
               Parser.Binding (Buffer.contents buffer)
             }
+  | "--" { simple_comment lexbuf; main lexbuf }
   | term_name as name { Parser.TermName name }
   | type_name as name { Parser.TypeName name }
   | eof { Parser.EOF }
@@ -61,3 +62,8 @@ and get_binding buffer = parse
   | _ as lxm { Buffer.add_char buffer lxm;
                get_binding buffer lexbuf
              }
+
+and simple_comment = parse
+  | '\n' { Lexing.new_line lexbuf }
+  | eof { () }
+  | _ { simple_comment lexbuf }
