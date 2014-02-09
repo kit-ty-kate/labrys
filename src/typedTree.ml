@@ -63,6 +63,13 @@ let function_type_error ~loc ~has ~expected =
     (TypesBeta.to_string has)
     (TypesBeta.to_string expected)
 
+let kind_missmatch ~loc ~has ~on =
+  Error.fail
+    ~loc
+    "Cannot apply something with kind '%s' on '%s'"
+    (Kinds.to_string has)
+    (Kinds.to_string on)
+
 let rec transform ~from ~ty =
   let replace = TypesBeta.replace ~from ~ty in
   let transform x = transform ~from ~ty x in
@@ -139,7 +146,7 @@ let rec aux gamma gammaT gammaK = function
           let res = TypesBeta.replace ~from:ty ~ty:ty_x res in
           let f = transform ~from:ty ~ty:ty_x f in
           TApp (res, f, ty_x)
-      | TypesBeta.Forall _ -> Error.fail ~loc "Cannot apply" (* TODO: improve the message*)
+      | TypesBeta.Forall (_, k, _) -> kind_missmatch ~loc ~has:kx ~on:k
       | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:ty_x ~expected:ty
       | (TypesBeta.AppOnTy _ as ty)
       | (TypesBeta.Ty _ as ty) -> function_type_error ~loc ~has:ty_x ~expected:ty
