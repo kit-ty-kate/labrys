@@ -31,7 +31,7 @@ type t =
 
 let fmt = Printf.sprintf
 
-let replace ~from ~ty =
+let rec replace ~from ~ty =
   let rec aux = function
     | Ty x when String.equal x from -> ty
     | Ty _ as t -> t
@@ -40,6 +40,10 @@ let replace ~from ~ty =
     | (Forall (x, _, _) as t) when String.equal x from -> t
     | Forall (x, k, t) -> Forall (x, k, aux t)
     | AbsOnTy (x, k, t) -> AbsOnTy (x, k, aux t)
+    | AppOnTy (AbsOnTy (from', _, t), x) when String.equal from from' ->
+        replace ~from:from' ~ty:x t
+    | AppOnTy (AbsOnTy (from, _, t), x) ->
+        aux (replace ~from ~ty:x t)
     | AppOnTy (f, x) -> AppOnTy (aux f, aux x)
   in
   aux
