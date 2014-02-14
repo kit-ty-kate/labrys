@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 1b606ac219fdc4ff435b732fd0bffd65)
+# DO NOT EDIT (digest: 4143360ecff9eb931430182b21e5cd2d)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -30,6 +30,13 @@
 <src/*.ml{,i}>: pkg_llvm.irreader
 <src/*.ml{,i}>: pkg_batteries
 <src/*.ml{,i}>: pkg_monomorphic
+# Executable test
+<tests/tests.{native,byte}>: oasis_executable_test_byte
+<tests/*.ml{,i}>: oasis_executable_test_byte
+<tests/tests.{native,byte}>: oasis_executable_test_native
+<tests/*.ml{,i}>: oasis_executable_test_native
+<tests/tests.{native,byte}>: pkg_oUnit
+<tests/*.ml{,i}>: pkg_oUnit
 # OASIS_STOP
 "examples": -traverse
 "examples": not_hygienic

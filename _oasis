@@ -4,11 +4,11 @@ Version: 0.1
 Synopsis: A System F omega compiler (LLVM based)
 Authors: Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
 License: MIT
+BuildTools: ocamlbuild
 Plugins: DevFiles (0.3)
 
 Executable cervoise
   Path: src
-  BuildTools: ocamlbuild
   MainIs: main.ml
   BuildDepends:
     unix,
@@ -20,3 +20,18 @@ Executable cervoise
   CompiledObject: best
   ByteOpt: -w A-44-33-4
   NativeOpt: -w A-44-33-4
+
+Executable test
+  Path: tests
+  Build$: flag(tests)
+  install: false
+  MainIs: tests.ml
+  BuildDepends:
+    oUnit (>= 2.0)
+  CompiledObject: best
+  ByteOpt: -w A-44-33-4
+  NativeOpt: -w A-44-33-4
+
+Test tests
+  Run$: flag(tests)
+  Command: $test

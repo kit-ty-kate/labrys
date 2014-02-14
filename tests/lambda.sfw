@@ -1,0 +1,18 @@
+-- A simple variant
+datatype Nat =
+  | O : Nat
+  | S : Nat -> Nat
+
+-- A simple functions
+let id = λx:Nat.x
+
+-- Applications
+let a = id O
+let b = id (S O)
+let c = id (S (S O))
+let d = id (id (id O))
+
+-- Shadowing
+let id = λx:Nat->Nat.λy:Nat.x
+
+-- More to come…

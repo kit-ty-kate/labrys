@@ -3,6 +3,8 @@ setup.data
 setup.log
 main.native
 main.byte
+tests.native
+tests.byte
 
 a.out
 examples/*.o
