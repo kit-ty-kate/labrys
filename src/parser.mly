@@ -121,6 +121,8 @@ pattern:
 | p = pat Arrow t = term { (p, t) }
 
 pat:
+| name = TermName
+    { ParseTree.Any name }
 | name = TypeName
     { ParseTree.TyConstr name }
 | p1 = pat p2 = pat %prec app

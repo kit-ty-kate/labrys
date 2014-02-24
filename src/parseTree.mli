@@ -35,6 +35,7 @@ type location = {loc_start : position; loc_end : position}
 
 type pattern =
   | TyConstr of string
+  | Any of string
   | PatternApp of (pattern * pattern)
   | PatternTApp of (pattern * ty)
 
