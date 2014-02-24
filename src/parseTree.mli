@@ -33,12 +33,18 @@ type value = (string * ty)
 type position = {pos_lnum : int; pos_cnum : int}
 type location = {loc_start : position; loc_end : position}
 
+type pattern =
+  | TyConstr of string
+  | PatternApp of (pattern * pattern)
+  | PatternTApp of (pattern * ty)
+
 type t =
   | Abs of (location * value * t)
   | TAbs of (location * t_value * t)
   | App of (location * t * t)
   | TApp of (location * t * ty)
   | Val of (location * string)
+  | PatternMatching of (location * t * (pattern * t) list)
 
 type variant =
   | Variant of (location * string * ty)

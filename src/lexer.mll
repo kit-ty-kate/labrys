@@ -40,6 +40,9 @@ rule main = parse
   | "λ" { Parser.Lambda }
   | "->" { Parser.Arrow }
   | "let" { Parser.Let }
+  | "match" { Parser.Match }
+  | "with" { Parser.With }
+  | "end" { Parser.End }
   | "forall" { Parser.Forall }
   | "datatype" { Parser.Datatype }
   | "begin" { let buffer = Buffer.create 4096 in

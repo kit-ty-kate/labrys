@@ -36,6 +36,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Dot
 %token Arrow
 %token Forall
+%token Match With End
 %token Datatype
 %token Pipe
 %token DoubleDot
@@ -47,7 +48,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token LBracket RBracket
 %token EOF
 
-%left Lambda Dot Forall
+%left Lambda Dot Forall Match
 %right Arrow
 %nonassoc TermName TypeName LParent LBracket
 %nonassoc app tapp
@@ -83,6 +84,8 @@ term:
     { ParseTree.Val (get_loc $startpos $endpos, termName) }
 | LParent term = term RParent
     { term }
+| Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
+    { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
 
 typeExpr:
 | name = TypeName
@@ -113,3 +116,16 @@ variant:
 kindopt:
 | { Kinds.Star }
 | DoubleDot k = kind { k }
+
+pattern:
+| p = pat Arrow t = term { (p, t) }
+
+pat:
+| name = TypeName
+    { ParseTree.TyConstr name }
+| p1 = pat p2 = pat %prec app
+    { ParseTree.PatternApp (p1, p2) }
+| p = pat LBracket ty = typeExpr RBracket
+    { ParseTree.PatternTApp (p, ty) }
+| LParent p = pat RParent
+    { p }
