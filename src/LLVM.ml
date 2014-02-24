@@ -24,6 +24,8 @@ open Monomorphic.None
 
 include Llvm
 
+let () = enable_pretty_stacktrace ()
+
 let externals = ref []
 
 let build_store src dst b = ignore (build_store src dst b)
