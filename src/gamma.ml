@@ -37,3 +37,12 @@ module Types = struct
 end
 
 module Kinds = Types
+
+module Constr = struct
+  include Value
+
+  let append k x map =
+    match find k map with
+    | None -> add k [x] map
+    | Some xs -> add k (x :: xs) map
+end

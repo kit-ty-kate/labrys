@@ -39,3 +39,10 @@ module Kinds : sig
 
   val add : loc:ParseTree.location -> key -> 'a -> 'a t -> 'a t
 end
+
+module Constr : sig
+  include module type of Map.Make(String)
+  include module type of Exceptionless
+
+  val append : key -> 'a -> 'a list t -> 'a list t
+end

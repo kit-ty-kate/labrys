@@ -49,9 +49,10 @@ let aux args =
   let gamma = Gamma.Value.empty in
   let gammaT = Gamma.Types.empty in
   let gammaK = Gamma.Kinds.empty in
+  let gammaC = Gamma.Constr.empty in
   open_in args.file
   |> ParserManager.parse
-  |> TypedTree.from_parse_tree gamma gammaT gammaK
+  |> TypedTree.from_parse_tree gamma gammaT gammaK gammaC
   |> UntypedTree.of_typed_tree
   |> Backend.make
   |> LLVM.to_string
