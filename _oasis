@@ -1,4 +1,4 @@
-OASISFormat: 0.3
+OASISFormat: 0.4
 Name: Cervoise
 Version: 0.1
 Synopsis: A System F omega compiler (LLVM based)
@@ -6,6 +6,7 @@ Authors: Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
 License: MIT
 BuildTools: ocamlbuild
 Plugins: DevFiles (0.3)
+AlphaFeatures: compiled_setup_ml
 
 Executable cervoise
   Path: src
