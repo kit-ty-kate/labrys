@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 4143360ecff9eb931430182b21e5cd2d)
+# DO NOT EDIT (digest: c63e57e70f5c030319fbfaf12f92c45d)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -18,18 +18,18 @@
 <src/*.ml{,i}>: oasis_executable_cervoise_byte
 <src/main.{native,byte}>: oasis_executable_cervoise_native
 <src/*.ml{,i}>: oasis_executable_cervoise_native
-<src/main.{native,byte}>: pkg_unix
+<src/main.{native,byte}>: pkg_batteries
 <src/main.{native,byte}>: pkg_cmdliner
 <src/main.{native,byte}>: pkg_llvm
 <src/main.{native,byte}>: pkg_llvm.irreader
-<src/main.{native,byte}>: pkg_batteries
 <src/main.{native,byte}>: pkg_monomorphic
-<src/*.ml{,i}>: pkg_unix
+<src/main.{native,byte}>: pkg_unix
+<src/*.ml{,i}>: pkg_batteries
 <src/*.ml{,i}>: pkg_cmdliner
 <src/*.ml{,i}>: pkg_llvm
 <src/*.ml{,i}>: pkg_llvm.irreader
-<src/*.ml{,i}>: pkg_batteries
 <src/*.ml{,i}>: pkg_monomorphic
+<src/*.ml{,i}>: pkg_unix
 # Executable test
 <tests/tests.{native,byte}>: oasis_executable_test_byte
 <tests/*.ml{,i}>: oasis_executable_test_byte
