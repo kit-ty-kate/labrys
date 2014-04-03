@@ -52,8 +52,8 @@ let aux args =
   let gammaC = Gamma.Constr.empty in
   open_in args.file
   |> ParserManager.parse
-  |> TypedTree.from_parse_tree gamma gammaT gammaK gammaC
-  |> UntypedTree.of_typed_tree
+  |> TypeChecker.from_parse_tree gamma gammaT gammaK gammaC
+  |> Lambda.of_typed_tree
   |> Backend.make
   |> LLVM.to_string
   |> print_or_compile args

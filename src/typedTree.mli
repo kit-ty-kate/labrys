@@ -37,11 +37,3 @@ type top =
   | Value of (value * t)
   | Binding of (value * string)
   | Datatype of variant list
-
-val from_parse_tree :
-  TypesBeta.t Gamma.Value.t ->
-  (Types.t * Kinds.t) Gamma.Types.t ->
-  Kinds.t Gamma.Kinds.t ->
-  string list Gamma.Constr.t ->
-  ParseTree.top list ->
-  top list

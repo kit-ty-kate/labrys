@@ -19,12 +19,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t =
-  | Abs of (string * t)
-  | App of (t * t)
-  | Val of string
-  | Variant of int
-
-type top =
-  | Value of (string * t * int)
-  | Binding of (string * string)
+val from_parse_tree :
+  TypesBeta.t Gamma.Value.t ->
+  (Types.t * Kinds.t) Gamma.Types.t ->
+  Kinds.t Gamma.Kinds.t ->
+  string list Gamma.Constr.t ->
+  ParseTree.top list ->
+  TypedTree.top list
