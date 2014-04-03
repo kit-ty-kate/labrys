@@ -1,6 +1,8 @@
 _build
 setup.data
 setup.log
+setup.exe
+
 main.native
 main.byte
 tests.native
