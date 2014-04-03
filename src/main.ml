@@ -52,7 +52,7 @@ let aux args =
   open_in args.file
   |> ParserManager.parse
   |> TypeChecker.from_parse_tree gamma gammaT gammaK
-  |> UntypedTree.of_typed_tree
+  |> Lambda.of_typed_tree
   |> Backend.make
   |> LLVM.to_string
   |> print_or_compile args

@@ -22,15 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type t =
-  | Abs of (string * t)
-  | App of (t * t)
-  | Val of string
-  | Variant of int
-
-type top =
-  | Value of (string * t * int)
-  | Binding of (string * string)
+open UntypedTree
 
 let rec of_typed_term = function
   | TypedTree.Abs ({TypedTree.param = {TypedTree.name; _}; _}, t) ->

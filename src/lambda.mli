@@ -19,12 +19,4 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t =
-  | Abs of (string * t)
-  | App of (t * t)
-  | Val of string
-  | Variant of int
-
-type top =
-  | Value of (string * t * int)
-  | Binding of (string * string)
+val of_typed_tree : TypedTree.top list -> UntypedTree.top list
