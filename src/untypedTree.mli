@@ -23,13 +23,10 @@ type t =
   | Abs of (string * t)
   | App of (t * t)
   | Val of string
-
-type variant =
-  | Variant of (string * int)
+  | Variant of int
 
 type top =
   | Value of (string * t * int)
   | Binding of (string * string)
-  | Datatype of variant list
 
 val of_typed_tree : TypedTree.top list -> top list

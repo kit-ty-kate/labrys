@@ -26,14 +26,11 @@ type t =
   | Abs of (string * t)
   | App of (t * t)
   | Val of string
-
-type variant =
-  | Variant of (string * int)
+  | Variant of int
 
 type top =
   | Value of (string * t * int)
   | Binding of (string * string)
-  | Datatype of variant list
 
 let rec of_typed_term = function
   | TypedTree.Abs ({TypedTree.param = {TypedTree.name; _}; _}, t) ->
@@ -49,8 +46,15 @@ let rec of_typed_term = function
   | TypedTree.Val {TypedTree.name; _} ->
       (Val name, 0)
 
-let of_typed_variant = function
-  | TypedTree.Variant (name, ty) -> Variant (name, TypesBeta.size ty)
+let of_typed_variant i = function
+  | TypedTree.Variant (name, ty) ->
+      let rec aux = function
+        | 0 -> Variant i
+        | n -> Abs ("", aux (pred n))
+      in
+      let size = TypesBeta.size ty in
+      let t = aux size in
+      Value (name, t, size)
 
 let rec of_typed_tree = function
   | TypedTree.Value ({TypedTree.name; _}, t) :: xs ->
@@ -59,6 +63,6 @@ let rec of_typed_tree = function
   | TypedTree.Binding ({TypedTree.name; _}, value) :: xs ->
       Binding (name, value) :: of_typed_tree xs
   | TypedTree.Datatype variants :: xs ->
-      Datatype (List.map of_typed_variant variants) :: of_typed_tree xs
+      List.mapi of_typed_variant variants @ of_typed_tree xs
   | [] ->
       []
