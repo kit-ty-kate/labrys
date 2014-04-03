@@ -22,23 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type value = {name : string; ty : TypesBeta.t}
-type abs = {abs_ty : TypesBeta.t; param : value; ty_expr : TypesBeta.t}
-
-type t =
-  | Abs of (abs * t)
-  | TAbs of (abs * t)
-  | App of (TypesBeta.t * t * t)
-  | TApp of (TypesBeta.t * t * TypesBeta.t)
-  | Val of value
-
-type variant =
-  | Variant of (string * TypesBeta.t)
-
-type top =
-  | Value of (value * t)
-  | Binding of (value * string)
-  | Datatype of variant list
+open TypedTree
 
 let get_type = function
   | Abs ({abs_ty; _}, _) -> abs_ty

@@ -51,7 +51,7 @@ let aux args =
   let gammaK = Gamma.Kinds.empty in
   open_in args.file
   |> ParserManager.parse
-  |> TypedTree.from_parse_tree gamma gammaT gammaK
+  |> TypeChecker.from_parse_tree gamma gammaT gammaK
   |> UntypedTree.of_typed_tree
   |> Backend.make
   |> LLVM.to_string
