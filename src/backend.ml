@@ -64,7 +64,24 @@ let insert_arg_in_env param env gammaEnv builder =
   let env = LLVM.build_gep env [|i32 (List.length gammaEnv)|] "gep_env" builder in
   LLVM.build_store param env builder
 
-let rec lambda env gammaParam gammaEnv gammaGlob builder = function
+let rec llvalue_of_pattern_var value builder = function
+  | Pattern.VLeaf -> value
+  | Pattern.VNode (i, var) ->
+      let value =
+        LLVM.build_bitcast value (LLVM.pointer_type variant_type) "" builder
+      in
+      let value = LLVM.build_load value "" builder in
+      let value = LLVM.build_extractvalue value 1 "" builder in
+      let value = LLVM.build_gep value [|i32 i|] "" builder in
+      let value = LLVM.build_load value "" builder in
+      llvalue_of_pattern_var value builder var
+
+let rec create_tree func env gammaParam gammaEnv gammaGlob builder value map_patterns =
+  function
+  | UntypedTree.Leaf _ -> assert false
+  | UntypedTree.Node (var, cases) -> assert false
+
+and lambda func env gammaParam gammaEnv gammaGlob builder = function
   | UntypedTree.Abs (name, t) ->
       let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
       let closure = create_closure f env builder in
@@ -73,17 +90,21 @@ let rec lambda env gammaParam gammaEnv gammaGlob builder = function
       let env = LLVM.param f 1 in
       insert_arg_in_env (snd gammaP) env gammaEnv builder;
       let gammaE = (name, List.length gammaEnv) in
-      let v = lambda env (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t in
+      let v = lambda f env (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t in
       LLVM.build_ret v builder;
       closure
   | UntypedTree.App (f, x) ->
-      let boxed_f = lambda env gammaParam gammaEnv gammaGlob builder f in
+      let boxed_f = lambda func env gammaParam gammaEnv gammaGlob builder f in
       let boxed_f = LLVM.build_bitcast boxed_f (LLVM.pointer_type closure_type) "extract_f_cast" builder in
       let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
       let f = LLVM.build_extractvalue boxed_f 0 "f" builder in
       let env = LLVM.build_extractvalue boxed_f 1 "env" builder in
-      let x = lambda env gammaParam gammaEnv gammaGlob builder x in
+      (* TODO: Is it the right env ? *)
+      let x = lambda func env gammaParam gammaEnv gammaGlob builder x in
       LLVM.build_call f [|x; env|] "tmp" builder
+  | UntypedTree.PatternMatching (t, map_patterns, tree) ->
+      let t = lambda func env gammaParam gammaEnv gammaGlob builder t in
+      create_tree func env gammaParam gammaEnv gammaGlob builder t map_patterns tree
   | UntypedTree.Val name ->
       let find gamma =
         Option.map (fun (res, c) -> (snd res, c)) (find_in_gamma name gamma)
@@ -113,15 +134,15 @@ let rec lambda env gammaParam gammaEnv gammaGlob builder = function
       LLVM.build_store variant_loaded variant builder;
       LLVM.build_bitcast variant star_type "cast_variant" builder
 
-let rec init gammaGlob builder = function
+let rec init func gammaGlob builder = function
   | `Val (name, g, t, size) :: xs ->
       let env = create_env size builder in
-      let value = lambda env None [] gammaGlob builder t in
+      let value = lambda func env None [] gammaGlob builder t in
       LLVM.build_store value g builder;
-      init ((name, g) :: gammaGlob) builder xs
+      init func ((name, g) :: gammaGlob) builder xs
   | `Datatype f :: xs ->
       let gs = f builder in
-      init (gs @ gammaGlob) builder xs
+      init func (gs @ gammaGlob) builder xs
   | [] -> ()
 
 let make =
@@ -134,8 +155,8 @@ let make =
         top init_list ((name, v) :: gamma) xs
     | [] ->
         let ty = LLVM.function_type (LLVM.void_type c) [||] in
-        let (_, builder) = LLVM.define_function c "__init" ty m in
-        init gamma builder (List.rev init_list);
+        let (f, builder) = LLVM.define_function c "__init" ty m in
+        init f gamma builder (List.rev init_list);
         LLVM.build_ret_void builder;
         m
   in

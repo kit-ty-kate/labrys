@@ -24,37 +24,79 @@ open Monomorphic.None
 
 open UntypedTree
 
-let rec of_typed_term = function
+let get_index_from_name name gammaC =
+  Option.default_delayed
+    (fun () -> assert false)
+    (Gamma.Constr.find name gammaC)
+
+let of_constr gammaC = function
+  | Pattern.Constr name -> Constr (get_index_from_name name gammaC)
+  | Pattern.Any name -> Any name
+
+let rec of_patterns gammaC = function
+  | Pattern.Leaf label ->
+      Leaf label
+  | Pattern.Node (var, patterns) ->
+      let patterns =
+        let aux (constr, tree) =
+          (of_constr gammaC constr, of_patterns gammaC tree)
+        in
+        List.map aux patterns
+      in
+      Node (var, patterns)
+
+let rec of_map_patterns gammaC m =
+  let aux i t (acc, size) =
+    let (t, size') = of_typed_term gammaC t in
+    (Pattern.Map.add i t acc, Int.max size size')
+  in
+  Pattern.Map.fold aux m (Pattern.Map.empty, 0)
+
+and of_typed_term gammaC = function
   | TypedTree.Abs ({TypedTree.param = {TypedTree.name; _}; _}, t) ->
-      let (t, size) = of_typed_term t in
+      let (t, size) = of_typed_term gammaC t in
       (Abs (name, t), succ size)
   | TypedTree.TApp (_, t, _)
   | TypedTree.TAbs (_, t) ->
-      of_typed_term t
+      of_typed_term gammaC t
   | TypedTree.App (_, f, x) ->
-      let (f, size) = of_typed_term f in
-      let (x, size') = of_typed_term x in
+      let (f, size) = of_typed_term gammaC f in
+      let (x, size') = of_typed_term gammaC x in
       (App (f, x), size + size')
   | TypedTree.Val {TypedTree.name; _} ->
       (Val name, 0)
+  | TypedTree.PatternMatching (t, map_patterns, patterns, _) ->
+      let (t, size) = of_typed_term gammaC t in
+      let (map_patterns, size') = of_map_patterns gammaC map_patterns in
+      let patterns = of_patterns gammaC patterns in
+      (PatternMatching (t, map_patterns, patterns), size + size')
 
-let of_typed_variant i = function
+let of_typed_variant (acc, i, gammaC) = function
   | TypedTree.Variant (name, ty) ->
-      let rec aux = function
-        | 0 -> Variant i
-        | n -> Abs ("", aux (pred n))
+      let variant =
+        let rec aux = function
+          | 0 -> Variant i
+          | n -> Abs ("", aux (pred n))
+        in
+        let size = TypesBeta.size ty in
+        let t = aux size in
+        Value (name, t, size)
       in
-      let size = TypesBeta.size ty in
-      let t = aux size in
-      Value (name, t, size)
+      (variant :: acc, succ i, Gamma.Constr.add name i gammaC)
 
-let rec of_typed_tree = function
-  | TypedTree.Value ({TypedTree.name; _}, t) :: xs ->
-      let (t, size) = of_typed_term t in
-      Value (name, t, size) :: of_typed_tree xs
-  | TypedTree.Binding ({TypedTree.name; _}, value) :: xs ->
-      Binding (name, value) :: of_typed_tree xs
-  | TypedTree.Datatype variants :: xs ->
-      List.mapi of_typed_variant variants @ of_typed_tree xs
-  | [] ->
-      []
+let of_typed_tree =
+  let rec aux gammaC = function
+    | TypedTree.Value ({TypedTree.name; _}, t) :: xs ->
+        let (t, size) = of_typed_term gammaC t in
+        Value (name, t, size) :: aux gammaC xs
+    | TypedTree.Binding ({TypedTree.name; _}, value) :: xs ->
+        Binding (name, value) :: aux gammaC xs
+    | TypedTree.Datatype variants :: xs ->
+        let (variants, _, gammaC) =
+          List.fold_left of_typed_variant ([], 0, Gamma.Constr.empty) variants
+        in
+        variants @ aux gammaC xs
+    | [] ->
+        []
+  in
+  aux Gamma.Constr.empty

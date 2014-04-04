@@ -22,16 +22,57 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
+module Map = struct
+  include Map.Make(Int)
+  include Exceptionless
+end
+
+module Matrix = struct
+  type constr =
+    | MConstr of (string * constr list)
+    | MAny of string
+
+  type 'a t = (constr * 'a) list
+
+  let replace_ty = assert false
+
+  let create' ~loc gammaC ty =
+    let rec aux acc = function
+      | ParseTree.Any name when List.is_empty acc ->
+          MAny name
+      | ParseTree.Any name ->
+          Error.fail ~loc "'%s' can't be applied to something" name
+      | ParseTree.TyConstr name ->
+          (* TODO: Check in gammaC (or make a module with abstract type ? :) )
+             And check type of the parameters
+           *)
+          MConstr (name, acc)
+      | ParseTree.PatternApp (x, y) ->
+          aux (acc @ [aux [] y]) x
+      | ParseTree.PatternTApp (x, ty) ->
+          replace_ty x ty
+    in
+    aux []
+
+  let create ~loc gammaC ty term p = [(create' ~loc gammaC ty p, term)]
+
+  let append ~loc gammaC ty term p patterns = patterns @ create ~loc gammaC ty term p
+
+  let get_map m =
+    let aux (acc, i) (_, x) = (Map.add i x acc, succ i) in
+    fst (List.fold_left aux (Map.empty, 0) m)
+end
+
 type constr =
   | Constr of string
   | Any of string
 
-type 'a t =
-  | Leaf of 'a
-  | Node of ('a t * constr) list
+type var =
+  | VLeaf
+  | VNode of (int * var)
 
-let create gammaC ty term p =
-  assert false
+type t =
+  | Node of (var * (constr * t) list)
+  | Leaf of int
 
-let append gammaC ty term p patterns =
-  assert false
+let create = assert false

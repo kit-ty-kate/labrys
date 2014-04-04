@@ -19,25 +19,44 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+module Map : sig
+  include BatteriesExceptionless.Map.S with type key = int
+  include module type of Exceptionless
+end
+
+module Matrix : sig
+  type 'a t
+
+  val create :
+    loc:ParseTree.location ->
+    string list Gamma.Value.t ->
+    TypesBeta.t ->
+    'a ->
+    ParseTree.pattern ->
+    'a t
+
+  val append :
+    loc:ParseTree.location ->
+    string list Gamma.Value.t ->
+    TypesBeta.t ->
+    'a ->
+    ParseTree.pattern ->
+    'a t ->
+    'a t
+
+  val get_map : 'a t -> 'a Map.t
+end
+
 type constr =
   | Constr of string
   | Any of string
 
-type 'a t =
-  | Leaf of 'a
-  | Node of ('a t * constr) list
+type var =
+  | VLeaf
+  | VNode of (int * var)
 
-val create :
-  string list Gamma.Value.t ->
-  TypesBeta.t ->
-  'a ->
-  ParseTree.pattern ->
-  'a t
+type t =
+  | Node of (var * (constr * t) list)
+  | Leaf of int
 
-val append :
-  string list Gamma.Value.t ->
-  TypesBeta.t ->
-  'a ->
-  ParseTree.pattern ->
-  'a t ->
-  'a t
+val create : 'a Matrix.t -> t

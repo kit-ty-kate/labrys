@@ -19,11 +19,20 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t =
+type constr =
+  | Constr of int
+  | Any of string
+
+type tree =
+  | Node of (Pattern.var * (constr * tree) list)
+  | Leaf of int
+
+and t =
   | Abs of (string * t)
   | App of (t * t)
   | Val of string
   | Variant of int
+  | PatternMatching of (t * t Pattern.Map.t * tree)
 
 type top =
   | Value of (string * t * int)

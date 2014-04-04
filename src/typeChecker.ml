@@ -30,7 +30,7 @@ let get_type = function
   | App (ty, _, _) -> ty
   | TApp (ty, _, _) -> ty
   | Val {ty; _} -> ty
-  | PatternMatching (_, _, ty) -> ty
+  | PatternMatching (_, _, _, ty) -> ty
 
 let type_error_aux ~loc =
   Error.fail
@@ -81,19 +81,11 @@ let rec transform ~from ~ty =
     | Val {name; ty} ->
         let ty = replace ty in
         Val {name; ty}
-    | PatternMatching (t, patterns, ty) ->
+    | PatternMatching (t, map_patterns, patterns, ty) ->
         let t = transform t in
-        let patterns =
-          let rec transform_patterns = function
-            | Pattern.Leaf t -> Pattern.Leaf (transform t)
-            | Pattern.Node c ->
-                let f (pattern, c) = (transform_patterns pattern, c) in
-                Pattern.Node (List.map f c)
-          in
-          transform_patterns patterns
-        in
+        let map_patterns = Pattern.Map.map aux map_patterns in
         let ty = replace ty in
-        PatternMatching (t, patterns, ty)
+        PatternMatching (t, map_patterns, patterns, ty)
   in
   aux
 
@@ -164,7 +156,7 @@ let rec aux gamma gammaT gammaK gammaC = function
       in
       let (initial_pattern, initial_ty) =
         let term = aux gamma gammaT gammaK gammaC (snd head) in
-        (Pattern.create gammaC ty term (fst head), get_type term)
+        (Pattern.Matrix.create ~loc gammaC ty term (fst head), get_type term)
       in
       let patterns =
         let f patterns (p, t) =
@@ -172,11 +164,11 @@ let rec aux gamma gammaT gammaK gammaC = function
           let has = get_type t in
           if not (TypesBeta.equal has initial_ty) then
             type_error ~loc ~has ~expected:initial_ty;
-          Pattern.append gammaC ty t p patterns
+          Pattern.Matrix.append ~loc gammaC ty t p patterns
         in
         List.fold_left f initial_pattern tail
       in
-      PatternMatching (t, patterns, initial_ty)
+      PatternMatching (t, Pattern.Matrix.get_map patterns, Pattern.create patterns, initial_ty)
 
 let rec check_if_returns_type ~datatype = function
   | TypesBeta.Ty x -> String.equal x datatype
