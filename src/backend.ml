@@ -145,7 +145,7 @@ let rec init func gammaGlob builder = function
       init func (gs @ gammaGlob) builder xs
   | [] -> ()
 
-let make =
+let make ~opt =
   let rec top init_list gamma = function
     | UntypedTree.Value (name, t, size) :: xs ->
         let g = LLVM.define_global name (LLVM.undef star_type) m in
@@ -158,6 +158,7 @@ let make =
         let (f, builder) = LLVM.define_function c "__init" ty m in
         init f gamma builder (List.rev init_list);
         LLVM.build_ret_void builder;
+        LLVM.optimize opt m;
         m
   in
   top [] []

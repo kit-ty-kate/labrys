@@ -25,7 +25,13 @@ open Monomorphic.None
 
 let sprintf = Printf.sprintf
 
-type args = {print : bool; c : bool; o : string option; file : string}
+type args =
+  { print : bool
+  ; opt : int
+  ; c : bool
+  ; o : string option
+  ; file : string
+  }
 
 let compile {c; o; file; _} result =
   let o = match o with
@@ -54,21 +60,22 @@ let aux args =
   |> ParserManager.parse
   |> TypeChecker.from_parse_tree gamma gammaT gammaK gammaC
   |> Lambda.of_typed_tree
-  |> Backend.make
+  |> Backend.make ~opt:args.opt
   |> LLVM.to_string
   |> print_or_compile args
 
-let start print c o file =
-  try aux {print; c; o; file}; None with
+let start print opt c o file =
+  try aux {print; opt; c; o; file}; None with
   | Error.Exn x -> Some (Error.dump ~file x)
   | ParserManager.Error x -> Some x
 
 let cmd =
   let print = Arg.(value & flag & info ["print"]) in
+  let opt = Arg.(value & opt int 0 & info ["opt"]) in
   let c = Arg.(value & flag & info ["c"]) in
   let o = Arg.(value & opt (some string) None & info ["o"]) in
   let file = Arg.(required & pos 0 (some non_dir_file) None & info []) in
-  (Term.(pure start $ print $ c $ o $ file), Term.info "cervoise")
+  (Term.(pure start $ print $ opt $ c $ o $ file), Term.info "cervoise")
 
 let () =
   match Term.eval cmd with

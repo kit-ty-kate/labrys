@@ -15,7 +15,8 @@ Executable cervoise
     unix,
     cmdliner,
     llvm (>= 3.4),
-    llvm.irreader (>= 3.4),
+    llvm.irreader,
+    llvm.passmgr_builder,
     batteries (>= 2.2),
     monomorphic
   CompiledObject: best
