@@ -51,3 +51,11 @@ let to_string m =
     ]
   in
   String.concat "\n" (declare_main @ !externals) ^ "\n" ^ string_of_llmodule m
+
+let optimize opt_level m =
+  let pm = PassManager.create () in
+  let b = Llvm_passmgr_builder.create () in
+  Llvm_passmgr_builder.set_opt_level opt_level b;
+  Llvm_passmgr_builder.populate_module_pass_manager pm b;
+  ignore (PassManager.run_module m pm);
+  Llvm.PassManager.dispose pm
