@@ -19,11 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-module Map : sig
-  include BatteriesExceptionless.Map.S with type key = int
-  include module type of Exceptionless
-end
-
 module Matrix : sig
   type 'a t
 
@@ -44,7 +39,7 @@ module Matrix : sig
     'a t ->
     'a t
 
-  val get_map : 'a t -> 'a Map.t
+  val get_map : 'a t -> 'a list
 end
 
 type constr =

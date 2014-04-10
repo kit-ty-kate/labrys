@@ -32,7 +32,7 @@ and t =
   | App of (t * t)
   | Val of string
   | Variant of int
-  | PatternMatching of (t * t Pattern.Map.t * tree)
+  | PatternMatching of (t * t list * tree)
 
 type top =
   | Value of (string * t * int)

@@ -46,11 +46,11 @@ let rec of_patterns gammaC = function
       Node (var, patterns)
 
 let rec of_map_patterns gammaC m =
-  let aux i t (acc, size) =
+  let aux (acc, size) t =
     let (t, size') = of_typed_term gammaC t in
-    (Pattern.Map.add i t acc, Int.max size size')
+    (t :: acc, Int.max size size')
   in
-  Pattern.Map.fold aux m (Pattern.Map.empty, 0)
+  List.fold_left aux ([], 0) m
 
 and of_typed_term gammaC = function
   | TypedTree.Abs ({TypedTree.param = {TypedTree.name; _}; _}, t) ->

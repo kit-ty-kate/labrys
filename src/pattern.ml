@@ -22,11 +22,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-module Map = struct
-  include Map.Make(Int)
-  include Exceptionless
-end
-
 module Matrix = struct
   type constr =
     | MConstr of (string * constr list)
@@ -58,9 +53,7 @@ module Matrix = struct
 
   let append ~loc gammaC ty term p patterns = patterns @ create ~loc gammaC ty term p
 
-  let get_map m =
-    let aux (acc, i) (_, x) = (Map.add i x acc, succ i) in
-    fst (List.fold_left aux (Map.empty, 0) m)
+  let get_map m = List.map snd m
 end
 
 type constr =

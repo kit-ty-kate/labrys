@@ -28,7 +28,7 @@ type t =
   | App of (TypesBeta.t * t * t)
   | TApp of (TypesBeta.t * t * TypesBeta.t)
   | Val of value
-  | PatternMatching of (t * t Pattern.Map.t * Pattern.t * TypesBeta.t)
+  | PatternMatching of (t * t list * Pattern.t * TypesBeta.t)
 
 type variant =
   | Variant of (string * TypesBeta.t)
