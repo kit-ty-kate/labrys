@@ -45,7 +45,7 @@ let rec of_patterns gammaC = function
       in
       Node (var, patterns)
 
-let rec of_map_patterns gammaC m =
+let rec of_results gammaC m =
   let aux (acc, size) t =
     let (t, size') = of_typed_term gammaC t in
     (t :: acc, Int.max size size')
@@ -65,11 +65,11 @@ and of_typed_term gammaC = function
       (App (f, x), size + size')
   | TypedTree.Val {TypedTree.name; _} ->
       (Val name, 0)
-  | TypedTree.PatternMatching (t, map_patterns, patterns, _) ->
+  | TypedTree.PatternMatching (t, results, patterns, _) ->
       let (t, size) = of_typed_term gammaC t in
-      let (map_patterns, size') = of_map_patterns gammaC map_patterns in
+      let (results, size') = of_results gammaC results in
       let patterns = of_patterns gammaC patterns in
-      (PatternMatching (t, map_patterns, patterns), size + size')
+      (PatternMatching (t, results, patterns), size + size')
 
 let of_typed_variant (acc, i, gammaC) = function
   | TypedTree.Variant (name, ty) ->

@@ -81,11 +81,11 @@ let rec transform ~from ~ty =
     | Val {name; ty} ->
         let ty = replace ty in
         Val {name; ty}
-    | PatternMatching (t, map_patterns, patterns, ty) ->
+    | PatternMatching (t, results, patterns, ty) ->
         let t = transform t in
-        let map_patterns = List.map aux map_patterns in
+        let results = List.map aux results in
         let ty = replace ty in
-        PatternMatching (t, map_patterns, patterns, ty)
+        PatternMatching (t, results, patterns, ty)
   in
   aux
 
