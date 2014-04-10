@@ -76,12 +76,43 @@ let rec llvalue_of_pattern_var value builder = function
       let value = LLVM.build_load value "" builder in
       llvalue_of_pattern_var value builder var
 
-let rec create_tree func env gammaParam gammaEnv gammaGlob builder value map_patterns =
-  function
-  | UntypedTree.Leaf _ -> assert false
-  | UntypedTree.Node (var, cases) -> assert false
+let rec create_branch func env gammaSwitch gammaParam gammaEnv gammaGlob value term map_patterns (constr, tree) =
+  let gammaSwitch = match constr with
+    | UntypedTree.Constr _ -> gammaSwitch
+    | UntypedTree.Any name -> (name, term) :: gammaSwitch
+  in
+  let block = LLVM.append_block c "" func in
+  let builder = LLVM.builder_at_end c block in
+  ignore (create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder value map_patterns tree);
+  block
 
-and lambda func env gammaParam gammaEnv gammaGlob builder = function
+and create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder value map_patterns =
+  function
+  | UntypedTree.Leaf i ->
+      snd (List.nth map_patterns i)
+  | UntypedTree.Node (var, cases) ->
+      (* The more general case is always the last one *)
+      let cases = List.rev cases in
+      let (default, cases) = match cases with
+        | x::xs -> (x, xs)
+        | [] -> assert false
+      in
+      let term = llvalue_of_pattern_var value builder var in
+      let default_branch = create_branch func env gammaSwitch gammaParam gammaEnv gammaGlob value term map_patterns default in
+      let switch = LLVM.build_switch term default_branch (List.length cases) builder in
+      List.iter
+        (fun ((constr, _) as case) ->
+           let i = match constr with
+             | UntypedTree.Constr i -> i
+             | UntypedTree.Any _ -> assert false
+           in
+           let branch = create_branch func env gammaSwitch gammaParam gammaEnv gammaGlob value term map_patterns case in
+           LLVM.add_case switch (i32 i) branch
+        )
+        cases;
+      switch
+
+and lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder = function
   | UntypedTree.Abs (name, t) ->
       let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
       let closure = create_closure f env builder in
@@ -90,21 +121,22 @@ and lambda func env gammaParam gammaEnv gammaGlob builder = function
       let env = LLVM.param f 1 in
       insert_arg_in_env (snd gammaP) env gammaEnv builder;
       let gammaE = (name, List.length gammaEnv) in
-      let v = lambda f env (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t in
+      let v = lambda f env gammaSwitch (Some gammaP) (gammaE :: gammaEnv) gammaGlob builder t in
       LLVM.build_ret v builder;
       closure
   | UntypedTree.App (f, x) ->
-      let boxed_f = lambda func env gammaParam gammaEnv gammaGlob builder f in
+      let boxed_f = lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder f in
       let boxed_f = LLVM.build_bitcast boxed_f (LLVM.pointer_type closure_type) "extract_f_cast" builder in
       let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
       let f = LLVM.build_extractvalue boxed_f 0 "f" builder in
       let env = LLVM.build_extractvalue boxed_f 1 "env" builder in
       (* TODO: Is it the right env ? *)
-      let x = lambda func env gammaParam gammaEnv gammaGlob builder x in
+      let x = lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder x in
       LLVM.build_call f [|x; env|] "tmp" builder
   | UntypedTree.PatternMatching (t, map_patterns, tree) ->
-      let t = lambda func env gammaParam gammaEnv gammaGlob builder t in
-      create_tree func env gammaParam gammaEnv gammaGlob builder t map_patterns tree
+      let t = lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder t in
+      let map_patterns = assert false in
+      create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder t map_patterns tree
   | UntypedTree.Val name ->
       let find gamma =
         Option.map (fun (res, c) -> (snd res, c)) (find_in_gamma name gamma)
@@ -137,7 +169,7 @@ and lambda func env gammaParam gammaEnv gammaGlob builder = function
 let rec init func gammaGlob builder = function
   | `Val (name, g, t, size) :: xs ->
       let env = create_env size builder in
-      let value = lambda func env None [] gammaGlob builder t in
+      let value = lambda func env [] None [] gammaGlob builder t in
       LLVM.build_store value g builder;
       init func ((name, g) :: gammaGlob) builder xs
   | `Datatype f :: xs ->
