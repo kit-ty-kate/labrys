@@ -145,6 +145,7 @@ and lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder = function
       let results = List.map (create_result func env gammaSwitch gammaParam gammaEnv gammaGlob builder) results in
       create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder t results tree
   | UntypedTree.Val name ->
+      (* TODO: Find in gammaSwitch *)
       let find gamma =
         Option.map (fun (res, c) -> (snd res, c)) (find_in_gamma name gamma)
       in
