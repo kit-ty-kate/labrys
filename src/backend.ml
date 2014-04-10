@@ -86,7 +86,7 @@ let rec create_branch func env gammaSwitch gammaParam gammaEnv gammaGlob value t
   ignore (create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder value results tree);
   block
 
-and create_result func env gammaSwitch gammaParam gammaEnv gammaGlob builder result =
+and create_result func env gammaSwitch gammaParam gammaEnv gammaGlob result =
   let block = LLVM.append_block c "" func in
   let builder = LLVM.builder_at_end c block in
   ignore (lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder result);
@@ -142,7 +142,7 @@ and lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder = function
       LLVM.build_call f [|x; env|] "tmp" builder
   | UntypedTree.PatternMatching (t, results, tree) ->
       let t = lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder t in
-      let results = List.map (create_result func env gammaSwitch gammaParam gammaEnv gammaGlob builder) results in
+      let results = List.map (create_result func env gammaSwitch gammaParam gammaEnv gammaGlob) results in
       create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder t results tree
   | UntypedTree.Val name ->
       (* TODO: Find in gammaSwitch *)
