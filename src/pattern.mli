@@ -39,7 +39,7 @@ module Matrix : sig
     'a t ->
     'a t
 
-  val get_map : 'a t -> 'a list
+  val get_results : 'a t -> 'a list
 end
 
 type constr =

@@ -53,7 +53,7 @@ module Matrix = struct
 
   let append ~loc gammaC ty term p patterns = patterns @ create ~loc gammaC ty term p
 
-  let get_map m = List.map snd m
+  let get_results m = List.map snd m
 end
 
 type constr =

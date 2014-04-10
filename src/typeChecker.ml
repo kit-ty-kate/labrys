@@ -168,7 +168,7 @@ let rec aux gamma gammaT gammaK gammaC = function
         in
         List.fold_left f initial_pattern tail
       in
-      PatternMatching (t, Pattern.Matrix.get_map patterns, Pattern.create patterns, initial_ty)
+      PatternMatching (t, Pattern.Matrix.get_results patterns, Pattern.create patterns, initial_ty)
 
 let rec check_if_returns_type ~datatype = function
   | TypesBeta.Ty x -> String.equal x datatype
