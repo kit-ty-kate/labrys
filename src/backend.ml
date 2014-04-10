@@ -76,20 +76,27 @@ let rec llvalue_of_pattern_var value builder = function
       let value = LLVM.build_load value "" builder in
       llvalue_of_pattern_var value builder var
 
-let rec create_branch func env gammaSwitch gammaParam gammaEnv gammaGlob value term map_patterns (constr, tree) =
+let rec create_branch func env gammaSwitch gammaParam gammaEnv gammaGlob value term results (constr, tree) =
   let gammaSwitch = match constr with
     | UntypedTree.Constr _ -> gammaSwitch
     | UntypedTree.Any name -> (name, term) :: gammaSwitch
   in
   let block = LLVM.append_block c "" func in
   let builder = LLVM.builder_at_end c block in
-  ignore (create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder value map_patterns tree);
+  ignore (create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder value results tree);
   block
 
-and create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder value map_patterns =
+and create_result func env gammaSwitch gammaParam gammaEnv gammaGlob builder result =
+  let block = LLVM.append_block c "" func in
+  let builder = LLVM.builder_at_end c block in
+  ignore (lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder result);
+  block
+
+and create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder value results =
   function
   | UntypedTree.Leaf i ->
-      snd (List.nth map_patterns i)
+      let block = List.nth results i in
+      LLVM.build_br block builder
   | UntypedTree.Node (var, cases) ->
       (* The more general case is always the last one *)
       let cases = List.rev cases in
@@ -98,7 +105,7 @@ and create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder value
         | [] -> assert false
       in
       let term = llvalue_of_pattern_var value builder var in
-      let default_branch = create_branch func env gammaSwitch gammaParam gammaEnv gammaGlob value term map_patterns default in
+      let default_branch = create_branch func env gammaSwitch gammaParam gammaEnv gammaGlob value term results default in
       let switch = LLVM.build_switch term default_branch (List.length cases) builder in
       List.iter
         (fun ((constr, _) as case) ->
@@ -106,7 +113,7 @@ and create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder value
              | UntypedTree.Constr i -> i
              | UntypedTree.Any _ -> assert false
            in
-           let branch = create_branch func env gammaSwitch gammaParam gammaEnv gammaGlob value term map_patterns case in
+           let branch = create_branch func env gammaSwitch gammaParam gammaEnv gammaGlob value term results case in
            LLVM.add_case switch (i32 i) branch
         )
         cases;
@@ -133,10 +140,10 @@ and lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder = function
       (* TODO: Is it the right env ? *)
       let x = lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder x in
       LLVM.build_call f [|x; env|] "tmp" builder
-  | UntypedTree.PatternMatching (t, map_patterns, tree) ->
+  | UntypedTree.PatternMatching (t, results, tree) ->
       let t = lambda func env gammaSwitch gammaParam gammaEnv gammaGlob builder t in
-      let map_patterns = assert false in
-      create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder t map_patterns tree
+      let results = List.map (create_result func env gammaSwitch gammaParam gammaEnv gammaGlob builder) results in
+      create_tree func env gammaSwitch gammaParam gammaEnv gammaGlob builder t results tree
   | UntypedTree.Val name ->
       let find gamma =
         Option.map (fun (res, c) -> (snd res, c)) (find_in_gamma name gamma)
