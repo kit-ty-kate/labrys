@@ -8,6 +8,7 @@
   * Add functions in backend (like access_env …)
   * Add more explicit type names (like « type name = string » instead of just use a string)
   * Avoid having too much parameters in Backend
+  * Replace Pattern.var by « type var = int list »
 
 * Cleaning (parser, typechecker, backend, …)
 * Unit-tests
