@@ -172,7 +172,7 @@ and lambda func env gamma builder = function
       LLVM.build_bitcast variant star_type "cast_variant" builder
 
 let rec init func gamma builder = function
-  | `Val (name, g, t, size) :: xs ->
+  | (name, g, t, size) :: xs ->
       let env = create_env size builder in
       let value = lambda func env gamma builder t in
       LLVM.build_store value g builder;
@@ -184,7 +184,7 @@ let make ~opt =
   let rec top init_list gamma = function
     | UntypedTree.Value (name, t, size) :: xs ->
         let g = LLVM.define_global name (LLVM.undef star_type) m in
-        top (`Val (name, g, t, size) :: init_list) gamma xs
+        top ((name, g, t, size) :: init_list) gamma xs
     | UntypedTree.Binding (name, binding) :: xs ->
         let v = LLVM.bind c ~name binding in
         let gamma = Gamma.Value.add name (Glob v) gamma in
