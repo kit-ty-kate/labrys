@@ -144,10 +144,9 @@ and lambda func env gamma builder = function
       let boxed_f = LLVM.build_bitcast boxed_f (LLVM.pointer_type closure_type) "extract_f_cast" builder in
       let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
       let f = LLVM.build_extractvalue boxed_f 0 "f" builder in
-      let env = LLVM.build_extractvalue boxed_f 1 "env" builder in
-      (* TODO: Is it the right env ? *)
+      let env_f = LLVM.build_extractvalue boxed_f 1 "env" builder in
       let x = lambda func env gamma builder x in
-      LLVM.build_call f [|x; env|] "tmp" builder
+      LLVM.build_call f [|x; env_f|] "tmp" builder
   | UntypedTree.PatternMatching (t, results, tree) ->
       let t = lambda func env gamma builder t in
       let results = List.map (create_result func env gamma) results in
