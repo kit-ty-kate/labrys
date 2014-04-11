@@ -29,7 +29,7 @@ module Matrix = struct
 
   type 'a t = (constr * 'a) list
 
-  let replace_ty = assert false
+  let replace_ty _ _ = assert false
 
   let create' ~loc gammaC ty =
     let rec aux acc = function
@@ -68,4 +68,4 @@ type t =
   | Node of (var * (constr * t) list)
   | Leaf of int
 
-let create = assert false
+let create _ = assert false
