@@ -30,7 +30,7 @@ let get_type = function
   | App (ty, _, _) -> ty
   | TApp (ty, _, _) -> ty
   | Val {ty; _} -> ty
-  | PatternMatching (_, _, _, ty) -> ty
+  | PatternMatching (_, _, ty) -> ty
 
 let type_error_aux ~loc =
   Error.fail
@@ -81,11 +81,11 @@ let rec transform ~from ~ty =
     | Val {name; ty} ->
         let ty = replace ty in
         Val {name; ty}
-    | PatternMatching (t, results, patterns, ty) ->
+    | PatternMatching (t, patterns, ty) ->
         let t = transform t in
-        let results = List.map aux results in
+        let patterns = Pattern.Matrix.map aux patterns in
         let ty = replace ty in
-        PatternMatching (t, results, patterns, ty)
+        PatternMatching (t, patterns, ty)
   in
   aux
 
@@ -168,7 +168,7 @@ let rec aux gamma gammaT gammaK gammaC = function
         in
         List.fold_left f initial_pattern tail
       in
-      PatternMatching (t, Pattern.Matrix.get_results patterns, Pattern.create patterns, initial_ty)
+      PatternMatching (t, patterns, initial_ty)
 
 let rec check_if_returns_type ~datatype = function
   | TypesBeta.Ty x -> String.equal x datatype
@@ -183,7 +183,9 @@ let transform_variants ~datatype gamma gammaT gammaK gammaC =
         let ty = ty_from_parse_tree' ~loc gammaT gammaK ty in
         if check_if_returns_type ~datatype ty then
           let (xs, gamma, gammaC) = aux xs in
-          (Variant (name, ty) :: xs, Gamma.Value.add name ty gamma, Gamma.Constr.append datatype name gammaC)
+          let gamma = Gamma.Value.add name ty gamma in
+          let gammaC = Gamma.Constr.add name ty gammaC in
+          (Variant (name, ty) :: xs, gamma, gammaC)
         else
           Error.fail ~loc "The variant '%s' doesn't return its type" name
     | [] -> ([], gamma, gammaC)

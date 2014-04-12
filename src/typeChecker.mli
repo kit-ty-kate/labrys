@@ -23,6 +23,6 @@ val from_parse_tree :
   TypesBeta.t Gamma.Value.t ->
   (Types.t * Kinds.t) Gamma.Types.t ->
   Kinds.t Gamma.Kinds.t ->
-  string list Gamma.Constr.t ->
+  TypesBeta.t Gamma.Constr.t ->
   ParseTree.top list ->
   TypedTree.top list

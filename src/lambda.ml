@@ -65,7 +65,10 @@ and of_typed_term gammaC = function
       (App (f, x), size + size')
   | TypedTree.Val {TypedTree.name; _} ->
       (Val name, 0)
-  | TypedTree.PatternMatching (t, results, patterns, _) ->
+  | TypedTree.PatternMatching (t, patterns, _) ->
+      let results = Pattern.Matrix.get_results patterns in
+      let gammaD = assert false in (* TODO: gammaD contains the list of constructors for each datatype *)
+      let patterns = Pattern.create gammaD patterns in
       let (t, size) = of_typed_term gammaC t in
       let (results, size') = of_results gammaC results in
       let patterns = of_patterns gammaC patterns in

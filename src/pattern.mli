@@ -24,7 +24,7 @@ module Matrix : sig
 
   val create :
     loc:ParseTree.location ->
-    string list Gamma.Value.t ->
+    TypesBeta.t Gamma.Constr.t -> (* TODO: Shouldn't be the same module as the other create *)
     TypesBeta.t ->
     'a ->
     ParseTree.pattern ->
@@ -32,12 +32,14 @@ module Matrix : sig
 
   val append :
     loc:ParseTree.location ->
-    string list Gamma.Value.t ->
+    TypesBeta.t Gamma.Constr.t ->
     TypesBeta.t ->
     'a ->
     ParseTree.pattern ->
     'a t ->
     'a t
+
+  val map : ('a -> 'b) -> 'a t -> 'b t
 
   val get_results : 'a t -> 'a list
 end
@@ -54,4 +56,4 @@ type t =
   | Node of (var * (constr * t) list)
   | Leaf of int
 
-val create : 'a Matrix.t -> t
+val create : string list Gamma.Constr.t -> 'a Matrix.t -> t
