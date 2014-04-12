@@ -209,5 +209,5 @@ let rec from_parse_tree gamma gammaT gammaK gammaC = function
       let gammaK = Gamma.Kinds.add ~loc name kind gammaK in
       let (variants, gamma, gammaC) = transform_variants ~datatype:name gamma gammaT gammaK gammaC variants in
       let xs = from_parse_tree gamma gammaT gammaK gammaC xs in
-      Datatype variants :: xs
+      Datatype (name, variants) :: xs
   | [] -> []

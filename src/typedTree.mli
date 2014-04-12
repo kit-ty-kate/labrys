@@ -36,4 +36,4 @@ type variant =
 type top =
   | Value of (value * t)
   | Binding of (value * string)
-  | Datatype of variant list
+  | Datatype of (string * variant list)
