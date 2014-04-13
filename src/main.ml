@@ -52,13 +52,9 @@ let print_or_compile = function
   | {print = false; _} as args -> compile args
 
 let aux args =
-  let gamma = Gamma.Value.empty in
-  let gammaT = Gamma.Types.empty in
-  let gammaK = Gamma.Kinds.empty in
-  let gammaC = Gamma.Constr.empty in
   open_in args.file
   |> ParserManager.parse
-  |> TypeChecker.from_parse_tree gamma gammaT gammaK gammaC
+  |> TypeChecker.from_parse_tree
   |> Lambda.of_typed_tree
   |> Backend.make ~opt:args.opt
   |> LLVM.to_string

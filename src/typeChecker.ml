@@ -211,3 +211,10 @@ let rec from_parse_tree gamma gammaT gammaK gammaC = function
       let xs = from_parse_tree gamma gammaT gammaK gammaC xs in
       Datatype (name, variants) :: xs
   | [] -> []
+
+let from_parse_tree =
+  from_parse_tree
+    Gamma.Value.empty
+    Gamma.Types.empty
+    Gamma.Kinds.empty
+    Gamma.Constr.empty
