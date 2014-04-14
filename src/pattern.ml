@@ -39,6 +39,13 @@ let function_type_error ~loc ~has ~expected =
     (TypesBeta.to_string has)
     (TypesBeta.to_string expected)
 
+let kind_missmatch ~loc ~has ~on =
+  Error.fail
+    ~loc
+    "Cannot apply something with kind '%s' on '%s'"
+    (Kinds.to_string has)
+    (Kinds.to_string on)
+
 module Matrix = struct
   type constr =
     | MConstr of (string * constr list)
@@ -50,9 +57,7 @@ module Matrix = struct
     | AnyTy of string
     | SomeTy of TypesBeta.t
 
-  let replace_ty _ _ = assert false
-
-  let create ~loc gammaC =
+  let create ~loc gammaT gammaC =
     let rec aux acc = function
       | ParseTree.Any name when List.is_empty acc ->
           (MAny name, AnyTy name)
@@ -113,8 +118,28 @@ module Matrix = struct
                 end
           in
           (f, SomeTy ty)
-      | ParseTree.PatternTApp (x, ty) ->
-          replace_ty x ty
+      | ParseTree.PatternTApp (x, param) ->
+          let (x, ty) = aux acc x in
+          begin match ty with
+          | SomeTy ty ->
+              let (param, kx) = Types.from_parse_tree ~loc gammaT param in
+              let param = TypesBeta.of_ty param in
+              begin match ty with
+              | TypesBeta.Forall (from, k, ty) when Kinds.equal k kx ->
+                  let ty = TypesBeta.replace ~from ~ty:param ty in
+                  (x, SomeTy ty)
+              | TypesBeta.Forall (_, k, _) -> kind_missmatch ~loc ~has:kx ~on:k
+              | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:param ~expected:ty
+              | (TypesBeta.AppOnTy _ as ty)
+              | (TypesBeta.Ty _ as ty) -> function_type_error ~loc ~has:param ~expected:ty
+              | TypesBeta.AbsOnTy _ -> assert false
+              end
+          | AnyTy name ->
+              Error.fail
+                ~loc
+                "Cannot apply something to the variable '%s'"
+                name
+          end
     in
     fun ty x ->
       let (res, ty') = aux [] x in
@@ -129,9 +154,9 @@ module Matrix = struct
       end;
       res
 
-  let create ~loc gammaC ty term p = [(create ~loc gammaC ty p, term)]
+  let create ~loc gammaT gammaC ty term p = [(create ~loc gammaT gammaC ty p, term)]
 
-  let append ~loc gammaC ty term p patterns = patterns @ create ~loc gammaC ty term p
+  let append ~loc gammaT gammaC ty term p patterns = patterns @ create ~loc gammaT gammaC ty term p
 
   let map f m = List.map (fun (constr, x) -> (constr, f x)) m
 

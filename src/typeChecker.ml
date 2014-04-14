@@ -156,7 +156,7 @@ let rec aux gamma gammaT gammaC = function
       in
       let (initial_pattern, initial_ty) =
         let term = aux gamma gammaT gammaC (snd head) in
-        (Pattern.Matrix.create ~loc gammaC ty term (fst head), get_type term)
+        (Pattern.Matrix.create ~loc gammaT gammaC ty term (fst head), get_type term)
       in
       let patterns =
         let f patterns (p, t) =
@@ -164,7 +164,7 @@ let rec aux gamma gammaT gammaC = function
           let has = get_type t in
           if not (TypesBeta.equal has initial_ty) then
             type_error ~loc ~has ~expected:initial_ty;
-          Pattern.Matrix.append ~loc gammaC ty t p patterns
+          Pattern.Matrix.append ~loc gammaT gammaC ty t p patterns
         in
         List.fold_left f initial_pattern tail
       in

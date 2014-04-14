@@ -24,6 +24,7 @@ module Matrix : sig
 
   val create :
     loc:ParseTree.location ->
+    [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t -> (* TODO: define types in a specific module *)
     TypesBeta.t Gamma.Constr.t -> (* TODO: Shouldn't be the same module as the other create *)
     TypesBeta.t ->
     'a ->
@@ -32,6 +33,7 @@ module Matrix : sig
 
   val append :
     loc:ParseTree.location ->
+    [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t ->
     TypesBeta.t Gamma.Constr.t ->
     TypesBeta.t ->
     'a ->
