@@ -29,7 +29,6 @@ type t =
 
 val from_parse_tree :
   loc:ParseTree.location ->
-  (t * Kinds.t) Gamma.Types.t ->
-  Kinds.t Gamma.Kinds.t ->
+  [`Alias of (t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t ->
   ParseTree.ty ->
   (t * Kinds.t)

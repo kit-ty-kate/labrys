@@ -37,31 +37,30 @@ let fail_apply ~loc x f =
   let conv = Kinds.to_string in
   Error.fail ~loc "Kind '%s' can't be applied on '%s'" (conv x) (conv f)
 
-let rec from_parse_tree ~loc gammaT gammaK = function
+let rec from_parse_tree ~loc gammaT = function
   | ParseTree.Fun (x, y) ->
-      let (x, k1) = from_parse_tree ~loc gammaT gammaK x in
-      let (y, k2) = from_parse_tree ~loc gammaT gammaK y in
+      let (x, k1) = from_parse_tree ~loc gammaT x in
+      let (y, k2) = from_parse_tree ~loc gammaT y in
       if Kinds.not_star k1 || Kinds.not_star k2 then
         fail_not_star ~loc "->";
       (Fun (x, y), Kinds.Star)
   | ParseTree.Ty name ->
       begin match Gamma.Types.find name gammaT with
-      | Some (ty, k) -> (Alias (name, ty), k)
-      | None -> match Gamma.Kinds.find name gammaK with
-        | Some k -> (Ty (name, k), k)
-        | None -> Error.fail ~loc "The type '%s' was not found in Γ" name
+      | Some (`Alias (ty, k)) -> (Alias (name, ty), k)
+      | Some (`Abstract k) -> (Ty (name, k), k)
+      | None -> Error.fail ~loc "The type '%s' was not found in Γ" name
       end
   | ParseTree.Forall (name, k, ret) ->
-      let (ret, kx) = from_parse_tree ~loc gammaT (Gamma.Kinds.add ~loc name k gammaK) ret in
+      let (ret, kx) = from_parse_tree ~loc (Gamma.Types.add ~loc name (`Abstract k) gammaT) ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
   | ParseTree.AbsOnTy (name, k, ret) ->
-      let (ret, kret) = from_parse_tree ~loc gammaT (Gamma.Kinds.add ~loc name k gammaK) ret in
+      let (ret, kret) = from_parse_tree ~loc (Gamma.Types.add ~loc name (`Abstract k) gammaT) ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
   | ParseTree.AppOnTy (f, x) ->
-      let (f, kf) = from_parse_tree ~loc gammaT gammaK f in
-      let (x, kx) = from_parse_tree ~loc gammaT gammaK x in
+      let (f, kf) = from_parse_tree ~loc gammaT f in
+      let (x, kx) = from_parse_tree ~loc gammaT x in
       let k =
         match kf with
         | Kinds.KFun (p, r) when Kinds.equal p kx -> r

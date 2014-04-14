@@ -36,8 +36,6 @@ module Types = struct
     add k x map
 end
 
-module Kinds = Types
-
 module Constr = struct
   include Value
 
