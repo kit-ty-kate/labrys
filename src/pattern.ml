@@ -51,7 +51,9 @@ module Matrix = struct
     | MConstr of (string * constr list)
     | MAny of string
 
-  type 'a t = (constr * 'a) list
+  type row = constr list
+
+  type 'a t = (row * 'a) list
 
   type ty =
     | AnyTy of string
@@ -154,7 +156,7 @@ module Matrix = struct
       end;
       res
 
-  let create ~loc gammaT gammaC ty term p = [(create ~loc gammaT gammaC ty p, term)]
+  let create ~loc gammaT gammaC ty term p = [([create ~loc gammaT gammaC ty p], term)]
 
   let append ~loc gammaT gammaC ty term p patterns = patterns @ create ~loc gammaT gammaC ty term p
 
