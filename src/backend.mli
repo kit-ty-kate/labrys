@@ -19,4 +19,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val make : with_main:bool -> opt:int -> UntypedTree.top list -> LLVM.llmodule
+val make :
+  with_main:bool ->
+  lto:bool ->
+  opt:int ->
+  UntypedTree.top list ->
+  LLVM.llmodule

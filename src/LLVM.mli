@@ -32,4 +32,8 @@ val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * ll
 
 val bind : llcontext -> name:string -> string -> llmodule -> llvalue
 
-val optimize : int -> llmodule -> unit
+val optimize :
+  lto:bool ->
+  opt:int ->
+  llmodule ->
+  unit
