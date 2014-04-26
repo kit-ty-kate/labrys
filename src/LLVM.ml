@@ -41,10 +41,17 @@ let bind c ~name s m =
   Llvm.dispose_module m';
   BatOption.get (lookup_global name m)
 
-let optimize opt_level m =
+let optimize ~lto ~opt m =
   let pm = PassManager.create () in
   let b = Llvm_passmgr_builder.create () in
-  Llvm_passmgr_builder.set_opt_level opt_level b;
+  Llvm_passmgr_builder.set_opt_level opt b;
   Llvm_passmgr_builder.populate_module_pass_manager pm b;
+  if lto then begin
+    Llvm_passmgr_builder.populate_lto_pass_manager
+      ~internalize:true
+      ~run_inliner:true
+      pm
+      b;
+  end;
   ignore (PassManager.run_module m pm);
   Llvm.PassManager.dispose pm

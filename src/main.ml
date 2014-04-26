@@ -27,6 +27,7 @@ let sprintf = Printf.sprintf
 
 type args =
   { print : bool
+  ; lto : bool
   ; opt : int
   ; c : bool
   ; o : string option
@@ -56,22 +57,23 @@ let aux args =
   |> ParserManager.parse
   |> TypeChecker.from_parse_tree
   |> Lambda.of_typed_tree
-  |> Backend.make ~with_main:(not args.c) ~opt:args.opt
+  |> Backend.make ~with_main:(not args.c) ~lto:args.lto ~opt:args.opt
   |> Llvm.string_of_llmodule
   |> print_or_compile args
 
-let start print opt c o file =
-  try aux {print; opt; c; o; file}; None with
+let start print lto opt c o file =
+  try aux {print; lto; opt; c; o; file}; None with
   | Error.Exn x -> Some (Error.dump ~file x)
   | ParserManager.Error x -> Some x
 
 let cmd =
   let print = Arg.(value & flag & info ["print"]) in
+  let lto = Arg.(value & flag & info ["lto"]) in
   let opt = Arg.(value & opt int 0 & info ["opt"]) in
   let c = Arg.(value & flag & info ["c"]) in
   let o = Arg.(value & opt (some string) None & info ["o"]) in
   let file = Arg.(required & pos 0 (some non_dir_file) None & info []) in
-  (Term.(pure start $ print $ opt $ c $ o $ file), Term.info "cervoise")
+  (Term.(pure start $ print $ lto $ opt $ c $ o $ file), Term.info "cervoise")
 
 let () =
   match Term.eval cmd with
