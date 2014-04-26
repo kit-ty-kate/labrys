@@ -56,26 +56,18 @@ let compile {c; o; file; _} result =
     | None -> if c then Utils.replace_ext file "bc" else "a.out"
   in
   if c then begin
-    if not (Llvm_bitwriter.write_bitcode_file result o) then
+    if not (Backend.write_bitcode ~o result) then
       print_error ()
   end else begin
-    Llvm_backends.initialize ();
-    let triple = Llvm_target.Target.default_triple () in
-    let target = Llvm_target.Target.by_triple triple in
-    let target = Llvm_target.TargetMachine.create ~triple target in
     let aux tmp =
-      Llvm_target.TargetMachine.emit_to_file
-        result
-        Llvm_target.CodeGenFileType.ObjectFile
-        tmp
-        target;
-      link ~tmp ~o
+      Backend.emit_object_file ~tmp result;
+      link ~tmp ~o;
     in
     with_tmp_file aux;
   end
 
 let print_or_compile = function
-  | {print = true; _} -> print_endline % Llvm.string_of_llmodule
+  | {print = true; _} -> print_endline % Backend.to_string
   | {print = false; _} as args -> compile args
 
 let aux args =
@@ -83,7 +75,8 @@ let aux args =
   |> ParserManager.parse
   |> TypeChecker.from_parse_tree
   |> Lambda.of_typed_tree
-  |> Backend.make ~with_main:(not args.c) ~lto:args.lto ~opt:args.opt
+  |> Backend.make ~with_main:(not args.c)
+  |> Backend.optimize ~lto:args.lto ~opt:args.opt
   |> print_or_compile args
 
 let start print lto opt c o file =

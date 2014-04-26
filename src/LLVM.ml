@@ -41,8 +41,9 @@ let bind c ~name s m =
   Llvm.dispose_module m';
   BatOption.get (lookup_global name m)
 
-let optimize ~lto ~opt m =
+let optimize ~lto ~opt layout m =
   let pm = PassManager.create () in
+  Llvm_target.DataLayout.add_to_pass_manager pm layout;
   let b = Llvm_passmgr_builder.create () in
   Llvm_passmgr_builder.set_opt_level opt b;
   Llvm_passmgr_builder.populate_module_pass_manager pm b;
