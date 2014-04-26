@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 9f27b9473c6bc0c092352f8383af35c6)
+# DO NOT EDIT (digest: 01396dbdfe6d57bda506c01e96be490b)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -21,17 +21,23 @@
 <src/main.{native,byte}>: package(batteries)
 <src/main.{native,byte}>: package(cmdliner)
 <src/main.{native,byte}>: package(llvm)
+<src/main.{native,byte}>: package(llvm.backends)
+<src/main.{native,byte}>: package(llvm.bitwriter)
 <src/main.{native,byte}>: package(llvm.irreader)
 <src/main.{native,byte}>: package(llvm.linker)
 <src/main.{native,byte}>: package(llvm.passmgr_builder)
+<src/main.{native,byte}>: package(llvm.target)
 <src/main.{native,byte}>: package(monomorphic)
 <src/main.{native,byte}>: package(unix)
 <src/*.ml{,i}>: package(batteries)
 <src/*.ml{,i}>: package(cmdliner)
 <src/*.ml{,i}>: package(llvm)
+<src/*.ml{,i}>: package(llvm.backends)
+<src/*.ml{,i}>: package(llvm.bitwriter)
 <src/*.ml{,i}>: package(llvm.irreader)
 <src/*.ml{,i}>: package(llvm.linker)
 <src/*.ml{,i}>: package(llvm.passmgr_builder)
+<src/*.ml{,i}>: package(llvm.target)
 <src/*.ml{,i}>: package(monomorphic)
 <src/*.ml{,i}>: package(unix)
 # Executable test

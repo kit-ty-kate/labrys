@@ -33,22 +33,48 @@ type args =
   ; file : string
   }
 
+let print_error () =
+  prerr_endline "\nThe compilation processes exited abnormally"
+
+let link ~tmp ~o =
+    let tmp = Filename.quote tmp in
+    let o = Filename.quote o in
+    let ld = Sys.command (sprintf "cc %s -o %s" tmp o) in
+    if Int.(ld <> 0) then begin
+      print_error ();
+    end
+
+let with_tmp_file f =
+  let tmp = Filename.temp_file "cervoise" "" in
+  f tmp;
+  Sys.remove tmp
+
 let compile {c; o; file; _} result =
   let o = match o with
     | Some o -> o
-    | None -> if c then Utils.replace_ext file "o" else "a.out"
+    | None -> if c then Utils.replace_ext file "bc" else "a.out"
   in
-  let c = if c then "-c" else "" in
-  let o = Filename.quote o in
-  let command = sprintf "llc - | cc %s -x assembler - -o %s" c o in
-  let output = Unix.open_process_out command in
-  output_string output result;
-  match Unix.close_process_out output with
-  | Unix.WEXITED 0 -> ()
-  | _ -> prerr_endline "\nThe compilation processes exited abnormally"
+  if c then begin
+    if not (Llvm_bitwriter.write_bitcode_file result o) then
+      print_error ()
+  end else begin
+    Llvm_backends.initialize ();
+    let triple = Llvm_target.Target.default_triple () in
+    let target = Llvm_target.Target.by_triple triple in
+    let target = Llvm_target.TargetMachine.create ~triple target in
+    let aux tmp =
+      Llvm_target.TargetMachine.emit_to_file
+        result
+        Llvm_target.CodeGenFileType.ObjectFile
+        tmp
+        target;
+      link ~tmp ~o
+    in
+    with_tmp_file aux;
+  end
 
 let print_or_compile = function
-  | {print = true; _} -> print_endline
+  | {print = true; _} -> print_endline % Llvm.string_of_llmodule
   | {print = false; _} as args -> compile args
 
 let aux args =
@@ -57,7 +83,6 @@ let aux args =
   |> TypeChecker.from_parse_tree
   |> Lambda.of_typed_tree
   |> Backend.make ~with_main:(not args.c) ~opt:args.opt
-  |> Llvm.string_of_llmodule
   |> print_or_compile args
 
 let start print opt c o file =
