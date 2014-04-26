@@ -1,4 +1,5 @@
 OASISFormat: 0.4
+OCamlVersion: >= 3.12.1
 Name: Cervoise
 Version: 0.1
 Synopsis: A System F omega compiler (LLVM based)
