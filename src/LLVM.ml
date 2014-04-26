@@ -26,8 +26,6 @@ include Llvm
 
 let () = enable_pretty_stacktrace ()
 
-let externals = ref []
-
 let build_store src dst b = ignore (build_store src dst b)
 let build_ret v b = ignore (build_ret v b)
 let build_ret_void b = ignore (build_ret_void b)
@@ -36,21 +34,12 @@ let define_function c s ty m =
   let f = define_function s ty m in
   f, builder_at_end c (entry_block f)
 
-let bind c ~name s =
+let bind c ~name s m =
   let membuffer = MemoryBuffer.of_string s in
   let m' = Llvm_irreader.parse_ir c membuffer in
-  externals := !externals @ [string_of_llmodule m'];
-  BatOption.get (lookup_global name m')
-
-let to_string m =
-  let declare_main =
-    [ "define void @main() {"
-    ; "  call void @__init()"
-    ; "  ret void"
-    ; "}"
-    ]
-  in
-  String.concat "\n" (declare_main @ !externals) ^ "\n" ^ string_of_llmodule m
+  Llvm_linker.link_modules m m' Llvm_linker.Mode.DestroySource;
+  Llvm.dispose_module m';
+  BatOption.get (lookup_global name m)
 
 let optimize opt_level m =
   let pm = PassManager.create () in

@@ -18,6 +18,7 @@ Executable cervoise
     llvm (>= 3.4),
     llvm.irreader,
     llvm.passmgr_builder,
+    llvm.linker,
     batteries (>= 2.2),
     monomorphic
   CompiledObject: best

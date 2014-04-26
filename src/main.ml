@@ -56,8 +56,8 @@ let aux args =
   |> ParserManager.parse
   |> TypeChecker.from_parse_tree
   |> Lambda.of_typed_tree
-  |> Backend.make ~opt:args.opt
-  |> LLVM.to_string
+  |> Backend.make ~with_main:(not args.c) ~opt:args.opt
+  |> Llvm.string_of_llmodule
   |> print_or_compile args
 
 let start print opt c o file =
