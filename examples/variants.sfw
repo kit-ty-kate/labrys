@@ -9,3 +9,25 @@ let testestest = D
 let testestestest = S O
 let testestestestest = D O
 let testestestestestest = D O (S O)
+
+let printInt : Nat -> Nat = begin
+  @msg = internal constant [4 x i8] c"%d\0a\00"
+  declare i32 @printf(i8*, ...)
+  define i8* @__printInt(i8* %i, i8**) {
+    %access_prim = load i8* %i
+    %access = zext i8 %access_prim to i32
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
+    %r = inttoptr i32 %r1 to i8*
+    ret i8* %r
+  }
+  @_printInt = global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__printInt, i8** null}
+  @printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
+end
+
+let uu =
+  printInt
+    match O with
+    | O -> S O
+    | S a -> D O O
+    | D x y -> O
+    end
