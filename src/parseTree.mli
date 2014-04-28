@@ -27,8 +27,8 @@ type t_value = (t_name * Kinds.t)
 type ty =
   | Fun of (ty * ty)
   | Ty of t_name
-  | Forall of (t_name * Kinds.t * ty)
-  | AbsOnTy of (t_name * Kinds.t * ty)
+  | Forall of (t_value * ty)
+  | AbsOnTy of (t_value * ty)
   | AppOnTy of (ty * ty)
 
 type value = (name * ty)

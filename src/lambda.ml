@@ -78,7 +78,7 @@ let of_typed_variant ~datatype (acc, i, gammaC, gammaD) = function
       let variant =
         let rec aux = function
           | 0 -> Variant i
-          | n -> Abs (Gamma.Name.of_string "", aux (pred n))
+          | n -> Abs (Gamma.Name.of_list [], aux (pred n))
         in
         let size = TypesBeta.size ty in
         let t = aux size in

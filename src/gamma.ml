@@ -23,14 +23,14 @@ open BatteriesExceptionless
 open Monomorphic.None
 
 module Name = struct
-  type t = string
+  type t = string list
 
-  let compare = String.compare
+  let compare = List.compare String.compare
 
-  let equal = String.equal
+  let equal = List.eq String.equal
 
-  let of_string x = x
-  let to_string x = x
+  let of_list x = x
+  let to_string = String.concat "."
 end
 
 module Type = Name
@@ -45,7 +45,10 @@ module Types = struct
 
   let add ~loc k x map =
     if mem k map then
-      Error.fail ~loc "A module cannot contain several times the type '%s'" k;
+      Error.fail
+        ~loc
+        "A module cannot contain several times the type '%s'"
+        (Name.to_string k);
     add k x map
 end
 

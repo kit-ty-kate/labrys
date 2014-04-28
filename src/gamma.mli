@@ -24,7 +24,7 @@ module Name : sig
 
   val equal : t -> t -> bool
 
-  val of_string : string -> t
+  val of_list : string list -> t
   val to_string : t -> string
 end
 

@@ -52,12 +52,12 @@ let rec from_parse_tree ~loc gammaT = function
       | Some (`Abstract k) -> (Ty (name, k), k)
       | None -> Error.fail ~loc "The type '%s' was not found in Γ" (Gamma.Type.to_string name)
       end
-  | ParseTree.Forall (name, k, ret) ->
+  | ParseTree.Forall ((name, k), ret) ->
       let (ret, kx) = from_parse_tree ~loc (Gamma.Types.add ~loc name (`Abstract k) gammaT) ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
-  | ParseTree.AbsOnTy (name, k, ret) ->
+  | ParseTree.AbsOnTy ((name, k), ret) ->
       let (ret, kret) = from_parse_tree ~loc (Gamma.Types.add ~loc name (`Abstract k) gammaT) ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
   | ParseTree.AppOnTy (f, x) ->
