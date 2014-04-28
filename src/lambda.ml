@@ -27,7 +27,7 @@ open UntypedTree
 let get_index_from_name name gammaC =
   Option.default_delayed
     (fun () -> assert false)
-    (Gamma.Constr.find name gammaC)
+    (Gamma.Index.find name gammaC)
 
 let of_constr gammaC = function
   | Pattern.Constr name -> Constr (get_index_from_name name gammaC)
@@ -78,13 +78,13 @@ let of_typed_variant ~datatype (acc, i, gammaC, gammaD) = function
       let variant =
         let rec aux = function
           | 0 -> Variant i
-          | n -> Abs ("", aux (pred n))
+          | n -> Abs (Gamma.Name.of_list [], aux (pred n))
         in
         let size = TypesBeta.size ty in
         let t = aux size in
         Value (name, t, size)
       in
-      let gammaC = Gamma.Constr.add name i gammaC in
+      let gammaC = Gamma.Index.add name i gammaC in
       let gammaD = Gamma.Constr.append datatype name gammaD in
       (variant :: acc, succ i, gammaC, gammaD)
 
@@ -97,7 +97,7 @@ let of_typed_tree =
         Binding (name, value) :: aux gammaC gammaD xs
     | TypedTree.Datatype (name, variants) :: xs ->
         let (variants, _, gammaC, gammaD) =
-          let gammaC = Gamma.Constr.empty in
+          let gammaC = Gamma.Index.empty in
           let gammaD = Gamma.Constr.empty in
           List.fold_left (of_typed_variant ~datatype:name) ([], 0, gammaC, gammaD) variants
         in
@@ -105,4 +105,4 @@ let of_typed_tree =
     | [] ->
         []
   in
-  aux Gamma.Constr.empty Gamma.Constr.empty
+  aux Gamma.Index.empty Gamma.Constr.empty

@@ -22,20 +22,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type t = (ParseTree.location * string)
+type t = (Location.t * string)
 
 exception Exn of t
 
 let fail ~loc x = Printf.ksprintf (fun x -> raise (Exn (loc, x))) x
 
 let dump ~file (loc, x) =
-  let string_of_location {ParseTree.loc_start; loc_end} =
+  let string_of_location {Location.loc_start; loc_end} =
     Printf.sprintf
       "Error in '%s' from line %d column %d to line %d column %d:\n"
       file
-      loc_start.ParseTree.pos_lnum
-      loc_start.ParseTree.pos_cnum
-      loc_end.ParseTree.pos_lnum
-      loc_end.ParseTree.pos_cnum
+      loc_start.Location.pos_lnum
+      loc_start.Location.pos_cnum
+      loc_end.Location.pos_lnum
+      loc_end.Location.pos_cnum
   in
   string_of_location loc ^ "    " ^ x

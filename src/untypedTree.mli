@@ -19,21 +19,23 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+type name = Gamma.Name.t
+
 type constr =
   | Constr of int
-  | Any of string
+  | Any of name
 
 type tree =
   | Node of (Pattern.var * (constr * tree) list)
   | Leaf of int
 
 and t =
-  | Abs of (string * t)
+  | Abs of (name * t)
   | App of (t * t)
-  | Val of string
+  | Val of name
   | Variant of int
   | PatternMatching of (t * t list * tree)
 
 type top =
-  | Value of (string * t * int)
-  | Binding of (string * string)
+  | Value of (name * t * int)
+  | Binding of (name * string)

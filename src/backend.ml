@@ -106,7 +106,9 @@ and create_tree func env gamma builder value results =
       let block = List.nth results i in
       LLVM.build_br block builder
   | UntypedTree.Node (var, cases) ->
-      (* The more general case is always the last one *)
+      (* The more general case is always the first one
+         (as it has been reversed in Pattern.create)
+      *)
       let cases = List.rev cases in
       let (default, cases) = match cases with
         | x::xs -> (x, xs)
@@ -184,7 +186,7 @@ let rec init func gamma builder = function
 let make ~with_main =
   let rec top init_list gamma = function
     | UntypedTree.Value (name, t, size) :: xs ->
-        let g = LLVM.define_global name (LLVM.undef star_type) m in
+        let g = LLVM.define_global (Gamma.Name.to_string name) (LLVM.undef star_type) m in
         top ((name, g, t, size) :: init_list) gamma xs
     | UntypedTree.Binding (name, binding) :: xs ->
         let v = LLVM.bind c ~name binding m in

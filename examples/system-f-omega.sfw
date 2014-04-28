@@ -21,13 +21,13 @@ let zero : Int = begin
   @zero = global i8* getelementptr(i8* @_zero)
 end
 
-let id = λX.λx:X.λx:X.x
+let id = λ X -> λ (x:X) -> λ (x:X) -> x
 
 let test = id [Int]
 
 let testdeux = printInt (test zero zero)
 
-let Id = λX.X
+let Id = λX, X
 
 let I = Id
 
@@ -35,6 +35,6 @@ let Ip = Id
 
 let II = Ip Int
 
-datatype Pair : * -> * -> * = Pair : forall X. forall Y. X -> Y -> Pair X Y
+datatype Pair : * -> * -> * = Pair : forall X, forall Y, X -> Y -> Pair X Y
 
 let test = Pair [Int] [Int] O O

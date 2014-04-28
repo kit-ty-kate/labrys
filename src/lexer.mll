@@ -30,6 +30,7 @@ rule main = parse
   | '\n' { Lexing.new_line lexbuf; main lexbuf }
   | '=' { Parser.Equal }
   | '.' { Parser.Dot }
+  | ',' { Parser.Comma }
   | ':' { Parser.DoubleDot }
   | '(' { Parser.LParent }
   | ')' { Parser.RParent }
@@ -50,8 +51,8 @@ rule main = parse
               Parser.Binding (Buffer.contents buffer)
             }
   | "--" { simple_comment lexbuf; main lexbuf }
-  | term_name as name { Parser.TermName name }
-  | type_name as name { Parser.TypeName name }
+  | term_name as name { Parser.LowerName name }
+  | type_name as name { Parser.UpperName name }
   | eof { Parser.EOF }
   | _ { raise Error }
 

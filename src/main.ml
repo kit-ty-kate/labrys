@@ -80,9 +80,14 @@ let aux args =
   |> print_or_compile args
 
 let start print lto opt c o file =
-  try aux {print; lto; opt; c; o; file}; None with
-  | Error.Exn x -> Some (Error.dump ~file x)
-  | ParserManager.Error x -> Some x
+  if lto && c then
+    Some
+      "Error: Cannot enable the lto optimization while compiling.\n\
+       This is allowed only during linking"
+  else
+    try aux {print; lto; opt; c; o; file}; None with
+    | Error.Exn x -> Some (Error.dump ~file x)
+    | ParserManager.Error x -> Some x
 
 let cmd =
   let print = Arg.(value & flag & info ["print"]) in

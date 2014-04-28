@@ -4,8 +4,8 @@ datatype Int =
 
 let Id = Int -> Int
 
-let id = λx:Id.x
+let id = λ(x:Id) -> x
 
-let val = id (λx:Int.x)
+let val = id (λ(x:Int) -> x)
 
 let idprime = id

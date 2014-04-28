@@ -21,6 +21,6 @@ let zero : Int = begin
   @zero = global i8* getelementptr(i8* @_zero)
 end
 
-let id = λX.λx:X.x
+let id = λX -> λ(x:X) -> x
 
 let test = id [Int] zero

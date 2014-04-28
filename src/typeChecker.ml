@@ -125,7 +125,7 @@ let rec aux gamma gammaT gammaC = function
       | (TypesBeta.AppOnTy _ as ty)
       | (TypesBeta.Ty _ as ty) -> function_type_error ~loc ~has:ty_x ~expected:ty
       | TypesBeta.Forall (ty, _, _) ->
-          type_error_aux ~loc (TypesBeta.to_string ty_x) ty
+          type_error_aux ~loc (TypesBeta.to_string ty_x) (Gamma.Type.to_string ty)
       | TypesBeta.AbsOnTy _ -> assert false
       end
   | ParseTree.TApp (loc, f, ty_x) ->
@@ -144,7 +144,7 @@ let rec aux gamma gammaT gammaC = function
       end
   | ParseTree.Val (loc, name) ->
       begin match Gamma.Value.find name gamma with
-      | None -> Error.fail ~loc "The value '%s' was not found in Γ" name
+      | None -> Error.fail ~loc "The value '%s' was not found in Γ" (Gamma.Name.to_string name)
       | Some ty -> Val {name; ty}
       end
   | ParseTree.PatternMatching (loc, t, patterns) ->
@@ -171,7 +171,7 @@ let rec aux gamma gammaT gammaC = function
       PatternMatching (t, patterns, initial_ty)
 
 let rec check_if_returns_type ~datatype = function
-  | TypesBeta.Ty x -> String.equal x datatype
+  | TypesBeta.Ty x -> Gamma.Type.equal x datatype
   | TypesBeta.Forall (_, _, ret)
   | TypesBeta.AppOnTy (ret, _)
   | TypesBeta.Fun (_, ret) -> check_if_returns_type ~datatype ret
@@ -184,10 +184,10 @@ let transform_variants ~datatype gamma gammaT gammaC =
         if check_if_returns_type ~datatype ty then
           let (xs, gamma, gammaC) = aux xs in
           let gamma = Gamma.Value.add name ty gamma in
-          let gammaC = Gamma.Constr.add name ty gammaC in
+          let gammaC = Gamma.Index.add name ty gammaC in
           (Variant (name, ty) :: xs, gamma, gammaC)
         else
-          Error.fail ~loc "The variant '%s' doesn't return its type" name
+          Error.fail ~loc "The variant '%s' doesn't return its type" (Gamma.Name.to_string name)
     | [] -> ([], gamma, gammaC)
   in
   aux
@@ -216,4 +216,4 @@ let from_parse_tree =
   from_parse_tree
     Gamma.Value.empty
     Gamma.Types.empty
-    Gamma.Constr.empty
+    Gamma.Index.empty

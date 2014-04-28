@@ -22,25 +22,27 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
+type name = Gamma.Type.t
+
 type t =
-  | Ty of string
+  | Ty of name
   | Fun of (t * t)
-  | Forall of (string * Kinds.t * t)
-  | AbsOnTy of (string * Kinds.t * t)
+  | Forall of (name * Kinds.t * t)
+  | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
 
 let fmt = Printf.sprintf
 
 let rec replace ~from ~ty =
   let rec aux = function
-    | Ty x when String.equal x from -> ty
+    | Ty x when Gamma.Type.equal x from -> ty
     | Ty _ as t -> t
     | Fun (param, ret) -> Fun (aux param, aux ret)
     | (AbsOnTy (x, _, _) as t)
-    | (Forall (x, _, _) as t) when String.equal x from -> t
+    | (Forall (x, _, _) as t) when Gamma.Type.equal x from -> t
     | Forall (x, k, t) -> Forall (x, k, aux t)
     | AbsOnTy (x, k, t) -> AbsOnTy (x, k, aux t)
-    | AppOnTy (AbsOnTy (from', _, t), x) when String.equal from from' ->
+    | AppOnTy (AbsOnTy (from', _, t), x) when Gamma.Type.equal from from' ->
         replace ~from:from' ~ty:x t
     | AppOnTy (AbsOnTy (from, _, t), x) ->
         aux (replace ~from ~ty:x t)
@@ -61,26 +63,24 @@ let rec of_ty = function
       AppOnTy (of_ty f, of_ty x)
 
 let rec to_string = function
-  | Ty x -> x
-  | Fun (Ty x, ret) -> x ^ " -> " ^ to_string ret
+  | Ty x -> Gamma.Type.to_string x
+  | Fun (Ty x, ret) -> Gamma.Type.to_string x ^ " -> " ^ to_string ret
   | Fun (x, ret) -> "(" ^ to_string x ^ ") -> " ^ to_string ret
   | Forall (x, k, t) ->
-      fmt "forall %s : %s. %s" x (Kinds.to_string k) (to_string t)
+      fmt "forall %s : %s. %s" (Gamma.Type.to_string x) (Kinds.to_string k) (to_string t)
   | AbsOnTy (name, k, t) ->
-      fmt "λ%s : %s. %s" name (Kinds.to_string k) (to_string t)
-  | AppOnTy (Ty f, Ty x) -> fmt "%s %s" f x
-  | AppOnTy (Ty f, x) -> fmt "%s (%s)" f (to_string x)
-  | AppOnTy (f, Ty x) -> fmt "(%s) %s" (to_string f) x
+      fmt "λ%s : %s. %s" (Gamma.Type.to_string name) (Kinds.to_string k) (to_string t)
+  | AppOnTy (Ty f, Ty x) -> fmt "%s %s" (Gamma.Type.to_string f) (Gamma.Type.to_string x)
+  | AppOnTy (Ty f, x) -> fmt "%s (%s)" (Gamma.Type.to_string f) (to_string x)
+  | AppOnTy (f, Ty x) -> fmt "(%s) %s" (to_string f) (Gamma.Type.to_string x)
   | AppOnTy (f, x) -> fmt "(%s) (%s)" (to_string f) (to_string x)
 
 let equal x y =
   let rec aux eq_list = function
     | Ty x, Ty x' ->
-        let eq = String.equal in
+        let eq = Gamma.Type.equal in
         List.exists (fun (y, y') -> eq x y && eq x' y') eq_list
-        || (String.equal x x'
-            && List.for_all (fun (y, y') -> eq x y || eq x' y') eq_list
-           )
+        || (eq x x' && List.for_all (fun (y, y') -> eq x y || eq x' y') eq_list)
     | Fun (param, res), Fun (param', res') ->
         aux eq_list (param, param') && aux eq_list (res, res')
     | AppOnTy (f, x), AppOnTy (f', x') ->

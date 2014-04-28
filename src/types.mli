@@ -19,16 +19,18 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+type name = Gamma.Type.t
+
 type t =
-  | Ty of (string * Kinds.t)
-  | Alias of (string * t)
+  | Ty of (name * Kinds.t)
+  | Alias of (name * t)
   | Fun of (t * t)
-  | Forall of (string * Kinds.t * t)
-  | AbsOnTy of (string * Kinds.t * t)
+  | Forall of (name * Kinds.t * t)
+  | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
 
 val from_parse_tree :
-  loc:ParseTree.location ->
+  loc:Location.t ->
   [`Alias of (t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t ->
   ParseTree.ty ->
   (t * Kinds.t)

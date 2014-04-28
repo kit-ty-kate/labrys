@@ -2,8 +2,8 @@ datatype Int =
   | O : Int
   | S : Int -> Int
 
-let id = λx:Int->Int.x
+let id = λ(x:Int->Int) -> x
 
-let val = id (λx:Int.x)
+let val = id (λ(x:Int) -> x)
 
 let idprime = id

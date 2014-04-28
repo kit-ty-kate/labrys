@@ -19,22 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-include module type of (Llvm :
-                          module type of Llvm
-                        with type llmodule = Llvm.llmodule
-                       )
+type position = {pos_lnum : int; pos_cnum : int}
 
-val build_store : llvalue -> llvalue -> llbuilder -> unit
-val build_ret : llvalue -> llbuilder -> unit
-val build_ret_void : llbuilder -> unit
-
-val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * llbuilder)
-
-val bind : llcontext -> name:Gamma.Name.t -> string -> llmodule -> llvalue
-
-val optimize :
-  lto:bool ->
-  opt:int ->
-  Llvm_target.DataLayout.t ->
-  llmodule ->
-  unit
+type t = {loc_start : position; loc_end : position}

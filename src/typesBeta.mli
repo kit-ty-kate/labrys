@@ -19,11 +19,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+type name = Gamma.Type.t
+
 type t =
-  | Ty of string
+  | Ty of name
   | Fun of (t * t)
-  | Forall of (string * Kinds.t * t)
-  | AbsOnTy of (string * Kinds.t * t)
+  | Forall of (name * Kinds.t * t)
+  | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
 
 val of_ty : Types.t -> t
@@ -32,6 +34,6 @@ val to_string : t -> string
 
 val equal : t -> t -> bool
 
-val replace : from:string -> ty:t -> t -> t
+val replace : from:name -> ty:t -> t -> t
 
 val size : t -> int
