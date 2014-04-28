@@ -1,0 +1,3 @@
+datatype Unit = Unit : Unit
+
+let id = λ(f:Unit -> Unit) -> f Unit
