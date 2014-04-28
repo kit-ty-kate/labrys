@@ -182,7 +182,7 @@ let rec init func gamma builder = function
 let make ~with_main ~lto ~opt =
   let rec top init_list gamma = function
     | UntypedTree.Value (name, t, size) :: xs ->
-        let g = LLVM.define_global name (LLVM.undef star_type) m in
+        let g = LLVM.define_global (Gamma.Key.to_string name) (LLVM.undef star_type) m in
         top ((name, g, t, size) :: init_list) gamma xs
     | UntypedTree.Binding (name, binding) :: xs ->
         let v = LLVM.bind c ~name binding m in

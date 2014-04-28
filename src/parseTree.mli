@@ -19,39 +19,39 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t_value = (string * Kinds.t)
+(* TODO: Do also t_name *)
+type name = Gamma.Key.t
+
+type t_value = (name * Kinds.t)
 
 type ty =
   | Fun of (ty * ty)
-  | Ty of string
-  | Forall of (string * Kinds.t * ty)
-  | AbsOnTy of (string * Kinds.t * ty)
+  | Ty of name
+  | Forall of (name * Kinds.t * ty)
+  | AbsOnTy of (name * Kinds.t * ty)
   | AppOnTy of (ty * ty)
 
-type value = (string * ty)
-
-type position = {pos_lnum : int; pos_cnum : int}
-type location = {loc_start : position; loc_end : position}
+type value = (name * ty)
 
 type pattern =
-  | TyConstr of string
-  | Any of string
+  | TyConstr of name
+  | Any of name
   | PatternApp of (pattern * pattern)
   | PatternTApp of (pattern * ty)
 
 type t =
-  | Abs of (location * value * t)
-  | TAbs of (location * t_value * t)
-  | App of (location * t * t)
-  | TApp of (location * t * ty)
-  | Val of (location * string)
-  | PatternMatching of (location * t * (pattern * t) list)
+  | Abs of (Location.t * value * t)
+  | TAbs of (Location.t * t_value * t)
+  | App of (Location.t * t * t)
+  | TApp of (Location.t * t * ty)
+  | Val of (Location.t * name)
+  | PatternMatching of (Location.t * t * (pattern * t) list)
 
 type variant =
-  | Variant of (location * string * ty)
+  | Variant of (Location.t * name * ty)
 
 type top =
-  | Value of (string * t)
-  | Type of (location * string * ty)
-  | Binding of (location * string * ty * string)
-  | Datatype of (location * string * Kinds.t * variant list)
+  | Value of (name * t)
+  | Type of (Location.t * name * ty)
+  | Binding of (Location.t * name * ty * string)
+  | Datatype of (Location.t * name * Kinds.t * variant list)

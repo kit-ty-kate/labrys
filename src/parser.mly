@@ -22,11 +22,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %{
   let get_loc startpos endpos =
     let get_pos pos =
-      { ParseTree.pos_lnum = pos.Lexing.pos_lnum
+      { Location.pos_lnum = pos.Lexing.pos_lnum
       ; pos_cnum = pos.Lexing.pos_cnum - pos.Lexing.pos_bol
       }
     in
-    { ParseTree.loc_start = get_pos startpos
+    { Location.loc_start = get_pos startpos
     ; loc_end = get_pos endpos
     }
 %}
@@ -60,28 +60,28 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 main:
 | Let name = TermName Equal term = term main = main
-    { ParseTree.Value (name, term) :: main }
+    { ParseTree.Value (Gamma.Key.of_string name, term) :: main }
 | Let name = TypeName Equal ty = typeExpr main = main
-    { ParseTree.Type (get_loc $startpos $endpos(ty), name, ty) :: main }
+    { ParseTree.Type (get_loc $startpos $endpos(ty), Gamma.Key.of_string name, ty) :: main }
 | Let name = TermName DoubleDot ty = typeExpr Equal binding = Binding main = main
-    { ParseTree.Binding (get_loc $startpos $endpos(binding), name, ty, binding) :: main }
+    { ParseTree.Binding (get_loc $startpos $endpos(binding), Gamma.Key.of_string name, ty, binding) :: main }
 | Datatype name = TypeName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
-    { ParseTree.Datatype (get_loc $startpos $endpos(variants), name, k, variants) :: main }
+    { ParseTree.Datatype (get_loc $startpos $endpos(variants), Gamma.Key.of_string name, k, variants) :: main }
 | EOF
     { [] }
 
 term:
 | Lambda termName = TermName DoubleDot typeName = typeExpr Dot term = term
-    { ParseTree.Abs (get_loc $startpos $endpos(typeName), (termName, typeName), term) }
+    { ParseTree.Abs (get_loc $startpos $endpos(typeName), (Gamma.Key.of_string termName, typeName), term) }
 | Lambda typeName = TypeName k = kindopt Dot term = term
-    { ParseTree.TAbs (get_loc $startpos $endpos(k), (typeName, k), term) }
+    { ParseTree.TAbs (get_loc $startpos $endpos(k), (Gamma.Key.of_string typeName, k), term) }
 | term1 = term term2 = term %prec app
     { ParseTree.App (get_loc $startpos $endpos(term2), term1, term2) }
 | term1 = term LBracket ty = typeExpr RBracket
     { ParseTree.TApp (get_loc $startpos $endpos, term1, ty) }
 | termName = TermName
 | termName = TypeName
-    { ParseTree.Val (get_loc $startpos $endpos, termName) }
+    { ParseTree.Val (get_loc $startpos $endpos, Gamma.Key.of_string termName) }
 | LParent term = term RParent
     { term }
 | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
@@ -89,13 +89,13 @@ term:
 
 typeExpr:
 | name = TypeName
-    { ParseTree.Ty name }
+    { ParseTree.Ty (Gamma.Key.of_string name) }
 | param = typeExpr Arrow ret = typeExpr
     { ParseTree.Fun (param, ret) }
 | Forall ty = TypeName k = kindopt Dot ret = typeExpr
-    { ParseTree.Forall (ty, k, ret) }
+    { ParseTree.Forall (Gamma.Key.of_string ty, k, ret) }
 | Lambda name = TypeName k = kindopt Dot ret = typeExpr
-    { ParseTree.AbsOnTy (name, k, ret) }
+    { ParseTree.AbsOnTy (Gamma.Key.of_string name, k, ret) }
 | f = typeExpr x = typeExpr %prec tapp
     { ParseTree.AppOnTy (f, x) }
 | LParent term = typeExpr RParent
@@ -111,7 +111,7 @@ kind:
 
 variant:
 | name = TypeName DoubleDot ty = typeExpr
-    { ParseTree.Variant (get_loc $startpos $endpos, name, ty) }
+    { ParseTree.Variant (get_loc $startpos $endpos, Gamma.Key.of_string name, ty) }
 
 kindopt:
 | { Kinds.Star }
@@ -122,9 +122,9 @@ pattern:
 
 pat:
 | name = TermName
-    { ParseTree.Any name }
+    { ParseTree.Any (Gamma.Key.of_string name) }
 | name = TypeName
-    { ParseTree.TyConstr name }
+    { ParseTree.TyConstr (Gamma.Key.of_string name) }
 | p1 = pat p2 = pat %prec app
     { ParseTree.PatternApp (p1, p2) }
 | p = pat LBracket ty = typeExpr RBracket

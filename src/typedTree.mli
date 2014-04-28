@@ -19,7 +19,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type value = {name : string; ty : TypesBeta.t}
+type name = Gamma.Key.t
+
+type value = {name : name; ty : TypesBeta.t}
 type abs = {abs_ty : TypesBeta.t; param : value; ty_expr : TypesBeta.t}
 
 type t =
@@ -31,9 +33,9 @@ type t =
   | PatternMatching of (t * t Pattern.Matrix.t * TypesBeta.t)
 
 type variant =
-  | Variant of (string * TypesBeta.t)
+  | Variant of (name * TypesBeta.t)
 
 type top =
   | Value of (value * t)
   | Binding of (value * string)
-  | Datatype of (string * variant list)
+  | Datatype of (name * variant list)

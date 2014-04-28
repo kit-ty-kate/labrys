@@ -19,23 +19,28 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
+module Key : sig
+  type t
+
+  val equal : t -> t -> bool
+
+  val of_string : string -> t
+  val to_string : t -> string
+end
 
 module Value : sig
-  include module type of Map.Make(String)
+  include BatMap.S with type key = Key.t
   include module type of Exceptionless
 end
 
 module Types : sig
-  include module type of Map.Make(String)
-  include module type of Exceptionless
+  include module type of Value
 
-  val add : loc:ParseTree.location -> key -> 'a -> 'a t -> 'a t
+  val add : loc:Location.t -> key -> 'a -> 'a t -> 'a t
 end
 
 module Constr : sig
-  include module type of Map.Make(String)
-  include module type of Exceptionless
+  include module type of Value
 
   val append : key -> 'a -> 'a list t -> 'a list t
 end

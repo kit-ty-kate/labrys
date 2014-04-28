@@ -19,18 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Gamma.Key.t
+type position = {pos_lnum : int; pos_cnum : int}
 
-type t =
-  | Ty of (name * Kinds.t)
-  | Alias of (name * t)
-  | Fun of (t * t)
-  | Forall of (name * Kinds.t * t)
-  | AbsOnTy of (name * Kinds.t * t)
-  | AppOnTy of (t * t)
-
-val from_parse_tree :
-  loc:Location.t ->
-  [`Alias of (t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t ->
-  ParseTree.ty ->
-  (t * Kinds.t)
+type t = {loc_start : position; loc_end : position}

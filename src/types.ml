@@ -22,12 +22,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
+type name = Gamma.Key.t
+
 type t =
-  | Ty of (string * Kinds.t)
-  | Alias of (string * t)
+  | Ty of (name * Kinds.t)
+  | Alias of (name * t)
   | Fun of (t * t)
-  | Forall of (string * Kinds.t * t)
-  | AbsOnTy of (string * Kinds.t * t)
+  | Forall of (name * Kinds.t * t)
+  | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
 
 let fail_not_star ~loc x =
@@ -48,7 +50,7 @@ let rec from_parse_tree ~loc gammaT = function
       begin match Gamma.Types.find name gammaT with
       | Some (`Alias (ty, k)) -> (Alias (name, ty), k)
       | Some (`Abstract k) -> (Ty (name, k), k)
-      | None -> Error.fail ~loc "The type '%s' was not found in Γ" name
+      | None -> Error.fail ~loc "The type '%s' was not found in Γ" (Gamma.Key.to_string name)
       end
   | ParseTree.Forall (name, k, ret) ->
       let (ret, kx) = from_parse_tree ~loc (Gamma.Types.add ~loc name (`Abstract k) gammaT) ret in
