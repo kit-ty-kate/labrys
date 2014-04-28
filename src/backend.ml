@@ -104,7 +104,9 @@ and create_tree func env gamma builder value results =
       let block = List.nth results i in
       LLVM.build_br block builder
   | UntypedTree.Node (var, cases) ->
-      (* The more general case is always the last one *)
+      (* The more general case is always the first one
+         (as it has been reversed in Pattern.create)
+      *)
       let cases = List.rev cases in
       let (default, cases) = match cases with
         | x::xs -> (x, xs)

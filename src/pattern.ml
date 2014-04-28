@@ -177,4 +177,14 @@ type t =
   | Node of (var * (constr * t) list)
   | Leaf of int
 
-let create _ = assert false
+let create gammaD =
+  let rec aux i var acc = function
+    | (Matrix.MConstr (name, args), _) :: xs ->
+        let args = assert false in
+        aux (succ i) var ((Constr name, args) :: acc) xs
+    | (Matrix.MAny name, _) :: xs ->
+        aux (succ i) var ((Any name, Leaf i) :: acc) xs
+    | [] ->
+        Node (var, acc)
+  in
+  aux 0 VLeaf []
