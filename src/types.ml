@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type name = Gamma.Key.t
+type name = Gamma.Type.t
 
 type t =
   | Ty of (name * Kinds.t)
@@ -50,7 +50,7 @@ let rec from_parse_tree ~loc gammaT = function
       begin match Gamma.Types.find name gammaT with
       | Some (`Alias (ty, k)) -> (Alias (name, ty), k)
       | Some (`Abstract k) -> (Ty (name, k), k)
-      | None -> Error.fail ~loc "The type '%s' was not found in Γ" (Gamma.Key.to_string name)
+      | None -> Error.fail ~loc "The type '%s' was not found in Γ" (Gamma.Type.to_string name)
       end
   | ParseTree.Forall (name, k, ret) ->
       let (ret, kx) = from_parse_tree ~loc (Gamma.Types.add ~loc name (`Abstract k) gammaT) ret in

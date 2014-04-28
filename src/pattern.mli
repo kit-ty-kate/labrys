@@ -25,7 +25,7 @@ module Matrix : sig
   val create :
     loc:Location.t ->
     [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t -> (* TODO: define types in a specific module *)
-    TypesBeta.t Gamma.Constr.t -> (* TODO: Shouldn't be the same module as the other create *)
+    TypesBeta.t Gamma.Index.t ->
     TypesBeta.t ->
     'a ->
     ParseTree.pattern ->
@@ -34,7 +34,7 @@ module Matrix : sig
   val append :
     loc:Location.t ->
     [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t ->
-    TypesBeta.t Gamma.Constr.t ->
+    TypesBeta.t Gamma.Index.t ->
     TypesBeta.t ->
     'a ->
     ParseTree.pattern ->
@@ -46,7 +46,7 @@ module Matrix : sig
   val get_results : 'a t -> 'a list
 end
 
-type name = Gamma.Key.t
+type name = Gamma.Name.t
 
 type constr =
   | Constr of name

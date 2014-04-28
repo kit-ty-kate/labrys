@@ -19,16 +19,16 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-(* TODO: Do also t_name *)
-type name = Gamma.Key.t
+type name = Gamma.Name.t
+type t_name = Gamma.Type.t
 
-type t_value = (name * Kinds.t)
+type t_value = (t_name * Kinds.t)
 
 type ty =
   | Fun of (ty * ty)
-  | Ty of name
-  | Forall of (name * Kinds.t * ty)
-  | AbsOnTy of (name * Kinds.t * ty)
+  | Ty of t_name
+  | Forall of (t_name * Kinds.t * ty)
+  | AbsOnTy of (t_name * Kinds.t * ty)
   | AppOnTy of (ty * ty)
 
 type value = (name * ty)
@@ -52,6 +52,6 @@ type variant =
 
 type top =
   | Value of (name * t)
-  | Type of (Location.t * name * ty)
+  | Type of (Location.t * t_name * ty)
   | Binding of (Location.t * name * ty * string)
-  | Datatype of (Location.t * name * Kinds.t * variant list)
+  | Datatype of (Location.t * t_name * Kinds.t * variant list)

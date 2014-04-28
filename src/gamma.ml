@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-module Key = struct
+module Name = struct
   type t = string
 
   let compare = String.compare
@@ -33,8 +33,10 @@ module Key = struct
   let to_string x = x
 end
 
+module Type = Name
+
 module Value = struct
-  include Map.Make(Key)
+  include Map.Make(Name)
   include Exceptionless
 end
 
@@ -46,6 +48,8 @@ module Types = struct
       Error.fail ~loc "A module cannot contain several times the type '%s'" k;
     add k x map
 end
+
+module Index = Value
 
 module Constr = struct
   include Value

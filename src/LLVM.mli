@@ -30,7 +30,7 @@ val build_ret_void : llbuilder -> unit
 
 val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * llbuilder)
 
-val bind : llcontext -> name:Gamma.Key.t -> string -> llmodule -> llvalue
+val bind : llcontext -> name:Gamma.Name.t -> string -> llmodule -> llvalue
 
 val optimize :
   lto:bool ->

@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type name = Gamma.Key.t
+type name = Gamma.Name.t
 
 (* TODO: Remove those duplications *)
 let type_error_aux ~loc =
@@ -64,16 +64,16 @@ module Matrix = struct
       | ParseTree.Any name when List.is_empty acc ->
           (MAny name, AnyTy name)
       | ParseTree.Any name ->
-          Error.fail ~loc "'%s' can't be applied to something" (Gamma.Key.to_string name)
+          Error.fail ~loc "'%s' can't be applied to something" (Gamma.Name.to_string name)
       | ParseTree.TyConstr name ->
-          let ty = Gamma.Constr.find name gammaC in
+          let ty = Gamma.Index.find name gammaC in
           let ty = match ty with
             | Some x -> x
             | None ->
                 Error.fail
                   ~loc
                   "The type constructor '%s' doesn't exists in Γ"
-                  (Gamma.Key.to_string name)
+                  (Gamma.Name.to_string name)
           in
           (MConstr (name, acc), SomeTy ty)
       | ParseTree.PatternApp (f, x) ->
@@ -85,7 +85,7 @@ module Matrix = struct
                 Error.fail
                   ~loc
                   "Cannot apply something to the variable '%s'"
-                  (Gamma.Key.to_string name)
+                  (Gamma.Name.to_string name)
           in
           let ty =
             match ty_x with
@@ -99,7 +99,7 @@ module Matrix = struct
                 | (TypesBeta.Ty _ as ty) ->
                     function_type_error ~loc ~has:ty_x ~expected:ty
                 | TypesBeta.Forall (ty, _, _) ->
-                    type_error_aux ~loc (TypesBeta.to_string ty_x) (Gamma.Key.to_string ty)
+                    type_error_aux ~loc (TypesBeta.to_string ty_x) (Gamma.Type.to_string ty)
                 | TypesBeta.AbsOnTy _ ->
                     assert false
                 end
@@ -113,7 +113,7 @@ module Matrix = struct
                     Error.fail
                       ~loc
                       "Cannot apply the variable '%s' to something with type '%s'"
-                      (Gamma.Key.to_string name)
+                      (Gamma.Name.to_string name)
                       (TypesBeta.to_string ty)
                 | TypesBeta.AbsOnTy _ ->
                     assert false
@@ -140,7 +140,7 @@ module Matrix = struct
               Error.fail
                 ~loc
                 "Cannot apply something to the variable '%s'"
-                (Gamma.Key.to_string name)
+                (Gamma.Name.to_string name)
           end
     in
     fun ty x ->

@@ -19,7 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-module Key : sig
+module Name : sig
   type t
 
   val equal : t -> t -> bool
@@ -28,19 +28,25 @@ module Key : sig
   val to_string : t -> string
 end
 
+module Type : module type of Name
+
 module Value : sig
-  include BatMap.S with type key = Key.t
+  include BatMap.S with type key = Name.t
   include module type of Exceptionless
 end
 
 module Types : sig
-  include module type of Value
+  include BatMap.S with type key = Type.t
+  include module type of Exceptionless
 
   val add : loc:Location.t -> key -> 'a -> 'a t -> 'a t
 end
 
+module Index : module type of Value
+
 module Constr : sig
-  include module type of Value
+  include BatMap.S with type key = Type.t
+  include module type of Exceptionless
 
   val append : key -> 'a -> 'a list t -> 'a list t
 end

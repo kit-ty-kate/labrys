@@ -19,14 +19,17 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Gamma.Key.t
+type name = Gamma.Name.t
+type t_name = Gamma.Type.t
 
-type value = {name : name; ty : TypesBeta.t}
-type abs = {abs_ty : TypesBeta.t; param : value; ty_expr : TypesBeta.t}
+type 'a value' = {name : 'a; ty : TypesBeta.t}
+type 'a abs = {abs_ty : TypesBeta.t; param : 'a value'; ty_expr : TypesBeta.t}
+
+type value = name value'
 
 type t =
-  | Abs of (abs * t)
-  | TAbs of (abs * t)
+  | Abs of (name abs * t)
+  | TAbs of (t_name abs * t)
   | App of (TypesBeta.t * t * t)
   | TApp of (TypesBeta.t * t * TypesBeta.t)
   | Val of value
@@ -38,4 +41,4 @@ type variant =
 type top =
   | Value of (value * t)
   | Binding of (value * string)
-  | Datatype of (name * variant list)
+  | Datatype of (t_name * variant list)
