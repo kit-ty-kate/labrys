@@ -20,7 +20,7 @@ Executable cervoise
     llvm.passmgr_builder,
     llvm.target,
     llvm.bitwriter,
-    llvm.backends,
+    llvm.all_backends,
     llvm.linker,
     batteries (>= 2.2),
     monomorphic

@@ -206,7 +206,7 @@ let make ~with_main =
   in
   top [] Gamma.Value.empty
 
-let init = lazy (Llvm_backends.initialize ())
+let init = lazy (Llvm_all_backends.initialize ())
 
 let get_triple () =
   Lazy.force init;
