@@ -58,19 +58,32 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %start main
 %type <ParseTree.top list> main
 
+%start mainInterface
+%type <Interface.t list> mainInterface
+
 %%
+
+(********* Implementation *********)
 
 main:
 | Let name = LowerName Equal term = term main = main
     { ParseTree.Value (Gamma.Name.of_list [name], term) :: main }
-| Type Alias name = UpperName Equal ty = typeExpr main = main
-    { ParseTree.Type (get_loc $startpos $endpos(ty), Gamma.Type.of_list [name], ty) :: main }
+| typeAlias = typeAlias main = main
+    { ParseTree.Type typeAlias :: main }
 | Let name = LowerName DoubleDot ty = typeExpr Equal binding = Binding main = main
     { ParseTree.Binding (get_loc $startpos $endpos(binding), Gamma.Name.of_list [name], ty, binding) :: main }
-| Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
-    { ParseTree.Datatype (get_loc $startpos $endpos(variants), Gamma.Type.of_list [name], k, variants) :: main }
+| datatype = datatype main = main
+    { ParseTree.Datatype datatype :: main }
 | EOF
     { [] }
+
+datatype:
+| Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
+    { (get_loc $startpos $endpos, Gamma.Type.of_list [name], k, variants) }
+
+typeAlias:
+| Type Alias name = UpperName Equal ty = typeExpr
+    { (get_loc $startpos $endpos, Gamma.Type.of_list [name], ty) }
 
 term:
 | Lambda LParent name = LowerName DoubleDot ty = typeExpr RParent Arrow term = term
@@ -151,3 +164,23 @@ pat:
     { ParseTree.PatternTApp (p, ty) }
 | LParent p = pat RParent
     { p }
+
+(********* Interface *********)
+
+mainInterface:
+| Let name = LowerName DoubleDot ty = typeExpr xs = mainInterface
+    { Interface.Val
+        (get_loc $startpos $endpos(ty), Gamma.Name.of_list [name], ty)
+      :: xs
+    }
+| Type name = UpperName xs = mainInterface
+    { Interface.AbstractType
+        (get_loc $startpos $endpos(name), Gamma.Type.of_list [name])
+      :: xs
+    }
+| datatype = datatype xs = mainInterface
+    { Interface.Datatype datatype :: xs }
+| typeAlias = typeAlias xs = mainInterface
+    { Interface.TypeAlias typeAlias :: xs }
+| EOF
+    { [] }

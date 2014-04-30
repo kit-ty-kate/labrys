@@ -19,43 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Gamma.Name.t
-type t_name = Gamma.Type.t
-
-type t_value = (t_name * Kinds.t)
-
-type ty =
-  | Fun of (ty * ty)
-  | Ty of t_name
-  | Forall of (t_value * ty)
-  | AbsOnTy of (t_value * ty)
-  | AppOnTy of (ty * ty)
-
-type value = (name * ty)
-
-type pattern =
-  | TyConstr of name
-  | Any of name
-  | PatternApp of (pattern * pattern)
-  | PatternTApp of (pattern * ty)
-
 type t =
-  | Abs of (Location.t * value * t)
-  | TAbs of (Location.t * t_value * t)
-  | App of (Location.t * t * t)
-  | TApp of (Location.t * t * ty)
-  | Val of (Location.t * name)
-  | PatternMatching of (Location.t * t * (pattern * t) list)
-
-type variant =
-  | Variant of (Location.t * name * ty)
-
-type datatype = (Location.t * t_name * Kinds.t * variant list)
-
-type typeAlias = (Location.t * t_name * ty)
-
-type top =
-  | Value of (name * t)
-  | Type of typeAlias
-  | Binding of (Location.t * name * ty * string)
-  | Datatype of datatype
+  | Val of (Location.t * ParseTree.name * ParseTree.ty)
+  | AbstractType of (Location.t * ParseTree.t_name)
+  | Datatype of ParseTree.datatype
+  | TypeAlias of (Location.t * ParseTree.t_name * ParseTree.ty)
