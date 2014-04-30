@@ -1,8 +1,8 @@
-datatype Int =
+type Int =
   | O : Int
   | S : Int -> Int
 
-let Id = Int -> Int
+type alias Id = Int -> Int
 
 let id = λ(x:Id) -> x
 

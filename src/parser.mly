@@ -38,7 +38,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Arrow
 %token Forall
 %token Match With End
-%token Datatype
+%token Type
+%token Alias
 %token Pipe
 %token DoubleDot
 %token Star
@@ -62,11 +63,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 main:
 | Let name = LowerName Equal term = term main = main
     { ParseTree.Value (Gamma.Name.of_list [name], term) :: main }
-| Let name = UpperName Equal ty = typeExpr main = main
+| Type Alias name = UpperName Equal ty = typeExpr main = main
     { ParseTree.Type (get_loc $startpos $endpos(ty), Gamma.Type.of_list [name], ty) :: main }
 | Let name = LowerName DoubleDot ty = typeExpr Equal binding = Binding main = main
     { ParseTree.Binding (get_loc $startpos $endpos(binding), Gamma.Name.of_list [name], ty, binding) :: main }
-| Datatype name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
+| Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant) main = main
     { ParseTree.Datatype (get_loc $startpos $endpos(variants), Gamma.Type.of_list [name], k, variants) :: main }
 | EOF
     { [] }

@@ -1,4 +1,4 @@
-datatype Int =
+type Int =
   | O : Int
   | S : Int -> Int
 
@@ -23,7 +23,7 @@ end
 
 let unit = printInt [Int] zero
 
-datatype Nat =
+type Nat =
   | O : Nat
   | S : Nat -> Nat
   | D : Nat -> Nat -> Nat

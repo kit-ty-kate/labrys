@@ -1,5 +1,5 @@
 -- A simple variant
-datatype Nat =
+type Nat =
   | O : Nat
   | S : Nat -> Nat
 

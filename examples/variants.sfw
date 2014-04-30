@@ -1,4 +1,4 @@
-datatype Nat =
+type Nat =
   | O : Nat
   | S : Nat -> Nat
   | D : Nat -> Nat -> Nat

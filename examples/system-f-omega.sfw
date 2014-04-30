@@ -1,4 +1,4 @@
-datatype Int =
+type Int =
   | O : Int
   | S : Int -> Int
 
@@ -27,14 +27,14 @@ let test = id [Int]
 
 let testdeux = printInt (test zero zero)
 
-let Id = λX, X
+type alias Id = λX, X
 
-let I = Id
+type alias I = Id
 
-let Ip = Id
+type alias Ip = Id
 
-let II = Ip Int
+type alias II = Ip Int
 
-datatype Pair : * -> * -> * = Pair : forall X, forall Y, X -> Y -> Pair X Y
+type Pair : * -> * -> * = Pair : forall X, forall Y, X -> Y -> Pair X Y
 
 let test = Pair [Int] [Int] O O

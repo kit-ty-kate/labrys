@@ -1,4 +1,4 @@
-datatype Int =
+type Int =
   | O : Int
   | S : Int -> Int
 
