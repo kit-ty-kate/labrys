@@ -47,6 +47,7 @@ rule main = parse
   | "forall" { Parser.Forall }
   | "type" { Parser.Type }
   | "alias" { Parser.Alias }
+  | "import" { Parser.Import }
   | "begin" { let buffer = Buffer.create 4096 in
               get_binding buffer lexbuf;
               Parser.Binding (Buffer.contents buffer)

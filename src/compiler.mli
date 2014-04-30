@@ -19,6 +19,15 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-exception Error of string
+type args =
+  { print : bool
+  ; lto : bool
+  ; opt : int
+  ; c : bool
+  ; o : string option
+  ; file : string
+  }
 
-val parse : BatIO.input -> ParseTree.top list
+exception ParseError of string
+
+val compile : args -> unit

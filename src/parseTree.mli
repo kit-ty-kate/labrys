@@ -59,3 +59,5 @@ type top =
   | Type of typeAlias
   | Binding of (Location.t * name * ty * string)
   | Datatype of datatype
+
+type imports = t_name list

@@ -212,8 +212,5 @@ let rec from_parse_tree gamma gammaT gammaC = function
       Datatype (name, variants) :: xs
   | [] -> []
 
-let from_parse_tree =
-  from_parse_tree
-    Gamma.Value.empty
-    Gamma.Types.empty
-    Gamma.Index.empty
+let from_parse_tree ({Gamma.values; types; indexes}, x) =
+  from_parse_tree values types indexes x

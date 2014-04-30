@@ -31,6 +31,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
 %}
 
+%token Import
 %token Let Equal
 %token Lambda
 %token Dot
@@ -56,26 +57,41 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %nonassoc app tapp
 
 %start main
-%type <ParseTree.top list> main
+%type <(ParseTree.imports * ParseTree.top list)> main
 
 %start mainInterface
-%type <Interface.t list> mainInterface
+%type <(ParseTree.imports * Interface.t list)> mainInterface
 
 %%
+
+entry(body):
+| imports = list(import) body = body
+    { (imports, body) }
 
 (********* Implementation *********)
 
 main:
-| Let name = LowerName Equal term = term main = main
-    { ParseTree.Value (Gamma.Name.of_list [name], term) :: main }
-| typeAlias = typeAlias main = main
-    { ParseTree.Type typeAlias :: main }
-| Let name = LowerName DoubleDot ty = typeExpr Equal binding = Binding main = main
-    { ParseTree.Binding (get_loc $startpos $endpos(binding), Gamma.Name.of_list [name], ty, binding) :: main }
-| datatype = datatype main = main
-    { ParseTree.Datatype datatype :: main }
+| x = entry(body)
+    { x }
+
+body:
+| Let name = LowerName Equal term = term xs = body
+    { ParseTree.Value (Gamma.Name.of_list [name], term) :: xs }
+| typeAlias = typeAlias xs = body
+    { ParseTree.Type typeAlias :: xs }
+| Let name = LowerName DoubleDot ty = typeExpr Equal binding = Binding xs = body
+    { ParseTree.Binding
+        (get_loc $startpos $endpos(binding), Gamma.Name.of_list [name], ty, binding)
+      :: xs
+    }
+| datatype = datatype xs = body
+    { ParseTree.Datatype datatype :: xs }
 | EOF
     { [] }
+
+import:
+| Import name = upperName
+    { Gamma.Type.of_list name }
 
 datatype:
 | Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
@@ -168,19 +184,23 @@ pat:
 (********* Interface *********)
 
 mainInterface:
-| Let name = LowerName DoubleDot ty = typeExpr xs = mainInterface
+| x = entry(bodyInterface)
+    { x }
+
+bodyInterface:
+| Let name = LowerName DoubleDot ty = typeExpr xs = bodyInterface
     { Interface.Val
         (get_loc $startpos $endpos(ty), Gamma.Name.of_list [name], ty)
       :: xs
     }
-| Type name = UpperName xs = mainInterface
+| Type name = UpperName xs = bodyInterface
     { Interface.AbstractType
         (get_loc $startpos $endpos(name), Gamma.Type.of_list [name])
       :: xs
     }
-| datatype = datatype xs = mainInterface
+| datatype = datatype xs = bodyInterface
     { Interface.Datatype datatype :: xs }
-| typeAlias = typeAlias xs = mainInterface
+| typeAlias = typeAlias xs = bodyInterface
     { Interface.TypeAlias typeAlias :: xs }
 | EOF
     { [] }

@@ -19,4 +19,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val from_parse_tree : ParseTree.top list -> TypedTree.top list
+val from_parse_tree :
+  ( ( TypesBeta.t
+    , [`Abstract of Kinds.t | `Alias of Types.t * Kinds.t]
+    , TypesBeta.t
+    ) Gamma.t
+   * ParseTree.top list) ->
+  TypedTree.top list

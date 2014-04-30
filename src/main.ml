@@ -23,53 +23,16 @@ open Cmdliner
 open BatteriesExceptionless
 open Monomorphic.None
 
-let sprintf = Printf.sprintf
-
-type args =
-  { print : bool
-  ; lto : bool
-  ; opt : int
-  ; c : bool
-  ; o : string option
-  ; file : string
-  }
-
-let compile {c; o; file; _} result =
-  let o = match o with
-    | Some o -> o
-    | None -> if c then Utils.replace_ext file "o" else "a.out"
-  in
-  let c = if c then "-c" else "" in
-  let o = Filename.quote o in
-  let command = sprintf "llc - | cc %s -x assembler - -o %s" c o in
-  let output = Unix.open_process_out command in
-  output_string output result;
-  match Unix.close_process_out output with
-  | Unix.WEXITED 0 -> ()
-  | _ -> prerr_endline "\nThe compilation processes exited abnormally"
-
-let print_or_compile = function
-  | {print = true; _} -> print_endline
-  | {print = false; _} as args -> compile args
-
-let aux args =
-  open_in args.file
-  |> ParserManager.parse
-  |> TypeChecker.from_parse_tree
-  |> Lambda.of_typed_tree
-  |> Backend.make ~with_main:(not args.c) ~lto:args.lto ~opt:args.opt
-  |> Llvm.string_of_llmodule
-  |> print_or_compile args
-
 let start print lto opt c o file =
   if lto && c then
     Some
       "Error: Cannot enable the lto optimization while compiling.\n\
        This is allowed only during linking"
   else
-    try aux {print; lto; opt; c; o; file}; None with
+    let args = {Compiler.print; lto; opt; c; o; file} in
+    try Compiler.compile args; None with
     | Error.Exn x -> Some (Error.dump ~file x)
-    | ParserManager.Error x -> Some x
+    | Compiler.ParseError x -> Some x
 
 let cmd =
   let print = Arg.(value & flag & info ["print"]) in
