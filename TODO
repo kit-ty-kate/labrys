@@ -9,6 +9,7 @@
   * Add more explicit type names (like « type name = string » instead of just use a string)
   * Replace Pattern.var by « type var = int list »
   * Have an abstract type for gammaX
+  * Rename DoubleDot into (Colon ?) in the Parser
 
 * Cleaning (parser, typechecker, backend, …)
 * Unit-tests
