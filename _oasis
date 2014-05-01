@@ -18,6 +18,9 @@ Executable cervoise
     llvm (>= 3.4),
     llvm.irreader,
     llvm.passmgr_builder,
+    llvm.target,
+    llvm.bitwriter,
+    llvm.all_backends,
     llvm.linker,
     batteries (>= 2.2),
     monomorphic

@@ -22,6 +22,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
+type t = Llvm.llmodule
+
 type gamma =
   | Value of LLVM.llvalue
   | Env of int
@@ -181,7 +183,7 @@ let rec init func gamma builder = function
       init func gamma builder xs
   | [] -> ()
 
-let make ~with_main ~lto ~opt =
+let make ~with_main =
   let rec top init_list gamma = function
     | UntypedTree.Value (name, t, size) :: xs ->
         let g = LLVM.define_global (Gamma.Name.to_string name) (LLVM.undef star_type) m in
@@ -200,7 +202,38 @@ let make ~with_main ~lto ~opt =
           ignore (LLVM.build_call f [||] "" builder);
           LLVM.build_ret_void builder;
         end;
-        LLVM.optimize ~lto ~opt m;
         m
   in
   top [] Gamma.Value.empty
+
+let init = lazy (Llvm_all_backends.initialize ())
+
+let get_triple () =
+  Lazy.force init;
+  Llvm_target.Target.default_triple ()
+
+let get_target ~triple =
+  let target = Llvm_target.Target.by_triple triple in
+  Llvm_target.TargetMachine.create ~triple target
+
+let optimize ~opt ~lto m =
+  let triple = get_triple () in
+  let target = get_target ~triple in
+  let layout = Llvm_target.TargetMachine.data_layout target in
+  LLVM.set_target_triple triple m;
+  LLVM.set_data_layout (Llvm_target.DataLayout.as_string layout) m;
+  LLVM.optimize ~lto ~opt layout m;
+  m
+
+let to_string = Llvm.string_of_llmodule
+
+let write_bitcode ~o m = Llvm_bitwriter.write_bitcode_file m o
+
+let emit_object_file ~tmp m =
+  let triple = get_triple () in
+  let target = get_target ~triple in
+  Llvm_target.TargetMachine.emit_to_file
+    m
+    Llvm_target.CodeGenFileType.ObjectFile
+    tmp
+    target

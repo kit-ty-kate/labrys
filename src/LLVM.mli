@@ -35,5 +35,6 @@ val bind : llcontext -> name:Gamma.Name.t -> string -> llmodule -> llvalue
 val optimize :
   lto:bool ->
   opt:int ->
+  Llvm_target.DataLayout.t ->
   llmodule ->
   unit
