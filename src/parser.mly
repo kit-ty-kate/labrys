@@ -33,6 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 %token Import
 %token Let Equal
+%token Rec
 %token Lambda
 %token Dot
 %token Comma
@@ -77,6 +78,11 @@ main:
 body:
 | Let name = LowerName Equal term = term xs = body
     { ParseTree.Value (Gamma.Name.of_list [name], term) :: xs }
+| Let Rec name = LowerName DoubleDot ty = typeExpr Equal term = term xs = body
+    { ParseTree.RecValue
+        (get_loc $startpos $endpos(term), Gamma.Name.of_list [name], ty, term)
+      :: xs
+    }
 | typeAlias = typeAlias xs = body
     { ParseTree.Type typeAlias :: xs }
 | Let name = LowerName DoubleDot ty = typeExpr Equal binding = Binding xs = body

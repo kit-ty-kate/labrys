@@ -93,6 +93,9 @@ let of_typed_tree =
     | TypedTree.Value ({TypedTree.name; _}, t) :: xs ->
         let (t, size) = of_typed_term gammaC gammaD t in
         Value (name, t, size) :: aux gammaC gammaD xs
+    | TypedTree.RecValue ({TypedTree.name; _}, t) :: xs ->
+        let (t, size) = of_typed_term gammaC gammaD t in
+        RecValue (name, t, size) :: aux gammaC gammaD xs
     | TypedTree.Binding ({TypedTree.name; _}, value) :: xs ->
         Binding (name, value) :: aux gammaC gammaD xs
     | TypedTree.Datatype (name, variants) :: xs ->

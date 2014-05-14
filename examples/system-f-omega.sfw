@@ -8,9 +8,8 @@ let printInt : Int -> Int = begin
   define i8* @__printInt(i8* %i, i8**) {
     %access_prim = load i8* %i
     %access = zext i8 %access_prim to i32
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
-    %r = inttoptr i32 %r1 to i8*
-    ret i8* %r
+    call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
+    ret i8* %i
   }
   @_printInt = global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__printInt, i8** null}
   @printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
@@ -38,3 +37,7 @@ type alias II = Ip Int
 type Pair : * -> * -> * = Pair : forall X, forall Y, X -> Y -> Pair X Y
 
 let test = Pair [Int] [Int] O O
+
+let rec recursiveFun : Int -> Int = λ (x : Int) -> recursiveFun (printInt x)
+
+let testa = recursiveFun zero

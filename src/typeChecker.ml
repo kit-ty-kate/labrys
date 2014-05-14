@@ -198,6 +198,15 @@ let rec from_parse_tree gamma gammaT gammaC = function
       let ty = get_type x in
       let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaC xs in
       Value ({name; ty}, x) :: xs
+  | ParseTree.RecValue (loc, name, ty, term) :: xs ->
+      let ty = ty_from_parse_tree' ~loc gammaT ty in
+      let gamma = Gamma.Value.add name ty gamma in
+      let x = aux gamma gammaT gammaC term in
+      let ty_x = get_type x in
+      if not (TypesBeta.equal ty ty_x) then
+        type_error ~loc ~has:ty_x ~expected:ty;
+      let xs = from_parse_tree gamma gammaT gammaC xs in
+      RecValue ({name; ty}, x) :: xs
   | ParseTree.Type (loc, name, ty) :: xs ->
       let ty = Types.from_parse_tree ~loc gammaT ty in
       from_parse_tree gamma (Gamma.Types.add ~loc name (`Alias ty) gammaT) gammaC xs

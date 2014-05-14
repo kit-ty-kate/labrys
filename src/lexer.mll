@@ -41,6 +41,7 @@ rule main = parse
   | "λ" { Parser.Lambda }
   | "->" { Parser.Arrow }
   | "let" { Parser.Let }
+  | "rec" { Parser.Rec }
   | "match" { Parser.Match }
   | "with" { Parser.With }
   | "end" { Parser.End }

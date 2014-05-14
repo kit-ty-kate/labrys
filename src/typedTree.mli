@@ -40,5 +40,6 @@ type variant =
 
 type top =
   | Value of (value * t)
+  | RecValue of (value * t)
   | Binding of (value * string)
   | Datatype of (t_name * variant list)

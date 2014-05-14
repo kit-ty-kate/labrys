@@ -56,6 +56,7 @@ type typeAlias = (Location.t * t_name * ty)
 
 type top =
   | Value of (name * t)
+  | RecValue of (Location.t * name * ty * t)
   | Type of typeAlias
   | Binding of (Location.t * name * ty * string)
   | Datatype of datatype

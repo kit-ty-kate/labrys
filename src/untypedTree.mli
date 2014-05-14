@@ -38,4 +38,5 @@ and t =
 
 type top =
   | Value of (name * t * int)
+  | RecValue of (name * t * int)
   | Binding of (name * string)
