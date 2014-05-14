@@ -43,7 +43,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Type
 %token Alias
 %token Pipe
-%token DoubleDot
+%token Colon
 %token Star
 %token <string> LowerName
 %token <string> UpperName
@@ -78,14 +78,14 @@ main:
 body:
 | Let name = LowerName Equal term = term xs = body
     { ParseTree.Value (Gamma.Name.of_list [name], term) :: xs }
-| Let Rec name = LowerName DoubleDot ty = typeExpr Equal term = term xs = body
+| Let Rec name = LowerName Colon ty = typeExpr Equal term = term xs = body
     { ParseTree.RecValue
         (get_loc $startpos $endpos(term), Gamma.Name.of_list [name], ty, term)
       :: xs
     }
 | typeAlias = typeAlias xs = body
     { ParseTree.Type typeAlias :: xs }
-| Let name = LowerName DoubleDot ty = typeExpr Equal binding = Binding xs = body
+| Let name = LowerName Colon ty = typeExpr Equal binding = Binding xs = body
     { ParseTree.Binding
         (get_loc $startpos $endpos(binding), Gamma.Name.of_list [name], ty, binding)
       :: xs
@@ -108,7 +108,7 @@ typeAlias:
     { (get_loc $startpos $endpos, Gamma.Type.of_list [name], ty) }
 
 term:
-| Lambda LParent name = LowerName DoubleDot ty = typeExpr RParent Arrow term = term
+| Lambda LParent name = LowerName Colon ty = typeExpr RParent Arrow term = term
     { ParseTree.Abs (get_loc $startpos $endpos(ty), (Gamma.Name.of_list [name], ty), term) }
 | Lambda value = kind_and_name Arrow term = term
     { ParseTree.TAbs (get_loc $startpos $endpos(value), value, term) }
@@ -159,17 +159,17 @@ kind:
     { k }
 
 variant:
-| name = UpperName DoubleDot ty = typeExpr
+| name = UpperName Colon ty = typeExpr
     { ParseTree.Variant (get_loc $startpos $endpos, Gamma.Name.of_list [name], ty) }
 
 kindopt:
 | { Kinds.Star }
-| DoubleDot k = kind { k }
+| Colon k = kind { k }
 
 kind_and_name:
 | name = UpperName
     { (Gamma.Type.of_list [name], Kinds.Star) }
-| LParent name = UpperName DoubleDot k = kind RParent
+| LParent name = UpperName Colon k = kind RParent
     { (Gamma.Type.of_list [name], k) }
 
 pattern:
@@ -194,7 +194,7 @@ mainInterface:
     { x }
 
 bodyInterface:
-| Let name = LowerName DoubleDot ty = typeExpr xs = bodyInterface
+| Let name = LowerName Colon ty = typeExpr xs = bodyInterface
     { Interface.Val
         (get_loc $startpos $endpos(ty), Gamma.Name.of_list [name], ty)
       :: xs

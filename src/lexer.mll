@@ -31,7 +31,7 @@ rule main = parse
   | '=' { Parser.Equal }
   | '.' { Parser.Dot }
   | ',' { Parser.Comma }
-  | ':' { Parser.DoubleDot }
+  | ':' { Parser.Colon }
   | '(' { Parser.LParent }
   | ')' { Parser.RParent }
   | '[' { Parser.LBracket }
