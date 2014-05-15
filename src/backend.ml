@@ -44,15 +44,6 @@ let variant_type = LLVM.struct_type c [|i32_type; env_type|]
 let i64 = LLVM.const_int i64_type
 let i32 = LLVM.const_int i32_type
 
-let create_env size builder =
-  let env =
-    LLVM.build_malloc
-      (LLVM.array_type star_type size)
-      "env"
-      builder
-  in
-  LLVM.build_gep env [|i64 0; i64 0|] "env_cast" builder
-
 let create_closure f env builder =
   let closure = LLVM.build_malloc closure_type "closure" builder in
   let loaded = LLVM.build_load closure "closure_loaded" builder in
@@ -68,9 +59,22 @@ let env_size_of_gamma gamma =
   in
   Gamma.Value.fold aux gamma 0
 
-let insert_arg_in_env param env env_size builder =
-  let env = LLVM.build_gep env [|i32 env_size|] "gep_env" builder in
-  LLVM.build_store param env builder
+let env_append param old_env size builder =
+  let new_env =
+    LLVM.build_malloc
+      (LLVM.array_type star_type (succ size))
+      ""
+      builder
+  in
+  for i = 0 to pred size do
+    let new_env_at_i = LLVM.build_gep new_env [|i32 i|] "" builder in
+    let old_env_at_i = LLVM.build_gep old_env [|i32 i|] "" builder in
+    let old_value = LLVM.build_load old_env_at_i "" builder in
+    LLVM.build_store old_value new_env_at_i builder
+  done;
+  let new_env_at_size = LLVM.build_gep new_env [|i32 size|] "" builder in
+  LLVM.build_store param new_env_at_size builder;
+  LLVM.build_gep new_env [|i64 0; i64 0|] "" builder
 
 let rec llvalue_of_pattern_var value builder = function
   | Pattern.VLeaf -> value
@@ -137,7 +141,7 @@ and lambda func env gamma builder = function
       let param = LLVM.param f 0 in
       let env = LLVM.param f 1 in
       let env_size = env_size_of_gamma gamma in
-      insert_arg_in_env param env env_size builder;
+      let env = env_append param env env_size builder in
       let gamma = Gamma.Value.add name (Value param) gamma in
       let gamma = Gamma.Value.add name (Env env_size) gamma in
       let v = lambda f env gamma builder t in
@@ -175,14 +179,14 @@ and lambda func env gamma builder = function
       LLVM.build_bitcast variant star_type "cast_variant" builder
 
 let rec init func gamma builder = function
-  | `Val (name, g, t, size) :: xs ->
-      let env = create_env size builder in
+  | `Val (name, g, t) :: xs ->
+      let env = LLVM.const_null star_type in
       let value = lambda func env gamma builder t in
       LLVM.build_store value g builder;
       let gamma = Gamma.Value.add name (Glob g) gamma in
       init func gamma builder xs
-  | `Rec (name, g, t, size) :: xs ->
-      let env = create_env size builder in
+  | `Rec (name, g, t) :: xs ->
+      let env = LLVM.const_null star_type in
       let gamma = Gamma.Value.add name (Glob g) gamma in
       let value = lambda func env gamma builder t in
       LLVM.build_store value g builder;
@@ -191,12 +195,12 @@ let rec init func gamma builder = function
 
 let make ~with_main =
   let rec top init_list gamma = function
-    | UntypedTree.Value (name, t, size) :: xs ->
+    | UntypedTree.Value (name, t) :: xs ->
         let g = LLVM.define_global (Gamma.Name.to_string name) (LLVM.undef star_type) m in
-        top (`Val (name, g, t, size) :: init_list) gamma xs
-    | UntypedTree.RecValue (name, t, size) :: xs ->
+        top (`Val (name, g, t) :: init_list) gamma xs
+    | UntypedTree.RecValue (name, t) :: xs ->
         let g = LLVM.define_global (Gamma.Name.to_string name) (LLVM.undef star_type) m in
-        top (`Rec (name, g, t, size) :: init_list) gamma xs
+        top (`Rec (name, g, t) :: init_list) gamma xs
     | UntypedTree.Binding (name, binding) :: xs ->
         let v = LLVM.bind c ~name binding m in
         let gamma = Gamma.Value.add name (Glob v) gamma in

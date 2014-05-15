@@ -46,32 +46,32 @@ let rec of_patterns gammaC = function
       Node (var, patterns)
 
 let rec of_results gammaC gammaD m =
-  let aux (acc, size) t =
-    let (t, size') = of_typed_term gammaC gammaD t in
-    (t :: acc, Int.max size size')
+  let aux acc t =
+    let t = of_typed_term gammaC gammaD t in
+    t :: acc
   in
-  List.fold_left aux ([], 0) m
+  List.fold_left aux [] m
 
 and of_typed_term gammaC gammaD = function
   | TypedTree.Abs ({TypedTree.param = {TypedTree.name; _}; _}, t) ->
-      let (t, size) = of_typed_term gammaC gammaD t in
-      (Abs (name, t), succ size)
+      let t = of_typed_term gammaC gammaD t in
+      Abs (name, t)
   | TypedTree.TApp (_, t, _)
   | TypedTree.TAbs (_, t) ->
       of_typed_term gammaC gammaD t
   | TypedTree.App (_, f, x) ->
-      let (f, size) = of_typed_term gammaC gammaD f in
-      let (x, size') = of_typed_term gammaC gammaD x in
-      (App (f, x), size + size')
+      let f = of_typed_term gammaC gammaD f in
+      let x = of_typed_term gammaC gammaD x in
+      App (f, x)
   | TypedTree.Val {TypedTree.name; _} ->
-      (Val name, 0)
+      Val name
   | TypedTree.PatternMatching (t, patterns, _) ->
       let results = Pattern.Matrix.get_results patterns in
       let patterns = Pattern.create gammaD patterns in
-      let (t, size) = of_typed_term gammaC gammaD t in
-      let (results, size') = of_results gammaC gammaD results in
+      let t = of_typed_term gammaC gammaD t in
+      let results = of_results gammaC gammaD results in
       let patterns = of_patterns gammaC patterns in
-      (PatternMatching (t, results, patterns), size + size')
+      PatternMatching (t, results, patterns)
 
 let of_typed_variant ~datatype (acc, i, gammaC, gammaD) = function
   | TypedTree.Variant (name, ty) ->
@@ -82,7 +82,7 @@ let of_typed_variant ~datatype (acc, i, gammaC, gammaD) = function
         in
         let size = TypesBeta.size ty in
         let t = aux size in
-        Value (name, t, size)
+        Value (name, t)
       in
       let gammaC = Gamma.Index.add name i gammaC in
       let gammaD = Gamma.Constr.append datatype name gammaD in
@@ -91,11 +91,11 @@ let of_typed_variant ~datatype (acc, i, gammaC, gammaD) = function
 let of_typed_tree =
   let rec aux gammaC gammaD = function
     | TypedTree.Value ({TypedTree.name; _}, t) :: xs ->
-        let (t, size) = of_typed_term gammaC gammaD t in
-        Value (name, t, size) :: aux gammaC gammaD xs
+        let t = of_typed_term gammaC gammaD t in
+        Value (name, t) :: aux gammaC gammaD xs
     | TypedTree.RecValue ({TypedTree.name; _}, t) :: xs ->
-        let (t, size) = of_typed_term gammaC gammaD t in
-        RecValue (name, t, size) :: aux gammaC gammaD xs
+        let t = of_typed_term gammaC gammaD t in
+        RecValue (name, t) :: aux gammaC gammaD xs
     | TypedTree.Binding ({TypedTree.name; _}, value) :: xs ->
         Binding (name, value) :: aux gammaC gammaD xs
     | TypedTree.Datatype (name, variants) :: xs ->

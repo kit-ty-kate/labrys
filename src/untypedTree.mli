@@ -37,6 +37,6 @@ and t =
   | PatternMatching of (t * t list * tree)
 
 type top =
-  | Value of (name * t * int)
-  | RecValue of (name * t * int)
+  | Value of (name * t)
+  | RecValue of (name * t)
   | Binding of (name * string)
