@@ -33,6 +33,7 @@ let start print lto opt c o file =
     try Compiler.compile args; None with
     | Error.Exn x -> Some (Error.dump ~file x)
     | Compiler.ParseError x -> Some x
+    | Sys_error x -> Some x
 
 let cmd =
   let print = Arg.(value & flag & info ["print"]) in
