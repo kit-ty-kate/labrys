@@ -66,14 +66,25 @@ let env_append param old_env size builder =
       ""
       builder
   in
-  for i = 0 to pred size do
-    let new_env_at_i = LLVM.build_gep new_env [|i32 i|] "" builder in
-    let old_env_at_i = LLVM.build_gep old_env [|i32 i|] "" builder in
-    let old_value = LLVM.build_load old_env_at_i "" builder in
-    LLVM.build_store old_value new_env_at_i builder
-  done;
-  let new_env_at_size = LLVM.build_gep new_env [|i32 size|] "" builder in
-  LLVM.build_store param new_env_at_size builder;
+  (* TODO: Bitcast earlier *)
+  let old_env = LLVM.build_bitcast old_env (LLVM.pointer_type (LLVM.array_type star_type size)) "" builder in
+  let new_env_loaded = LLVM.build_load new_env "" builder in
+  let new_env_filled =
+    if Int.equal size 0 then
+      LLVM.build_insertvalue new_env_loaded param size "" builder
+    else
+      let old_env = LLVM.build_load old_env "" builder in
+      let rec loop array i =
+        if Int.(i < size) then
+          let old_value = LLVM.build_extractvalue old_env i "" builder in
+          let array = LLVM.build_insertvalue array old_value i "" builder in
+          loop array (succ i)
+        else
+          LLVM.build_insertvalue array param i "" builder
+      in
+      loop new_env_loaded 0
+  in
+  LLVM.build_store new_env_filled new_env builder;
   LLVM.build_gep new_env [|i64 0; i64 0|] "" builder
 
 let rec llvalue_of_pattern_var value builder = function
