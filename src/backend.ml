@@ -215,6 +215,10 @@ let make ~with_main =
   in
   top [] Gamma.Value.empty
 
+let link dst src =
+  Llvm_linker.link_modules dst src Llvm_linker.Mode.DestroySource;
+  dst
+
 let init = lazy (Llvm_all_backends.initialize ())
 
 let get_triple () =

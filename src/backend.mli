@@ -23,6 +23,8 @@ type t
 
 val make : with_main:bool -> UntypedTree.top list -> t
 
+val link : t -> t -> t
+
 val optimize : opt:int -> lto:bool -> t -> t
 
 val to_string : t -> string
