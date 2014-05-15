@@ -40,9 +40,14 @@ let env_type = LLVM.pointer_type star_type
 let lambda_type = LLVM.function_type star_type [|star_type; env_type|]
 let closure_type = LLVM.struct_type c [|LLVM.pointer_type lambda_type; env_type|]
 let variant_type = LLVM.struct_type c [|i32_type; env_type|]
+let array_type = LLVM.array_type star_type
+let array_ptr_type size = LLVM.pointer_type (array_type size)
 
 let i64 = LLVM.const_int i64_type
 let i32 = LLVM.const_int i32_type
+
+let to_star x builder =
+  LLVM.build_bitcast x star_type "" builder
 
 let create_closure f env builder =
   let closure = LLVM.build_malloc closure_type "closure" builder in
@@ -50,7 +55,7 @@ let create_closure f env builder =
   let loaded = LLVM.build_insertvalue loaded f 0 "closure_insert_f" builder in
   let loaded = LLVM.build_insertvalue loaded env 1 "closure_insert_env" builder in
   LLVM.build_store loaded closure builder;
-  LLVM.build_bitcast closure star_type "closure_cast" builder
+  to_star closure builder
 
 let env_size_of_gamma gamma =
   let aux _ = function
@@ -60,14 +65,8 @@ let env_size_of_gamma gamma =
   Gamma.Value.fold aux gamma 0
 
 let env_append param old_env size builder =
-  let new_env =
-    LLVM.build_malloc
-      (LLVM.array_type star_type (succ size))
-      ""
-      builder
-  in
-  (* TODO: Bitcast earlier *)
-  let old_env = LLVM.build_bitcast old_env (LLVM.pointer_type (LLVM.array_type star_type size)) "" builder in
+  let new_env = LLVM.build_malloc (array_type (succ size)) "" builder in
+  let old_env = LLVM.build_bitcast old_env (array_ptr_type size) "" builder in
   let new_env_loaded = LLVM.build_load new_env "" builder in
   let new_env_filled =
     if Int.equal size 0 then
@@ -176,8 +175,9 @@ and lambda func env gamma builder = function
       begin match value with
       | Value value -> value
       | Env i ->
-          let value = LLVM.build_gep env [|i32 i|] "from_env" builder in
-          LLVM.build_load value "from_env_loaded" builder
+          let env = LLVM.build_bitcast env (array_ptr_type (succ i)) "" builder in
+          let value = LLVM.build_load env "" builder in
+          LLVM.build_extractvalue value i "" builder
       | Glob value ->
           LLVM.build_load value "glob_extract" builder
       end
@@ -187,7 +187,7 @@ and lambda func env gamma builder = function
       let variant_loaded = LLVM.build_insertvalue variant_loaded (i32 i) 0 "variant_with_idx" builder in
       let variant_loaded = LLVM.build_insertvalue variant_loaded env 1 "variant_with_vals" builder in
       LLVM.build_store variant_loaded variant builder;
-      LLVM.build_bitcast variant star_type "cast_variant" builder
+      to_star variant builder
 
 let rec init func gamma builder = function
   | `Val (name, g, t) :: xs ->
