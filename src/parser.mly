@@ -69,6 +69,10 @@ entry(body):
 | imports = list(import) body = body
     { (imports, body) }
 
+import:
+| Import name = upperName
+    { Gamma.Type.of_list name }
+
 (********* Implementation *********)
 
 main:
@@ -94,10 +98,6 @@ body:
     { ParseTree.Datatype datatype :: xs }
 | EOF
     { [] }
-
-import:
-| Import name = upperName
-    { Gamma.Type.of_list name }
 
 datatype:
 | Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
