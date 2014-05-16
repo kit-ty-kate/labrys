@@ -100,6 +100,6 @@ and compile args =
   parse args.file
   |> TypeChecker.from_parse_tree
   |> Lambda.of_typed_tree
-  |> Backend.make ~with_main:(not args.c)
+  |> Backend.make ~with_main:(not args.c) ~name:"Main"
   |> Backend.optimize ~lto:args.lto ~opt:args.opt
   |> print_or_compile args
