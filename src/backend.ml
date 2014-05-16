@@ -43,6 +43,7 @@ module Make (I : sig val name : string end) = struct
   let variant_type = LLVM.struct_type c [|i32_type; env_type|]
   let array_type = LLVM.array_type star_type
   let array_ptr_type size = LLVM.pointer_type (array_type size)
+  let unit_function_type = LLVM.function_type (LLVM.void_type c) [||]
 
   let i64 = LLVM.const_int i64_type
   let i32 = LLVM.const_int i32_type
@@ -50,7 +51,6 @@ module Make (I : sig val name : string end) = struct
   let undef = LLVM.undef star_type
 
   (* TODO: Do « insertvalue undef … » instead of « %x = load … & insertvalue %x » *)
-  (* TOKNOW: What happend for internal globals and functions on linking ? *)
   (* TODO: Use the module name as prefix for global values *)
 
   let create_closure f env builder =
@@ -237,6 +237,17 @@ module Make (I : sig val name : string end) = struct
     LLVM.set_linkage LLVM.Linkage.Internal globals;
     globals
 
+  let init_gc builder =
+    let define_malloc () =
+      let malloc_type = (LLVM.function_type star_type [|i32_type|]) in
+      let (malloc, builder) = LLVM.define_function c "malloc" malloc_type m in
+      LLVM.set_linkage LLVM.Linkage.Private malloc;
+      let gc_malloc = LLVM.declare_function "GC_malloc" malloc_type m in
+      LLVM.build_ret (LLVM.build_call gc_malloc (LLVM.params malloc) "" builder) builder
+    in
+    let gc_init = LLVM.declare_function "GC_init" unit_function_type m in
+    ignore (LLVM.build_call gc_init [||] "" builder)
+
   let make ~with_main =
     let rec top init_list i gamma = function
       | UntypedTree.Value (name, t) :: xs ->
@@ -247,13 +258,13 @@ module Make (I : sig val name : string end) = struct
           let v = LLVM.bind c ~name binding m in
           top (`Bind (name, v, i) :: init_list) (succ i) gamma xs
       | [] ->
-          let ty = LLVM.function_type (LLVM.void_type c) [||] in
-          let (f, builder) = LLVM.define_function c "__init" ty m in
+          let (f, builder) = LLVM.define_function c "__init" unit_function_type m in
+          init_gc builder;
           let globals = create_globals i in
           init f ~globals gamma Gamma.Value.empty builder (List.rev init_list);
           LLVM.build_ret_void builder;
           if with_main then begin
-            let (_, builder) = LLVM.define_function c "main" ty m in
+            let (_, builder) = LLVM.define_function c "main" unit_function_type m in
             ignore (LLVM.build_call f [||] "" builder);
             LLVM.build_ret_void builder;
           end;
