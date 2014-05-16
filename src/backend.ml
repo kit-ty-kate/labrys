@@ -48,18 +48,17 @@ module Make (I : sig val name : string end) = struct
   let i64 = LLVM.const_int i64_type
   let i32 = LLVM.const_int i32_type
   let null = LLVM.const_null star_type
-  let undef = LLVM.undef star_type
 
-  (* TODO: Do « insertvalue undef … » instead of « %x = load … & insertvalue %x » *)
   (* TODO: Use the module name as prefix for global values *)
 
-  let create_closure f env builder =
-    let closure = LLVM.build_malloc closure_type "closure" builder in
-    let loaded = LLVM.build_load closure "closure_loaded" builder in
-    let loaded = LLVM.build_insertvalue loaded f 0 "closure_insert_f" builder in
-    let loaded = LLVM.build_insertvalue loaded env 1 "closure_insert_env" builder in
-    LLVM.build_store loaded closure builder;
-    closure
+  let malloc_and_init ty values builder =
+    let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
+    let values = List.fold_lefti aux (LLVM.undef ty) values in
+    let allocated = LLVM.build_malloc ty "" builder in
+    LLVM.build_store values allocated builder;
+    allocated
+
+  let create_closure f env = malloc_and_init closure_type [f; env]
 
   let env_size_of_gamma gamma =
     let aux _ = function
@@ -69,25 +68,23 @@ module Make (I : sig val name : string end) = struct
     Gamma.Value.fold aux gamma 0
 
   let env_append param old_env size builder =
-    let new_env = LLVM.build_malloc (array_type (succ size)) "" builder in
-    let old_env = LLVM.build_bitcast old_env (array_ptr_type size) "" builder in
-    let new_env_loaded = LLVM.build_load new_env "" builder in
-    let new_env_filled =
+    let values =
+      let old_env = LLVM.build_bitcast old_env (array_ptr_type size) "" builder in
       if Int.equal size 0 then
-        LLVM.build_insertvalue new_env_loaded param size "" builder
+        [param]
       else
         let old_env = LLVM.build_load old_env "" builder in
-        let rec loop array i =
+        let rec loop acc i =
           if Int.(i < size) then
             let old_value = LLVM.build_extractvalue old_env i "" builder in
-            let array = LLVM.build_insertvalue array old_value i "" builder in
-            loop array (succ i)
+            loop (old_value :: acc) (succ i)
           else
-            LLVM.build_insertvalue array param i "" builder
+            param :: acc
         in
-        loop new_env_loaded 0
+        loop [] 0
     in
-    LLVM.build_store new_env_filled new_env builder;
+    let values = List.rev values in
+    let new_env = malloc_and_init (array_type (succ size)) values builder in
     LLVM.build_gep new_env [|i64 0; i64 0|] "" builder
 
   let rec llvalue_of_pattern_var value builder = function
@@ -98,7 +95,7 @@ module Make (I : sig val name : string end) = struct
         in
         let value = LLVM.build_load value "" builder in
         let value = LLVM.build_extractvalue value 1 "" builder in
-        let value = LLVM.build_gep value [|i32 i|] "" builder in
+        let value = LLVM.build_gep value [|i32 i|] "" builder in (* TODO: Remove this GEP *)
         let value = LLVM.build_load value "" builder in
         llvalue_of_pattern_var value builder var
 
@@ -188,12 +185,7 @@ module Make (I : sig val name : string end) = struct
             LLVM.build_extractvalue value i "" builder
         end
     | UntypedTree.Variant i ->
-        let variant = LLVM.build_malloc variant_type "variant" builder in
-        let variant_loaded = LLVM.build_load variant "variant_loaded" builder in
-        let variant_loaded = LLVM.build_insertvalue variant_loaded (i32 i) 0 "variant_with_idx" builder in
-        let variant_loaded = LLVM.build_insertvalue variant_loaded env 1 "variant_with_vals" builder in
-        LLVM.build_store variant_loaded variant builder;
-        variant
+        malloc_and_init variant_type [i32 i; env] builder
 
   let store_to_globals ~globals x i builder =
     let globals_loaded = LLVM.build_load globals "" builder in
