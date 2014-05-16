@@ -195,23 +195,33 @@ let store_to_globals ~globals x i builder =
   let globals_loaded = LLVM.build_insertvalue globals_loaded x i "" builder in
   LLVM.build_store globals_loaded globals builder
 
-let rec init func ~globals gamma builder = function
+let rec init func ~globals gamma global_values builder = function
   | `Val (name, i, t) :: xs ->
       let value = lambda func ~env:null ~globals gamma builder t in
       let gamma = Gamma.Value.add name (Glob i) gamma in
+      let global_values = Gamma.Value.add name value global_values in
       store_to_globals ~globals value i builder;
-      init func ~globals gamma builder xs
+      init func ~globals gamma global_values builder xs
   | `Rec (name, i, t) :: xs ->
       let gamma = Gamma.Value.add name (Glob i) gamma in
       let value = lambda func ~env:null ~globals gamma builder t in
+      let global_values = Gamma.Value.add name value global_values in
       store_to_globals ~globals value i builder;
-      init func ~globals gamma builder xs
+      init func ~globals gamma global_values builder xs
   | `Bind (name, value, i) :: xs ->
       let gamma = Gamma.Value.add name (Glob i) gamma in
       let value = LLVM.build_load value "" builder in
+      let global_values = Gamma.Value.add name value global_values in
       store_to_globals ~globals value i builder;
-      init func ~globals gamma builder xs
-  | [] -> ()
+      init func ~globals gamma global_values builder xs
+  | [] ->
+      (* TODO: Use global (needs a real build-system) *)
+      let aux name value =
+        let name = Gamma.Name.to_string name in
+        let global = LLVM.define_global name null m in
+        LLVM.build_store value global builder;
+      in
+      Gamma.Value.iter aux global_values
 
 let create_globals size =
   let initial_value =
@@ -235,7 +245,7 @@ let make ~with_main =
         let ty = LLVM.function_type (LLVM.void_type c) [||] in
         let (f, builder) = LLVM.define_function c "__init" ty m in
         let globals = create_globals i in
-        init f ~globals gamma builder (List.rev init_list);
+        init f ~globals gamma Gamma.Value.empty builder (List.rev init_list);
         LLVM.build_ret_void builder;
         if with_main then begin
           let (_, builder) = LLVM.define_function c "main" ty m in
