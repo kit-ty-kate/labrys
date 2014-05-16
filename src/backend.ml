@@ -146,6 +146,7 @@ and create_tree func env gamma builder value results =
 and lambda func env gamma builder = function
   | UntypedTree.Abs (name, t) ->
       let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
+      LLVM.set_linkage LLVM.Linkage.Internal f;
       let closure = create_closure f env builder in
       let builder = builder' in
       let param = LLVM.param f 0 in
