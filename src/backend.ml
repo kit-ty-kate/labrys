@@ -27,7 +27,7 @@ type t = Llvm.llmodule
 type gamma =
   | Value of LLVM.llvalue
   | Env of int
-  | Glob of LLVM.llvalue
+  | Glob of int
 
 let c = LLVM.create_context ()
 let m = LLVM.create_module c "Main"
@@ -45,7 +45,10 @@ let array_ptr_type size = LLVM.pointer_type (array_type size)
 
 let i64 = LLVM.const_int i64_type
 let i32 = LLVM.const_int i32_type
+let null = LLVM.const_null star_type
+let undef = LLVM.undef star_type
 
+(* TODO: Remove it ? *)
 let to_star x builder =
   LLVM.build_bitcast x star_type "" builder
 
@@ -108,10 +111,10 @@ let rec create_branch func env gamma value term results (constr, tree) =
   ignore (create_tree func env gamma builder value results tree);
   block
 
-and create_result func env gamma result =
+and create_result func ~env ~globals gamma result =
   let block = LLVM.append_block c "" func in
   let builder = LLVM.builder_at_end c block in
-  ignore (lambda func env gamma builder result);
+  ignore (lambda func ~env ~globals gamma builder result);
   block
 
 and create_tree func env gamma builder value results =
@@ -143,7 +146,7 @@ and create_tree func env gamma builder value results =
         cases;
       switch
 
-and lambda func env gamma builder = function
+and lambda func ~env ~globals gamma builder = function
   | UntypedTree.Abs (name, t) ->
       let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
       LLVM.set_linkage LLVM.Linkage.Internal f;
@@ -155,20 +158,20 @@ and lambda func env gamma builder = function
       let env = env_append param env env_size builder in
       let gamma = Gamma.Value.add name (Value param) gamma in
       let gamma = Gamma.Value.add name (Env env_size) gamma in
-      let v = lambda f env gamma builder t in
+      let v = lambda f ~env ~globals gamma builder t in
       LLVM.build_ret v builder;
       closure
   | UntypedTree.App (f, x) ->
-      let boxed_f = lambda func env gamma builder f in
+      let boxed_f = lambda func ~env ~globals gamma builder f in
       let boxed_f = LLVM.build_bitcast boxed_f (LLVM.pointer_type closure_type) "extract_f_cast" builder in
       let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
       let f = LLVM.build_extractvalue boxed_f 0 "f" builder in
       let env_f = LLVM.build_extractvalue boxed_f 1 "env" builder in
-      let x = lambda func env gamma builder x in
+      let x = lambda func ~env ~globals gamma builder x in
       LLVM.build_call f [|x; env_f|] "tmp" builder
   | UntypedTree.PatternMatching (t, results, tree) ->
-      let t = lambda func env gamma builder t in
-      let results = List.map (create_result func env gamma) results in
+      let t = lambda func ~env ~globals gamma builder t in
+      let results = List.map (create_result func ~env ~globals gamma) results in
       create_tree func env gamma builder t results tree
   | UntypedTree.Val name ->
       let value = Gamma.Value.find name gamma in
@@ -179,8 +182,9 @@ and lambda func env gamma builder = function
           let env = LLVM.build_bitcast env (array_ptr_type (succ i)) "" builder in
           let value = LLVM.build_load env "" builder in
           LLVM.build_extractvalue value i "" builder
-      | Glob value ->
-          LLVM.build_load value "glob_extract" builder
+      | Glob i ->
+          let value = LLVM.build_load globals "" builder in
+          LLVM.build_extractvalue value i "" builder
       end
   | UntypedTree.Variant i ->
       let variant = LLVM.build_malloc variant_type "variant" builder in
@@ -190,37 +194,52 @@ and lambda func env gamma builder = function
       LLVM.build_store variant_loaded variant builder;
       to_star variant builder
 
-let rec init func gamma builder = function
-  | `Val (name, g, t) :: xs ->
-      let env = LLVM.const_null star_type in
-      let value = lambda func env gamma builder t in
-      LLVM.build_store value g builder;
-      let gamma = Gamma.Value.add name (Glob g) gamma in
-      init func gamma builder xs
-  | `Rec (name, g, t) :: xs ->
-      let env = LLVM.const_null star_type in
-      let gamma = Gamma.Value.add name (Glob g) gamma in
-      let value = lambda func env gamma builder t in
-      LLVM.build_store value g builder;
-      init func gamma builder xs
+let store_to_globals ~globals x i builder =
+  let globals_loaded = LLVM.build_load globals "" builder in
+  let globals_loaded = LLVM.build_insertvalue globals_loaded x i "" builder in
+  LLVM.build_store globals_loaded globals builder
+
+let rec init func ~globals gamma builder = function
+  | `Val (name, i, t) :: xs ->
+      let value = lambda func ~env:null ~globals gamma builder t in
+      let gamma = Gamma.Value.add name (Glob i) gamma in
+      store_to_globals ~globals value i builder;
+      init func ~globals gamma builder xs
+  | `Rec (name, i, t) :: xs ->
+      let gamma = Gamma.Value.add name (Glob i) gamma in
+      let value = lambda func ~env:null ~globals gamma builder t in
+      store_to_globals ~globals value i builder;
+      init func ~globals gamma builder xs
+  | `Bind (name, value, i) :: xs ->
+      let gamma = Gamma.Value.add name (Glob i) gamma in
+      let value = LLVM.build_load value "" builder in
+      store_to_globals ~globals value i builder;
+      init func ~globals gamma builder xs
   | [] -> ()
 
+let create_globals size =
+  let initial_value =
+    let value = Array.make size null in
+    LLVM.const_array star_type value
+  in
+  let globals = LLVM.define_global "globals" initial_value m in
+  LLVM.set_linkage LLVM.Linkage.Internal globals;
+  globals
+
 let make ~with_main =
-  let rec top init_list gamma = function
+  let rec top init_list i gamma = function
     | UntypedTree.Value (name, t) :: xs ->
-        let g = LLVM.define_global (Gamma.Name.to_string name) (LLVM.undef star_type) m in
-        top (`Val (name, g, t) :: init_list) gamma xs
+        top (`Val (name, i, t) :: init_list) (succ i) gamma xs
     | UntypedTree.RecValue (name, t) :: xs ->
-        let g = LLVM.define_global (Gamma.Name.to_string name) (LLVM.undef star_type) m in
-        top (`Rec (name, g, t) :: init_list) gamma xs
+        top (`Rec (name, i, t) :: init_list) (succ i) gamma xs
     | UntypedTree.Binding (name, binding) :: xs ->
         let v = LLVM.bind c ~name binding m in
-        let gamma = Gamma.Value.add name (Glob v) gamma in
-        top init_list gamma xs
+        top (`Bind (name, v, i) :: init_list) (succ i) gamma xs
     | [] ->
         let ty = LLVM.function_type (LLVM.void_type c) [||] in
         let (f, builder) = LLVM.define_function c "__init" ty m in
-        init f gamma builder (List.rev init_list);
+        let globals = create_globals i in
+        init f ~globals gamma builder (List.rev init_list);
         LLVM.build_ret_void builder;
         if with_main then begin
           let (_, builder) = LLVM.define_function c "main" ty m in
@@ -229,7 +248,7 @@ let make ~with_main =
         end;
         m
   in
-  top [] Gamma.Value.empty
+  top [] 0 Gamma.Value.empty
 
 let link dst src =
   Llvm_linker.link_modules dst src Llvm_linker.Mode.DestroySource;
