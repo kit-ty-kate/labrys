@@ -48,17 +48,13 @@ let i32 = LLVM.const_int i32_type
 let null = LLVM.const_null star_type
 let undef = LLVM.undef star_type
 
-(* TODO: Remove it ? *)
-let to_star x builder =
-  LLVM.build_bitcast x star_type "" builder
-
 let create_closure f env builder =
   let closure = LLVM.build_malloc closure_type "closure" builder in
   let loaded = LLVM.build_load closure "closure_loaded" builder in
   let loaded = LLVM.build_insertvalue loaded f 0 "closure_insert_f" builder in
   let loaded = LLVM.build_insertvalue loaded env 1 "closure_insert_env" builder in
   LLVM.build_store loaded closure builder;
-  to_star closure builder
+  closure
 
 let env_size_of_gamma gamma =
   let aux _ = function
@@ -192,7 +188,7 @@ and lambda func ~env ~globals gamma builder = function
       let variant_loaded = LLVM.build_insertvalue variant_loaded (i32 i) 0 "variant_with_idx" builder in
       let variant_loaded = LLVM.build_insertvalue variant_loaded env 1 "variant_with_vals" builder in
       LLVM.build_store variant_loaded variant builder;
-      to_star variant builder
+      variant
 
 let store_to_globals ~globals x i builder =
   let globals_loaded = LLVM.build_load globals "" builder in
