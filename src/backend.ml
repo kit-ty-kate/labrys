@@ -29,6 +29,7 @@ type gamma =
   | Env of int
   | Glob of int
 
+(* TODO: Remove those two globals *)
 let c = LLVM.create_context ()
 let m = LLVM.create_module c "Main"
 
