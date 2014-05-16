@@ -48,6 +48,10 @@ let i32 = LLVM.const_int i32_type
 let null = LLVM.const_null star_type
 let undef = LLVM.undef star_type
 
+(* TODO: Do « insertvalue undef … » instead of « %x = load … & insertvalue %x » *)
+(* TOKNOW: What happend for internal globals and functions on linking ? *)
+(* TODO: Use the module name as prefix for global values *)
+
 let create_closure f env builder =
   let closure = LLVM.build_malloc closure_type "closure" builder in
   let loaded = LLVM.build_load closure "closure_loaded" builder in
