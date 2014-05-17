@@ -16,16 +16,6 @@ let printInt : Int -> Int = begin
   @printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
 end
 
-let zero : Int = begin
-  @_zero = global i8 0
-  @zero = global i8* getelementptr(i8* @_zero)
-end
-
-let one : Int = begin
-  @_one = global i8 0
-  @one = global i8* getelementptr(i8* @_one)
-end
-
 type Unit = Unit : Unit
 
 let id = λ(f:Unit -> Unit) -> f Unit
@@ -34,4 +24,4 @@ let rec f : Int -> Int -> (Unit -> Unit) -> Unit =
   λ(x : Int) -> λ(y : Int) -> λ(k : Unit -> Unit) ->
     f y x (λ(u : Unit) -> (λ(test : Int) -> k Unit) (printInt x))
 
-let test = f zero one
+let test = f O (S O) (λ(x:Unit) -> Unit)

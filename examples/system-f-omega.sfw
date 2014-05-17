@@ -15,16 +15,11 @@ let printInt : Int -> Int = begin
   @printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
 end
 
-let zero : Int = begin
-  @_zero = global i8 0
-  @zero = global i8* getelementptr(i8* @_zero)
-end
-
 let id = λ X -> λ (x:X) -> λ (x:X) -> x
 
 let test = id [Int]
 
-let testdeux = printInt (test zero zero)
+let testdeux = printInt (test O O)
 
 type alias Id = λX, X
 
@@ -38,6 +33,8 @@ type Pair : * -> * -> * = Pair : forall X, forall Y, X -> Y -> Pair X Y
 
 let test = Pair [Int] [Int] O O
 
-let rec recursiveFun : Int -> Int = λ (x : Int) -> recursiveFun (printInt x)
+let rec recursiveFun : Int -> Int -> Int =
+  λ (x : Int) -> λ (y : Int) ->
+    recursiveFun y (printInt x)
 
-let testa = recursiveFun zero
+let testa = recursiveFun O (S O)
