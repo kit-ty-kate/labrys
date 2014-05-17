@@ -35,17 +35,17 @@ module Make (I : sig val name : string end) = struct
 
   let i8_type = LLVM.i8_type c
   let i32_type = LLVM.i32_type c
-  let i64_type = LLVM.i64_type c
   let star_type = LLVM.pointer_type i8_type
-  let env_type = LLVM.pointer_type star_type
-  let lambda_type = LLVM.function_type star_type [|star_type; env_type|]
-  let closure_type = LLVM.struct_type c [|LLVM.pointer_type lambda_type; env_type|]
-  let variant_type = LLVM.struct_type c [|i32_type; env_type|]
+  let lambda_type = LLVM.function_type star_type [|star_type; star_type|]
+  let lambda_ptr_type = LLVM.pointer_type lambda_type
+  let closure_type = LLVM.struct_type c [|lambda_ptr_type; star_type|]
+  let closure_ptr_type = LLVM.pointer_type closure_type
+  let variant_type = LLVM.struct_type c [|i32_type; star_type|]
+  let variant_ptr_type = LLVM.pointer_type variant_type
   let array_type = LLVM.array_type star_type
   let array_ptr_type size = LLVM.pointer_type (array_type size)
   let unit_function_type = LLVM.function_type (LLVM.void_type c) [||]
 
-  let i64 = LLVM.const_int i64_type
   let i32 = LLVM.const_int i32_type
   let null = LLVM.const_null star_type
 
@@ -84,18 +84,16 @@ module Make (I : sig val name : string end) = struct
         loop [] 0
     in
     let values = List.rev values in
-    let new_env = malloc_and_init (array_type (succ size)) values builder in
-    LLVM.build_gep new_env [|i64 0; i64 0|] "" builder
+    malloc_and_init (array_type (succ size)) values builder
 
   let rec llvalue_of_pattern_var value builder = function
     | Pattern.VLeaf -> value
     | Pattern.VNode (i, var) ->
-        let value =
-          LLVM.build_bitcast value (LLVM.pointer_type variant_type) "" builder
-        in
+        let value = LLVM.build_bitcast value variant_ptr_type "" builder in
         let value = LLVM.build_load value "" builder in
         let value = LLVM.build_extractvalue value 1 "" builder in
-        let value = LLVM.build_gep value [|i32 i|] "" builder in (* TODO: Remove this GEP *)
+        let value = LLVM.build_bitcast value (array_ptr_type (succ i)) "" builder in
+        let value = LLVM.build_extractvalue value i "" builder in
         let value = LLVM.build_load value "" builder in
         llvalue_of_pattern_var value builder var
 
@@ -161,7 +159,7 @@ module Make (I : sig val name : string end) = struct
         closure
     | UntypedTree.App (f, x) ->
         let boxed_f = lambda func ~env ~globals gamma builder f in
-        let boxed_f = LLVM.build_bitcast boxed_f (LLVM.pointer_type closure_type) "extract_f_cast" builder in
+        let boxed_f = LLVM.build_bitcast boxed_f closure_ptr_type "extract_f_cast" builder in
         let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
         let f = LLVM.build_extractvalue boxed_f 0 "f" builder in
         let env_f = LLVM.build_extractvalue boxed_f 1 "env" builder in
