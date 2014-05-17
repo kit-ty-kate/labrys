@@ -237,6 +237,7 @@ module Make (I : sig val name : string end) = struct
       let gc_malloc = LLVM.declare_function "GC_malloc" malloc_type m in
       LLVM.build_ret (LLVM.build_call gc_malloc (LLVM.params malloc) "" builder) builder
     in
+    define_malloc ();
     let gc_init = LLVM.declare_function "GC_init" unit_function_type m in
     ignore (LLVM.build_call gc_init [||] "" builder)
 
