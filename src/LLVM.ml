@@ -30,6 +30,11 @@ let build_store src dst b = ignore (build_store src dst b)
 let build_ret v b = ignore (build_ret v b)
 let build_ret_void b = ignore (build_ret_void b)
 
+let build_call f args name builder =
+  let value = build_call f args name builder in
+  set_tail_call true value;
+  value
+
 let define_function c s ty m =
   let f = define_function s ty m in
   f, builder_at_end c (entry_block f)
