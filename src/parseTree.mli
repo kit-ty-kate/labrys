@@ -46,6 +46,7 @@ type t =
   | TApp of (Location.t * t * ty)
   | Val of (Location.t * name)
   | PatternMatching of (Location.t * t * (pattern * t) list)
+  | Let of (name * t * t)
 
 type variant =
   | Variant of (Location.t * name * ty)

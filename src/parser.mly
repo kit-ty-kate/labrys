@@ -32,7 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %}
 
 %token Import
-%token Let Equal
+%token Let Equal In
 %token Rec
 %token Lambda
 %token Dot
@@ -52,7 +52,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token LBracket RBracket
 %token EOF
 
-%left Lambda Comma Forall Match
+%left Lambda Comma Forall Match Let In
 %right Arrow
 %nonassoc LowerName UpperName LParent LBracket
 %nonassoc app tapp
@@ -122,6 +122,8 @@ term:
     { term }
 | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
     { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
+| Let name = LowerName Equal t = term In xs = term
+    { ParseTree.Let (Gamma.Name.of_list [name], t, xs) }
 
 name:
 | name = LowerName

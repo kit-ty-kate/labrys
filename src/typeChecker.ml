@@ -31,6 +31,7 @@ let get_type = function
   | TApp (ty, _, _) -> ty
   | Val {ty; _} -> ty
   | PatternMatching (_, _, ty) -> ty
+  | Let (_, _, _, ty) -> ty
 
 let type_error_aux ~loc =
   Error.fail
@@ -86,6 +87,11 @@ let rec transform ~from ~ty =
         let patterns = Pattern.Matrix.map aux patterns in
         let ty = replace ty in
         PatternMatching (t, patterns, ty)
+    | Let (name, t, xs, ty) ->
+        let t = transform t in
+        let xs = transform xs in
+        let ty = replace ty in
+        Let (name, t, xs, ty)
   in
   aux
 
@@ -169,6 +175,11 @@ let rec aux gamma gammaT gammaC = function
         List.fold_left f initial_pattern tail
       in
       PatternMatching (t, patterns, initial_ty)
+  | ParseTree.Let (name, t, xs) ->
+      let t = aux gamma gammaT gammaC t in
+      let gamma = Gamma.Value.add name (get_type t) gamma in
+      let xs = aux gamma gammaT gammaC xs in
+      Let (name, t, xs, get_type xs)
 
 let rec check_if_returns_type ~datatype = function
   | TypesBeta.Ty x -> Gamma.Type.equal x datatype

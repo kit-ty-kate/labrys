@@ -72,6 +72,10 @@ and of_typed_term gammaC gammaD = function
       let results = of_results gammaC gammaD results in
       let patterns = of_patterns gammaC patterns in
       PatternMatching (t, results, patterns)
+  | TypedTree.Let (name, t, xs, _) ->
+      let t = of_typed_term gammaC gammaD t in
+      let xs = of_typed_term gammaC gammaD xs in
+      Let (name, t, xs)
 
 let of_typed_variant ~datatype (acc, i, gammaC, gammaD) = function
   | TypedTree.Variant (name, ty) ->

@@ -184,6 +184,10 @@ module Make (I : sig val name : string end) = struct
         end
     | UntypedTree.Variant i ->
         malloc_and_init variant_type [i32 i; env] builder
+    | UntypedTree.Let (name, t, xs) ->
+        let t = lambda func ~env ~globals gamma builder t in
+        let gamma = Gamma.Value.add name (Value t) gamma in
+        lambda func ~env ~globals gamma builder xs
 
   let store_to_globals ~globals x i builder =
     let globals_loaded = LLVM.build_load globals "" builder in
