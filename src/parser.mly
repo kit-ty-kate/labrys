@@ -29,6 +29,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     { Location.loc_start = get_pos startpos
     ; loc_end = get_pos endpos
     }
+
+  let let_lambda_sugar term args =
+    let aux term = function
+      | `Val (loc, arg) -> ParseTree.Abs (loc, arg, term)
+      | `Ty (loc, ty) -> ParseTree.TAbs (loc, ty, term)
+    in
+    List.fold_left aux term (List.rev args)
 %}
 
 %token Import
@@ -81,8 +88,7 @@ main:
 
 body:
 | Let name = LowerName args = list(arg) Equal term = term xs = body
-    { let aux term (loc, name, ty) = ParseTree.Abs (loc, (name, ty), term) in
-      let term = List.fold_left aux term (List.rev args) in
+    { let term = let_lambda_sugar term args in
       ParseTree.Value (Gamma.Name.of_list [name], term) :: xs
     }
 | Let Rec name = LowerName Colon ty = typeExpr Equal term = term xs = body
@@ -112,11 +118,7 @@ typeAlias:
 
 term:
 | Lambda args = nonempty_list(arg) Arrow term = term
-    { let aux term (loc, name, ty) = ParseTree.Abs (loc, (name, ty), term) in
-      List.fold_left aux term (List.rev args)
-    }
-| Lambda value = kind_and_name Arrow term = term
-    { ParseTree.TAbs (get_loc $startpos $endpos(value), value, term) }
+    { let_lambda_sugar term args }
 | term1 = term term2 = term %prec app
     { ParseTree.App (get_loc $startpos $endpos(term2), term1, term2) }
 | term1 = term LBracket ty = typeExpr RBracket
@@ -128,14 +130,15 @@ term:
 | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
     { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
 | Let name = LowerName args = list(arg) Equal t = term In xs = term
-    { let aux t (loc, name, ty) = ParseTree.Abs (loc, (name, ty), t) in
-      let t = List.fold_left aux t (List.rev args) in
+    { let t = let_lambda_sugar t args in
       ParseTree.Let (Gamma.Name.of_list [name], t, xs)
     }
 
 arg:
 | LParen name = LowerName Colon ty = typeExpr RParen
-    { (get_loc $startpos $endpos(ty), Gamma.Name.of_list [name], ty) }
+    { `Val (get_loc $startpos $endpos, (Gamma.Name.of_list [name], ty)) }
+| ty = kind_and_name
+    { `Ty (get_loc $startpos $endpos, ty) }
 
 name:
 | name = LowerName
