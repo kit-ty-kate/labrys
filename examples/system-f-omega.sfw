@@ -33,8 +33,7 @@ type Pair : * -> * -> * = Pair : forall X, forall Y, X -> Y -> Pair X Y
 
 let test = Pair [Int] [Int] O O
 
-let rec recursiveFun : Int -> Int -> Int =
-  λ (x : Int) -> λ (y : Int) ->
-    recursiveFun y (printInt x)
+let rec recursiveFun (x : Int) (y : Int) : Int =
+  recursiveFun y (printInt x)
 
 let testa = recursiveFun O (S O)
