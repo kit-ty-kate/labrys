@@ -29,7 +29,7 @@ type alias Ip = Id
 
 type alias II = Ip Int
 
-type Pair : * -> * -> * = Pair : forall X, forall Y, X -> Y -> Pair X Y
+type Pair : * -> * -> * = Pair : forall X Y, X -> Y -> Pair X Y
 
 let test = Pair [Int] [Int] O O
 
