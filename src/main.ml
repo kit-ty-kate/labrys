@@ -41,7 +41,7 @@ let with_tmp_file f =
   f tmp;
   Sys.remove tmp
 
-let write {Compiler.o; modul; _} result =
+let write {Compiler.o; _} result =
   let o = Option.default "a.out" o in
   let aux tmp =
     Backend.emit_object_file ~tmp result;

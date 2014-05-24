@@ -63,9 +63,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %start mainInterface
 %type <(ParseTree.imports * Interface.t list)> mainInterface
 
-%start module_name
-%type <Gamma.Type.t> module_name
-
 %%
 
 entry(body):
