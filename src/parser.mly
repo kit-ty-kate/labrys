@@ -80,8 +80,11 @@ main:
     { x }
 
 body:
-| Let name = LowerName Equal term = term xs = body
-    { ParseTree.Value (Gamma.Name.of_list [name], term) :: xs }
+| Let name = LowerName args = list(arg) Equal term = term xs = body
+    { let aux term (loc, name, ty) = ParseTree.Abs (loc, (name, ty), term) in
+      let term = List.fold_left aux term (List.rev args) in
+      ParseTree.Value (Gamma.Name.of_list [name], term) :: xs
+    }
 | Let Rec name = LowerName Colon ty = typeExpr Equal term = term xs = body
     { ParseTree.RecValue
         (get_loc $startpos $endpos(term), Gamma.Name.of_list [name], ty, term)
@@ -124,8 +127,11 @@ term:
     { term }
 | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
     { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
-| Let name = LowerName Equal t = term In xs = term
-    { ParseTree.Let (Gamma.Name.of_list [name], t, xs) }
+| Let name = LowerName args = list(arg) Equal t = term In xs = term
+    { let aux t (loc, name, ty) = ParseTree.Abs (loc, (name, ty), t) in
+      let t = List.fold_left aux t (List.rev args) in
+      ParseTree.Let (Gamma.Name.of_list [name], t, xs)
+    }
 
 arg:
 | LParen name = LowerName Colon ty = typeExpr RParen
