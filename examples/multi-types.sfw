@@ -4,7 +4,7 @@ type Int =
 
 type alias Id = Int -> Int
 
-let id = λ(x:Id) -> x
+let id (x:Id) = x
 
 let val = id (λ(x:Int) -> x)
 

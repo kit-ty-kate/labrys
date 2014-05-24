@@ -15,7 +15,7 @@ let printInt : Int -> Int = begin
   @printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
 end
 
-let id = λ X -> λ (x:X) -> λ (x:X) -> x
+let id X (x:X) (x:X) = x
 
 let test = id [Int]
 

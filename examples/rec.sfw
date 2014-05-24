@@ -18,7 +18,7 @@ end
 
 type Unit = Unit : Unit
 
-let id = λ(f:Unit -> Unit) -> f Unit
+let id (f:Unit -> Unit) = f Unit
 
 let rec f : Int -> Int -> (Unit -> Unit) -> Unit =
   λ(x : Int) -> λ(y : Int) -> λ(k : Unit -> Unit) ->

@@ -2,4 +2,4 @@ type Int =
   | O : Int
   | S : Int -> Int
 
-let s = λ(x:Int->Int->Int) -> λ(y:Int->Int) -> λ(z:Int) -> x z (y z)
+let s (x:Int->Int->Int) (y:Int->Int) (z:Int) = x z (y z)

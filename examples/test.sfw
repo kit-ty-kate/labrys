@@ -21,10 +21,10 @@ let zero : Int = begin
   @zero = global i8* getelementptr(i8* @_zero)
 end
 
-let app = λ(x:Int->Int) -> λ(f:Int->Int->Int) -> f
+let app (x:Int->Int) (f:Int->Int->Int) = f
 
-let id = λ(x:Int) -> x
-let const = λ(x:Int) -> λ(y:Int) -> x
+let id (x:Int) = x
+let const (x:Int) (y:Int) = x
 
 let curry = app id
 
