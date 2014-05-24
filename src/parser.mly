@@ -48,13 +48,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token <string> LowerName
 %token <string> UpperName
 %token <string> Binding
-%token LParent RParent
+%token LParen RParen
 %token LBracket RBracket
 %token EOF
 
 %left Lambda Comma Forall Match Let In
 %right Arrow
-%nonassoc LowerName UpperName LParent LBracket
+%nonassoc LowerName UpperName LParen LBracket
 %nonassoc app tapp
 
 %start main
@@ -108,7 +108,7 @@ typeAlias:
     { (get_loc $startpos $endpos, Gamma.Type.of_list [name], ty) }
 
 term:
-| Lambda LParent name = LowerName Colon ty = typeExpr RParent Arrow term = term
+| Lambda LParen name = LowerName Colon ty = typeExpr RParen Arrow term = term
     { ParseTree.Abs (get_loc $startpos $endpos(ty), (Gamma.Name.of_list [name], ty), term) }
 | Lambda value = kind_and_name Arrow term = term
     { ParseTree.TAbs (get_loc $startpos $endpos(value), value, term) }
@@ -118,7 +118,7 @@ term:
     { ParseTree.TApp (get_loc $startpos $endpos, term1, ty) }
 | name = name
     { ParseTree.Val (get_loc $startpos $endpos, Gamma.Name.of_list name) }
-| LParent term = term RParent
+| LParen term = term RParen
     { term }
 | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
     { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
@@ -149,7 +149,7 @@ typeExpr:
     { ParseTree.AbsOnTy (value, ret) }
 | f = typeExpr x = typeExpr %prec tapp
     { ParseTree.AppOnTy (f, x) }
-| LParent term = typeExpr RParent
+| LParen term = typeExpr RParen
     { term }
 
 kind:
@@ -157,7 +157,7 @@ kind:
     { Kinds.Star }
 | k1 = kind Arrow k2 = kind
     { Kinds.KFun (k1, k2) }
-| LParent k = kind RParent
+| LParen k = kind RParen
     { k }
 
 variant:
@@ -171,7 +171,7 @@ kindopt:
 kind_and_name:
 | name = UpperName
     { (Gamma.Type.of_list [name], Kinds.Star) }
-| LParent name = UpperName Colon k = kind RParent
+| LParen name = UpperName Colon k = kind RParen
     { (Gamma.Type.of_list [name], k) }
 
 pattern:
@@ -186,7 +186,7 @@ pat:
     { ParseTree.PatternApp (p1, p2) }
 | p = pat LBracket ty = typeExpr RBracket
     { ParseTree.PatternTApp (p, ty) }
-| LParent p = pat RParent
+| LParen p = pat RParen
     { p }
 
 (********* Interface *********)

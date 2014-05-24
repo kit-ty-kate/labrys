@@ -32,8 +32,8 @@ rule main = parse
   | '.' { Parser.Dot }
   | ',' { Parser.Comma }
   | ':' { Parser.Colon }
-  | '(' { Parser.LParent }
-  | ')' { Parser.RParent }
+  | '(' { Parser.LParen }
+  | ')' { Parser.RParen }
   | '[' { Parser.LBracket }
   | ']' { Parser.RBracket }
   | '|' { Parser.Pipe }
