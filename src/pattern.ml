@@ -124,8 +124,7 @@ module Matrix = struct
           let (x, ty) = aux acc x in
           begin match ty with
           | SomeTy ty ->
-              let (param, kx) = Types.from_parse_tree ~loc gammaT param in
-              let param = TypesBeta.of_ty param in
+              let (param, kx) = TypesBeta.of_parse_tree_kind ~loc gammaT param in
               begin match ty with
               | TypesBeta.Forall (from, k, ty) when Kinds.equal k kx ->
                   let ty = TypesBeta.replace ~from ~ty:param ty in

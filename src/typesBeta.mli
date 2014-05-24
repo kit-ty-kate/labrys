@@ -28,7 +28,17 @@ type t =
   | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
 
-val of_ty : Types.t -> t
+val of_parse_tree_kind :
+  loc:Location.t ->
+  [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t ->
+  ParseTree.ty ->
+  (t * Kinds.t)
+
+val of_parse_tree :
+  loc:Location.t ->
+  [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t ->
+  ParseTree.ty ->
+  t
 
 val to_string : t -> string
 

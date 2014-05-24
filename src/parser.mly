@@ -63,6 +63,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %start mainInterface
 %type <(ParseTree.imports * Interface.t list)> mainInterface
 
+%start module_name
+%type <Gamma.Type.t> module_name
+
 %%
 
 entry(body):
@@ -70,7 +73,11 @@ entry(body):
     { (imports, body) }
 
 import:
-| Import name = upperName
+| Import modul = module_name
+    { modul }
+
+module_name:
+| name = upperName
     { Gamma.Type.of_list name }
 
 (********* Implementation *********)
@@ -201,9 +208,9 @@ bodyInterface:
         (get_loc $startpos $endpos(ty), Gamma.Name.of_list [name], ty)
       :: xs
     }
-| Type name = UpperName xs = bodyInterface
+| Type name = UpperName k = kindopt xs = bodyInterface
     { Interface.AbstractType
-        (get_loc $startpos $endpos(name), Gamma.Type.of_list [name])
+        (get_loc $startpos $endpos(name), (Gamma.Type.of_list [name], k))
       :: xs
     }
 | datatype = datatype xs = bodyInterface

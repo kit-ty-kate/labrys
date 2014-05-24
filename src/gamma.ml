@@ -33,7 +33,20 @@ module Name = struct
   let to_string = String.concat "."
 end
 
-module Type = Name
+module Type = struct
+  include Name
+
+  let check_module_name =
+    let regexp = Str.regexp "^[A-Z][A-Z a-z]*$" in
+    fun name ->
+      if not (Str.string_match regexp name 0) then
+        raise (Sys_error "Error: The given module name is invalid")
+
+  let of_string x =
+    let result = String.nsplit x ~by:"." in
+    List.iter check_module_name result;
+    result
+end
 
 module Value = struct
   include Map.Make(Name)
@@ -74,3 +87,16 @@ let empty =
   ; types = Types.empty
   ; indexes = Index.empty
   }
+
+let union (module_name, interface) self =
+  let aux interface self =
+    let aux k x acc = Value.add (module_name @ k) x acc in
+    Value.fold aux interface self
+  in
+  { values = aux interface.values self.values
+  ; types = aux interface.types self.types
+  ; indexes = aux interface.indexes self.indexes
+  }
+
+let is_empty {values; types; indexes} =
+  Value.is_empty values && Types.is_empty types && Index.is_empty indexes

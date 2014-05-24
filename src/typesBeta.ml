@@ -62,6 +62,16 @@ let rec of_ty = function
   | Types.AppOnTy (f, x) ->
       AppOnTy (of_ty f, of_ty x)
 
+let of_parse_tree_kind ~loc gammaT ty =
+  let (ty, k) = Types.from_parse_tree ~loc gammaT ty in
+  (of_ty ty, k)
+
+let of_parse_tree ~loc gammaT ty =
+  let (ty, k) = Types.from_parse_tree ~loc gammaT ty in
+  if Kinds.not_star k then
+    Error.fail ~loc "Values cannot be of kind /= '*'";
+  of_ty ty
+
 let rec to_string = function
   | Ty x -> Gamma.Type.to_string x
   | Fun (Ty x, ret) -> Gamma.Type.to_string x ^ " -> " ^ to_string ret

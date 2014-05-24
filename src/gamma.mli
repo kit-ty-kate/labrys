@@ -28,7 +28,11 @@ module Name : sig
   val to_string : t -> string
 end
 
-module Type : module type of Name
+module Type : sig
+  include module type of Name
+
+  val of_string : string -> t
+end
 
 module Value : sig
   include BatMap.S with type key = Name.t
@@ -58,3 +62,7 @@ type ('values, 'types, 'indexes) t =
   }
 
 val empty : ('a, 'b, 'c) t
+
+val union : (Type.t * ('a, 'b, 'c) t) -> ('a, 'b, 'c) t -> ('a, 'b, 'c) t
+
+val is_empty : ('a, 'b, 'c) t -> bool

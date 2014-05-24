@@ -22,84 +22,87 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let sprintf = Printf.sprintf
-
 type args =
   { print : bool
   ; lto : bool
   ; opt : int
-  ; c : bool
   ; o : string option
-  ; file : string
+  ; modul : Gamma.Type.t
   }
 
 exception ParseError of string
 
-let print_error () =
-  prerr_endline "\nThe compilation processes exited abnormally"
+let fmt = Printf.sprintf
 
-let link ~tmp ~o =
-    let tmp = Filename.quote tmp in
-    let o = Filename.quote o in
-    let ld = Sys.command (sprintf "cc -lgc %s -o %s" tmp o) in
-    if Int.(ld <> 0) then begin
-      print_error ();
-    end
+let impl_of_module modul =
+  let base_filename = Gamma.Type.to_string modul in
+  base_filename ^ ".sfw"
 
-let with_tmp_file f =
-  let tmp = Filename.temp_file "cervoise" "" in
-  f tmp;
-  Sys.remove tmp
+let intf_of_module modul = impl_of_module modul ^ "i"
 
-let compile {c; o; file; _} result =
-  let o = match o with
-    | Some o -> o
-    | None -> if c then Utils.replace_ext file "bc" else "a.out"
-  in
-  if c then begin
-    if not (Backend.write_bitcode ~o result) then
-      print_error ()
-  end else begin
-    let aux tmp =
-      Backend.emit_object_file ~tmp result;
-      link ~tmp ~o;
+let parse filename parser =
+  let aux file =
+    let filebuf = Lexing.from_channel file in
+    let get_offset () =
+      let pos = Lexing.lexeme_start_p filebuf in
+      let open Lexing in
+      let column = pos.pos_cnum - pos.pos_bol in
+      string_of_int pos.pos_lnum ^ ":" ^ string_of_int column
     in
-    with_tmp_file aux;
-  end
+    try parser Lexer.main filebuf with
+    | Lexer.Error ->
+        raise
+          (ParseError (fmt "%s: Lexing error at: %s" filename (get_offset ())))
+    | Parser.Error ->
+        raise
+          (ParseError (fmt "%s: Parsing error at: %s" filename (get_offset ())))
+  in
+  File.with_file_in filename aux
 
-let print_or_compile = function
-  | {print = true; _} -> print_endline % Backend.to_string
-  | {print = false; _} as args -> compile args
+(* TODO: handle steps in path *)
+let rec build_intf =
+  let aux acc module_name =
+    let ifile = intf_of_module module_name in
+    let (imports, tree) = parse ifile Parser.mainInterface in
+    let gamma = build_intf imports in
+    let gamma = Interface.compile gamma tree in
+    Gamma.union (module_name, gamma) acc
+  in
+  fun imports -> List.fold_left aux Gamma.empty imports
 
-let rec parse file =
-  let (imports, program) =
-    let file = open_in file in
-    let aux () =
-      let filebuf = Lexing.from_channel file in
-      let get_offset () =
-        let pos = Lexing.lexeme_start_p filebuf in
-        let open Lexing in
-        let column = pos.pos_cnum - pos.pos_bol in
-        string_of_int pos.pos_lnum ^ ":" ^ string_of_int column
-      in
-      try Parser.main Lexer.main filebuf with
-      | Lexer.Error ->
-          raise (ParseError ("Lexing error at: " ^ get_offset ()))
-      | Parser.Error ->
-          raise (ParseError ("Parsing error at: " ^ get_offset ()))
+let rec build_impl args imports =
+  (* TODO: file that checks the hash of the dependencies *)
+  (* TODO: We don't nececary need .sfw in the .sfwi contains only types *)
+  (* TODO: Memoize *)
+  let aux (gamma_acc, impl_acc) modul =
+    let interface = build_intf imports in
+    let impl =
+      compile
+        ~interface
+        {args with print = false; lto = false; modul}
     in
-    finally (fun () -> close_in file) aux ()
+    match impl_acc with
+    | Some impl_acc ->
+        (Gamma.union (modul, interface) gamma_acc, Some (Backend.link impl impl_acc))
+    | None ->
+        (Gamma.union (modul, interface) gamma_acc, Some impl)
   in
-  let aux acc x =
-    assert false
-  in
-  let gamma = List.fold_left aux Gamma.empty imports in
-  (gamma, program)
+  let (gamma, impl) = List.fold_left aux (Gamma.empty, None) imports in
+  (gamma, impl)
 
-and compile args =
-  parse args.file
-  |> TypeChecker.from_parse_tree
-  |> Lambda.of_typed_tree
-  |> Backend.make ~with_main:(not args.c) ~name:"Main"
-  |> Backend.optimize ~lto:args.lto ~opt:args.opt
-  |> print_or_compile args
+and compile ~interface args =
+  let file = impl_of_module args.modul in
+  let (imports, parse_tree) = parse file Parser.main in
+  let (gamma, code) = build_impl args imports in
+  let dst =
+    TypeChecker.from_parse_tree gamma parse_tree
+    |> Lambda.of_typed_tree
+    (* TODO: Give an the modules to be initialized *)
+    |> Backend.make ~with_main:(Gamma.is_empty interface) ~name:args.modul
+    |> Backend.optimize ~lto:args.lto ~opt:args.opt
+  in
+  match code with
+  | Some code -> Backend.link dst code
+  | None -> dst
+
+let compile = compile ~interface:Gamma.empty

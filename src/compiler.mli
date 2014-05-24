@@ -23,11 +23,10 @@ type args =
   { print : bool
   ; lto : bool
   ; opt : int
-  ; c : bool
   ; o : string option
-  ; file : string
+  ; modul : Gamma.Type.t
   }
 
 exception ParseError of string
 
-val compile : args -> unit
+val compile : args -> Backend.t

@@ -95,19 +95,9 @@ let rec transform ~from ~ty =
   in
   aux
 
-let ty_from_parse_tree ~loc gammaT ty =
-  let (ty, k) = Types.from_parse_tree ~loc gammaT ty in
-  (TypesBeta.of_ty ty, k)
-
-let ty_from_parse_tree' ~loc gammaT ty =
-  let (ty, k) = Types.from_parse_tree ~loc gammaT ty in
-  if Kinds.not_star k then
-    Error.fail ~loc "Values cannot be of kind /= '*'";
-  TypesBeta.of_ty ty
-
 let rec aux gamma gammaT gammaC = function
   | ParseTree.Abs (loc, (name, ty), t) ->
-      let ty = ty_from_parse_tree' ~loc gammaT ty in
+      let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
       let expr = aux (Gamma.Value.add name ty gamma) gammaT gammaC t in
       let param = {name; ty} in
       let ty_expr = get_type expr in
@@ -136,7 +126,7 @@ let rec aux gamma gammaT gammaC = function
       end
   | ParseTree.TApp (loc, f, ty_x) ->
       let f = aux gamma gammaT gammaC f in
-      let (ty_x, kx) = ty_from_parse_tree ~loc gammaT ty_x in
+      let (ty_x, kx) = TypesBeta.of_parse_tree_kind ~loc gammaT ty_x in
       begin match get_type f with
       | TypesBeta.Forall (ty, k, res) when Kinds.equal k kx ->
           let res = TypesBeta.replace ~from:ty ~ty:ty_x res in
@@ -191,7 +181,7 @@ let rec check_if_returns_type ~datatype = function
 let transform_variants ~datatype gamma gammaT gammaC =
   let rec aux = function
     | ParseTree.Variant (loc, name, ty) :: xs ->
-        let ty = ty_from_parse_tree' ~loc gammaT ty in
+        let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
         if check_if_returns_type ~datatype ty then
           let (xs, gamma, gammaC) = aux xs in
           let gamma = Gamma.Value.add name ty gamma in
@@ -210,7 +200,7 @@ let rec from_parse_tree gamma gammaT gammaC = function
       let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaC xs in
       Value ({name; ty}, x) :: xs
   | ParseTree.RecValue (loc, name, ty, term) :: xs ->
-      let ty = ty_from_parse_tree' ~loc gammaT ty in
+      let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
       let gamma = Gamma.Value.add name ty gamma in
       let x = aux gamma gammaT gammaC term in
       let ty_x = get_type x in
@@ -222,7 +212,7 @@ let rec from_parse_tree gamma gammaT gammaC = function
       let ty = Types.from_parse_tree ~loc gammaT ty in
       from_parse_tree gamma (Gamma.Types.add ~loc name (`Alias ty) gammaT) gammaC xs
   | ParseTree.Binding (loc, name, ty, binding) :: xs ->
-      let ty = ty_from_parse_tree' ~loc gammaT ty in
+      let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
       let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaC xs in
       Binding ({name; ty}, binding) :: xs
   | ParseTree.Datatype (loc, name, kind, variants) :: xs ->
@@ -232,5 +222,5 @@ let rec from_parse_tree gamma gammaT gammaC = function
       Datatype (name, variants) :: xs
   | [] -> []
 
-let from_parse_tree ({Gamma.values; types; indexes}, x) =
+let from_parse_tree {Gamma.values; types; indexes} x =
   from_parse_tree values types indexes x
