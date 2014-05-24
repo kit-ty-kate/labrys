@@ -36,6 +36,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       | `Ty (loc, ty) -> ParseTree.TAbs (loc, ty, term)
     in
     List.fold_left aux term (List.rev args)
+
+  let let_rec_lambda_sugar term ty args =
+    let aux (term, ty) = function
+      | `Val (loc, ((_, ty') as arg)) ->
+          (ParseTree.Abs (loc, arg, term), ParseTree.Fun (ty', ty))
+      | `Ty (loc, ty') ->
+          (ParseTree.TAbs (loc, ty', term), ParseTree.Forall (ty', ty))
+    in
+    List.fold_left aux (term, ty) (List.rev args)
 %}
 
 %token Import
@@ -91,8 +100,9 @@ body:
     { let term = let_lambda_sugar term args in
       ParseTree.Value (Gamma.Name.of_list [name], term) :: xs
     }
-| Let Rec name = LowerName Colon ty = typeExpr Equal term = term xs = body
-    { ParseTree.RecValue
+| Let Rec name = LowerName args = list(arg) Colon ty = typeExpr Equal term = term xs = body
+    { let (term, ty) = let_rec_lambda_sugar term ty args in
+      ParseTree.RecValue
         (get_loc $startpos $endpos(term), Gamma.Name.of_list [name], ty, term)
       :: xs
     }
@@ -177,7 +187,9 @@ kind:
 
 variant:
 | name = UpperName Colon ty = typeExpr
-    { ParseTree.Variant (get_loc $startpos $endpos, Gamma.Name.of_list [name], ty) }
+    { ParseTree.Variant
+        (get_loc $startpos $endpos, Gamma.Name.of_list [name], ty)
+    }
 
 kindopt:
 | { Kinds.Star }
