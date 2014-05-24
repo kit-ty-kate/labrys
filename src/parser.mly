@@ -108,8 +108,10 @@ typeAlias:
     { (get_loc $startpos $endpos, Gamma.Type.of_list [name], ty) }
 
 term:
-| Lambda LParen name = LowerName Colon ty = typeExpr RParen Arrow term = term
-    { ParseTree.Abs (get_loc $startpos $endpos(ty), (Gamma.Name.of_list [name], ty), term) }
+| Lambda args = nonempty_list(arg) Arrow term = term
+    { let aux term (loc, name, ty) = ParseTree.Abs (loc, (name, ty), term) in
+      List.fold_left aux term (List.rev args)
+    }
 | Lambda value = kind_and_name Arrow term = term
     { ParseTree.TAbs (get_loc $startpos $endpos(value), value, term) }
 | term1 = term term2 = term %prec app
@@ -124,6 +126,10 @@ term:
     { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
 | Let name = LowerName Equal t = term In xs = term
     { ParseTree.Let (Gamma.Name.of_list [name], t, xs) }
+
+arg:
+| LParen name = LowerName Colon ty = typeExpr RParen
+    { (get_loc $startpos $endpos(ty), Gamma.Name.of_list [name], ty) }
 
 name:
 | name = LowerName
