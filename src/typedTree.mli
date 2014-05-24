@@ -35,6 +35,7 @@ type t =
   | Val of value
   | PatternMatching of (t * t Pattern.Matrix.t * TypesBeta.t)
   | Let of (name * t * t * TypesBeta.t)
+  | LetRec of (name * TypesBeta.t * t * t * TypesBeta.t)
 
 type variant =
   | Variant of (name * TypesBeta.t)

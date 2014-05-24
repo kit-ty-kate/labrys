@@ -147,6 +147,11 @@ term:
     { let t = let_lambda_sugar t args in
       ParseTree.Let (Gamma.Name.of_list [name], t, xs)
     }
+| Let Rec name = LowerName args = list(arg) Colon ty = typeExpr Equal t = term In xs = term
+    { let (t, ty) = let_rec_lambda_sugar t ty args in
+      ParseTree.LetRec
+        (get_loc $startpos $endpos(ty), Gamma.Name.of_list [name], ty, t, xs)
+    }
 
 arg:
 | LParen name = LowerName Colon ty = typeExpr RParen

@@ -36,6 +36,7 @@ and t =
   | Variant of int
   | PatternMatching of (t * t list * tree)
   | Let of (name * t * t)
+  | LetRec of (name * t * t)
 
 type top =
   | Value of (name * t)

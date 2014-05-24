@@ -58,8 +58,6 @@ module Make (I : sig val name : string end) = struct
     LLVM.build_store values allocated builder;
     allocated
 
-  let create_closure f env = malloc_and_init closure_type [f; env]
-
   let env_size_of_gamma gamma =
     let aux _ = function
       | Env _ -> succ
@@ -85,6 +83,23 @@ module Make (I : sig val name : string end) = struct
     in
     let values = List.rev values in
     malloc_and_init (array_type (succ size)) values builder
+
+  let create_closure ~isrec f env gamma builder =
+    let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
+    let allocated = LLVM.build_malloc closure_type "" builder in
+    let (env, gamma) =
+      match isrec with
+      | Some rec_name ->
+          let env_size = env_size_of_gamma gamma in
+          let env = env_append allocated env env_size builder in
+          let gamma = Gamma.Value.add rec_name (Env env_size) gamma in
+          (env, gamma)
+      | None ->
+          (env, gamma)
+    in
+    let values = List.fold_lefti aux (LLVM.undef closure_type) [f; env] in
+    LLVM.build_store values allocated builder;
+    (allocated, gamma)
 
   let rec llvalue_of_pattern_var value builder = function
     | Pattern.VLeaf -> value
@@ -142,16 +157,17 @@ module Make (I : sig val name : string end) = struct
           cases;
         switch
 
-  and lambda func ~env ~globals gamma builder = function
+  and lambda func ?isrec ~env ~globals gamma builder = function
     | UntypedTree.Abs (name, t) ->
         let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
         LLVM.set_linkage LLVM.Linkage.Internal f;
-        let closure = create_closure f env builder in
+        let (closure, gamma) = create_closure ~isrec f env gamma builder in
         let builder = builder' in
         let param = LLVM.param f 0 in
         let env = LLVM.param f 1 in
         let env_size = env_size_of_gamma gamma in
         let env = env_append param env env_size builder in
+        (* TODO: Wtf override ? *)
         let gamma = Gamma.Value.add name (Value param) gamma in
         let gamma = Gamma.Value.add name (Env env_size) gamma in
         let v = lambda f ~env ~globals gamma builder t in
@@ -186,6 +202,10 @@ module Make (I : sig val name : string end) = struct
         malloc_and_init variant_type [i32 i; env] builder
     | UntypedTree.Let (name, t, xs) ->
         let t = lambda func ~env ~globals gamma builder t in
+        let gamma = Gamma.Value.add name (Value t) gamma in
+        lambda func ~env ~globals gamma builder xs
+    | UntypedTree.LetRec (name, t, xs) ->
+        let t = lambda func ~isrec:name ~env ~globals gamma builder t in
         let gamma = Gamma.Value.add name (Value t) gamma in
         lambda func ~env ~globals gamma builder xs
 

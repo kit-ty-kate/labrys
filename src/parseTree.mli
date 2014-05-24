@@ -47,6 +47,7 @@ type t =
   | Val of (Location.t * name)
   | PatternMatching of (Location.t * t * (pattern * t) list)
   | Let of (name * t * t)
+  | LetRec of (Location.t * name * ty * t * t)
 
 type variant =
   | Variant of (Location.t * name * ty)

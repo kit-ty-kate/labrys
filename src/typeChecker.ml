@@ -32,6 +32,7 @@ let get_type = function
   | Val {ty; _} -> ty
   | PatternMatching (_, _, ty) -> ty
   | Let (_, _, _, ty) -> ty
+  | LetRec (_, _, _, _, ty) -> ty
 
 let type_error_aux ~loc =
   Error.fail
@@ -92,6 +93,12 @@ let rec transform ~from ~ty =
         let xs = transform xs in
         let ty = replace ty in
         Let (name, t, xs, ty)
+    | LetRec (name, ty_let, t, xs, ty) ->
+        let ty_let = replace ty_let in
+        let t = transform t in
+        let xs = transform xs in
+        let ty = replace ty in
+        LetRec (name, ty_let, t, xs, ty)
   in
   aux
 
@@ -180,6 +187,12 @@ let rec aux gamma gammaT gammaC = function
       let gamma = Gamma.Value.add name (get_type t) gamma in
       let xs = aux gamma gammaT gammaC xs in
       Let (name, t, xs, get_type xs)
+  | ParseTree.LetRec (loc, name, ty, t, xs) ->
+      let ty = ty_from_parse_tree' ~loc gammaT ty in
+      let gamma = Gamma.Value.add name ty gamma in
+      let t = aux gamma gammaT gammaC t in
+      let xs = aux gamma gammaT gammaC xs in
+      LetRec (name, ty, t, xs, get_type xs)
 
 let rec check_if_returns_type ~datatype = function
   | TypesBeta.Ty x -> Gamma.Type.equal x datatype

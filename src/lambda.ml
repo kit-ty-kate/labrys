@@ -76,6 +76,10 @@ and of_typed_term gammaC gammaD = function
       let t = of_typed_term gammaC gammaD t in
       let xs = of_typed_term gammaC gammaD xs in
       Let (name, t, xs)
+  | TypedTree.LetRec (name, _, t, xs, _) ->
+      let t = of_typed_term gammaC gammaD t in
+      let xs = of_typed_term gammaC gammaD xs in
+      LetRec (name, t, xs)
 
 let of_typed_variant ~datatype (acc, i, gammaC, gammaD) = function
   | TypedTree.Variant (name, ty) ->
