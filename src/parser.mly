@@ -45,6 +45,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           (ParseTree.TAbs (loc, ty', term), ParseTree.Forall (ty', ty))
     in
     List.fold_left aux (term, ty) (List.rev args)
+
+  let param_ty_sugar f values ret =
+    let aux ret value = f (value, ret) in
+    List.fold_left aux ret (List.rev values)
 %}
 
 %token Import
@@ -168,10 +172,10 @@ typeExpr:
     { ParseTree.Ty (Gamma.Type.of_list name) }
 | param = typeExpr Arrow ret = typeExpr
     { ParseTree.Fun (param, ret) }
-| Forall value = kind_and_name Comma ret = typeExpr
-    { ParseTree.Forall (value, ret) }
-| Lambda value = kind_and_name Comma ret = typeExpr
-    { ParseTree.AbsOnTy (value, ret) }
+| Forall values = nonempty_list(kind_and_name) Comma ret = typeExpr
+    { param_ty_sugar (fun x -> ParseTree.Forall x) values ret }
+| Lambda values = nonempty_list(kind_and_name) Comma ret = typeExpr
+    { param_ty_sugar (fun x -> ParseTree.AbsOnTy x) values ret }
 | f = typeExpr x = typeExpr %prec tapp
     { ParseTree.AppOnTy (f, x) }
 | LParen term = typeExpr RParen
