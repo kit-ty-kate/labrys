@@ -27,6 +27,7 @@ module Name : sig
   val of_list : string list -> t
   val to_string : t -> string
   val to_file : t -> string
+  val to_module_name : t -> string
 end
 
 module Type : module type of Name

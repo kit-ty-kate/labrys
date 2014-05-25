@@ -27,29 +27,13 @@ type args =
   ; lto : bool
   ; opt : int
   ; o : string option
-  ; file : (string * string) (* TODO: Do an abstract type *)
+  ; file : ModulePath.t
+  ; modul : Gamma.Type.t
   }
 
 exception ParseError of string
 
 let fmt = Printf.sprintf
-
-let impl_of_module path modul =
-  let base_filename = Gamma.Type.to_file modul in
-  let path' = Filename.dirname base_filename in
-  let file = Filename.basename (base_filename ^ ".sfw") in
-  (Filename.concat path path', file)
-
-let intf_of_module path modul =
-  let (path, file) = impl_of_module path modul in
-  (path, file ^ "i")
-
-let module_of_file (path, file) =
-  let file = Filename.concat path file in
-  let file = Filename.chop_extension file in
-  let file = String.nsplit file ~by:"/" in
-  let file = List.map String.capitalize file in
-  String.concat "_" file
 
 let parse filename parser =
   let aux file =
@@ -70,29 +54,28 @@ let parse filename parser =
   in
   File.with_file_in filename aux
 
-(* TODO: handle steps in path *)
 let rec build_intf path =
   let aux acc module_name =
-    let (path, ifile) = intf_of_module path module_name in
-    let ifile = Filename.concat path ifile in
+    let ifile = ModulePath.intf path module_name in
+    let ifile = ModulePath.to_string ifile in
     let (imports, tree) = parse ifile Parser.mainInterface in
     let gamma = build_intf path imports in
     let gamma = Interface.compile gamma tree in
     Gamma.union (module_name, gamma) acc
   in
-  fun imports -> List.fold_left aux Gamma.empty imports
+  List.fold_left aux Gamma.empty
 
 let rec build_impl args imports =
   (* TODO: file that checks the hash of the dependencies *)
   (* TODO: We don't nececary need .sfw in the .sfwi contains only types *)
   (* TODO: Memoize *)
   let aux (gamma_acc, impl_acc) modul =
-    let interface = build_intf (fst args.file) imports in
-    let file = impl_of_module (fst args.file) modul in
+    let interface = build_intf args.file imports in
+    let file = ModulePath.impl args.file modul in
     let impl =
       compile
         ~interface
-        {args with print = false; lto = false; file}
+        {args with print = false; lto = false; file; modul}
     in
     match impl_acc with
     | Some impl_acc ->
@@ -100,18 +83,16 @@ let rec build_impl args imports =
     | None ->
         (Gamma.union (modul, interface) gamma_acc, Some impl)
   in
-  let (gamma, impl) = List.fold_left aux (Gamma.empty, None) imports in
-  (gamma, impl)
+  List.fold_left aux (Gamma.empty, None) imports
 
 and compile ?(with_main = false) ~interface args =
-  let file = Filename.concat (fst args.file) (snd args.file) in
+  let file = ModulePath.to_string args.file in
   let (imports, parse_tree) = parse file Parser.main in
   let (gamma, code) = build_impl args imports in
   let dst =
     TypeChecker.from_parse_tree gamma parse_tree
     |> Lambda.of_typed_tree
-    (* TODO: Give an the modules to be initialized *)
-    |> Backend.make ~with_main ~name:(module_of_file args.file)
+    |> Backend.make ~with_main ~name:args.modul ~imports
     |> Backend.optimize ~lto:args.lto ~opt:args.opt
   in
   match code with

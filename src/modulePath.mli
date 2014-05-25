@@ -19,15 +19,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type args =
-  { print : bool
-  ; lto : bool
-  ; opt : int
-  ; o : string option
-  ; file : ModulePath.t
-  ; modul : Gamma.Type.t
-  }
+type t
 
-exception ParseError of string
+val of_file : string -> t
 
-val compile : args -> Backend.t
+val impl : t -> Gamma.Type.t -> t
+val intf : t -> Gamma.Type.t -> t
+
+val to_module : t -> Gamma.Type.t
+val to_string : t -> string

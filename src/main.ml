@@ -59,8 +59,9 @@ let start print lto opt o file' =
       "Error: Cannot enable the lto optimization while compiling.\n\
        This is allowed only during linking"
 *)
-  let file = (Filename.dirname file', Filename.basename file') in
-  let args = {Compiler.print; lto; opt; o; file} in
+  let file = ModulePath.of_file file' in
+  let modul = ModulePath.to_module file in
+  let args = {Compiler.print; lto; opt; o; file; modul} in
   try Compiler.compile args |> print_or_write args; None with
   | Error.Exn x -> Some (Error.dump ~file:file' x)
   | Compiler.ParseError x -> Some x

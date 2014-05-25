@@ -246,7 +246,17 @@ module Make (I : sig val name : string end) = struct
     let gc_init = LLVM.declare_function "GC_init" unit_function_type m in
     ignore (LLVM.build_call gc_init [||] "" builder)
 
-  let make ~with_main =
+  let init_name = fmt "__%s_init"
+
+  let init_imports imports builder =
+    let aux import =
+      let import = Gamma.Type.to_module_name import in
+      let f = LLVM.declare_global unit_function_type (init_name import) m in
+      ignore (LLVM.build_call f [||] "" builder)
+    in
+    List.iter aux imports
+
+  let make ~with_main ~imports =
     let rec top init_list i gamma = function
       | UntypedTree.Value (name, t) :: xs ->
           top (`Val (name, i, t) :: init_list) (succ i) gamma xs
@@ -257,14 +267,15 @@ module Make (I : sig val name : string end) = struct
           top (`Bind (name, v, i) :: init_list) (succ i) gamma xs
       | [] ->
           let (f, builder) =
-            LLVM.define_function c (fmt "__%s_init" I.name) unit_function_type m
+            LLVM.define_function c (init_name I.name) unit_function_type m
           in
-          init_gc builder;
+          init_imports imports builder;
           let globals = create_globals i in
           init f ~globals gamma Gamma.Value.empty builder (List.rev init_list);
           LLVM.build_ret_void builder;
           if with_main then begin
             let (_, builder) = LLVM.define_function c "main" unit_function_type m in
+            init_gc builder;
             ignore (LLVM.build_call f [||] "" builder);
             LLVM.build_ret_void builder;
           end;
@@ -273,9 +284,10 @@ module Make (I : sig val name : string end) = struct
     top [] 0 Gamma.Value.empty
 end
 
-let make ~with_main ~name x =
+let make ~with_main ~name ~imports x =
+  let name = Gamma.Type.to_module_name name in
   let module Module = Make(struct let name = name end) in
-  Module.make ~with_main x
+  Module.make ~with_main ~imports x
 
 let link dst src =
   Llvm_linker.link_modules dst src Llvm_linker.Mode.DestroySource;
