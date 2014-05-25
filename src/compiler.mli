@@ -24,7 +24,7 @@ type args =
   ; lto : bool
   ; opt : int
   ; o : string option
-  ; file : string
+  ; file : (string * string)
   }
 
 exception ParseError of string

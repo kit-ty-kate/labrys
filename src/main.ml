@@ -53,15 +53,16 @@ let print_or_write = function
   | {Compiler.print = true; _} -> print_endline % Backend.to_string
   | {Compiler.print = false; _} as args -> write args
 
-let start print lto opt o file =
+let start print lto opt o file' =
 (*  if lto && c then
     Some
       "Error: Cannot enable the lto optimization while compiling.\n\
        This is allowed only during linking"
 *)
+  let file = (Filename.dirname file', Filename.basename file') in
   let args = {Compiler.print; lto; opt; o; file} in
   try Compiler.compile args |> print_or_write args; None with
-  | Error.Exn x -> Some (Error.dump ~file x)
+  | Error.Exn x -> Some (Error.dump ~file:file' x)
   | Compiler.ParseError x -> Some x
   | Sys_error x -> Some x
 

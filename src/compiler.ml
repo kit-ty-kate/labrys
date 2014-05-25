@@ -27,20 +27,25 @@ type args =
   ; lto : bool
   ; opt : int
   ; o : string option
-  ; file : string
+  ; file : (string * string) (* TODO: Do an abstract type *)
   }
 
 exception ParseError of string
 
 let fmt = Printf.sprintf
 
-let impl_of_module modul =
+let impl_of_module path modul =
   let base_filename = Gamma.Type.to_file modul in
-  base_filename ^ ".sfw"
+  let path' = Filename.dirname base_filename in
+  let file = Filename.basename (base_filename ^ ".sfw") in
+  (Filename.concat path path', file)
 
-let intf_of_module modul = impl_of_module modul ^ "i"
+let intf_of_module path modul =
+  let (path, file) = impl_of_module path modul in
+  (path, file ^ "i")
 
-let module_of_file file =
+let module_of_file (path, file) =
+  let file = Filename.concat path file in
   let file = Filename.chop_extension file in
   let file = String.nsplit file ~by:"/" in
   let file = List.map String.capitalize file in
@@ -66,11 +71,12 @@ let parse filename parser =
   File.with_file_in filename aux
 
 (* TODO: handle steps in path *)
-let rec build_intf =
+let rec build_intf path =
   let aux acc module_name =
-    let ifile = intf_of_module module_name in
+    let (path, ifile) = intf_of_module path module_name in
+    let ifile = Filename.concat path ifile in
     let (imports, tree) = parse ifile Parser.mainInterface in
-    let gamma = build_intf imports in
+    let gamma = build_intf path imports in
     let gamma = Interface.compile gamma tree in
     Gamma.union (module_name, gamma) acc
   in
@@ -81,8 +87,8 @@ let rec build_impl args imports =
   (* TODO: We don't nececary need .sfw in the .sfwi contains only types *)
   (* TODO: Memoize *)
   let aux (gamma_acc, impl_acc) modul =
-    let interface = build_intf imports in
-    let file = impl_of_module modul in
+    let interface = build_intf (fst args.file) imports in
+    let file = impl_of_module (fst args.file) modul in
     let impl =
       compile
         ~interface
@@ -98,7 +104,8 @@ let rec build_impl args imports =
   (gamma, impl)
 
 and compile ~interface args =
-  let (imports, parse_tree) = parse args.file Parser.main in
+  let file = Filename.concat (fst args.file) (snd args.file) in
+  let (imports, parse_tree) = parse file Parser.main in
   let (gamma, code) = build_impl args imports in
   let dst =
     TypeChecker.from_parse_tree gamma parse_tree
