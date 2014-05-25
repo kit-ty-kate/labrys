@@ -85,6 +85,3 @@ let union (module_name, interface) self =
   ; types = aux interface.types self.types
   ; indexes = aux interface.indexes self.indexes
   }
-
-let is_empty {values; types; indexes} =
-  Value.is_empty values && Types.is_empty types && Index.is_empty indexes

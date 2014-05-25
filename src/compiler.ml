@@ -103,7 +103,7 @@ let rec build_impl args imports =
   let (gamma, impl) = List.fold_left aux (Gamma.empty, None) imports in
   (gamma, impl)
 
-and compile ~interface args =
+and compile ?(with_main = false) ~interface args =
   let file = Filename.concat (fst args.file) (snd args.file) in
   let (imports, parse_tree) = parse file Parser.main in
   let (gamma, code) = build_impl args imports in
@@ -111,11 +111,11 @@ and compile ~interface args =
     TypeChecker.from_parse_tree gamma parse_tree
     |> Lambda.of_typed_tree
     (* TODO: Give an the modules to be initialized *)
-    |> Backend.make ~with_main:(Gamma.is_empty interface) ~name:(module_of_file args.file)
+    |> Backend.make ~with_main ~name:(module_of_file args.file)
     |> Backend.optimize ~lto:args.lto ~opt:args.opt
   in
   match code with
   | Some code -> Backend.link dst code
   | None -> dst
 
-let compile = compile ~interface:Gamma.empty
+let compile = compile ~with_main:true ~interface:Gamma.empty

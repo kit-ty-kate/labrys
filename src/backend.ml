@@ -24,6 +24,8 @@ open Monomorphic.None
 
 type t = Llvm.llmodule
 
+let fmt = Printf.sprintf
+
 module Make (I : sig val name : string end) = struct
   type gamma =
     | Value of LLVM.llvalue
@@ -217,6 +219,7 @@ module Make (I : sig val name : string end) = struct
         (* TODO: Use global (needs a real build-system) *)
         let aux name value =
           let name = Gamma.Name.to_string name in
+          let name = I.name ^ "_" ^ name in
           let global = LLVM.define_global name null m in
           LLVM.build_store value global builder;
         in
@@ -253,7 +256,9 @@ module Make (I : sig val name : string end) = struct
           let v = LLVM.bind c ~name binding m in
           top (`Bind (name, v, i) :: init_list) (succ i) gamma xs
       | [] ->
-          let (f, builder) = LLVM.define_function c "__init" unit_function_type m in
+          let (f, builder) =
+            LLVM.define_function c (fmt "__%s_init" I.name) unit_function_type m
+          in
           init_gc builder;
           let globals = create_globals i in
           init f ~globals gamma Gamma.Value.empty builder (List.rev init_list);

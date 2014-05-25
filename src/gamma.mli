@@ -61,5 +61,3 @@ type ('values, 'types, 'indexes) t =
 val empty : ('a, 'b, 'c) t
 
 val union : (Type.t * ('a, 'b, 'c) t) -> ('a, 'b, 'c) t -> ('a, 'b, 'c) t
-
-val is_empty : ('a, 'b, 'c) t -> bool
