@@ -24,7 +24,7 @@ type args =
   ; lto : bool
   ; opt : int
   ; o : string option
-  ; modul : Gamma.Type.t
+  ; file : string
   }
 
 exception ParseError of string

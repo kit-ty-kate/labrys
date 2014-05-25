@@ -53,16 +53,15 @@ let print_or_write = function
   | {Compiler.print = true; _} -> print_endline % Backend.to_string
   | {Compiler.print = false; _} as args -> write args
 
-let start print lto opt o modul =
+let start print lto opt o file =
 (*  if lto && c then
     Some
       "Error: Cannot enable the lto optimization while compiling.\n\
        This is allowed only during linking"
 *)
-  let modul = Gamma.Type.of_string modul in
-  let args = {Compiler.print; lto; opt; o; modul} in
+  let args = {Compiler.print; lto; opt; o; file} in
   try Compiler.compile args |> print_or_write args; None with
-  | Error.Exn x -> Some (Error.dump ~file:(Gamma.Type.to_string modul) x)
+  | Error.Exn x -> Some (Error.dump ~file x)
   | Compiler.ParseError x -> Some x
   | Sys_error x -> Some x
 
@@ -71,8 +70,8 @@ let cmd =
   let lto = Arg.(value & flag & info ["lto"]) in
   let opt = Arg.(value & opt int 0 & info ["opt"]) in
   let o = Arg.(value & opt (some string) None & info ["o"]) in
-  let modul = Arg.(required & pos 0 (some string) None & info []) in
-  (Term.(pure start $ print $ lto $ opt $ o $ modul), Term.info "cervoise")
+  let file = Arg.(required & pos 0 (some non_dir_file) None & info []) in
+  (Term.(pure start $ print $ lto $ opt $ o $ file), Term.info "cervoise")
 
 let () =
   match Term.eval cmd with

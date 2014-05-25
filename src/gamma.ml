@@ -31,22 +31,10 @@ module Name = struct
 
   let of_list x = x
   let to_string = String.concat "."
+  let to_file = String.concat "/"
 end
 
-module Type = struct
-  include Name
-
-  let check_module_name =
-    let regexp = Str.regexp "^[A-Z][A-Z a-z]*$" in
-    fun name ->
-      if not (Str.string_match regexp name 0) then
-        raise (Sys_error "Error: The given module name is invalid")
-
-  let of_string x =
-    let result = String.nsplit x ~by:"." in
-    List.iter check_module_name result;
-    result
-end
+module Type = Name
 
 module Value = struct
   include Map.Make(Name)

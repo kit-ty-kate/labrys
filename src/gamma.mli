@@ -26,13 +26,10 @@ module Name : sig
 
   val of_list : string list -> t
   val to_string : t -> string
+  val to_file : t -> string
 end
 
-module Type : sig
-  include module type of Name
-
-  val of_string : string -> t
-end
+module Type : module type of Name
 
 module Value : sig
   include BatMap.S with type key = Name.t

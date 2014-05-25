@@ -27,7 +27,7 @@ type args =
   ; lto : bool
   ; opt : int
   ; o : string option
-  ; modul : Gamma.Type.t
+  ; file : string
   }
 
 exception ParseError of string
@@ -35,10 +35,16 @@ exception ParseError of string
 let fmt = Printf.sprintf
 
 let impl_of_module modul =
-  let base_filename = Gamma.Type.to_string modul in
+  let base_filename = Gamma.Type.to_file modul in
   base_filename ^ ".sfw"
 
 let intf_of_module modul = impl_of_module modul ^ "i"
+
+let module_of_file file =
+  let file = Filename.chop_extension file in
+  let file = String.nsplit file ~by:"/" in
+  let file = List.map String.capitalize file in
+  String.concat "_" file
 
 let parse filename parser =
   let aux file =
@@ -76,10 +82,11 @@ let rec build_impl args imports =
   (* TODO: Memoize *)
   let aux (gamma_acc, impl_acc) modul =
     let interface = build_intf imports in
+    let file = impl_of_module modul in
     let impl =
       compile
         ~interface
-        {args with print = false; lto = false; modul}
+        {args with print = false; lto = false; file}
     in
     match impl_acc with
     | Some impl_acc ->
@@ -91,14 +98,13 @@ let rec build_impl args imports =
   (gamma, impl)
 
 and compile ~interface args =
-  let file = impl_of_module args.modul in
-  let (imports, parse_tree) = parse file Parser.main in
+  let (imports, parse_tree) = parse args.file Parser.main in
   let (gamma, code) = build_impl args imports in
   let dst =
     TypeChecker.from_parse_tree gamma parse_tree
     |> Lambda.of_typed_tree
     (* TODO: Give an the modules to be initialized *)
-    |> Backend.make ~with_main:(Gamma.is_empty interface) ~name:args.modul
+    |> Backend.make ~with_main:(Gamma.is_empty interface) ~name:(module_of_file args.file)
     |> Backend.optimize ~lto:args.lto ~opt:args.opt
   in
   match code with

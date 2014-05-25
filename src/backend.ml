@@ -269,7 +269,6 @@ module Make (I : sig val name : string end) = struct
 end
 
 let make ~with_main ~name x =
-  let name = Gamma.Type.to_string name in
   let module Module = Make(struct let name = name end) in
   Module.make ~with_main x
 
