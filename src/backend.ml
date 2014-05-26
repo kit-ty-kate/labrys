@@ -162,6 +162,8 @@ module Make (I : sig val name : string end) = struct
         LLVM.set_linkage LLVM.Linkage.Internal f;
         let (closure, gamma) = create_closure ~isrec f env gamma builder in
         let builder = builder' in
+        (* TODO: Use %0 instead of env (%1) if possible *)
+        (* TODO: Have a thinner env management *)
         let param = LLVM.param f 0 in
         let env = LLVM.param f 1 in
         let (env, gamma) = env_append param env name gamma builder in
