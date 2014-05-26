@@ -65,7 +65,8 @@ module Make (I : sig val name : string end) = struct
     in
     Gamma.Value.fold aux gamma 0
 
-  let env_append param old_env size builder =
+  let env_append param old_env name gamma builder =
+    let size = env_size_of_gamma gamma in
     let values =
       let old_env = LLVM.build_bitcast old_env (array_ptr_type size) "" builder in
       if Int.equal size 0 then
@@ -82,7 +83,8 @@ module Make (I : sig val name : string end) = struct
         loop [] 0
     in
     let values = List.rev values in
-    malloc_and_init (array_type (succ size)) values builder
+    let gamma = Gamma.Value.add name (Env size) gamma in
+    (malloc_and_init (array_type (succ size)) values builder, gamma)
 
   let create_closure ~isrec f env gamma builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
@@ -90,10 +92,7 @@ module Make (I : sig val name : string end) = struct
     let (env, gamma) =
       match isrec with
       | Some rec_name ->
-          let env_size = env_size_of_gamma gamma in
-          let env = env_append allocated env env_size builder in
-          let gamma = Gamma.Value.add rec_name (Env env_size) gamma in
-          (env, gamma)
+          env_append allocated env rec_name gamma builder
       | None ->
           (env, gamma)
     in
@@ -165,11 +164,7 @@ module Make (I : sig val name : string end) = struct
         let builder = builder' in
         let param = LLVM.param f 0 in
         let env = LLVM.param f 1 in
-        let env_size = env_size_of_gamma gamma in
-        let env = env_append param env env_size builder in
-        (* TODO: Wtf override ? *)
-        let gamma = Gamma.Value.add name (Value param) gamma in
-        let gamma = Gamma.Value.add name (Env env_size) gamma in
+        let (env, gamma) = env_append param env name gamma builder in
         let v = lambda f ~env ~globals gamma builder t in
         LLVM.build_ret v builder;
         closure
