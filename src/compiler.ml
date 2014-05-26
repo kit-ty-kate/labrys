@@ -65,30 +65,38 @@ let rec build_intf path =
   in
   List.fold_left aux Gamma.empty
 
-let rec build_impl args imports =
+let rec build_impl =
+  let tbl = Hashtbl.create 32 in
+  fun args imports ->
   (* TODO: file that checks the hash of the dependencies *)
   (* TODO: We don't nececary need .sfw in the .sfwi contains only types *)
-  (* TODO: Memoize *)
-  let aux (gamma_acc, impl_acc) modul =
-    let interface = build_intf args.file imports in
-    let file = ModulePath.impl args.file modul in
-    let impl =
-      compile
-        ~interface
-        {args with print = false; lto = false; file; modul}
-    in
-    match impl_acc with
-    | Some impl_acc ->
-        (Gamma.union (modul, interface) gamma_acc, Some (Backend.link impl impl_acc))
+  let aux ((imports_acc, gamma_acc, impl_acc) as acc) modul =
+    match Hashtbl.find tbl modul with
+    | Some () ->
+        acc
     | None ->
-        (Gamma.union (modul, interface) gamma_acc, Some impl)
+        let interface = build_intf args.file imports in
+        let file = ModulePath.impl args.file modul in
+        let impl =
+          compile
+            ~interface
+            {args with print = false; lto = false; file; modul}
+        in
+        let impl = match impl_acc with
+          | Some impl_acc -> Backend.link impl impl_acc
+          | None -> impl
+        in
+        Hashtbl.add tbl modul ();
+        let gamma = Gamma.union (modul, interface) gamma_acc in
+        (imports_acc @ [modul], gamma, Some impl)
   in
-  List.fold_left aux (Gamma.empty, None) imports
+  List.fold_left aux ([], Gamma.empty, None) imports
 
 and compile ?(with_main = false) ~interface args =
+  (* TODO: Check interface *)
   let file = ModulePath.to_string args.file in
   let (imports, parse_tree) = parse file Parser.main in
-  let (gamma, code) = build_impl args imports in
+  let (imports, gamma, code) = build_impl args imports in
   let dst =
     TypeChecker.from_parse_tree gamma parse_tree
     |> Lambda.of_typed_tree
