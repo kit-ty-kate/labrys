@@ -162,7 +162,18 @@ module Matrix = struct
 
   let map f m = List.map (fun (constr, x) -> (constr, f x)) m
 
-  let get_results m = List.map snd m
+  let get_results m =
+    let aux (constr, branch) =
+      let constr =
+        let rec aux acc = function
+          | MConstr (_, l) -> List.fold_left aux acc l
+          | MAny name -> name :: acc
+        in
+        aux [] constr
+      in
+      (constr, branch)
+    in
+    List.map aux m
 end
 
 type constr =

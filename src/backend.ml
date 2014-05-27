@@ -83,7 +83,7 @@ module Make (I : sig val name : string end) = struct
   let create_closure ~isrec ~used_vars ~f ~env gamma builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
     let allocated = LLVM.build_malloc closure_type "" builder in
-    let gamma = Gamma.Value.filter (fun x _ -> Hashtbl.mem used_vars x) gamma in
+    let gamma = Gamma.Value.filter (fun x _ -> List.mem x used_vars) gamma in
     let gamma = match isrec with
       | Some rec_name -> Gamma.Value.add rec_name (Value allocated) gamma
       | None -> gamma

@@ -19,6 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+type name = Gamma.Name.t
+
 module Matrix : sig
   type 'a t
 
@@ -43,10 +45,8 @@ module Matrix : sig
 
   val map : ('a -> 'b) -> 'a t -> 'b t
 
-  val get_results : 'a t -> 'a list
+  val get_results : 'a t -> (name list * 'a) list
 end
-
-type name = Gamma.Name.t
 
 type constr =
   | Constr of name

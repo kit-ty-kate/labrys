@@ -45,63 +45,63 @@ let rec of_patterns gammaC = function
       in
       Node (var, patterns)
 
-let rec of_results used_list gammaC gammaD m =
-  let aux acc t =
-    let t = of_typed_term used_list gammaC gammaD t in
-    t :: acc
+let rec of_results gammaC gammaD m =
+  let aux (acc, used_vars_acc) (wildcards, t) =
+    let (t, used_vars) = of_typed_term gammaC gammaD t in
+    let used_vars = List.fold_left List.remove used_vars wildcards in
+    (t :: acc, used_vars @ used_vars_acc)
   in
-  List.fold_left aux [] m
+  List.fold_left aux ([], []) m
 
-and of_typed_term used_list gammaC gammaD = function
+and of_typed_term gammaC gammaD = function
   | TypedTree.Abs ({TypedTree.param = {TypedTree.name; _}; _}, t) ->
-      let used_vars = Hashtbl.create 32 in
-      let used_list = used_vars :: used_list in
-      let t = of_typed_term used_list gammaC gammaD t in
-      Abs (name, used_vars, t)
+      let (t, used_vars) = of_typed_term gammaC gammaD t in
+      let used_vars = List.remove used_vars name in
+      (Abs (name, used_vars, t), used_vars)
   | TypedTree.TApp (_, t, _)
   | TypedTree.TAbs (_, t) ->
-      of_typed_term used_list gammaC gammaD t
+      of_typed_term gammaC gammaD t
   | TypedTree.App (_, f, x) ->
-      let f = of_typed_term used_list gammaC gammaD f in
-      let x = of_typed_term used_list gammaC gammaD x in
-      App (f, x)
+      let (f, used_vars1) = of_typed_term gammaC gammaD f in
+      let (x, used_vars2) = of_typed_term gammaC gammaD x in
+      (App (f, x), used_vars1 @ used_vars2)
   | TypedTree.Val {TypedTree.name; _} ->
-      List.iter (fun x -> Hashtbl.add x name ()) used_list;
-      Val name
+      (Val name, [name])
   | TypedTree.PatternMatching (t, patterns, _) ->
       let results = Pattern.Matrix.get_results patterns in
       let patterns = Pattern.create gammaD patterns in
-      let t = of_typed_term used_list gammaC gammaD t in
-      let results = of_results used_list gammaC gammaD results in
+      let (t, used_vars1) = of_typed_term gammaC gammaD t in
+      let (results, used_vars2) = of_results gammaC gammaD results in
       let patterns = of_patterns gammaC patterns in
-      PatternMatching (t, results, patterns)
+      (PatternMatching (t, results, patterns), used_vars1 @ used_vars2)
   | TypedTree.Let (name, t, xs, _) ->
-      let t = of_typed_term used_list gammaC gammaD t in
-      let xs = of_typed_term used_list gammaC gammaD xs in
-      Let (name, t, xs)
+      let (t, used_vars1) = of_typed_term gammaC gammaD t in
+      let (xs, used_vars2) = of_typed_term gammaC gammaD xs in
+      let used_vars = used_vars1 @ List.remove used_vars2 name in
+      (Let (name, t, xs), used_vars)
   | TypedTree.LetRec (name, _, t, xs, _) ->
-      let t = of_typed_term used_list gammaC gammaD t in
-      let xs = of_typed_term used_list gammaC gammaD xs in
-      LetRec (name, t, xs)
+      let (t, used_vars1) = of_typed_term gammaC gammaD t in
+      let (xs, used_vars2) = of_typed_term gammaC gammaD xs in
+      let used_vars =
+        List.remove used_vars1 name @ List.remove used_vars2 name
+      in
+      (LetRec (name, t, xs), used_vars)
 
 let of_typed_variant ~datatype (acc, i, gammaC, gammaD) = function
   | TypedTree.Variant (name, ty) ->
       let variant =
-        let rec aux used_list params = function
+        let rec aux params = function
           | 0 ->
-              let add tbl name = Hashtbl.add tbl name () in
-              List.iter (fun tbl -> List.iter (add tbl) params) used_list;
-              Variant i
+              (Variant i, params)
           | n ->
               let name = Gamma.Name.of_list [string_of_int n] in
               let params = name :: params in
-              let used_vars = Hashtbl.create 4 in
-              let used_list = used_vars :: used_list in
-              let t = aux used_list params (pred n) in
-              Abs (name, used_vars, t)
+              let (t, used_vars) = aux params (pred n) in
+              let used_vars = List.remove used_vars name in
+              (Abs (name, used_vars, t), used_vars)
         in
         let size = TypesBeta.size ty in
-        let t = aux [] [] size in
+        let (t, _) = aux [] size in
         Value (name, t)
       in
       let gammaC = Gamma.Index.add name i gammaC in
@@ -111,10 +111,10 @@ let of_typed_variant ~datatype (acc, i, gammaC, gammaD) = function
 let of_typed_tree =
   let rec aux gammaC gammaD = function
     | TypedTree.Value ({TypedTree.name; _}, t) :: xs ->
-        let t = of_typed_term [] gammaC gammaD t in
+        let (t, _) = of_typed_term gammaC gammaD t in
         Value (name, t) :: aux gammaC gammaD xs
     | TypedTree.RecValue ({TypedTree.name; _}, t) :: xs ->
-        let t = of_typed_term [] gammaC gammaD t in
+        let (t, _) = of_typed_term gammaC gammaD t in
         RecValue (name, t) :: aux gammaC gammaD xs
     | TypedTree.Binding ({TypedTree.name; _}, value) :: xs ->
         Binding (name, value) :: aux gammaC gammaD xs
