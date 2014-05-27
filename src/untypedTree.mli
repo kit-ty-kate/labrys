@@ -20,6 +20,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Gamma.Name.t
+type used_vars = (name, unit) Hashtbl.t
+type index = int
 
 type constr =
   | Constr of int
@@ -30,10 +32,10 @@ type tree =
   | Leaf of int
 
 and t =
-  | Abs of (name * t)
+  | Abs of (name * used_vars * t)
   | App of (t * t)
   | Val of name
-  | Variant of int
+  | Variant of index
   | PatternMatching of (t * t list * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)

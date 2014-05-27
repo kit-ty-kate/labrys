@@ -58,46 +58,41 @@ module Make (I : sig val name : string end) = struct
     LLVM.build_store values allocated builder;
     allocated
 
-  let env_size_of_gamma gamma =
-    let aux _ = function
-      | Env _ -> succ
-      | Value _ | Glob _ -> identity
+  let fold_env ~env gamma builder =
+    let old_env_size = Gamma.Value.cardinal gamma in
+    let env = LLVM.build_bitcast env (array_ptr_type old_env_size) "" builder in
+    let env = lazy (LLVM.build_load env "" builder) in
+    let aux name value (i, values, gamma) =
+      match value with
+      | Value value ->
+          let values = value :: values in
+          let gamma = Gamma.Value.add name (Env i) gamma in
+          (succ i, values, gamma)
+      | Env j ->
+          let env = Lazy.force env in
+          let value = LLVM.build_extractvalue env j "" builder in
+          let values = value :: values in
+          let gamma = Gamma.Value.add name (Env i) gamma in
+          (succ i, values, gamma)
+      | Glob j ->
+          let gamma = Gamma.Value.add name (Glob j) gamma in
+          (i, values, gamma)
     in
-    Gamma.Value.fold aux gamma 0
+    Gamma.Value.fold aux gamma (0, [], Gamma.Value.empty)
 
-  let env_append param old_env name gamma builder =
-    let size = env_size_of_gamma gamma in
-    let values =
-      let old_env = LLVM.build_bitcast old_env (array_ptr_type size) "" builder in
-      if Int.equal size 0 then
-        [param]
-      else
-        let old_env = LLVM.build_load old_env "" builder in
-        let rec loop acc i =
-          if Int.(i < size) then
-            let old_value = LLVM.build_extractvalue old_env i "" builder in
-            loop (old_value :: acc) (succ i)
-          else
-            param :: acc
-        in
-        loop [] 0
-    in
-    let values = List.rev values in
-    let gamma = Gamma.Value.add name (Env size) gamma in
-    (malloc_and_init (array_type (succ size)) values builder, gamma)
-
-  let create_closure ~isrec f env gamma builder =
+  let create_closure ~isrec ~used_vars ~f ~env gamma builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
     let allocated = LLVM.build_malloc closure_type "" builder in
-    let (env, gamma) =
-      match isrec with
-      | Some rec_name ->
-          env_append allocated env rec_name gamma builder
-      | None ->
-          (env, gamma)
+    let gamma = Gamma.Value.filter (fun x _ -> Hashtbl.mem used_vars x) gamma in
+    let gamma = match isrec with
+      | Some rec_name -> Gamma.Value.add rec_name (Value allocated) gamma
+      | None -> gamma
     in
-    let values = List.fold_lefti aux (LLVM.undef closure_type) [f; env] in
-    LLVM.build_store values allocated builder;
+    let (env_size, values, gamma) = fold_env ~env gamma builder in
+    let values = List.rev values in
+    let env = malloc_and_init (array_type env_size) values builder in
+    let closure = List.fold_lefti aux (LLVM.undef closure_type) [f; env] in
+    LLVM.build_store closure allocated builder;
     (allocated, gamma)
 
   let rec llvalue_of_pattern_var value builder = function
@@ -157,16 +152,16 @@ module Make (I : sig val name : string end) = struct
         switch
 
   and lambda func ?isrec ~env ~globals gamma builder = function
-    | UntypedTree.Abs (name, t) ->
+    | UntypedTree.Abs (name, used_vars, t) ->
         let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
         LLVM.set_linkage LLVM.Linkage.Internal f;
-        let (closure, gamma) = create_closure ~isrec f env gamma builder in
+        let (closure, gamma) =
+          create_closure ~isrec ~used_vars ~f ~env gamma builder
+        in
         let builder = builder' in
-        (* TODO: Use %0 instead of env (%1) if possible *)
-        (* TODO: Have a thinner env management *)
         let param = LLVM.param f 0 in
         let env = LLVM.param f 1 in
-        let (env, gamma) = env_append param env name gamma builder in
+        let gamma = Gamma.Value.add name (Value param) gamma in
         let v = lambda f ~env ~globals gamma builder t in
         LLVM.build_ret v builder;
         closure
