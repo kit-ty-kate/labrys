@@ -154,7 +154,7 @@ module Make (I : sig val name : string end) = struct
   and lambda func ?isrec ~env ~globals gamma builder = function
     | UntypedTree.Abs (name, used_vars, t) ->
         let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
-        LLVM.set_linkage LLVM.Linkage.Internal f;
+        LLVM.set_linkage LLVM.Linkage.Private f;
         let (closure, gamma) =
           create_closure ~isrec ~used_vars ~f ~env gamma builder
         in
@@ -240,7 +240,7 @@ module Make (I : sig val name : string end) = struct
       LLVM.const_array star_type value
     in
     let globals = LLVM.define_global "globals" initial_value m in
-    LLVM.set_linkage LLVM.Linkage.Internal globals;
+    LLVM.set_linkage LLVM.Linkage.Private globals;
     globals
 
   let init_gc builder =
