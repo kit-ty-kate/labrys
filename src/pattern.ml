@@ -53,7 +53,7 @@ module Matrix = struct
     | MConstr of (name * constr list)
     | MAny of name
 
-  type 'a t = (constr * 'a) list
+  type 'a t = (constr list * 'a) list
 
   type ty =
     | AnyTy of name
@@ -156,7 +156,7 @@ module Matrix = struct
       end;
       res
 
-  let create ~loc gammaT gammaC ty term p = [(create ~loc gammaT gammaC ty p, term)]
+  let create ~loc gammaT gammaC ty term p = [([create ~loc gammaT gammaC ty p], term)]
 
   let append ~loc gammaT gammaC ty term p patterns = patterns @ create ~loc gammaT gammaC ty term p
 
@@ -169,7 +169,7 @@ module Matrix = struct
           | MConstr (_, l) -> List.fold_left aux acc l
           | MAny name -> name :: acc
         in
-        aux [] constr
+        List.fold_left aux [] constr
       in
       (constr, branch)
     in
@@ -189,12 +189,15 @@ type t =
   | Leaf of int
 
 let create gammaD =
-  let rec aux i var acc = function
-    | (Matrix.MConstr (name, args), _) :: xs ->
+  let rec aux i var acc =
+    function
+    | ((*Matrix.MConstr (name, args)*)_, _) :: xs ->
         let args = assert false in
-        aux (succ i) var ((Constr name, args) :: acc) xs
-    | (Matrix.MAny name, _) :: xs ->
-        aux (succ i) var ((Any name, Leaf i) :: acc) xs
+        assert false
+        (*aux (succ i) var ((Constr name, args) :: acc) xs*)
+    | ((*Matrix.MAny name*)_, _) :: xs ->
+        assert false
+        (*aux (succ i) var ((Any name, Leaf i) :: acc) xs*)
     | [] ->
         Node (var, acc)
   in
