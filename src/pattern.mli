@@ -23,6 +23,7 @@ type name = Gamma.Name.t
 
 module Matrix : sig
   type 'a t
+  type matrix
 
   val create :
     loc:Location.t ->
@@ -45,7 +46,7 @@ module Matrix : sig
 
   val map : ('a -> 'b) -> 'a t -> 'b t
 
-  val get_results : 'a t -> (name list * 'a) list
+  val split : 'a t -> (matrix * (name list * 'a) list)
 end
 
 type constr =
@@ -60,4 +61,4 @@ type t =
   | Node of (var * (constr * t) list)
   | Leaf of int
 
-val create : name list Gamma.Constr.t -> 'a Matrix.t -> t
+val create : name list Gamma.Constr.t -> Matrix.matrix -> t

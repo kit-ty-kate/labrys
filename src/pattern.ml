@@ -49,11 +49,19 @@ let kind_missmatch ~loc ~has ~on =
     (Kinds.to_string on)
 
 module Matrix = struct
-  type constr =
-    | MConstr of (name * constr list)
+  type mconstr =
+    | MConstr of (name * mconstr list)
     | MAny of name
 
-  type 'a t = (constr list * 'a) list
+  type 'a t = (mconstr * 'a) list
+
+  type code_index = int
+
+  type constr =
+    | Constr of (code_index * name * constr list)
+    | Any of (code_index * name)
+
+  type matrix = constr list list
 
   type ty =
     | AnyTy of name
@@ -156,24 +164,33 @@ module Matrix = struct
       end;
       res
 
-  let create ~loc gammaT gammaC ty term p = [([create ~loc gammaT gammaC ty p], term)]
+  let create ~loc gammaT gammaC ty term p = [(create ~loc gammaT gammaC ty p, term)]
 
   let append ~loc gammaT gammaC ty term p patterns = patterns @ create ~loc gammaT gammaC ty term p
 
   let map f m = List.map (fun (constr, x) -> (constr, f x)) m
 
-  let get_results m =
-    let aux (constr, branch) =
-      let constr =
-        let rec aux acc = function
-          | MConstr (_, l) -> List.fold_left aux acc l
-          | MAny name -> name :: acc
-        in
-        List.fold_left aux [] constr
-      in
-      (constr, branch)
+  let split m =
+    let rec change_row code_index = function
+      | MConstr (name, args) :: xs ->
+          let (args, names1) = change_row code_index args in
+          let (xs, names2) = change_row code_index xs in
+          (Constr (code_index, name, args) :: xs, names1 @ names2)
+      | MAny name :: xs ->
+          let (xs, names) = change_row code_index xs in
+          (Any (code_index, name) :: xs, name :: names)
+      | [] ->
+          ([], [])
     in
-    List.map aux m
+    let rec aux code_index = function
+      | (row, branch) :: xs ->
+          let (rows, branches) = aux (succ code_index) xs in
+          let (row, names) = change_row code_index [row] in
+          (row :: rows, (names, branch) :: branches)
+      | [] ->
+          ([], [])
+    in
+    aux 0 m
 end
 
 type constr =
@@ -189,16 +206,4 @@ type t =
   | Leaf of int
 
 let create gammaD =
-  let rec aux i var acc =
-    function
-    | ((*Matrix.MConstr (name, args)*)_, _) :: xs ->
-        let args = assert false in
-        assert false
-        (*aux (succ i) var ((Constr name, args) :: acc) xs*)
-    | ((*Matrix.MAny name*)_, _) :: xs ->
-        assert false
-        (*aux (succ i) var ((Any name, Leaf i) :: acc) xs*)
-    | [] ->
-        Node (var, acc)
-  in
-  aux 0 VLeaf []
+  assert false

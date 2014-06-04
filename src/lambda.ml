@@ -68,7 +68,7 @@ and of_typed_term gammaC gammaD = function
   | TypedTree.Val {TypedTree.name; _} ->
       (Val name, [name])
   | TypedTree.PatternMatching (t, patterns, _) ->
-      let results = Pattern.Matrix.get_results patterns in
+      let (patterns, results) = Pattern.Matrix.split patterns in
       let patterns = Pattern.create gammaD patterns in
       let (t, used_vars1) = of_typed_term gammaC gammaD t in
       let (results, used_vars2) = of_results gammaC gammaD results in
