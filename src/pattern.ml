@@ -57,11 +57,15 @@ module Matrix = struct
 
   type code_index = int
 
-  type pattern =
-    | Constr of (code_index * name * pattern list)
-    | Any of (code_index * name)
+  type var =
+    | VLeaf
+    | VNode of (int * var)
 
-  type matrix = pattern list list
+  type pattern =
+    | Constr of (code_index * var * name * pattern list)
+    | Any of (code_index * var * name)
+
+  type matrix = pattern list
 
   type ty =
     | AnyTy of name
@@ -170,22 +174,33 @@ module Matrix = struct
 
   let map f m = List.map (fun (constr, x) -> (constr, f x)) m
 
+  let succ_var = function
+    | VLeaf -> assert false
+    | VNode (i, var) -> VNode (succ i, var)
+
   let split m =
-    let rec change_row code_index = function
+    let rec change_row code_index var = function
       | MConstr (name, args) :: xs ->
-          let (args, names1) = change_row code_index args in
-          let (xs, names2) = change_row code_index xs in
-          (Constr (code_index, name, args) :: xs, names1 @ names2)
+          let (args, names1) = change_row code_index (VNode (0, var)) args in
+          let (xs, names2) = change_row code_index (succ_var var) xs in
+          (Constr (code_index, var, name, args) :: xs, names1 @ names2)
       | MAny name :: xs ->
-          let (xs, names) = change_row code_index xs in
-          (Any (code_index, name) :: xs, name :: names)
+          let (xs, names) = change_row code_index (succ_var var) xs in
+          (Any (code_index, var, name) :: xs, name :: names)
       | [] ->
           ([], [])
+    in
+    let change_row code_index = function
+      | MConstr (name, args) ->
+          let (args, names) = change_row code_index (VNode (0, VLeaf)) args in
+          (Constr (code_index, VLeaf, name, args), names)
+      | MAny name ->
+          (Any (code_index, VLeaf, name), [name])
     in
     let rec aux code_index = function
       | (row, branch) :: xs ->
           let (rows, branches) = aux (succ code_index) xs in
-          let (row, names) = change_row code_index [row] in
+          let (row, names) = change_row code_index row in
           (row :: rows, (names, branch) :: branches)
       | [] ->
           ([], [])
@@ -197,7 +212,7 @@ type constr =
   | Constr of name
   | Any of name
 
-type var =
+type var = Matrix.var =
   | VLeaf
   | VNode of (int * var)
 
