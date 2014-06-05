@@ -244,7 +244,14 @@ let create gammaD m =
       match m with
       | Matrix.Constr (code_index, name, _) :: xs ->
           let args = aux (VNode (0, var)) [] (specialize name m_base) in
-          let acc = (Constr name, args) :: acc in
+          let acc =
+            let args =
+              match args with
+              | Node (_, []) -> Leaf code_index
+              | Leaf _ | Node _ -> args
+            in
+            (Constr name, args) :: acc
+          in
           handle_patterns (succ_var var) acc m_base xs
       | Matrix.Any (code_index, name) :: xs ->
           let acc = (Any name, Leaf code_index) :: acc in
