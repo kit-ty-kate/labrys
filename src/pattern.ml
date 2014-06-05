@@ -247,7 +247,7 @@ let create gammaD m =
           let acc = (Constr name, args) :: acc in
           handle_patterns (succ_var var) acc m_base xs
       | Matrix.Any (code_index, name) :: xs ->
-          let acc = (Constr name, Leaf code_index) :: acc in
+          let acc = (Any name, Leaf code_index) :: acc in
           handle_patterns (succ_var var) acc m_base xs
       | [] ->
           acc
