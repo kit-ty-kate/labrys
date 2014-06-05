@@ -57,11 +57,11 @@ module Matrix = struct
 
   type code_index = int
 
-  type constr =
-    | Constr of (code_index * name * constr list)
+  type pattern =
+    | Constr of (code_index * name * pattern list)
     | Any of (code_index * name)
 
-  type matrix = constr list list
+  type matrix = pattern list list
 
   type ty =
     | AnyTy of name

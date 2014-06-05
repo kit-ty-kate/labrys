@@ -95,6 +95,7 @@ module Make (I : sig val name : string end) = struct
     LLVM.build_store closure allocated builder;
     (allocated, gamma)
 
+  (* TODO: Memoize *)
   let rec llvalue_of_pattern_var value builder = function
     | Pattern.VLeaf -> value
     | Pattern.VNode (i, var) ->
