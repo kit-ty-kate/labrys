@@ -219,14 +219,20 @@ let specialize name m =
     in
     aux m
   in
-  let rec aux = function
+  let rec aux =
+    let append m = function
+      | [] -> aux m
+      | x -> x :: aux m
+    in
+    function
     | (Matrix.Constr (_, x, args) :: xs) :: m when Gamma.Name.equal name x ->
-        (args @ xs) :: aux m
-    | [] :: m
+        append m (args @ xs)
     | (Matrix.Constr _ :: _) :: m ->
         aux m
     | ((Matrix.Any _ as x) :: xs) :: m ->
-        (List.make size x @ xs) :: aux m
+        append m (List.make size x @ xs)
+    | [] :: m ->
+        assert false
     | [] ->
         []
   in
@@ -239,30 +245,25 @@ let succ_var = function
 (* TODO: Use gammaD *)
 let create gammaD m =
   let rec aux var acc m =
-    let rec handle_patterns var acc m_base m =
+    let rec handle_patterns var m_base m =
       (* Com n1 *)
       match m with
-      | Matrix.Constr (code_index, name, _) :: xs ->
-          let args = aux (VNode (0, var)) [] (specialize name m_base) in
-          let acc =
-            let args =
-              match args with
-              | Node (_, []) -> Leaf code_index
-              | Leaf _ | Node _ -> args
-            in
-            (Constr name, args) :: acc
+      | Matrix.Constr (code_index, name, _) :: _ ->
+          let xs =
+            match specialize name m_base with
+            | [] -> Leaf code_index
+            | m_base -> aux (VNode (0, var)) [] m_base
           in
-          handle_patterns (succ_var var) acc m_base xs
-      | Matrix.Any (code_index, name) :: xs ->
-          let acc = (Any name, Leaf code_index) :: acc in
-          handle_patterns (succ_var var) acc m_base xs
+          (Constr name, xs)
+      | Matrix.Any (code_index, name) :: _ ->
+          (Any name, Leaf code_index)
       | [] ->
-          acc
+          assert false
     in
     match m with
     | patterns :: xs ->
-        let patterns = handle_patterns var [] m patterns in
-        aux var (patterns @ acc) xs
+        let patterns = handle_patterns var m patterns in
+        aux var (patterns :: acc) xs
     | [] ->
         Node (var, acc)
   in
