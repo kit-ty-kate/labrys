@@ -128,15 +128,7 @@ module Make (I : sig val name : string end) = struct
     | UntypedTree.Leaf i ->
         let block = List.nth results i in
         LLVM.build_br block builder
-    | UntypedTree.Node (var, cases) ->
-        (* The more general case is always the first one
-           (as it has been reversed in Pattern.create)
-        *)
-        let cases = List.rev cases in
-        let (default, cases) = match cases with
-          | x::xs -> (x, xs)
-          | [] -> assert false
-        in
+    | UntypedTree.Node (var, default, cases) ->
         let term = llvalue_of_pattern_var value builder var in
         let default_branch = create_branch func env gamma value term results default in
         let switch = LLVM.build_switch term default_branch (List.length cases) builder in

@@ -36,14 +36,13 @@ let of_constr gammaC = function
 let rec of_patterns gammaC = function
   | Pattern.Leaf label ->
       Leaf label
-  | Pattern.Node (var, patterns) ->
-      let patterns =
-        let aux (constr, tree) =
-          (of_constr gammaC constr, of_patterns gammaC tree)
-        in
-        List.map aux patterns
+  | Pattern.Node (var, default, cases) ->
+      let aux (constr, tree) =
+        (of_constr gammaC constr, of_patterns gammaC tree)
       in
-      Node (var, patterns)
+      let default = aux default in
+      let cases = List.map aux cases in
+      Node (var, default, cases)
 
 let rec of_results gammaC gammaD m =
   let aux (acc, used_vars_acc) (wildcards, t) =

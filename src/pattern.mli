@@ -58,7 +58,7 @@ type var =
   | VNode of (int * var)
 
 type t =
-  | Node of (var * (constr * t) list)
+  | Node of (var * (constr * t) * (constr * t) list)
   | Leaf of int
 
 val create : name list Gamma.Constr.t -> Matrix.matrix -> t

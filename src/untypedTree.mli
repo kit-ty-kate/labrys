@@ -28,7 +28,7 @@ type constr =
   | Any of name
 
 type tree =
-  | Node of (Pattern.var * (constr * tree) list)
+  | Node of (Pattern.var * (constr * tree) * (constr * tree) list)
   | Leaf of int
 
 and t =

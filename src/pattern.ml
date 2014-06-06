@@ -202,7 +202,7 @@ type var =
   | VNode of (int * var)
 
 type t =
-  | Node of (var * (constr * t) list)
+  | Node of (var * (constr * t) * (constr * t) list)
   | Leaf of int
 
 let specialize name m =
@@ -265,6 +265,11 @@ let create gammaD m =
         let patterns = handle_patterns var m patterns in
         aux var (patterns :: acc) xs
     | [] ->
-        Node (var, acc)
+        let (default, cases) =
+          match acc with
+          | [] -> assert false
+          | x::xs -> (x, xs)
+        in
+        Node (var, default, cases)
   in
   aux VLeaf [] m
