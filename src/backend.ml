@@ -103,8 +103,8 @@ module Make (I : sig val name : string end) = struct
         let value = LLVM.build_load value "" builder in
         let value = LLVM.build_extractvalue value 1 "" builder in
         let value = LLVM.build_bitcast value (array_ptr_type (succ i)) "" builder in
-        let value = LLVM.build_extractvalue value i "" builder in
         let value = LLVM.build_load value "" builder in
+        let value = LLVM.build_extractvalue value i "" builder in
         llvalue_of_pattern_var value builder var
 
   let rec create_branch func env gamma value term results (constr, tree) =
