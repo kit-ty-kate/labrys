@@ -57,9 +57,13 @@ module Matrix = struct
 
   type code_index = int
 
+  type var =
+    | VLeaf
+    | VNode of (int * var)
+
   type pattern =
-    | Constr of ((name * Gamma.Type.t) * pattern list)
-    | Any of name
+    | Constr of (var * (name * Gamma.Type.t) * pattern list)
+    | Any of (var * name)
 
   type matrix = (pattern list * code_index) list
 
@@ -174,22 +178,26 @@ module Matrix = struct
 
   let map f m = List.map (fun (constr, x) -> (constr, f x)) m
 
+  let succ_var = function
+    | VLeaf -> VLeaf
+    | VNode (i, var) -> VNode (succ i, var)
+
   let split m =
-    let rec change_row = function
+    let rec change_row var = function
       | MConstr (name, args) :: xs ->
-          let (args, names1) = change_row args in
-          let (xs, names2) = change_row xs in
-          (Constr (name, args) :: xs, names1 @ names2)
+          let (args, names1) = change_row (VNode (0, var)) args in
+          let (xs, names2) = change_row (succ_var var) xs in
+          (Constr (var, name, args) :: xs, names1 @ names2)
       | MAny name :: xs ->
-          let (xs, names) = change_row xs in
-          (Any name :: xs, name :: names)
+          let (xs, names) = change_row (succ_var var) xs in
+          (Any (var, name) :: xs, name :: names)
       | [] ->
           ([], [])
     in
     let rec aux code_index = function
       | (row, branch) :: xs ->
           let (rows, branches) = aux (succ code_index) xs in
-          let (row, names) = change_row [row] in
+          let (row, names) = change_row VLeaf [row] in
           ((row, code_index) :: rows, (names, branch) :: branches)
       | [] ->
           ([], [])
@@ -201,7 +209,7 @@ type constr =
   | Constr of name
   | Any of name
 
-type var =
+type var = Matrix.var =
   | VLeaf
   | VNode of (int * var)
 
@@ -213,7 +221,7 @@ let specialize name m =
   let eq = Gamma.Name.equal in
   let size =
     let rec aux = function
-      | (Matrix.Constr ((x, _), args) :: _, _) :: m when eq name x ->
+      | (Matrix.Constr (_, (x, _), args) :: _, _) :: m when eq name x ->
           Int.max (List.length args) (aux m)
       | ([], _) :: m
       | (Matrix.Constr _ :: _, _) :: m
@@ -225,7 +233,7 @@ let specialize name m =
     aux m
   in
   let rec aux = function
-    | (Matrix.Constr ((x, _), args) :: xs, code_index) :: m when eq name x ->
+    | (Matrix.Constr (_, (x, _), args) :: xs, code_index) :: m when eq name x ->
         (args @ xs, code_index) :: aux m
     | ([], _) :: m (* TODO: ??? *)
     | (Matrix.Constr _ :: _, _) :: m ->
@@ -237,14 +245,9 @@ let specialize name m =
   in
   aux m
 
-let succ_var = function
-  | VLeaf -> VLeaf
-  | VNode (i, var) -> VNode (succ i, var)
-
-let create gammaD m =
-  let rec aux var m =
-    match m with
-    | (Matrix.Constr ((_, ty), _) :: _, code_index) :: _->
+let create gammaD =
+  let rec aux m = match m with
+    | (Matrix.Constr (var, (_, ty), _) :: _, code_index) :: _->
         let variants = Gamma.Constr.find ty gammaD in
         let variants =
           Option.default_delayed (fun () -> assert false) variants
@@ -255,7 +258,7 @@ let create gammaD m =
               match specialize name m with
               | ([], code_index) :: _ -> Leaf code_index
               | [] -> Leaf code_index
-              | m -> aux (VNode (0, var)) m
+              | m -> aux m
             in
             (Constr name, xs)
           in
@@ -267,10 +270,10 @@ let create gammaD m =
           | x::xs -> (x, xs)
         in
         Node (var, default, cases)
-    | (Matrix.Any name :: _, code_index) :: _ ->
+    | (Matrix.Any (var, name) :: _, code_index) :: _ ->
         Leaf code_index (* TODO: Finish it *)
     | ([], _) :: _
     | [] ->
         assert false
   in
-  aux VLeaf m
+  aux
