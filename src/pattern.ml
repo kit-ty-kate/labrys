@@ -50,7 +50,7 @@ let kind_missmatch ~loc ~has ~on =
 
 module Matrix = struct
   type mconstr =
-    | MConstr of (name * mconstr list)
+    | MConstr of ((name * Gamma.Type.t) * mconstr list)
     | MAny of name
 
   type 'a t = (mconstr * 'a) list
@@ -58,14 +58,18 @@ module Matrix = struct
   type code_index = int
 
   type pattern =
-    | Constr of (code_index * name * pattern list)
-    | Any of (code_index * name)
+    | Constr of ((name * Gamma.Type.t) * pattern list)
+    | Any of name
 
-  type matrix = pattern list list
+  type matrix = (pattern list * code_index) list
 
   type ty =
     | AnyTy of name
     | SomeTy of TypesBeta.t
+
+  let replace_ty ty = function
+    | MConstr ((name, _), xs) -> MConstr ((name, TypesBeta.head ty), xs)
+    | MAny _ as x -> x
 
   let create ~loc gammaT gammaC =
     let rec aux acc = function
@@ -83,7 +87,7 @@ module Matrix = struct
                   "The type constructor '%s' doesn't exists in Γ"
                   (Gamma.Name.to_string name)
           in
-          (MConstr (name, acc), SomeTy ty)
+          (MConstr ((name, TypesBeta.head ty), acc), SomeTy ty)
       | ParseTree.PatternApp (f, x) ->
           let (x, ty_x) = aux [] x in
           let (f, ty_f) = aux (acc @ [x]) f in
@@ -127,7 +131,7 @@ module Matrix = struct
                     assert false
                 end
           in
-          (f, SomeTy ty)
+          (replace_ty ty f, SomeTy ty)
       | ParseTree.PatternTApp (x, param) ->
           let (x, ty) = aux acc x in
           begin match ty with
@@ -137,7 +141,7 @@ module Matrix = struct
               begin match ty with
               | TypesBeta.Forall (from, k, ty) when Kinds.equal k kx ->
                   let ty = TypesBeta.replace ~from ~ty:param ty in
-                  (x, SomeTy ty)
+                  (replace_ty ty x, SomeTy ty)
               | TypesBeta.Forall (_, k, _) -> kind_missmatch ~loc ~has:kx ~on:k
               | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:param ~expected:ty
               | (TypesBeta.AppOnTy _ as ty)
@@ -171,22 +175,22 @@ module Matrix = struct
   let map f m = List.map (fun (constr, x) -> (constr, f x)) m
 
   let split m =
-    let rec change_row code_index = function
+    let rec change_row = function
       | MConstr (name, args) :: xs ->
-          let (args, names1) = change_row code_index args in
-          let (xs, names2) = change_row code_index xs in
-          (Constr (code_index, name, args) :: xs, names1 @ names2)
+          let (args, names1) = change_row args in
+          let (xs, names2) = change_row xs in
+          (Constr (name, args) :: xs, names1 @ names2)
       | MAny name :: xs ->
-          let (xs, names) = change_row code_index xs in
-          (Any (code_index, name) :: xs, name :: names)
+          let (xs, names) = change_row xs in
+          (Any name :: xs, name :: names)
       | [] ->
           ([], [])
     in
     let rec aux code_index = function
       | (row, branch) :: xs ->
           let (rows, branches) = aux (succ code_index) xs in
-          let (row, names) = change_row code_index [row] in
-          (row :: rows, (names, branch) :: branches)
+          let (row, names) = change_row [row] in
+          ((row, code_index) :: rows, (names, branch) :: branches)
       | [] ->
           ([], [])
     in
@@ -206,33 +210,28 @@ type t =
   | Leaf of int
 
 let specialize name m =
+  let eq = Gamma.Name.equal in
   let size =
     let rec aux = function
-      | (Matrix.Constr (_, x, args) :: _) :: m when Gamma.Name.equal name x ->
+      | (Matrix.Constr ((x, _), args) :: _, _) :: m when eq name x ->
           Int.max (List.length args) (aux m)
-      | [] :: m
-      | (Matrix.Constr _ :: _) :: m
-      | (Matrix.Any _ :: _) :: m ->
+      | ([], _) :: m
+      | (Matrix.Constr _ :: _, _) :: m
+      | (Matrix.Any _ :: _, _) :: m ->
           aux m
       | [] ->
           0
     in
     aux m
   in
-  let rec aux =
-    let append m = function
-      | [] -> aux m
-      | x -> x :: aux m
-    in
-    function
-    | (Matrix.Constr (_, x, args) :: xs) :: m when Gamma.Name.equal name x ->
-        append m (args @ xs)
-    | (Matrix.Constr _ :: _) :: m ->
+  let rec aux = function
+    | (Matrix.Constr ((x, _), args) :: xs, code_index) :: m when eq name x ->
+        (args @ xs, code_index) :: aux m
+    | ([], _) :: m (* TODO: ??? *)
+    | (Matrix.Constr _ :: _, _) :: m ->
         aux m
-    | ((Matrix.Any _ as x) :: xs) :: m ->
-        append m (List.make size x @ xs)
-    | [] :: m ->
-        assert false
+    | ((Matrix.Any _ as x) :: xs, code_index) :: m ->
+        (List.make size x @ xs, code_index) :: aux m
     | [] ->
         []
   in
@@ -242,34 +241,36 @@ let succ_var = function
   | VLeaf -> VLeaf
   | VNode (i, var) -> VNode (succ i, var)
 
-(* TODO: Use gammaD *)
 let create gammaD m =
-  let rec aux var acc m =
-    let rec handle_patterns var m_base m =
-      (* Com n1 *)
-      match m with
-      | Matrix.Constr (code_index, name, _) :: _ ->
-          let xs =
-            match specialize name m_base with
-            | [] -> Leaf code_index
-            | m_base -> aux (VNode (0, var)) [] m_base
-          in
-          (Constr name, xs)
-      | Matrix.Any (code_index, name) :: _ ->
-          (Any name, Leaf code_index)
-      | [] ->
-          assert false
-    in
+  let rec aux var m =
     match m with
-    | patterns :: xs ->
-        let patterns = handle_patterns var m patterns in
-        aux var (patterns :: acc) xs
-    | [] ->
+    | (Matrix.Constr ((_, ty), _) :: _, code_index) :: _->
+        let variants = Gamma.Constr.find ty gammaD in
+        let variants =
+          Option.default_delayed (fun () -> assert false) variants
+        in
+        let variants =
+          let aux name =
+            let xs =
+              match specialize name m with
+              | ([], code_index) :: _ -> Leaf code_index
+              | [] -> Leaf code_index
+              | m -> aux (VNode (0, var)) m
+            in
+            (Constr name, xs)
+          in
+          List.map aux variants
+        in
         let (default, cases) =
-          match acc with
+          match variants with
           | [] -> assert false
           | x::xs -> (x, xs)
         in
         Node (var, default, cases)
+    | (Matrix.Any name :: _, code_index) :: _ ->
+        Leaf code_index (* TODO: Finish it *)
+    | ([], _) :: _
+    | [] ->
+        assert false
   in
-  aux VLeaf [] m
+  aux VLeaf m

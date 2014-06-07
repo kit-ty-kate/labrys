@@ -102,3 +102,10 @@ let rec size = function
   | AbsOnTy _
   | Ty _ -> 0
   | Forall (_, _, t) -> size t
+
+let rec head = function
+  | Ty name -> name
+  | Fun (_, t)
+  | Forall (_, _, t)
+  | AbsOnTy (_, _, t)
+  | AppOnTy (t, _) -> head t

@@ -37,3 +37,5 @@ val equal : t -> t -> bool
 val replace : from:name -> ty:t -> t -> t
 
 val size : t -> int
+
+val head : t -> name
