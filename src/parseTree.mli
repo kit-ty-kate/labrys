@@ -34,10 +34,12 @@ type ty =
 type value = (name * ty)
 
 type pattern =
-  | TyConstr of name
+  | TyConstr of (name * pattern_arg list)
   | Any of name
-  | PatternApp of (pattern * pattern)
-  | PatternTApp of (pattern * ty)
+
+and pattern_arg =
+  | PVal of pattern
+  | PTy of ty
 
 type t =
   | Abs of (Location.t * value * t)

@@ -216,14 +216,18 @@ pattern:
 pat:
 | name = LowerName
     { ParseTree.Any (Gamma.Name.of_list [name]) }
+| name = upperName args = list(pat_arg)
+    { ParseTree.TyConstr (Gamma.Name.of_list name, args) }
+
+pat_arg:
+| name = LowerName
+    { ParseTree.PVal (ParseTree.Any (Gamma.Name.of_list [name])) }
 | name = upperName
-    { ParseTree.TyConstr (Gamma.Name.of_list name) }
-| p1 = pat p2 = pat %prec app
-    { ParseTree.PatternApp (p1, p2) }
-| p = pat LBracket ty = typeExpr RBracket
-    { ParseTree.PatternTApp (p, ty) }
+    { ParseTree.PVal (ParseTree.TyConstr (Gamma.Name.of_list name, [])) }
 | LParen p = pat RParen
-    { p }
+    { ParseTree.PVal p }
+| LBracket ty = typeExpr RBracket
+    { ParseTree.PTy ty }
 
 (********* Interface *********)
 

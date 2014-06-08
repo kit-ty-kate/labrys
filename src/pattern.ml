@@ -51,7 +51,7 @@ let kind_missmatch ~loc ~has ~on =
 module Matrix = struct
   type mconstr =
     | MConstr of ((name * Gamma.Type.t) * mconstr list)
-    | MAny of name
+    | MAny of (name * Gamma.Type.t)
 
   type 'a t = (mconstr * 'a) list
 
@@ -63,114 +63,53 @@ module Matrix = struct
 
   type pattern =
     | Constr of (var * (name * Gamma.Type.t) * pattern list)
-    | Any of (var * name)
+    | Any of (var * (name * Gamma.Type.t))
 
   type matrix = (pattern list * code_index) list
 
-  type ty =
-    | AnyTy of name
-    | SomeTy of TypesBeta.t
-
-  let replace_ty ty = function
-    | MConstr ((name, _), xs) -> MConstr ((name, TypesBeta.head ty), xs)
-    | MAny _ as x -> x
-
   let create ~loc gammaT gammaC =
-    let rec aux acc = function
-      | ParseTree.Any name when List.is_empty acc ->
-          (MAny name, AnyTy name)
+    let rec aux ty' = function
       | ParseTree.Any name ->
-          Error.fail ~loc "'%s' can't be applied to something" (Gamma.Name.to_string name)
-      | ParseTree.TyConstr name ->
+          MAny (name, TypesBeta.head ty')
+      | ParseTree.TyConstr (name, args) ->
           let ty = Gamma.Index.find name gammaC in
-          let ty = match ty with
-            | Some x -> x
-            | None ->
-                Error.fail
-                  ~loc
-                  "The type constructor '%s' doesn't exists in Γ"
-                  (Gamma.Name.to_string name)
-          in
-          (MConstr ((name, TypesBeta.head ty), acc), SomeTy ty)
-      | ParseTree.PatternApp (f, x) ->
-          let (x, ty_x) = aux [] x in
-          let (f, ty_f) = aux (acc @ [x]) f in
-          let ty_f = match ty_f with
-            | SomeTy x -> x
-            | AnyTy name ->
-                Error.fail
-                  ~loc
-                  "Cannot apply something to the variable '%s'"
-                  (Gamma.Name.to_string name)
-          in
-          let ty =
-            match ty_x with
-            | SomeTy ty_x ->
-                begin match ty_f with
-                | TypesBeta.Fun (ty, res) when TypesBeta.equal ty ty_x ->
-                    res
-                | TypesBeta.Fun (ty, _) ->
-                    type_error ~loc ~has:ty_x ~expected:ty
+          let ty = Option.default_delayed (fun () -> assert false) ty in
+          let aux (args, ty) = function
+            | ParseTree.PVal p ->
+                let (param_ty, res_ty) = match ty with
+                  | TypesBeta.Fun (param, res) -> (param, res)
+                  | (TypesBeta.AppOnTy _ as ty)
+                  | (TypesBeta.Ty _ as ty) ->
+                      function_type_error ~loc ~has:ty' ~expected:ty
+                  | TypesBeta.Forall (ty, _, _) ->
+                      type_error_aux ~loc (TypesBeta.to_string ty') (Gamma.Type.to_string ty)
+                  | TypesBeta.AbsOnTy _ ->
+                      assert false
+                in
+                let arg = aux param_ty p in
+                (arg :: args, res_ty)
+            | ParseTree.PTy pty ->
+                let (pty, kx) = Types.from_parse_tree ~loc gammaT pty in
+                let pty = TypesBeta.of_ty pty in
+                begin match pty with
+                | TypesBeta.Forall (from, k, ty) when Kinds.equal k kx ->
+                    let ty = TypesBeta.replace ~from ~ty:pty ty in
+                    (args, ty)
+                | TypesBeta.Forall (_, k, _) -> kind_missmatch ~loc ~has:kx ~on:k
+                | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:pty ~expected:ty
                 | (TypesBeta.AppOnTy _ as ty)
-                | (TypesBeta.Ty _ as ty) ->
-                    function_type_error ~loc ~has:ty_x ~expected:ty
-                | TypesBeta.Forall (ty, _, _) ->
-                    type_error_aux ~loc (TypesBeta.to_string ty_x) (Gamma.Type.to_string ty)
-                | TypesBeta.AbsOnTy _ ->
-                    assert false
-                end
-            | AnyTy name ->
-                begin match ty_f with
-                | TypesBeta.Fun (_, res) ->
-                    res
-                | (TypesBeta.AppOnTy _ as ty)
-                | (TypesBeta.Forall _ as ty)
-                | (TypesBeta.Ty _ as ty) ->
-                    Error.fail
-                      ~loc
-                      "Cannot apply the variable '%s' to something with type '%s'"
-                      (Gamma.Name.to_string name)
-                      (TypesBeta.to_string ty)
-                | TypesBeta.AbsOnTy _ ->
-                    assert false
+                | (TypesBeta.Ty _ as ty) -> function_type_error ~loc ~has:pty ~expected:ty
+                | TypesBeta.AbsOnTy _ -> assert false
                 end
           in
-          (replace_ty ty f, SomeTy ty)
-      | ParseTree.PatternTApp (x, param) ->
-          let (x, ty) = aux acc x in
-          begin match ty with
-          | SomeTy ty ->
-              let (param, kx) = Types.from_parse_tree ~loc gammaT param in
-              let param = TypesBeta.of_ty param in
-              begin match ty with
-              | TypesBeta.Forall (from, k, ty) when Kinds.equal k kx ->
-                  let ty = TypesBeta.replace ~from ~ty:param ty in
-                  (replace_ty ty x, SomeTy ty)
-              | TypesBeta.Forall (_, k, _) -> kind_missmatch ~loc ~has:kx ~on:k
-              | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:param ~expected:ty
-              | (TypesBeta.AppOnTy _ as ty)
-              | (TypesBeta.Ty _ as ty) -> function_type_error ~loc ~has:param ~expected:ty
-              | TypesBeta.AbsOnTy _ -> assert false
-              end
-          | AnyTy name ->
-              Error.fail
-                ~loc
-                "Cannot apply something to the variable '%s'"
-                (Gamma.Name.to_string name)
-          end
-    in
-    fun ty x ->
-      let (res, ty') = aux [] x in
-      begin match ty' with
-      | SomeTy ty' ->
+          let (args, ty) = List.fold_left aux ([], ty) args in
           if not (TypesBeta.equal ty ty') then
             Error.fail
               ~loc
               "The type of the pattern is not equal to the type of the value matched";
-      | AnyTy _ ->
-          ()
-      end;
-      res
+          MConstr ((name, TypesBeta.head ty), List.rev args)
+    in
+    aux
 
   let create ~loc gammaT gammaC ty term p = [(create ~loc gammaT gammaC ty p, term)]
 
@@ -188,9 +127,9 @@ module Matrix = struct
           let (args, names1) = change_row (VNode (0, var)) args in
           let (xs, names2) = change_row (succ_var var) xs in
           (Constr (var, name, args) :: xs, names1 @ names2)
-      | MAny name :: xs ->
+      | MAny (name, ty) :: xs ->
           let (xs, names) = change_row (succ_var var) xs in
-          (Any (var, name) :: xs, name :: names)
+          (Any (var, (name, ty)) :: xs, name :: names)
       | [] ->
           ([], [])
     in
@@ -235,11 +174,12 @@ let specialize name m =
   let rec aux = function
     | (Matrix.Constr (_, (x, _), args) :: xs, code_index) :: m when eq name x ->
         (args @ xs, code_index) :: aux m
-    | ([], _) :: m (* TODO: ??? *)
     | (Matrix.Constr _ :: _, _) :: m ->
         aux m
     | ((Matrix.Any _ as x) :: xs, code_index) :: m ->
         (List.make size x @ xs, code_index) :: aux m
+    | ([], _) :: _ ->
+        assert false
     | [] ->
         []
   in
@@ -247,7 +187,8 @@ let specialize name m =
 
 let create gammaD =
   let rec aux m = match m with
-    | (Matrix.Constr (var, (_, ty), _) :: _, code_index) :: _->
+    | (Matrix.Any (var, (_, ty)) :: _, _) :: _
+    | (Matrix.Constr (var, (_, ty), _) :: _, _) :: _->
         let variants = Gamma.Constr.find ty gammaD in
         let variants =
           Option.default_delayed (fun () -> assert false) variants
@@ -257,7 +198,7 @@ let create gammaD =
             let xs =
               match specialize name m with
               | ([], code_index) :: _ -> Leaf code_index
-              | [] -> Leaf code_index
+              | [] -> failwith "Pattern non-exostive" (* TODO: Use Error *)
               | m -> aux m
             in
             (Constr name, xs)
@@ -270,8 +211,6 @@ let create gammaD =
           | x::xs -> (x, xs)
         in
         Node (var, default, cases)
-    | (Matrix.Any (var, name) :: _, code_index) :: _ ->
-        Leaf code_index (* TODO: Finish it *)
     | ([], _) :: _
     | [] ->
         assert false
