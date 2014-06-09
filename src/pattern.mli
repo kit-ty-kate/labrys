@@ -22,35 +22,32 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type name = Gamma.Name.t
 
 module Matrix : sig
+  type mconstr
   type 'a t
   type matrix
 
   val create :
     loc:Location.t ->
+    TypesBeta.t Gamma.Value.t ->
     [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t -> (* TODO: define types in a specific module *)
     TypesBeta.t Gamma.Index.t ->
     TypesBeta.t ->
-    'a ->
     ParseTree.pattern ->
-    'a t
+    (mconstr * TypesBeta.t Gamma.Value.t)
 
-  val append :
-    loc:Location.t ->
-    [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t ->
-    TypesBeta.t Gamma.Index.t ->
-    TypesBeta.t ->
-    'a ->
-    ParseTree.pattern ->
-    'a t ->
-    'a t
+  val join : mconstr -> 'a -> 'a t
+
+  val append : mconstr -> 'a -> 'a t -> 'a t
 
   val map : ('a -> 'b) -> 'a t -> 'b t
 
   val split : 'a t -> (matrix * (name list * 'a) list)
 end
 
+type index = int
+
 type constr =
-  | Constr of name
+  | Constr of (name * index)
   | Any of name
 
 type var =

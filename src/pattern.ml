@@ -68,13 +68,14 @@ module Matrix = struct
   type matrix = (pattern list * code_index) list
 
   let create ~loc gammaT gammaC =
-    let rec aux ty' = function
+    let rec aux gamma ty' = function
       | ParseTree.Any name ->
-          MAny (name, TypesBeta.head ty')
+          let gamma = Gamma.Value.add name ty' gamma in
+          (MAny (name, TypesBeta.head ty'), gamma)
       | ParseTree.TyConstr (name, args) ->
           let ty = Gamma.Index.find name gammaC in
           let ty = Option.default_delayed (fun () -> assert false) ty in
-          let aux (args, ty) = function
+          let aux (args, ty, gamma) = function
             | ParseTree.PVal p ->
                 let (param_ty, res_ty) = match ty with
                   | TypesBeta.Fun (param, res) -> (param, res)
@@ -86,15 +87,15 @@ module Matrix = struct
                   | TypesBeta.AbsOnTy _ ->
                       assert false
                 in
-                let arg = aux param_ty p in
-                (arg :: args, res_ty)
+                let (arg, gamma) = aux gamma param_ty p in
+                (arg :: args, res_ty, gamma)
             | ParseTree.PTy pty ->
                 let (pty, kx) = Types.from_parse_tree ~loc gammaT pty in
                 let pty = TypesBeta.of_ty pty in
                 begin match pty with
                 | TypesBeta.Forall (from, k, ty) when Kinds.equal k kx ->
                     let ty = TypesBeta.replace ~from ~ty:pty ty in
-                    (args, ty)
+                    (args, ty, gamma)
                 | TypesBeta.Forall (_, k, _) -> kind_missmatch ~loc ~has:kx ~on:k
                 | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:pty ~expected:ty
                 | (TypesBeta.AppOnTy _ as ty)
@@ -102,18 +103,21 @@ module Matrix = struct
                 | TypesBeta.AbsOnTy _ -> assert false
                 end
           in
-          let (args, ty) = List.fold_left aux ([], ty) args in
+          let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
           if not (TypesBeta.equal ty ty') then
             Error.fail
               ~loc
               "The type of the pattern is not equal to the type of the value matched";
-          MConstr ((name, TypesBeta.head ty), List.rev args)
+          (MConstr ((name, TypesBeta.head ty), List.rev args), gamma)
     in
     aux
 
-  let create ~loc gammaT gammaC ty term p = [(create ~loc gammaT gammaC ty p, term)]
+  let create ~loc gamma gammaT gammaC ty p =
+    create ~loc gammaT gammaC gamma ty p
 
-  let append ~loc gammaT gammaC ty term p patterns = patterns @ create ~loc gammaT gammaC ty term p
+  let join p term = [(p, term)]
+
+  let append p term patterns = patterns @ join p term
 
   let map f m = List.map (fun (constr, x) -> (constr, f x)) m
 
@@ -144,8 +148,10 @@ module Matrix = struct
     aux 0 m
 end
 
+type index = int
+
 type constr =
-  | Constr of name
+  | Constr of (name * index)
   | Any of name
 
 type var = Matrix.var =
@@ -201,7 +207,9 @@ let create gammaD =
               | [] -> failwith "Pattern non-exostive" (* TODO: Use Error *)
               | m -> aux m
             in
-            (Constr name, xs)
+            let index = List.index_of name variants in
+            let index = Option.default_delayed (fun () -> assert false) index in
+            (Constr (name, index), xs)
           in
           List.map aux variants
         in

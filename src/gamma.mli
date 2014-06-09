@@ -51,10 +51,11 @@ module Constr : sig
   val append : key -> 'a -> 'a list t -> 'a list t
 end
 
-type ('values, 'types, 'indexes) t =
+type ('values, 'types, 'indexes, 'constr) t =
   { values : 'values Value.t
   ; types : 'types Types.t
   ; indexes : 'indexes Index.t
+  ; constructors : 'constr Constr.t
   }
 
-val empty : ('a, 'b, 'c) t
+val empty : ('a, 'b, 'c, 'd) t

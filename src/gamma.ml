@@ -63,14 +63,16 @@ module Constr = struct
     | Some xs -> add k (x :: xs) map
 end
 
-type ('values, 'types, 'indexes) t =
+type ('values, 'types, 'indexes, 'constr) t =
   { values : 'values Value.t
   ; types : 'types Types.t
   ; indexes : 'indexes Index.t
+  ; constructors : 'constr Constr.t
   }
 
 let empty =
   { values = Value.empty
   ; types = Types.empty
   ; indexes = Index.empty
+  ; constructors = Constr.empty
   }

@@ -30,7 +30,7 @@ let get_type = function
   | App (ty, _, _) -> ty
   | TApp (ty, _, _) -> ty
   | Val {ty; _} -> ty
-  | PatternMatching (_, _, ty) -> ty
+  | PatternMatching (_, _, _, ty) -> ty
   | Let (_, _, _, ty) -> ty
   | LetRec (_, _, _, _, ty) -> ty
 
@@ -83,11 +83,11 @@ let rec transform ~from ~ty =
     | Val {name; ty} ->
         let ty = replace ty in
         Val {name; ty}
-    | PatternMatching (t, patterns, ty) ->
+    | PatternMatching (t, results, patterns, ty) ->
         let t = transform t in
-        let patterns = Pattern.Matrix.map aux patterns in
+        let results = List.map (fun (x, y) -> (x, aux y)) results in
         let ty = replace ty in
-        PatternMatching (t, patterns, ty)
+        PatternMatching (t, results, patterns, ty)
     | Let (name, t, xs, ty) ->
         let t = transform t in
         let xs = transform xs in
@@ -112,10 +112,10 @@ let ty_from_parse_tree' ~loc gammaT ty =
     Error.fail ~loc "Values cannot be of kind /= '*'";
   TypesBeta.of_ty ty
 
-let rec aux gamma gammaT gammaC = function
+let rec aux gamma gammaT gammaC gammaD = function
   | ParseTree.Abs (loc, (name, ty), t) ->
       let ty = ty_from_parse_tree' ~loc gammaT ty in
-      let expr = aux (Gamma.Value.add name ty gamma) gammaT gammaC t in
+      let expr = aux (Gamma.Value.add name ty gamma) gammaT gammaC gammaD t in
       let param = {name; ty} in
       let ty_expr = get_type expr in
       let abs_ty = TypesBeta.Fun (ty, ty_expr) in
@@ -123,13 +123,13 @@ let rec aux gamma gammaT gammaC = function
   | ParseTree.TAbs (loc, (name, k), t) ->
       let ty = TypesBeta.Ty name in
       let param = {name; ty = ty} in
-      let expr = aux gamma (Gamma.Types.add ~loc name (`Abstract k) gammaT) gammaC t in
+      let expr = aux gamma (Gamma.Types.add ~loc name (`Abstract k) gammaT) gammaC gammaD t in
       let ty_expr = get_type expr in
       let abs_ty = TypesBeta.Forall (name, k, ty_expr) in
       TAbs ({abs_ty; param; ty_expr}, expr)
   | ParseTree.App (loc, f, x) ->
-      let f = aux gamma gammaT gammaC f in
-      let x = aux gamma gammaT gammaC x in
+      let f = aux gamma gammaT gammaC gammaD f in
+      let x = aux gamma gammaT gammaC gammaD x in
       let ty_x = get_type x in
       begin match get_type f with
       | TypesBeta.Fun (ty, res) when TypesBeta.equal ty ty_x ->
@@ -142,7 +142,7 @@ let rec aux gamma gammaT gammaC = function
       | TypesBeta.AbsOnTy _ -> assert false
       end
   | ParseTree.TApp (loc, f, ty_x) ->
-      let f = aux gamma gammaT gammaC f in
+      let f = aux gamma gammaT gammaC gammaD f in
       let (ty_x, kx) = ty_from_parse_tree ~loc gammaT ty_x in
       begin match get_type f with
       | TypesBeta.Forall (ty, k, res) when Kinds.equal k kx ->
@@ -161,37 +161,47 @@ let rec aux gamma gammaT gammaC = function
       | Some ty -> Val {name; ty}
       end
   | ParseTree.PatternMatching (loc, t, patterns) ->
-      let t = aux gamma gammaT gammaC t in
+      let t = aux gamma gammaT gammaC gammaD t in
       let ty = get_type t in
       let (head, tail) = match patterns with
         | [] -> assert false
         | x::xs -> (x, xs)
       in
       let (initial_pattern, initial_ty) =
-        let term = aux gamma gammaT gammaC (snd head) in
-        (Pattern.Matrix.create ~loc gammaT gammaC ty term (fst head), get_type term)
+        let (pattern, gamma) =
+          let gammaC = Gamma.Index.map fst gammaC in
+          Pattern.Matrix.create ~loc gamma gammaT gammaC ty (fst head)
+        in
+        let term = aux gamma gammaT gammaC gammaD (snd head) in
+        (Pattern.Matrix.join pattern term, get_type term)
       in
       let patterns =
         let f patterns (p, t) =
-          let t = aux gamma gammaT gammaC t in
+          let (pattern, gamma) =
+            let gammaC = Gamma.Index.map fst gammaC in
+            Pattern.Matrix.create ~loc gamma gammaT gammaC ty p
+          in
+          let t = aux gamma gammaT gammaC gammaD t in
           let has = get_type t in
           if not (TypesBeta.equal has initial_ty) then
             type_error ~loc ~has ~expected:initial_ty;
-          Pattern.Matrix.append ~loc gammaT gammaC ty t p patterns
+          Pattern.Matrix.append pattern t patterns
         in
         List.fold_left f initial_pattern tail
       in
-      PatternMatching (t, patterns, initial_ty)
+      let (patterns, results) = Pattern.Matrix.split patterns in
+      let patterns = Pattern.create gammaD patterns in
+      PatternMatching (t, results, patterns, initial_ty)
   | ParseTree.Let (name, t, xs) ->
-      let t = aux gamma gammaT gammaC t in
+      let t = aux gamma gammaT gammaC gammaD t in
       let gamma = Gamma.Value.add name (get_type t) gamma in
-      let xs = aux gamma gammaT gammaC xs in
+      let xs = aux gamma gammaT gammaC gammaD xs in
       Let (name, t, xs, get_type xs)
   | ParseTree.LetRec (loc, name, ty, t, xs) ->
       let ty = ty_from_parse_tree' ~loc gammaT ty in
       let gamma = Gamma.Value.add name ty gamma in
-      let t = aux gamma gammaT gammaC t in
-      let xs = aux gamma gammaT gammaC xs in
+      let t = aux gamma gammaT gammaC gammaD t in
+      let xs = aux gamma gammaT gammaC gammaD xs in
       LetRec (name, ty, t, xs, get_type xs)
 
 let rec check_if_returns_type ~datatype = function
@@ -201,49 +211,55 @@ let rec check_if_returns_type ~datatype = function
   | TypesBeta.Fun (_, ret) -> check_if_returns_type ~datatype ret
   | TypesBeta.AbsOnTy _ -> false
 
-let transform_variants ~datatype gamma gammaT gammaC =
-  let rec aux = function
+let transform_variants ~datatype gamma gammaT gammaC gammaD =
+  let rec aux index = function
     | ParseTree.Variant (loc, name, ty) :: xs ->
         let ty = ty_from_parse_tree' ~loc gammaT ty in
         if check_if_returns_type ~datatype ty then
-          let (xs, gamma, gammaC) = aux xs in
+          let (xs, gamma, gammaC, gammaD) = aux (succ index) xs in
           let gamma = Gamma.Value.add name ty gamma in
-          let gammaC = Gamma.Index.add name ty gammaC in
-          (Variant (name, ty) :: xs, gamma, gammaC)
+          let gammaC = Gamma.Index.add name (ty, index) gammaC in
+          let gammaD = Gamma.Constr.append datatype name gammaD in
+          (Variant (name, ty) :: xs, gamma, gammaC, gammaD)
         else
-          Error.fail ~loc "The variant '%s' doesn't return its type" (Gamma.Name.to_string name)
-    | [] -> ([], gamma, gammaC)
+          Error.fail
+            ~loc
+            "The variant '%s' doesn't return its type"
+            (Gamma.Name.to_string name)
+    | [] -> ([], gamma, gammaC, gammaD)
   in
-  aux
+  aux 0
 
-let rec from_parse_tree gamma gammaT gammaC = function
+let rec from_parse_tree gamma gammaT gammaC gammaD = function
   | ParseTree.Value (name, term) :: xs ->
-      let x = aux gamma gammaT gammaC term in
+      let x = aux gamma gammaT gammaC gammaD term in
       let ty = get_type x in
-      let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaC xs in
+      let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaC gammaD xs in
       Value ({name; ty}, x) :: xs
   | ParseTree.RecValue (loc, name, ty, term) :: xs ->
       let ty = ty_from_parse_tree' ~loc gammaT ty in
       let gamma = Gamma.Value.add name ty gamma in
-      let x = aux gamma gammaT gammaC term in
+      let x = aux gamma gammaT gammaC gammaD term in
       let ty_x = get_type x in
       if not (TypesBeta.equal ty ty_x) then
         type_error ~loc ~has:ty_x ~expected:ty;
-      let xs = from_parse_tree gamma gammaT gammaC xs in
+      let xs = from_parse_tree gamma gammaT gammaC gammaD xs in
       RecValue ({name; ty}, x) :: xs
   | ParseTree.Type (loc, name, ty) :: xs ->
       let ty = Types.from_parse_tree ~loc gammaT ty in
-      from_parse_tree gamma (Gamma.Types.add ~loc name (`Alias ty) gammaT) gammaC xs
+      from_parse_tree gamma (Gamma.Types.add ~loc name (`Alias ty) gammaT) gammaC gammaD xs
   | ParseTree.Binding (loc, name, ty, binding) :: xs ->
       let ty = ty_from_parse_tree' ~loc gammaT ty in
-      let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaC xs in
+      let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaC gammaD xs in
       Binding ({name; ty}, binding) :: xs
   | ParseTree.Datatype (loc, name, kind, variants) :: xs ->
       let gammaT = Gamma.Types.add ~loc name (`Abstract kind) gammaT in
-      let (variants, gamma, gammaC) = transform_variants ~datatype:name gamma gammaT gammaC variants in
-      let xs = from_parse_tree gamma gammaT gammaC xs in
+      let (variants, gamma, gammaC, gammaD) =
+        transform_variants ~datatype:name gamma gammaT gammaC gammaD variants
+      in
+      let xs = from_parse_tree gamma gammaT gammaC gammaD xs in
       Datatype (name, variants) :: xs
   | [] -> []
 
-let from_parse_tree ({Gamma.values; types; indexes}, x) =
-  from_parse_tree values types indexes x
+let from_parse_tree ({Gamma.values; types; indexes; constructors}, x) =
+  from_parse_tree values types indexes constructors x
