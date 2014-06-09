@@ -27,6 +27,7 @@ include module type of (Llvm :
 val build_store : llvalue -> llvalue -> llbuilder -> unit
 val build_ret : llvalue -> llbuilder -> unit
 val build_ret_void : llbuilder -> unit
+val build_br : llbasicblock -> llbuilder -> unit
 
 val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * llbuilder)
 
