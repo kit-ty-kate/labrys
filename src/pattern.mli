@@ -21,6 +21,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = Gamma.Name.t
 
+type var =
+  | VLeaf
+  | VNode of (int * var)
+
 module Matrix : sig
   type mconstr
   type 'a t
@@ -41,18 +45,12 @@ module Matrix : sig
 
   val map : ('a -> 'b) -> 'a t -> 'b t
 
-  val split : 'a t -> (matrix * (name list * 'a) list)
+  val split : 'a t -> (matrix * ((var * name) list * 'a) list)
 end
 
 type index = int
 
-type constr =
-  | Constr of (name * index)
-  | Any of name
-
-type var =
-  | VLeaf
-  | VNode of (int * var)
+type constr = (name * index)
 
 type t =
   | Node of (var * (constr * t) * (constr * t) list)

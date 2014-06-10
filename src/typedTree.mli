@@ -26,7 +26,7 @@ type 'a value' = {name : 'a; ty : TypesBeta.t}
 type 'a abs = {abs_ty : TypesBeta.t; param : 'a value'; ty_expr : TypesBeta.t}
 
 type value = name value'
-type used_vars = name list
+type used_vars = (Pattern.var * name) list
 
 type t =
   | Abs of (name abs * t)

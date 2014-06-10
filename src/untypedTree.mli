@@ -23,9 +23,7 @@ type name = Gamma.Name.t
 type used_vars = name list
 type index = int
 
-type constr =
-  | Constr of int
-  | Any of name
+type constr = int
 
 type tree =
   | Node of (Pattern.var * (constr * tree) * (constr * tree) list)
@@ -36,7 +34,7 @@ and t =
   | App of (t * t)
   | Val of name
   | Variant of index
-  | PatternMatching of (t * t list * tree)
+  | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
 

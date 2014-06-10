@@ -107,19 +107,22 @@ module Make (I : sig val name : string end) = struct
         let value = LLVM.build_extractvalue value i "" builder in
         llvalue_of_pattern_var value builder var
 
-  let rec create_branch func env gamma value term results (constr, tree) =
-    let gamma = match constr with
-      | UntypedTree.Constr _ -> gamma
-      | UntypedTree.Any name -> Gamma.Value.add name (Value term) gamma
-    in
+  let rec create_branch func env gamma value results tree =
     let block = LLVM.append_block c "" func in
     let builder = LLVM.builder_at_end c block in
     create_tree func env gamma builder value results tree;
     block
 
-  and create_result func ~env ~globals ~res ~next_block gamma result =
+  and create_result func ~env ~globals ~res ~next_block ~value gamma (vars, result) =
     let block = LLVM.append_block c "" func in
     let builder = LLVM.builder_at_end c block in
+    let gamma =
+      let aux gamma (var, name) =
+        let var = llvalue_of_pattern_var value builder var in
+        Gamma.Value.add name (Value var) gamma
+      in
+      List.fold_left aux gamma vars
+    in
     let (v, builder) = lambda func ~env ~globals gamma builder result in
     LLVM.build_store v res builder;
     LLVM.build_br next_block builder;
@@ -131,16 +134,12 @@ module Make (I : sig val name : string end) = struct
         LLVM.build_br block builder
     | UntypedTree.Node (var, default, cases) ->
         let term = llvalue_of_pattern_var value builder var in
-        let default_branch = create_branch func env gamma value term results default in
+        let default_branch = create_branch func env gamma value results (snd default) in
         let switch = LLVM.build_switch term default_branch (List.length cases) builder in
         List.iter
-          (fun ((constr, _) as case) ->
-             let i = match constr with
-               | UntypedTree.Constr i -> i
-               | UntypedTree.Any _ -> assert false
-             in
-             let branch = create_branch func env gamma value term results case in
-             LLVM.add_case switch (i32 i) branch
+          (fun (constr, tree) ->
+             let branch = create_branch func env gamma value results tree in
+             LLVM.add_case switch (i32 constr) branch
           )
           cases
 
@@ -169,7 +168,7 @@ module Make (I : sig val name : string end) = struct
         let (t, builder) = lambda func ~env ~globals gamma builder t in
         let res = LLVM.build_alloca star_type "" builder in
         let next_block = LLVM.append_block c "" func in
-        let results = List.map (create_result func ~env ~globals ~res ~next_block gamma) results in
+        let results = List.map (create_result func ~env ~globals ~res ~next_block ~value:t gamma) results in
         let builder' = LLVM.builder_at_end c next_block in
         create_tree func env gamma builder t results tree;
         (LLVM.build_load res "" builder', builder')

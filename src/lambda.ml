@@ -24,17 +24,11 @@ open Monomorphic.None
 
 open UntypedTree
 
-let of_constr = function
-  | Pattern.Constr (_, i) -> Constr i
-  | Pattern.Any name -> Any name
-
 let rec of_patterns = function
   | Pattern.Leaf label ->
       Leaf label
   | Pattern.Node (var, default, cases) ->
-      let aux (constr, tree) =
-        (of_constr constr, of_patterns tree)
-      in
+      let aux ((_, constr), tree) = (constr, of_patterns tree) in
       let default = aux default in
       let cases = List.map aux cases in
       Node (var, default, cases)
@@ -42,8 +36,9 @@ let rec of_patterns = function
 let rec of_results m =
   let aux (acc, used_vars_acc) (wildcards, t) =
     let (t, used_vars) = of_typed_term t in
-    let used_vars = List.fold_left List.remove used_vars wildcards in
-    (t :: acc, used_vars @ used_vars_acc)
+    let remove acc (_, name) = List.remove acc name in
+    let used_vars = List.fold_left remove used_vars wildcards in
+    ((wildcards, t) :: acc, used_vars @ used_vars_acc)
   in
   List.fold_left aux ([], []) m
 

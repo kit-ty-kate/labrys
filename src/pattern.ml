@@ -24,6 +24,10 @@ open Monomorphic.None
 
 type name = Gamma.Name.t
 
+type var =
+  | VLeaf
+  | VNode of (int * var)
+
 (* TODO: Remove those duplications *)
 let type_error_aux ~loc =
   Error.fail
@@ -56,10 +60,6 @@ module Matrix = struct
   type 'a t = (mconstr * 'a) list
 
   type code_index = int
-
-  type var =
-    | VLeaf
-    | VNode of (int * var)
 
   type pattern =
     | Constr of (var * (name * Gamma.Type.t) * pattern list)
@@ -133,7 +133,7 @@ module Matrix = struct
           (Constr (var, name, args) :: xs, names1 @ names2)
       | MAny (name, ty) :: xs ->
           let (xs, names) = change_row (succ_var var) xs in
-          (Any (var, (name, ty)) :: xs, name :: names)
+          (Any (var, (name, ty)) :: xs, (var, name) :: names)
       | [] ->
           ([], [])
     in
@@ -150,17 +150,18 @@ end
 
 type index = int
 
-type constr =
-  | Constr of (name * index)
-  | Any of name
-
-type var = Matrix.var =
-  | VLeaf
-  | VNode of (int * var)
+type constr = (name * index)
 
 type t =
   | Node of (var * (constr * t) * (constr * t) list)
   | Leaf of int
+
+let are_any =
+  let aux = function
+    | Matrix.Any _ -> true
+    | Matrix.Constr _ -> false
+  in
+  List.for_all aux
 
 let specialize name m =
   let eq = Gamma.Name.equal in
@@ -193,6 +194,8 @@ let specialize name m =
 
 let create gammaD =
   let rec aux m = match m with
+    | ((Matrix.Any _ :: _ as row), code_index) :: _ when are_any row ->
+        Leaf code_index
     | (Matrix.Any (var, (_, ty)) :: _, _) :: _
     | (Matrix.Constr (var, (_, ty), _) :: _, _) :: _->
         let variants = Gamma.Constr.find ty gammaD in
@@ -209,7 +212,7 @@ let create gammaD =
             in
             let index = List.index_of name variants in
             let index = Option.default_delayed (fun () -> assert false) index in
-            (Constr (name, index), xs)
+            ((name, index), xs)
           in
           List.map aux variants
         in
