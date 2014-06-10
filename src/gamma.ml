@@ -31,6 +31,8 @@ module Name = struct
 
   let of_list x = x
   let to_string = String.concat "."
+  let to_file = String.concat "/"
+  let to_module_name = String.concat "_"
 end
 
 module Type = Name
@@ -75,4 +77,15 @@ let empty =
   ; types = Types.empty
   ; indexes = Index.empty
   ; constructors = Constr.empty
+  }
+
+let union (module_name, interface) self =
+  let aux interface self =
+    let aux k x acc = Value.add (module_name @ k) x acc in
+    Value.fold aux interface self
+  in
+  { values = aux interface.values self.values
+  ; types = aux interface.types self.types
+  ; indexes = aux interface.indexes self.indexes
+  ; constructors = aux interface.constructors self.constructors
   }

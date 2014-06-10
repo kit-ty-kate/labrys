@@ -19,13 +19,36 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+open BatteriesExceptionless
+open Monomorphic.None
+
 type t =
   | Val of (Location.t * ParseTree.name * ParseTree.ty)
   | AbstractType of (Location.t * ParseTree.t_value)
   | Datatype of ParseTree.datatype
   | TypeAlias of (Location.t * ParseTree.t_name * ParseTree.ty)
 
-val compile :
-  (TypesBeta.t, [`Abstract of Kinds.t | `Alias of Types.t * Kinds.t], (TypesBeta.t * int), Gamma.Name.t list) Gamma.t ->
-  t list ->
-  (TypesBeta.t, [`Abstract of Kinds.t | `Alias of Types.t * Kinds.t], (TypesBeta.t * int), Gamma.Name.t list) Gamma.t
+let rec compile gamma = function
+  | Val (loc, name, ty) :: xs ->
+      let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
+      let values = Gamma.Value.add name ty gamma.Gamma.values in
+      compile {gamma with Gamma.values} xs
+  | AbstractType (loc, (name, k)) :: xs ->
+      let types = Gamma.Types.add ~loc name (`Abstract k) gamma.Gamma.types in
+      compile {gamma with Gamma.types} xs
+  | Datatype (loc, name, k, variants) :: xs ->
+      let types = Gamma.Types.add ~loc name (`Abstract k) gamma.Gamma.types in
+      let indexes =
+        let aux acc i (ParseTree.Variant (loc, name, ty)) =
+          let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
+          Gamma.Index.add name (ty, i) acc
+        in
+        List.fold_lefti aux gamma.Gamma.indexes variants
+      in
+      compile {gamma with Gamma.types; indexes} xs
+  | TypeAlias (loc, name, ty) :: xs ->
+      let ty = Types.from_parse_tree ~loc gamma.Gamma.types ty in
+      let types = Gamma.Types.add ~loc name (`Alias ty) gamma.Gamma.types in
+      compile {gamma with Gamma.types} xs
+  | [] ->
+      gamma

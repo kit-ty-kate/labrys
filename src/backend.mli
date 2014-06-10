@@ -21,7 +21,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type t
 
-val make : with_main:bool -> name:string -> UntypedTree.top list -> t
+val make :
+  with_main:bool ->
+  name:Gamma.Type.t ->
+  imports:ParseTree.imports ->
+  UntypedTree.top list ->
+  t
 
 val link : t -> t -> t
 

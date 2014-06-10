@@ -90,8 +90,7 @@ module Matrix = struct
                 let (arg, gamma) = aux gamma param_ty p in
                 (arg :: args, res_ty, gamma)
             | ParseTree.PTy pty ->
-                let (pty, kx) = Types.from_parse_tree ~loc gammaT pty in
-                let pty = TypesBeta.of_ty pty in
+                let (pty, kx) = TypesBeta.of_parse_tree_kind ~loc gammaT pty in
                 begin match pty with
                 | TypesBeta.Forall (from, k, ty) when Kinds.equal k kx ->
                     let ty = TypesBeta.replace ~from ~ty:pty ty in

@@ -23,26 +23,57 @@ open Cmdliner
 open BatteriesExceptionless
 open Monomorphic.None
 
-let start print lto opt c o file =
-  if lto && c then
+let sprintf = Printf.sprintf
+
+let print_error () =
+  prerr_endline "\nThe compilation processes exited abnormally"
+
+let link ~tmp ~o =
+    let tmp = Filename.quote tmp in
+    let o = Filename.quote o in
+    let ld = Sys.command (sprintf "cc -lgc %s -o %s" tmp o) in
+    if Int.(ld <> 0) then begin
+      print_error ();
+    end
+
+let with_tmp_file f =
+  let tmp = Filename.temp_file "cervoise" "" in
+  f tmp;
+  Sys.remove tmp
+
+let write {Compiler.o; _} result =
+  let o = Option.default "a.out" o in
+  let aux tmp =
+    Backend.emit_object_file ~tmp result;
+    link ~tmp ~o;
+  in
+  with_tmp_file aux
+
+let print_or_write = function
+  | {Compiler.print = true; _} -> print_endline % Backend.to_string
+  | {Compiler.print = false; _} as args -> write args
+
+let start print lto opt o file' =
+(*  if lto && c then
     Some
       "Error: Cannot enable the lto optimization while compiling.\n\
        This is allowed only during linking"
-  else
-    let args = {Compiler.print; lto; opt; c; o; file} in
-    try Compiler.compile args; None with
-    | Error.Exn x -> Some (Error.dump ~file x)
-    | Compiler.ParseError x -> Some x
-    | Sys_error x -> Some x
+*)
+  let file = ModulePath.of_file file' in
+  let modul = ModulePath.to_module file in
+  let args = {Compiler.print; lto; opt; o; file; modul} in
+  try Compiler.compile args |> print_or_write args; None with
+  | Error.Exn x -> Some (Error.dump ~file:file' x)
+  | Compiler.ParseError x -> Some x
+  | Sys_error x -> Some x
 
 let cmd =
   let print = Arg.(value & flag & info ["print"]) in
   let lto = Arg.(value & flag & info ["lto"]) in
   let opt = Arg.(value & opt int 0 & info ["opt"]) in
-  let c = Arg.(value & flag & info ["c"]) in
   let o = Arg.(value & opt (some string) None & info ["o"]) in
   let file = Arg.(required & pos 0 (some non_dir_file) None & info []) in
-  (Term.(pure start $ print $ lto $ opt $ c $ o $ file), Term.info "cervoise")
+  (Term.(pure start $ print $ lto $ opt $ o $ file), Term.info "cervoise")
 
 let () =
   match Term.eval cmd with
