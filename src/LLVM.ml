@@ -30,6 +30,7 @@ let build_store src dst b = ignore (build_store src dst b)
 let build_ret v b = ignore (build_ret v b)
 let build_ret_void b = ignore (build_ret_void b)
 let build_br bb b = ignore (build_br bb b)
+let build_unreachable b = ignore (build_unreachable b)
 
 let build_call f args name builder =
   let value = build_call f args name builder in

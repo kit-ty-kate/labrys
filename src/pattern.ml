@@ -152,7 +152,7 @@ type index = int
 type constr = (name * index)
 
 type t =
-  | Node of (var * (constr * t) * (constr * t) list)
+  | Node of (var * (constr * t) list)
   | Leaf of int
 
 let are_any =
@@ -215,12 +215,7 @@ let create gammaD =
           in
           List.map aux variants
         in
-        let (default, cases) =
-          match variants with
-          | [] -> assert false
-          | x::xs -> (x, xs)
-        in
-        Node (var, default, cases)
+        Node (var, variants)
     | ([], _) :: _
     | [] ->
         assert false

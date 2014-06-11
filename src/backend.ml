@@ -60,6 +60,15 @@ module Make (I : sig val name : string end) = struct
     LLVM.build_store values allocated builder;
     allocated
 
+  let debug_trap = LLVM.declare_function "llvm.debugtrap" unit_function_type m
+
+  let create_default_branch func =
+    let block = LLVM.append_block c "" func in
+    let builder = LLVM.builder_at_end c block in
+    ignore (LLVM.build_call debug_trap [||] "" builder);
+    LLVM.build_unreachable builder;
+    block
+
   let fold_env ~env gamma builder =
     let old_env_size = Gamma.Value.cardinal gamma in
     let env = LLVM.build_bitcast env (array_ptr_type old_env_size) "" builder in
@@ -99,7 +108,8 @@ module Make (I : sig val name : string end) = struct
 
   (* TODO: Memoize *)
   let rec llvalue_of_pattern_var value builder = function
-    | Pattern.VLeaf -> value
+    | Pattern.VLeaf ->
+        value
     | Pattern.VNode (i, var) ->
         let value = LLVM.build_bitcast value variant_ptr_type "" builder in
         let value = LLVM.build_load value "" builder in
@@ -134,9 +144,12 @@ module Make (I : sig val name : string end) = struct
     | UntypedTree.Leaf i ->
         let block = List.nth results i in
         LLVM.build_br block builder
-    | UntypedTree.Node (var, default, cases) ->
+    | UntypedTree.Node (var, cases) ->
         let term = llvalue_of_pattern_var value builder var in
-        let default_branch = create_branch func env gamma value results (snd default) in
+        let term = LLVM.build_bitcast term variant_ptr_type "" builder in
+        let term = LLVM.build_load term "" builder in
+        let term = LLVM.build_extractvalue term 0 "" builder in
+        let default_branch = create_default_branch func in
         let switch = LLVM.build_switch term default_branch (List.length cases) builder in
         List.iter
           (fun (constr, tree) ->
@@ -189,6 +202,9 @@ module Make (I : sig val name : string end) = struct
             (LLVM.build_extractvalue value i "" builder, builder)
         end
     | UntypedTree.Variant i ->
+        let (env_size, values, _) = fold_env ~env gamma builder in
+        let values = List.rev values in
+        let env = malloc_and_init (array_type env_size) values builder in
         (malloc_and_init variant_type [i32 i; env] builder, builder)
     | UntypedTree.Let (name, t, xs) ->
         let (t, builder) = lambda func ~env ~globals gamma builder t in

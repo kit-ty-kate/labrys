@@ -27,11 +27,10 @@ open UntypedTree
 let rec of_patterns = function
   | Pattern.Leaf label ->
       Leaf label
-  | Pattern.Node (var, default, cases) ->
+  | Pattern.Node (var, cases) ->
       let aux ((_, constr), tree) = (constr, of_patterns tree) in
-      let default = aux default in
       let cases = List.map aux cases in
-      Node (var, default, cases)
+      Node (var, cases)
 
 let rec of_results m =
   let aux (acc, used_vars_acc) (wildcards, t) =
@@ -59,6 +58,7 @@ and of_typed_term = function
   | TypedTree.PatternMatching (t, results, patterns, _) ->
       let (t, used_vars1) = of_typed_term t in
       let (results, used_vars2) = of_results results in
+      let results = List.rev results in
       let patterns = of_patterns patterns in
       (PatternMatching (t, results, patterns), used_vars1 @ used_vars2)
   | TypedTree.Let (name, t, xs, _) ->
@@ -104,6 +104,7 @@ let rec of_typed_tree = function
       Binding (name, value) :: of_typed_tree xs
   | TypedTree.Datatype (_, variants) :: xs ->
       let variants = List.fold_lefti of_typed_variant [] variants in
+      let variants = List.rev variants in
       variants @ of_typed_tree xs
   | [] ->
       []

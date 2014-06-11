@@ -26,7 +26,7 @@ type index = int
 type constr = int
 
 type tree =
-  | Node of (Pattern.var * (constr * tree) * (constr * tree) list)
+  | Node of (Pattern.var * (constr * tree) list)
   | Leaf of int
 
 and t =

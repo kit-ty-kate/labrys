@@ -53,7 +53,7 @@ type index = int
 type constr = (name * index)
 
 type t =
-  | Node of (var * (constr * t) * (constr * t) list)
+  | Node of (var * (constr * t) list)
   | Leaf of int
 
 val create : name list Gamma.Constr.t -> Matrix.matrix -> t
