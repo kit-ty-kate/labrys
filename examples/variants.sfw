@@ -1,33 +1,106 @@
 type Nat =
   | O : Nat
   | S : Nat -> Nat
-  | D : Nat -> Nat -> Nat
 
-let test = O
-let testest = S
-let testestest = D
-let testestestest = S O
-let testestestestest = D O
-let testestestestestest = D O (S O)
+type Unit = Unit : Unit
 
-let printInt : Nat -> Nat = begin
+let printInt : Nat -> Unit = begin
   @msg = internal constant [4 x i8] c"%d\0a\00"
+
   declare i32 @printf(i8*, ...)
-  define i8* @__printInt(i8* %i, i8**) {
-    %access_prim = load i8* %i
-    %access = zext i8 %access_prim to i32
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
-    %r = inttoptr i32 %r1 to i8*
-    ret i8* %r
+  
+  define i32 @__int_of_nat(i8*) {
+    %var = bitcast i8* %0 to { i32, i8* }*
+    %variant = load { i32, i8* }* %var
+    %key = extractvalue { i32, i8* } %variant, 0
+    %cond = icmp eq i32 %key, 0
+    br i1 %cond, label %e, label %loop
+  loop:
+    %next = extractvalue { i32, i8* } %variant, 1
+    %val = call i32 @__int_of_nat(i8* %next)
+    %res = add i32 1, %val
+    ret i32 %res
+  e:
+    ret i32 0
+  }
+
+  define i8* @__printInt(i8*, i8**) {
+    %i = call i32 @__int_of_nat(i8* %0)
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %i)
+    ret i8* null
   }
   @_printInt = global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__printInt, i8** null}
   @printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
 end
 
-let uu =
-  printInt
-    match O with
-    | O -> S O
-    | S a -> D O O
-    | D x y -> O
-    end
+let printZero : Unit -> Unit = begin
+  @msg = internal constant [3 x i8] c"0\0a\00"
+
+  declare i32 @printf(i8*, ...)
+
+  define internal i8* @__print(i8*, i8**) {
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
+    %r = inttoptr i32 %r1 to i8*
+    ret i8* %r
+  }
+  @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
+  @printZero = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+end
+
+let printOne : Unit -> Unit = begin
+  @msg = internal constant [3 x i8] c"1\0a\00"
+
+  declare i32 @printf(i8*, ...)
+
+  define internal i8* @__print(i8*, i8**) {
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
+    %r = inttoptr i32 %r1 to i8*
+    ret i8* %r
+  }
+  @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
+  @printOne = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+end
+
+let printTwo : Unit -> Unit = begin
+  @msg = internal constant [3 x i8] c"2\0a\00"
+
+  declare i32 @printf(i8*, ...)
+
+  define internal i8* @__print(i8*, i8**) {
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
+    %r = inttoptr i32 %r1 to i8*
+    ret i8* %r
+  }
+  @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
+  @printTwo = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+end
+
+let printOther : Unit -> Unit = begin
+  @msg = internal constant [7 x i8] c"other\0a\00"
+
+  declare i32 @printf(i8*, ...)
+
+  define internal i8* @__print(i8*, i8**) {
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([7 x i8]* @msg, i32 0, i32 0))
+    %r = inttoptr i32 %r1 to i8*
+    ret i8* %r
+  }
+  @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
+  @printOther = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+end
+
+let f (x : Nat) =
+  match x with
+  | O -> let lol = printZero Unit in Unit
+  | S O -> let lol = printOne Unit in Unit
+  | S (S O) -> let lol = printTwo Unit in Unit
+  | S (S (S a)) -> let lol = printOther Unit in Unit
+  end
+
+let test = f O
+let test = f (S O)
+let test = f (S (S O))
+let test = f (S (S (S O)))
+let test = f (S (S (S (S O))))
+let test = f (S (S (S (S (S O)))))
+let test = f (S (S (S (S (S (S O))))))
