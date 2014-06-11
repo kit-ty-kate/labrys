@@ -60,3 +60,4 @@ let test = printInt (fact (S (S O))) -- 2
 let test = printInt (fact (S (S (S O)))) -- 6
 let test = printInt (fact (S (S (S (S O))))) -- 24
 let test = printInt (fact (S (S (S (S (S O)))))) -- 120
+let test = printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))) -- 362880
