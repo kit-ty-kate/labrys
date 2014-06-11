@@ -191,7 +191,7 @@ let specialize name m =
   in
   aux m
 
-let create gammaD =
+let create ~loc gammaD =
   let rec aux m = match m with
     | ((Matrix.Any _ :: _ as row), code_index) :: _ when are_any row ->
         Leaf code_index
@@ -206,7 +206,11 @@ let create gammaD =
             let xs =
               match specialize name m with
               | ([], code_index) :: _ -> Leaf code_index
-              | [] -> failwith "Pattern non-exostive" (* TODO: Use Error *)
+              | [] ->
+                  Error.fail
+                    ~loc
+                    "Pattern non-exostive on constructor '%s'"
+                    (Gamma.Name.to_string name)
               | m -> aux m
             in
             let index = List.index_of name variants in

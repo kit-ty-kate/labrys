@@ -56,4 +56,4 @@ type t =
   | Node of (var * (constr * t) list)
   | Leaf of int
 
-val create : name list Gamma.Constr.t -> Matrix.matrix -> t
+val create : loc:Location.t -> name list Gamma.Constr.t -> Matrix.matrix -> t

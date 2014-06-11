@@ -180,7 +180,7 @@ let rec aux gamma gammaT gammaC gammaD = function
         List.fold_left f initial_pattern tail
       in
       let (patterns, results) = Pattern.Matrix.split patterns in
-      let patterns = Pattern.create gammaD patterns in
+      let patterns = Pattern.create ~loc gammaD patterns in
       PatternMatching (t, results, patterns, initial_ty)
   | ParseTree.Let (name, t, xs) ->
       let t = aux gamma gammaT gammaC gammaD t in
