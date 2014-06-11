@@ -66,6 +66,7 @@ let start print lto opt o file' =
   | Error.Exn x -> Some (Error.dump ~file:file' x)
   | Compiler.ParseError x -> Some x
   | Sys_error x -> Some x
+  | Llvm_irreader.Error x -> Some x
 
 let cmd =
   let print = Arg.(value & flag & info ["print"]) in
