@@ -25,21 +25,25 @@ type var = private
   | VLeaf
   | VNode of (int * var)
 
-type index = int
+type mconstr
 
-type constr = (name * index)
+type 'a t = (mconstr * 'a) list
 
-type t =
-  | Node of (var * (constr * t) list)
-  | Leaf of int
+type code_index = int
+
+type pattern = private
+  | Constr of (var * (name * Gamma.Type.t) * pattern list)
+  | Any of (var * (name * Gamma.Type.t))
+
+type matrix = (pattern list * code_index) list
 
 val create :
   loc:Location.t ->
-  (TypesBeta.t Gamma.Value.t -> ParseTree.t -> ('a * TypesBeta.t)) ->
   TypesBeta.t Gamma.Value.t ->
   [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t -> (* TODO: define types in a specific module *)
   (TypesBeta.t * int) Gamma.Index.t ->
-  name list Gamma.Constr.t ->
   TypesBeta.t ->
-  (ParseTree.pattern * ParseTree.t) list ->
-  (t * ((var * name) list * 'a) list * TypesBeta.t)
+  ParseTree.pattern ->
+  (mconstr * TypesBeta.t Gamma.Value.t)
+
+val split : 'a t -> (matrix * ((var * name) list * 'a) list)

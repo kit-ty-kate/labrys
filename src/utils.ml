@@ -27,3 +27,5 @@ let replace_ext filename ext =
     try Filename.chop_extension filename with _ -> filename
   in
   filename ^ "." ^ ext
+
+let fold f acc l = List.rev (List.fold_left f acc l)

@@ -153,34 +153,13 @@ let rec aux gamma gammaT gammaC gammaD = function
   | ParseTree.PatternMatching (loc, t, patterns) ->
       let t = aux gamma gammaT gammaC gammaD t in
       let ty = get_type t in
-      let (head, tail) = match patterns with
-        | [] -> assert false
-        | x::xs -> (x, xs)
-      in
-      let (initial_pattern, initial_ty) =
-        let (pattern, gamma) =
-          let gammaC = Gamma.Index.map fst gammaC in
-          Pattern.Matrix.create ~loc gamma gammaT gammaC ty (fst head)
+      let (patterns, results, initial_ty) =
+        let aux gamma x =
+          let x = aux gamma gammaT gammaC gammaD x in
+          (x, get_type x)
         in
-        let term = aux gamma gammaT gammaC gammaD (snd head) in
-        (Pattern.Matrix.join pattern term, get_type term)
+        Pattern.create ~loc aux gamma gammaT gammaC gammaD ty patterns
       in
-      let patterns =
-        let f patterns (p, t) =
-          let (pattern, gamma) =
-            let gammaC = Gamma.Index.map fst gammaC in
-            Pattern.Matrix.create ~loc gamma gammaT gammaC ty p
-          in
-          let t = aux gamma gammaT gammaC gammaD t in
-          let has = get_type t in
-          if not (TypesBeta.equal has initial_ty) then
-            type_error ~loc ~has ~expected:initial_ty;
-          Pattern.Matrix.append pattern t patterns
-        in
-        List.fold_left f initial_pattern tail
-      in
-      let (patterns, results) = Pattern.Matrix.split patterns in
-      let patterns = Pattern.create ~loc gammaD patterns in
       PatternMatching (t, results, patterns, initial_ty)
   | ParseTree.Let (name, t, xs) ->
       let t = aux gamma gammaT gammaC gammaD t in
