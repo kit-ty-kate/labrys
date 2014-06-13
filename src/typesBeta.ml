@@ -141,6 +141,13 @@ module Error = struct
        This is not a function; it cannot be applied."
       (to_string ty)
 
+  let forall_type ~loc ty =
+    Error.fail
+      ~loc
+      "Error: This expression has type '%s'. \
+       This is not a type abstraction; it cannot be applied by a value."
+      (to_string ty)
+
   let kind_missmatch ~loc ~has ~on =
     Error.fail
       ~loc
@@ -168,7 +175,7 @@ let apply_ty ~loc ~ty_x ~kind_x = function
   | (Fun _ as ty)
   | (AppOnTy _ as ty)
   | (Ty _ as ty) ->
-      Error.function_type ~loc ty
+      Error.forall_type ~loc ty
   | AbsOnTy _ ->
       assert false
 
