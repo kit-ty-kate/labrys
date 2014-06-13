@@ -72,6 +72,10 @@ let of_parse_tree ~loc gammaT ty =
     Error.fail ~loc "Values cannot be of kind /= '*'";
   of_ty ty
 
+let func ~param ~res = Fun (param, res)
+let atom name = Ty name
+let forall ~param ~kind ~res = Forall (param, kind, res)
+
 let rec to_string = function
   | Ty x -> Gamma.Type.to_string x
   | Fun (Ty x, ret) -> Gamma.Type.to_string x ^ " -> " ^ to_string ret
@@ -119,3 +123,58 @@ let rec head = function
   | Forall (_, _, t)
   | AbsOnTy (_, _, t)
   | AppOnTy (t, _) -> head t
+
+module Error = struct
+  let type_error_aux ~loc =
+    Error.fail
+      ~loc
+      "Error: This expression has type '%s' but an \
+       expression was expected of type '%s'"
+
+  let fail ~loc ~has ~expected =
+    type_error_aux ~loc (to_string has) (to_string expected)
+
+  let function_type ~loc ty =
+    Error.fail
+      ~loc
+      "Error: This expression has type '%s'. \
+       This is not a function; it cannot be applied."
+      (to_string ty)
+
+  let kind_missmatch ~loc ~has ~on =
+    Error.fail
+      ~loc
+      "Cannot apply something with kind '%s' on '%s'"
+      (Kinds.to_string has)
+      (Kinds.to_string on)
+end
+
+let apply ~loc = function
+  | Fun x ->
+      x
+  | (Forall _ as ty)
+  | (AppOnTy _ as ty)
+  | (Ty _ as ty) ->
+      Error.function_type ~loc ty
+  | AbsOnTy _ ->
+      assert false
+
+let apply_ty ~loc ~ty_x ~kind_x = function
+  | Forall (ty, k, res) when Kinds.equal k kind_x ->
+      let res = replace ~from:ty ~ty:ty_x res in
+      (ty, res)
+  | Forall (_, k, _) ->
+      Error.kind_missmatch ~loc ~has:kind_x ~on:k
+  | (Fun _ as ty)
+  | (AppOnTy _ as ty)
+  | (Ty _ as ty) ->
+      Error.function_type ~loc ty
+  | AbsOnTy _ ->
+      assert false
+
+let rec check_if_returns_type ~datatype = function
+  | Ty x -> Gamma.Type.equal x datatype
+  | Forall (_, _, ret)
+  | AppOnTy (ret, _)
+  | Fun (_, ret) -> check_if_returns_type ~datatype ret
+  | AbsOnTy _ -> false

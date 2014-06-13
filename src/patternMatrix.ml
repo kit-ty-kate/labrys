@@ -42,30 +42,6 @@ type pattern =
 
 type matrix = (pattern list * code_index) list
 
-(* TODO: Remove those duplications *)
-let type_error_aux ~loc =
-  Error.fail
-    ~loc
-    "Error: This expression has type '%s' but an \
-     expression was expected of type '%s'"
-
-let type_error ~loc ~has ~expected =
-  type_error_aux ~loc (TypesBeta.to_string has) (TypesBeta.to_string expected)
-
-let function_type_error ~loc ~has ~expected =
-  Error.fail
-    ~loc
-    "Error: Can't apply '%s' to a non-function type '%s'"
-    (TypesBeta.to_string has)
-    (TypesBeta.to_string expected)
-
-let kind_missmatch ~loc ~has ~on =
-  Error.fail
-    ~loc
-    "Cannot apply something with kind '%s' on '%s'"
-    (Kinds.to_string has)
-    (Kinds.to_string on)
-
 let create ~loc gammaT gammaC =
   let rec aux gamma ty' = function
     | ParseTree.Any name ->
@@ -76,30 +52,13 @@ let create ~loc gammaT gammaC =
         let (ty, _) = Option.default_delayed (fun () -> assert false) ty in
         let aux (args, ty, gamma) = function
           | ParseTree.PVal p ->
-              let (param_ty, res_ty) = match ty with
-                | TypesBeta.Fun (param, res) -> (param, res)
-                | (TypesBeta.AppOnTy _ as ty)
-                | (TypesBeta.Ty _ as ty) ->
-                    function_type_error ~loc ~has:ty' ~expected:ty
-                | TypesBeta.Forall (ty, _, _) ->
-                    type_error_aux ~loc (TypesBeta.to_string ty') (Gamma.Type.to_string ty)
-                | TypesBeta.AbsOnTy _ ->
-                    assert false
-              in
+              let (param_ty, res_ty) = TypesBeta.apply ~loc ty in
               let (arg, gamma) = aux gamma param_ty p in
               (arg :: args, res_ty, gamma)
           | ParseTree.PTy pty ->
               let (pty, kx) = TypesBeta.of_parse_tree_kind ~loc gammaT pty in
-              begin match pty with
-              | TypesBeta.Forall (from, k, ty) when Kinds.equal k kx ->
-                  let ty = TypesBeta.replace ~from ~ty:pty ty in
-                  (args, ty, gamma)
-              | TypesBeta.Forall (_, k, _) -> kind_missmatch ~loc ~has:kx ~on:k
-              | TypesBeta.Fun (ty, _) -> type_error ~loc ~has:pty ~expected:ty
-              | (TypesBeta.AppOnTy _ as ty)
-              | (TypesBeta.Ty _ as ty) -> function_type_error ~loc ~has:pty ~expected:ty
-              | TypesBeta.AbsOnTy _ -> assert false
-              end
+              let (_, res) = TypesBeta.apply_ty ~loc ~ty_x:pty ~kind_x:kx ty in
+              (args, res, gamma)
         in
         let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
         if not (TypesBeta.equal ty ty') then

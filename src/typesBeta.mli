@@ -21,12 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = Gamma.Type.t
 
-type t =
-  | Ty of name
-  | Fun of (t * t)
-  | Forall of (name * Kinds.t * t)
-  | AbsOnTy of (name * Kinds.t * t)
-  | AppOnTy of (t * t)
+type t
 
 val of_parse_tree_kind :
   loc:Location.t ->
@@ -40,6 +35,10 @@ val of_parse_tree :
   ParseTree.ty ->
   t
 
+val func : param:t -> res:t -> t
+val atom : name -> t
+val forall : param:name -> kind:Kinds.t -> res:t -> t
+
 val to_string : t -> string
 
 val equal : t -> t -> bool
@@ -49,3 +48,21 @@ val replace : from:name -> ty:t -> t -> t
 val size : t -> int
 
 val head : t -> name
+
+module Error : sig
+  val fail : loc:Location.t -> has:t -> expected:t -> 'a
+end
+
+val apply :
+  loc:Location.t ->
+  t ->
+  (t * t)
+
+val apply_ty :
+  loc:Location.t ->
+  ty_x:t ->
+  kind_x:Kinds.t ->
+  t ->
+  (name * t)
+
+val check_if_returns_type : datatype:name -> t -> bool

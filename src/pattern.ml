@@ -30,16 +30,6 @@ type var = Matrix.var = private
   | VLeaf
   | VNode of (int * var)
 
-(* TODO: Remove those duplications *)
-let type_error_aux ~loc =
-  Error.fail
-    ~loc
-    "Error: This expression has type '%s' but an \
-     expression was expected of type '%s'"
-
-let type_error ~loc ~has ~expected =
-  type_error_aux ~loc (TypesBeta.to_string has) (TypesBeta.to_string expected)
-
 type index = int
 
 type constr = (name * index)
@@ -134,7 +124,7 @@ let create ~loc f gamma gammaT gammaC gammaD ty patterns =
       let (pattern, gamma) = Matrix.create ~loc gamma gammaT gammaC ty p in
       let (t, has) = f gamma t in
       if not (TypesBeta.equal has initial_ty) then
-        type_error ~loc ~has ~expected:initial_ty;
+        TypesBeta.Error.fail ~loc ~has ~expected:initial_ty;
       (pattern, t) :: patterns
     in
     Utils.fold f initial_pattern tail
