@@ -151,10 +151,10 @@ module Make (I : sig val name : string end) = struct
         let value = LLVM.build_extractvalue value i "" builder in
         llvalue_of_pattern_var value builder var
 
-  let rec create_branch func env gamma value results tree =
+  let rec create_branch func ~env ~default gamma value results tree =
     let block = LLVM.append_block c "" func in
     let builder = LLVM.builder_at_end c block in
-    create_tree func env gamma builder value results tree;
+    create_tree func ~env ~default gamma builder value results tree;
     block
 
   and create_result func ~env ~globals ~res ~next_block ~value gamma (vars, result) =
@@ -172,7 +172,7 @@ module Make (I : sig val name : string end) = struct
     LLVM.build_br next_block builder;
     block
 
-  and create_tree func env gamma builder value results = function
+  and create_tree func ~env ~default gamma builder value results = function
     | UntypedTree.Leaf i ->
         let block = List.nth results i in
         LLVM.build_br block builder
@@ -181,11 +181,10 @@ module Make (I : sig val name : string end) = struct
         let term = LLVM.build_bitcast term variant_ptr_type "" builder in
         let term = LLVM.build_load term "" builder in
         let term = LLVM.build_extractvalue term 0 "" builder in
-        let default_branch = create_default_branch func in
-        let switch = LLVM.build_switch term default_branch (List.length cases) builder in
+        let switch = LLVM.build_switch term default (List.length cases) builder in
         List.iter
           (fun (constr, tree) ->
-             let branch = create_branch func env gamma value results tree in
+             let branch = create_branch func ~env ~default gamma value results tree in
              LLVM.add_case switch (i32 constr) branch
           )
           cases
@@ -221,7 +220,8 @@ module Make (I : sig val name : string end) = struct
         let next_block = LLVM.append_block c "" func in
         let results = List.map (create_result func ~env ~globals ~res ~next_block ~value:t gamma) results in
         let builder' = LLVM.builder_at_end c next_block in
-        create_tree func env gamma builder t results tree;
+        let default = create_default_branch func in
+        create_tree func ~env ~default gamma builder t results tree;
         (LLVM.build_load res "" builder', builder')
     | UntypedTree.Val name ->
         let value = Gamma.Value.find name gamma in
