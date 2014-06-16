@@ -286,15 +286,14 @@ module Make (I : sig val name : string end) = struct
         Gamma.Value.iter aux global_values;
         builder
 
+  let define_malloc () =
+    let malloc_type = (LLVM.function_type star_type [|i32_type|]) in
+    let (malloc, builder) = LLVM.define_function c "malloc" malloc_type m in
+    LLVM.set_linkage LLVM.Linkage.Private malloc;
+    let gc_malloc = LLVM.declare_function "GC_malloc" malloc_type m in
+    LLVM.build_ret (LLVM.build_call gc_malloc (LLVM.params malloc) "" builder) builder
+
   let init_gc builder =
-    let define_malloc () =
-      let malloc_type = (LLVM.function_type star_type [|i32_type|]) in
-      let (malloc, builder) = LLVM.define_function c "malloc" malloc_type m in
-      LLVM.set_linkage LLVM.Linkage.Private malloc;
-      let gc_malloc = LLVM.declare_function "GC_malloc" malloc_type m in
-      LLVM.build_ret (LLVM.build_call gc_malloc (LLVM.params malloc) "" builder) builder
-    in
-    define_malloc ();
     let gc_init = LLVM.declare_function "GC_init" unit_function_type m in
     ignore (LLVM.build_call gc_init [||] "" builder)
 
@@ -321,6 +320,7 @@ module Make (I : sig val name : string end) = struct
           let (f, builder) =
             LLVM.define_function c (init_name I.name) unit_function_type m
           in
+          define_malloc ();
           init_imports imports builder;
           let globals = Globals.create ~size:i builder in
           let builder = init f ~globals gamma Gamma.Value.empty builder (List.rev init_list) in
