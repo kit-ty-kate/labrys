@@ -140,18 +140,31 @@ module Make (I : sig val name : string end) = struct
     LLVM.build_store closure allocated builder;
     (allocated, gamma)
 
-  (* TODO: Memoize *)
-  let rec llvalue_of_pattern_var value builder = function
-    | Pattern.VLeaf ->
-        value
-    | Pattern.VNode (i, var) ->
-        let value = LLVM.build_bitcast value Type.variant_ptr "" builder in
-        let value = LLVM.build_load value "" builder in
-        let value = LLVM.build_extractvalue value 1 "" builder in
-        let value = LLVM.build_bitcast value (Type.array_ptr (succ i)) "" builder in
-        let value = LLVM.build_load value "" builder in
-        let value = LLVM.build_extractvalue value i "" builder in
-        llvalue_of_pattern_var value builder var
+  let (llvalue_of_pattern_var, pattern_value_clear) =
+    let htbl = Hashtbl.create 32 in
+    let rec llvalue_of_pattern_var value builder = function
+      | Pattern.VLeaf ->
+          value
+      | Pattern.VNode (i, var) ->
+          let value = LLVM.build_bitcast value Type.variant_ptr "" builder in
+          let value = LLVM.build_load value "" builder in
+          let value = LLVM.build_extractvalue value 1 "" builder in
+          let value = LLVM.build_bitcast value (Type.array_ptr (succ i)) "" builder in
+          let value = LLVM.build_load value "" builder in
+          let value = LLVM.build_extractvalue value i "" builder in
+          llvalue_of_pattern_var value builder var
+    in
+    let get value builder var =
+      match Hashtbl.find htbl var with
+      | None ->
+          let res = llvalue_of_pattern_var value builder var in
+          Hashtbl.add htbl var res;
+          res
+      | Some x ->
+          x
+      in
+    let clear () = Hashtbl.clear htbl in
+    (get, clear)
 
   let rec create_branch func ~env ~default gamma value results tree =
     let block = LLVM.append_block c "" func in
@@ -224,6 +237,7 @@ module Make (I : sig val name : string end) = struct
         let builder' = LLVM.builder_at_end c next_block in
         let default = create_default_branch func in
         create_tree func ~env ~default gamma builder t results tree;
+        pattern_value_clear ();
         (LLVM.build_load res "" builder', builder')
     | UntypedTree.Val name ->
         let value = Gamma.Value.find name gamma in
