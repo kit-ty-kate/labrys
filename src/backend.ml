@@ -142,7 +142,17 @@ module Make (I : sig val name : string end) = struct
 
   let (llvalue_of_pattern_var, pattern_value_clear) =
     let htbl = Hashtbl.create 32 in
-    let rec llvalue_of_pattern_var value builder = function
+    let rec get value builder =
+      let llvalue_of_pattern_var value var =
+        match Hashtbl.find htbl var with
+        | None ->
+            let res = get value builder var in
+            Hashtbl.add htbl var res;
+            res
+        | Some x ->
+            x
+      in
+      function
       | Pattern.VLeaf ->
           value
       | Pattern.VNode (i, var) ->
@@ -152,17 +162,8 @@ module Make (I : sig val name : string end) = struct
           let value = LLVM.build_bitcast value (Type.array_ptr (succ i)) "" builder in
           let value = LLVM.build_load value "" builder in
           let value = LLVM.build_extractvalue value i "" builder in
-          llvalue_of_pattern_var value builder var
+          llvalue_of_pattern_var value var
     in
-    let get value builder var =
-      match Hashtbl.find htbl var with
-      | None ->
-          let res = llvalue_of_pattern_var value builder var in
-          Hashtbl.add htbl var res;
-          res
-      | Some x ->
-          x
-      in
     let clear () = Hashtbl.clear htbl in
     (get, clear)
 
