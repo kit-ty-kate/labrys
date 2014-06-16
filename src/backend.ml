@@ -57,7 +57,7 @@ module Make (I : sig val name : string end) = struct
   module Globals : sig
     type t
 
-    val create : size:int -> LLVM.llbuilder -> t
+    val create : size:int -> t
     val load : t -> LLVM.llbuilder -> t
     val store : t -> LLVM.llvalue -> int -> LLVM.llbuilder -> t
     val get : t -> LLVM.llvalue
@@ -67,7 +67,7 @@ module Make (I : sig val name : string end) = struct
       ; loaded : LLVM.llvalue
       }
 
-    let create ~size builder =
+    let create ~size =
       let initial_value =
         let value = Array.make size null in
         LLVM.const_array Type.star value
@@ -338,7 +338,7 @@ module Make (I : sig val name : string end) = struct
             LLVM.define_function c (init_name I.name) Type.unit_function m
           in
           init_imports imports builder;
-          let globals = Globals.create ~size:i builder in
+          let globals = Globals.create ~size:i in
           let builder = init f ~globals gamma Gamma.Value.empty builder (List.rev init_list) in
           LLVM.build_ret_void builder;
           if with_main then begin
