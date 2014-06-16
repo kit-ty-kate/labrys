@@ -31,6 +31,7 @@ module Make (I : sig val name : string end) = struct
     | Value of LLVM.llvalue
     | Env of int
     | Glob of int
+    | ValueGlob of (int * LLVM.llvalue)
 
   let c = LLVM.create_context ()
   let m = LLVM.create_module c I.name
@@ -51,6 +52,39 @@ module Make (I : sig val name : string end) = struct
   let i32 = LLVM.const_int i32_type
   let null = LLVM.const_null star_type
 
+  module Globals : sig
+    type t
+
+    val create : size:int -> LLVM.llbuilder -> t
+    val load : t -> LLVM.llbuilder -> t
+    val store : t -> LLVM.llvalue -> int -> LLVM.llbuilder -> t
+    val get : t -> LLVM.llvalue
+  end = struct
+    type t =
+      { globals : LLVM.llvalue
+      ; loaded : LLVM.llvalue
+      }
+
+    let create ~size builder =
+      let initial_value =
+        let value = Array.make size null in
+        LLVM.const_array star_type value
+      in
+      let globals = LLVM.define_global "globals" initial_value m in
+      LLVM.set_linkage LLVM.Linkage.Private globals;
+      {globals; loaded = initial_value}
+
+    let load {globals; _} builder =
+      {globals; loaded = LLVM.build_load globals "" builder}
+
+    let store {globals; loaded} x i builder =
+      let loaded = LLVM.build_insertvalue loaded x i "" builder in
+      LLVM.build_store loaded globals builder;
+      {globals; loaded}
+
+    let get {loaded; _} = loaded
+  end
+
   (* TODO: Use the module name as prefix for global values *)
 
   let malloc_and_init ty values builder =
@@ -70,9 +104,6 @@ module Make (I : sig val name : string end) = struct
     block
 
   let fold_env ~env gamma builder =
-    let old_env_size = Gamma.Value.cardinal gamma in
-    let env = LLVM.build_bitcast env (array_ptr_type old_env_size) "" builder in
-    let env = lazy (LLVM.build_load env "" builder) in
     let aux name value (i, values, gamma) =
       match value with
       | Value value ->
@@ -85,6 +116,7 @@ module Make (I : sig val name : string end) = struct
           let values = value :: values in
           let gamma = Gamma.Value.add name (Env i) gamma in
           (succ i, values, gamma)
+      | ValueGlob (j, _)
       | Glob j ->
           let gamma = Gamma.Value.add name (Glob j) gamma in
           (i, values, gamma)
@@ -167,6 +199,10 @@ module Make (I : sig val name : string end) = struct
         in
         let param = LLVM.param f 0 in
         let env = LLVM.param f 1 in
+        let env_size = Gamma.Value.cardinal gamma in
+        let env = LLVM.build_bitcast env (array_ptr_type env_size) "" builder' in
+        let env = lazy (LLVM.build_load env "" builder') in
+        let globals = Globals.load globals builder' in
         let gamma = Gamma.Value.add name (Value param) gamma in
         let (v, builder') = lambda f ~env ~globals gamma builder' t in
         LLVM.build_ret v builder';
@@ -191,15 +227,15 @@ module Make (I : sig val name : string end) = struct
         let value = Gamma.Value.find name gamma in
         let value = Option.default_delayed (fun () -> assert false) value in
         begin match value with
+        | ValueGlob (_, value)
         | Value value ->
             (value, builder)
         | Env i ->
-            let env = LLVM.build_bitcast env (array_ptr_type (succ i)) "" builder in
-            let value = LLVM.build_load env "" builder in
-            (LLVM.build_extractvalue value i "" builder, builder)
+            let env = Lazy.force env in
+            (LLVM.build_extractvalue env i "" builder, builder)
         | Glob i ->
-            let value = LLVM.build_load globals "" builder in
-            (LLVM.build_extractvalue value i "" builder, builder)
+            let globals = Globals.get globals in
+            (LLVM.build_extractvalue globals i "" builder, builder)
         end
     | UntypedTree.Variant i ->
         let (env_size, values, _) = fold_env ~env gamma builder in
@@ -215,29 +251,29 @@ module Make (I : sig val name : string end) = struct
         let gamma = Gamma.Value.add name (Value t) gamma in
         lambda func ~env ~globals gamma builder xs
 
-  let store_to_globals ~globals x i builder =
-    let globals_loaded = LLVM.build_load globals "" builder in
-    let globals_loaded = LLVM.build_insertvalue globals_loaded x i "" builder in
-    LLVM.build_store globals_loaded globals builder
+  let lambda func ~globals gamma builder t =
+    let env = lazy null in
+    let globals = Globals.load globals builder in
+    lambda func ~env ~globals gamma builder t
 
   let rec init func ~globals gamma global_values builder = function
     | `Val (name, i, t) :: xs ->
-        let (value, builder) = lambda func ~env:null ~globals gamma builder t in
-        let gamma = Gamma.Value.add name (Glob i) gamma in
+        let (value, builder) = lambda func ~globals gamma builder t in
+        let gamma = Gamma.Value.add name (ValueGlob (i, value)) gamma in
         let global_values = Gamma.Value.add name value global_values in
-        store_to_globals ~globals value i builder;
+        let globals = Globals.store globals value i builder in
         init func ~globals gamma global_values builder xs
     | `Rec (name, i, t) :: xs ->
         let gamma = Gamma.Value.add name (Glob i) gamma in
-        let (value, builder) = lambda func ~env:null ~globals gamma builder t in
+        let (value, builder) = lambda func ~globals gamma builder t in
         let global_values = Gamma.Value.add name value global_values in
-        store_to_globals ~globals value i builder;
+        let globals = Globals.store globals value i builder in
         init func ~globals gamma global_values builder xs
     | `Bind (name, value, i) :: xs ->
         let gamma = Gamma.Value.add name (Glob i) gamma in
         let value = LLVM.build_load value "" builder in
         let global_values = Gamma.Value.add name value global_values in
-        store_to_globals ~globals value i builder;
+        let globals = Globals.store globals value i builder in
         init func ~globals gamma global_values builder xs
     | [] ->
         (* TODO: Use global (needs a real build-system) *)
@@ -249,15 +285,6 @@ module Make (I : sig val name : string end) = struct
         in
         Gamma.Value.iter aux global_values;
         builder
-
-  let create_globals size =
-    let initial_value =
-      let value = Array.make size null in
-      LLVM.const_array star_type value
-    in
-    let globals = LLVM.define_global "globals" initial_value m in
-    LLVM.set_linkage LLVM.Linkage.Private globals;
-    globals
 
   let init_gc builder =
     let define_malloc () =
@@ -295,7 +322,7 @@ module Make (I : sig val name : string end) = struct
             LLVM.define_function c (init_name I.name) unit_function_type m
           in
           init_imports imports builder;
-          let globals = create_globals i in
+          let globals = Globals.create ~size:i builder in
           let builder = init f ~globals gamma Gamma.Value.empty builder (List.rev init_list) in
           LLVM.build_ret_void builder;
           if with_main then begin
