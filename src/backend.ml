@@ -36,21 +36,23 @@ module Make (I : sig val name : string end) = struct
   let c = LLVM.create_context ()
   let m = LLVM.create_module c I.name
 
-  let i8_type = LLVM.i8_type c
-  let i32_type = LLVM.i32_type c
-  let star_type = LLVM.pointer_type i8_type
-  let lambda_type = LLVM.function_type star_type [|star_type; star_type|]
-  let lambda_ptr_type = LLVM.pointer_type lambda_type
-  let closure_type = LLVM.struct_type c [|lambda_ptr_type; star_type|]
-  let closure_ptr_type = LLVM.pointer_type closure_type
-  let variant_type = LLVM.struct_type c [|i32_type; star_type|]
-  let variant_ptr_type = LLVM.pointer_type variant_type
-  let array_type = LLVM.array_type star_type
-  let array_ptr_type size = LLVM.pointer_type (array_type size)
-  let unit_function_type = LLVM.function_type (LLVM.void_type c) [||]
+  module Type = struct
+    let i8 = LLVM.i8_type c
+    let i32 = LLVM.i32_type c
+    let star = LLVM.pointer_type i8
+    let lambda = LLVM.function_type star [|star; star|]
+    let lambda_ptr = LLVM.pointer_type lambda
+    let closure = LLVM.struct_type c [|lambda_ptr; star|]
+    let closure_ptr = LLVM.pointer_type closure
+    let variant = LLVM.struct_type c [|i32; star|]
+    let variant_ptr = LLVM.pointer_type variant
+    let array = LLVM.array_type star
+    let array_ptr size = LLVM.pointer_type (array size)
+    let unit_function = LLVM.function_type (LLVM.void_type c) [||]
+  end
 
-  let i32 = LLVM.const_int i32_type
-  let null = LLVM.const_null star_type
+  let i32 = LLVM.const_int Type.i32
+  let null = LLVM.const_null Type.star
 
   module Globals : sig
     type t
@@ -68,7 +70,7 @@ module Make (I : sig val name : string end) = struct
     let create ~size builder =
       let initial_value =
         let value = Array.make size null in
-        LLVM.const_array star_type value
+        LLVM.const_array Type.star value
       in
       let globals = LLVM.define_global "globals" initial_value m in
       LLVM.set_linkage LLVM.Linkage.Private globals;
@@ -94,7 +96,7 @@ module Make (I : sig val name : string end) = struct
     LLVM.build_store values allocated builder;
     allocated
 
-  let debug_trap = LLVM.declare_function "llvm.debugtrap" unit_function_type m
+  let debug_trap = LLVM.declare_function "llvm.debugtrap" Type.unit_function m
 
   let create_default_branch func =
     let block = LLVM.append_block c "" func in
@@ -125,7 +127,7 @@ module Make (I : sig val name : string end) = struct
 
   let create_closure ~isrec ~used_vars ~f ~env gamma builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
-    let allocated = LLVM.build_malloc closure_type "" builder in
+    let allocated = LLVM.build_malloc Type.closure "" builder in
     let gamma = Gamma.Value.filter (fun x _ -> List.mem x used_vars) gamma in
     let gamma = match isrec with
       | Some rec_name -> Gamma.Value.add rec_name (Value allocated) gamma
@@ -133,8 +135,8 @@ module Make (I : sig val name : string end) = struct
     in
     let (env_size, values, gamma) = fold_env ~env gamma builder in
     let values = List.rev values in
-    let env = malloc_and_init (array_type env_size) values builder in
-    let closure = List.fold_lefti aux (LLVM.undef closure_type) [f; env] in
+    let env = malloc_and_init (Type.array env_size) values builder in
+    let closure = List.fold_lefti aux (LLVM.undef Type.closure) [f; env] in
     LLVM.build_store closure allocated builder;
     (allocated, gamma)
 
@@ -143,10 +145,10 @@ module Make (I : sig val name : string end) = struct
     | Pattern.VLeaf ->
         value
     | Pattern.VNode (i, var) ->
-        let value = LLVM.build_bitcast value variant_ptr_type "" builder in
+        let value = LLVM.build_bitcast value Type.variant_ptr "" builder in
         let value = LLVM.build_load value "" builder in
         let value = LLVM.build_extractvalue value 1 "" builder in
-        let value = LLVM.build_bitcast value (array_ptr_type (succ i)) "" builder in
+        let value = LLVM.build_bitcast value (Type.array_ptr (succ i)) "" builder in
         let value = LLVM.build_load value "" builder in
         let value = LLVM.build_extractvalue value i "" builder in
         llvalue_of_pattern_var value builder var
@@ -178,7 +180,7 @@ module Make (I : sig val name : string end) = struct
         LLVM.build_br block builder
     | UntypedTree.Node (var, cases) ->
         let term = llvalue_of_pattern_var value builder var in
-        let term = LLVM.build_bitcast term variant_ptr_type "" builder in
+        let term = LLVM.build_bitcast term Type.variant_ptr "" builder in
         let term = LLVM.build_load term "" builder in
         let term = LLVM.build_extractvalue term 0 "" builder in
         let switch = LLVM.build_switch term default (List.length cases) builder in
@@ -191,7 +193,7 @@ module Make (I : sig val name : string end) = struct
 
   and lambda func ?isrec ~env ~globals gamma builder = function
     | UntypedTree.Abs (name, used_vars, t) ->
-        let (f, builder') = LLVM.define_function c "__lambda" lambda_type m in
+        let (f, builder') = LLVM.define_function c "__lambda" Type.lambda m in
         LLVM.set_linkage LLVM.Linkage.Private f;
         let (closure, gamma) =
           create_closure ~isrec ~used_vars ~f ~env gamma builder
@@ -199,7 +201,7 @@ module Make (I : sig val name : string end) = struct
         let param = LLVM.param f 0 in
         let env = LLVM.param f 1 in
         let env_size = Gamma.Value.cardinal gamma in
-        let env = LLVM.build_bitcast env (array_ptr_type env_size) "" builder' in
+        let env = LLVM.build_bitcast env (Type.array_ptr env_size) "" builder' in
         let env = lazy (LLVM.build_load env "" builder') in
         let globals = Globals.load globals builder' in
         let gamma = Gamma.Value.add name (Value param) gamma in
@@ -208,7 +210,7 @@ module Make (I : sig val name : string end) = struct
         (closure, builder)
     | UntypedTree.App (f, x) ->
         let (boxed_f, builder) = lambda func ~env ~globals gamma builder f in
-        let boxed_f = LLVM.build_bitcast boxed_f closure_ptr_type "extract_f_cast" builder in
+        let boxed_f = LLVM.build_bitcast boxed_f Type.closure_ptr "extract_f_cast" builder in
         let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
         let f = LLVM.build_extractvalue boxed_f 0 "f" builder in
         let env_f = LLVM.build_extractvalue boxed_f 1 "env" builder in
@@ -216,7 +218,7 @@ module Make (I : sig val name : string end) = struct
         (LLVM.build_call f [|x; env_f|] "tmp" builder, builder)
     | UntypedTree.PatternMatching (t, results, tree) ->
         let (t, builder) = lambda func ~env ~globals gamma builder t in
-        let res = LLVM.build_alloca star_type "" builder in
+        let res = LLVM.build_alloca Type.star "" builder in
         let next_block = LLVM.append_block c "" func in
         let results = List.map (create_result func ~env ~globals ~res ~next_block ~value:t gamma) results in
         let builder' = LLVM.builder_at_end c next_block in
@@ -240,8 +242,8 @@ module Make (I : sig val name : string end) = struct
     | UntypedTree.Variant i ->
         let (env_size, values, _) = fold_env ~env gamma builder in
         let values = List.rev values in
-        let env = malloc_and_init (array_type env_size) values builder in
-        (malloc_and_init variant_type [i32 i; env] builder, builder)
+        let env = malloc_and_init (Type.array env_size) values builder in
+        (malloc_and_init Type.variant [i32 i; env] builder, builder)
     | UntypedTree.Let (name, t, xs) ->
         let (t, builder) = lambda func ~env ~globals gamma builder t in
         let gamma = Gamma.Value.add name (Value t) gamma in
@@ -286,15 +288,15 @@ module Make (I : sig val name : string end) = struct
         Gamma.Value.iter aux global_values;
         builder
 
-  let define_malloc () =
-    let malloc_type = (LLVM.function_type star_type [|i32_type|]) in
+  let () =
+    let malloc_type = (LLVM.function_type Type.star [|Type.i32|]) in
     let (malloc, builder) = LLVM.define_function c "malloc" malloc_type m in
     LLVM.set_linkage LLVM.Linkage.Private malloc;
     let gc_malloc = LLVM.declare_function "GC_malloc" malloc_type m in
     LLVM.build_ret (LLVM.build_call gc_malloc (LLVM.params malloc) "" builder) builder
 
   let init_gc builder =
-    let gc_init = LLVM.declare_function "GC_init" unit_function_type m in
+    let gc_init = LLVM.declare_function "GC_init" Type.unit_function m in
     ignore (LLVM.build_call gc_init [||] "" builder)
 
   let init_name = fmt "__%s_init"
@@ -302,7 +304,7 @@ module Make (I : sig val name : string end) = struct
   let init_imports imports builder =
     let aux import =
       let import = Gamma.Type.to_module_name import in
-      let f = LLVM.declare_global unit_function_type (init_name import) m in
+      let f = LLVM.declare_global Type.unit_function (init_name import) m in
       ignore (LLVM.build_call f [||] "" builder)
     in
     List.iter aux imports
@@ -318,15 +320,14 @@ module Make (I : sig val name : string end) = struct
           top (`Bind (name, v, i) :: init_list) (succ i) gamma xs
       | [] ->
           let (f, builder) =
-            LLVM.define_function c (init_name I.name) unit_function_type m
+            LLVM.define_function c (init_name I.name) Type.unit_function m
           in
-          define_malloc ();
           init_imports imports builder;
           let globals = Globals.create ~size:i builder in
           let builder = init f ~globals gamma Gamma.Value.empty builder (List.rev init_list) in
           LLVM.build_ret_void builder;
           if with_main then begin
-            let (_, builder) = LLVM.define_function c "main" unit_function_type m in
+            let (_, builder) = LLVM.define_function c "main" Type.unit_function m in
             init_gc builder;
             ignore (LLVM.build_call f [||] "" builder);
             LLVM.build_ret_void builder;
