@@ -123,7 +123,8 @@ module Make (I : sig val name : string end) = struct
           let gamma = Gamma.Value.add name (Glob j) gamma in
           (i, values, gamma)
     in
-    Gamma.Value.fold aux gamma (0, [], Gamma.Value.empty)
+    let (a, b, c) = Gamma.Value.fold aux gamma (0, [], Gamma.Value.empty) in
+    (a, List.rev b, c)
 
   let create_closure ~isrec ~used_vars ~f ~env gamma builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
@@ -134,7 +135,6 @@ module Make (I : sig val name : string end) = struct
       | None -> gamma
     in
     let (env_size, values, gamma) = fold_env ~env gamma builder in
-    let values = List.rev values in
     let env = malloc_and_init (Type.array env_size) values builder in
     let closure = List.fold_lefti aux (LLVM.undef Type.closure) [f; env] in
     LLVM.build_store closure allocated builder;
@@ -255,7 +255,6 @@ module Make (I : sig val name : string end) = struct
         end
     | UntypedTree.Variant i ->
         let (env_size, values, _) = fold_env ~env gamma builder in
-        let values = List.rev values in
         let env = malloc_and_init (Type.array env_size) values builder in
         (malloc_and_init Type.variant [i32 i; env] builder, builder)
     | UntypedTree.Let (name, t, xs) ->

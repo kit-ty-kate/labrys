@@ -61,11 +61,12 @@ let create ~loc gammaT gammaC =
               (args, res, gamma)
         in
         let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
+        let args = List.rev args in
         if not (TypesBeta.equal ty ty') then
           Error.fail
             ~loc
             "The type of the pattern is not equal to the type of the value matched";
-        (MConstr ((name, TypesBeta.head ty), List.rev args), gamma)
+        (MConstr ((name, TypesBeta.head ty), args), gamma)
   in
   aux
 

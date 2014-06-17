@@ -39,7 +39,8 @@ let rec of_results m =
     let used_vars = List.fold_left remove used_vars wildcards in
     ((wildcards, t) :: acc, Set.union used_vars used_vars_acc)
   in
-  List.fold_left aux ([], Set.empty) m
+  let (a, b) = List.fold_left aux ([], Set.empty) m in
+  (List.rev a, b)
 
 and of_typed_term = function
   | TypedTree.Abs ({TypedTree.param = {TypedTree.name; _}; _}, t) ->
@@ -58,7 +59,6 @@ and of_typed_term = function
   | TypedTree.PatternMatching (t, results, patterns, _) ->
       let (t, used_vars1) = of_typed_term t in
       let (results, used_vars2) = of_results results in
-      let results = List.rev results in
       let patterns = of_patterns patterns in
       (PatternMatching (t, results, patterns), Set.union used_vars1 used_vars2)
   | TypedTree.Let (name, t, xs, _) ->
