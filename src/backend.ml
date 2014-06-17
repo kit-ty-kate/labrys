@@ -140,23 +140,25 @@ module Make (I : sig val name : string end) = struct
     LLVM.build_store closure allocated builder;
     (allocated, gamma)
 
-  let rec llvalue_of_pattern_var vars value builder = function
-    | Pattern.VLeaf ->
+  let rec llvalue_of_pattern_var vars value builder var =
+    match Map.find var vars with
+    | Some value ->
         (value, vars)
-    | Pattern.VNode (i, var) ->
-        begin match Map.find var vars with
-        | None ->
-            let (value, vars) = llvalue_of_pattern_var vars value builder var in
-            let value = LLVM.build_bitcast value Type.variant_ptr "" builder in
-            let value = LLVM.build_load value "" builder in
-            let value = LLVM.build_extractvalue value 1 "" builder in
-            let value = LLVM.build_bitcast value (Type.array_ptr (succ i)) "" builder in
-            let value = LLVM.build_load value "" builder in
-            let value = LLVM.build_extractvalue value i "" builder in
-            (value, Map.add var value vars)
-        | Some x ->
-            (x, vars)
-        end
+    | None ->
+        let (value, vars) =
+          match var with
+          | Pattern.VLeaf ->
+              (value, vars)
+          | Pattern.VNode (i, var) ->
+              let (value, vars) = llvalue_of_pattern_var vars value builder var in
+              let value = LLVM.build_bitcast value Type.variant_ptr "" builder in
+              let value = LLVM.build_load value "" builder in
+              let value = LLVM.build_extractvalue value 1 "" builder in
+              let value = LLVM.build_bitcast value (Type.array_ptr (succ i)) "" builder in
+              let value = LLVM.build_load value "" builder in
+              (LLVM.build_extractvalue value i "" builder, vars)
+        in
+        (value, Map.add var value vars)
 
   let rec create_branch func ~env ~default vars gamma value results tree =
     let block = LLVM.append_block c "" func in
