@@ -140,67 +140,65 @@ module Make (I : sig val name : string end) = struct
     LLVM.build_store closure allocated builder;
     (allocated, gamma)
 
-  let (llvalue_of_pattern_var, pattern_value_clear) =
-    let htbl = Hashtbl.create 32 in
-    let rec get value builder =
-      let llvalue_of_pattern_var value var =
-        match Hashtbl.find htbl var with
+  let rec llvalue_of_pattern_var vars value builder = function
+    | Pattern.VLeaf ->
+        (value, vars)
+    | Pattern.VNode (i, var) ->
+        begin match Map.find var vars with
         | None ->
-            let res = get value builder var in
-            Hashtbl.add htbl var res;
-            res
+            let value = LLVM.build_bitcast value Type.variant_ptr "" builder in
+            let value = LLVM.build_load value "" builder in
+            let value = LLVM.build_extractvalue value 1 "" builder in
+            let value = LLVM.build_bitcast value (Type.array_ptr (succ i)) "" builder in
+            let value = LLVM.build_load value "" builder in
+            let value = LLVM.build_extractvalue value i "" builder in
+            let (value, vars) = llvalue_of_pattern_var vars value builder var in
+            (value, Map.add var value vars)
         | Some x ->
-            x
-      in
-      function
-      | Pattern.VLeaf ->
-          value
-      | Pattern.VNode (i, var) ->
-          let value = LLVM.build_bitcast value Type.variant_ptr "" builder in
-          let value = LLVM.build_load value "" builder in
-          let value = LLVM.build_extractvalue value 1 "" builder in
-          let value = LLVM.build_bitcast value (Type.array_ptr (succ i)) "" builder in
-          let value = LLVM.build_load value "" builder in
-          let value = LLVM.build_extractvalue value i "" builder in
-          llvalue_of_pattern_var value var
-    in
-    let clear () = Hashtbl.clear htbl in
-    (get, clear)
+            (x, vars)
+        end
 
-  let rec create_branch func ~env ~default gamma value results tree =
+  let rec create_branch func ~env ~default vars gamma value results tree =
     let block = LLVM.append_block c "" func in
     let builder = LLVM.builder_at_end c block in
-    create_tree func ~env ~default gamma builder value results tree;
+    create_tree func ~env ~default vars gamma builder value results tree;
     block
 
-  and create_result func ~env ~globals ~res ~next_block ~value gamma (vars, result) =
+  and create_result func ~env ~globals ~res ~next_block gamma builder (vars, result) =
     let block = LLVM.append_block c "" func in
-    let builder = LLVM.builder_at_end c block in
-    let gamma =
-      let aux gamma (var, name) =
-        let var = llvalue_of_pattern_var value builder var in
-        Gamma.Value.add name (Value var) gamma
+    let builder' = LLVM.builder_at_end c block in
+    let (gamma, pattern_vars) =
+      let aux (gamma, pattern_vars) (var, name) =
+        let variable = LLVM.build_alloca Type.star "" builder in
+        let value = LLVM.build_load variable "" builder' in
+        (Gamma.Value.add name (Value value) gamma, (var, variable) :: pattern_vars)
       in
-      List.fold_left aux gamma vars
+      List.fold_left aux (gamma, []) vars
     in
-    let (v, builder) = lambda func ~env ~globals gamma builder result in
-    LLVM.build_store v res builder;
-    LLVM.build_br next_block builder;
-    block
+    let (v, builder') = lambda func ~env ~globals gamma builder' result in
+    LLVM.build_store v res builder';
+    LLVM.build_br next_block builder';
+    (block, pattern_vars)
 
-  and create_tree func ~env ~default gamma builder value results = function
+  and create_tree func ~env ~default vars gamma builder value results = function
     | UntypedTree.Leaf i ->
-        let block = List.nth results i in
+        let (block, pattern_vars) = List.nth results i in
+        let aux vars (var, variable) =
+          let (var, vars) = llvalue_of_pattern_var vars value builder var in
+          LLVM.build_store var variable builder;
+          vars
+        in
+        ignore (List.fold_left aux vars pattern_vars);
         LLVM.build_br block builder
     | UntypedTree.Node (var, cases) ->
-        let term = llvalue_of_pattern_var value builder var in
+        let (term, vars) = llvalue_of_pattern_var vars value builder var in
         let term = LLVM.build_bitcast term Type.variant_ptr "" builder in
         let term = LLVM.build_load term "" builder in
         let term = LLVM.build_extractvalue term 0 "" builder in
         let switch = LLVM.build_switch term default (List.length cases) builder in
         List.iter
           (fun (constr, tree) ->
-             let branch = create_branch func ~env ~default gamma value results tree in
+             let branch = create_branch func ~env ~default vars gamma value results tree in
              LLVM.add_case switch (i32 constr) branch
           )
           cases
@@ -234,11 +232,10 @@ module Make (I : sig val name : string end) = struct
         let (t, builder) = lambda func ~env ~globals gamma builder t in
         let res = LLVM.build_alloca Type.star "" builder in
         let next_block = LLVM.append_block c "" func in
-        let results = List.map (create_result func ~env ~globals ~res ~next_block ~value:t gamma) results in
+        let results = List.map (create_result func ~env ~globals ~res ~next_block gamma builder) results in
         let builder' = LLVM.builder_at_end c next_block in
         let default = create_default_branch func in
-        create_tree func ~env ~default gamma builder t results tree;
-        pattern_value_clear ();
+        create_tree func ~env ~default Map.empty gamma builder t results tree;
         (LLVM.build_load res "" builder', builder')
     | UntypedTree.Val name ->
         let value = Gamma.Value.find name gamma in
