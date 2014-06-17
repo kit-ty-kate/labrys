@@ -41,5 +41,5 @@ val create :
   (TypesBeta.t * int) Gamma.Index.t ->
   name list Gamma.Constr.t ->
   TypesBeta.t ->
-  (ParseTree.pattern * ParseTree.t) list ->
+  ((Location.t * ParseTree.pattern) * (Location.t * ParseTree.t)) list ->
   (t * ((var * name) list * 'a) list * TypesBeta.t)

@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = Gamma.Name.t
 type t_name = Gamma.Type.t
+type loc = Location.t
 
 type t_value = (t_name * Kinds.t)
 
@@ -42,27 +43,27 @@ and pattern_arg =
   | PTy of ty
 
 type t =
-  | Abs of (Location.t * value * t)
-  | TAbs of (Location.t * t_value * t)
-  | App of (Location.t * t * t)
-  | TApp of (Location.t * t * ty)
-  | Val of (Location.t * name)
-  | PatternMatching of (Location.t * t * (pattern * t) list)
+  | Abs of (loc * value * t)
+  | TAbs of (loc * t_value * t)
+  | App of (loc * t * t)
+  | TApp of (loc * t * ty)
+  | Val of (loc * name)
+  | PatternMatching of (loc * t * ((loc * pattern) * (loc * t)) list)
   | Let of (name * t * t)
-  | LetRec of (Location.t * name * ty * t * t)
+  | LetRec of (loc * name * ty * t * t)
 
 type variant =
-  | Variant of (Location.t * name * ty)
+  | Variant of (loc * name * ty)
 
-type datatype = (Location.t * t_name * Kinds.t * variant list)
+type datatype = (loc * t_name * Kinds.t * variant list)
 
-type typeAlias = (Location.t * t_name * ty)
+type typeAlias = (loc * t_name * ty)
 
 type top =
   | Value of (name * t)
-  | RecValue of (Location.t * name * ty * t)
+  | RecValue of (loc * name * ty * t)
   | Type of typeAlias
-  | Binding of (Location.t * name * ty * string)
+  | Binding of (loc * name * ty * string)
   | Datatype of datatype
 
 type imports = t_name list

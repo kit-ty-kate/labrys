@@ -215,7 +215,8 @@ kind_and_name:
     { (Gamma.Type.of_list [name], k) }
 
 pattern:
-| p = pat Arrow t = term { (p, t) }
+| p = pat Arrow t = term
+    { ((get_loc $startpos $endpos(p), p), (get_loc $startpos(t) $endpos(t), t)) }
 
 pat:
 | name = LowerName

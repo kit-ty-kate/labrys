@@ -110,21 +110,22 @@ let create ~loc gammaD =
   aux
 
 let create ~loc f gamma gammaT gammaC gammaD ty patterns =
-  let ((head_p, head_t), tail) = match patterns with
+  let (head, tail) = match patterns with
     | [] -> assert false
     | x::xs -> (x, xs)
   in
   let (initial_pattern, initial_ty) =
+    let ((loc, head_p), (_, head_t)) = head in
     let (pattern, gamma) = Matrix.create ~loc gamma gammaT gammaC ty head_p in
     let (term, ty_term) = f gamma head_t in
     ([(pattern, term)], ty_term)
   in
   let patterns =
-    let f patterns (p, t) =
-      let (pattern, gamma) = Matrix.create ~loc gamma gammaT gammaC ty p in
+    let f patterns ((loc_p, p), (loc_t, t)) =
+      let (pattern, gamma) = Matrix.create ~loc:loc_p gamma gammaT gammaC ty p in
       let (t, has) = f gamma t in
       if not (TypesBeta.equal has initial_ty) then
-        TypesBeta.Error.fail ~loc ~has ~expected:initial_ty;
+        TypesBeta.Error.fail ~loc:loc_t ~has ~expected:initial_ty;
       (pattern, t) :: patterns
     in
     Utils.fold f initial_pattern tail
