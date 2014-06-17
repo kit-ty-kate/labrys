@@ -20,7 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Gamma.Name.t
-type used_vars = name list
+type used_vars = name BatSet.t
 type index = int
 
 type constr = int

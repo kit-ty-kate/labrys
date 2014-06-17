@@ -35,16 +35,16 @@ let rec of_patterns = function
 let rec of_results m =
   let aux (acc, used_vars_acc) (wildcards, t) =
     let (t, used_vars) = of_typed_term t in
-    let remove acc (_, name) = List.remove acc name in
+    let remove acc (_, name) = Set.remove name acc in
     let used_vars = List.fold_left remove used_vars wildcards in
-    ((wildcards, t) :: acc, used_vars @ used_vars_acc)
+    ((wildcards, t) :: acc, Set.union used_vars used_vars_acc)
   in
-  List.fold_left aux ([], []) m
+  List.fold_left aux ([], Set.empty) m
 
 and of_typed_term = function
   | TypedTree.Abs ({TypedTree.param = {TypedTree.name; _}; _}, t) ->
       let (t, used_vars) = of_typed_term t in
-      let used_vars = List.remove used_vars name in
+      let used_vars = Set.remove name used_vars in
       (Abs (name, used_vars, t), used_vars)
   | TypedTree.TApp (_, t, _)
   | TypedTree.TAbs (_, t) ->
@@ -52,25 +52,25 @@ and of_typed_term = function
   | TypedTree.App (_, f, x) ->
       let (f, used_vars1) = of_typed_term f in
       let (x, used_vars2) = of_typed_term x in
-      (App (f, x), used_vars1 @ used_vars2)
+      (App (f, x), Set.union used_vars1 used_vars2)
   | TypedTree.Val {TypedTree.name; _} ->
-      (Val name, [name])
+      (Val name, Set.singleton name)
   | TypedTree.PatternMatching (t, results, patterns, _) ->
       let (t, used_vars1) = of_typed_term t in
       let (results, used_vars2) = of_results results in
       let results = List.rev results in
       let patterns = of_patterns patterns in
-      (PatternMatching (t, results, patterns), used_vars1 @ used_vars2)
+      (PatternMatching (t, results, patterns), Set.union used_vars1 used_vars2)
   | TypedTree.Let (name, t, xs, _) ->
       let (t, used_vars1) = of_typed_term t in
       let (xs, used_vars2) = of_typed_term xs in
-      let used_vars = used_vars1 @ List.remove used_vars2 name in
+      let used_vars = Set.union used_vars1 (Set.remove name used_vars2) in
       (Let (name, t, xs), used_vars)
   | TypedTree.LetRec (name, _, t, xs, _) ->
       let (t, used_vars1) = of_typed_term t in
       let (xs, used_vars2) = of_typed_term xs in
       let used_vars =
-        List.remove used_vars1 name @ List.remove used_vars2 name
+        Set.union (Set.remove name used_vars1) (Set.remove name used_vars2)
       in
       (LetRec (name, t, xs), used_vars)
 
@@ -82,13 +82,13 @@ let of_typed_variant acc i = function
               (Variant i, params)
           | n ->
               let name = Gamma.Name.of_list [string_of_int n] in
-              let params = name :: params in
+              let params = Set.add name params in
               let (t, used_vars) = aux params (pred n) in
-              let used_vars = List.remove used_vars name in
+              let used_vars = Set.remove name used_vars in
               (Abs (name, used_vars, t), used_vars)
         in
         let size = TypesBeta.size ty in
-        let (t, _) = aux [] size in
+        let (t, _) = aux Set.empty size in
         Value (name, t)
       in
       variant :: acc
