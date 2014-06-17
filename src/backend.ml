@@ -146,13 +146,13 @@ module Make (I : sig val name : string end) = struct
     | Pattern.VNode (i, var) ->
         begin match Map.find var vars with
         | None ->
+            let (value, vars) = llvalue_of_pattern_var vars value builder var in
             let value = LLVM.build_bitcast value Type.variant_ptr "" builder in
             let value = LLVM.build_load value "" builder in
             let value = LLVM.build_extractvalue value 1 "" builder in
             let value = LLVM.build_bitcast value (Type.array_ptr (succ i)) "" builder in
             let value = LLVM.build_load value "" builder in
             let value = LLVM.build_extractvalue value i "" builder in
-            let (value, vars) = llvalue_of_pattern_var vars value builder var in
             (value, Map.add var value vars)
         | Some x ->
             (x, vars)
