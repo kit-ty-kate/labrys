@@ -109,6 +109,12 @@ let create ~loc gammaD =
   in
   aux
 
+let rec get_useless_cases ~loc results = function
+  | Leaf i ->
+      List.remove results i
+  | Node (_, l) ->
+      List.fold_left (fun r (_, p) -> get_useless_cases ~loc r p) results l
+
 let create ~loc f gamma gammaT gammaC gammaD ty patterns =
   let (head, tail) = match patterns with
     | [] -> assert false
@@ -132,4 +138,13 @@ let create ~loc f gamma gammaT gammaC gammaD ty patterns =
   in
   let (patterns, results) = Matrix.split patterns in
   let patterns = create ~loc gammaD patterns in
+  let useless_cases =
+    get_useless_cases ~loc (List.mapi (fun i _ -> i) results) patterns
+  in
+  if not (List.is_empty useless_cases) then
+    Error.fail
+      ~loc
+      "The pattern matching contains the following useless cases (%s)"
+      (Utils.string_of_list (fun x -> string_of_int (succ x)) useless_cases);
+  List.
   (patterns, results, initial_ty)

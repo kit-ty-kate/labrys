@@ -22,3 +22,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 val replace_ext : string -> string -> string
 
 val fold : ('a list -> 'b -> 'a list) -> 'a list -> 'b list -> 'a list
+
+val string_of_list : ('a -> string) -> 'a list -> string

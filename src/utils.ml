@@ -29,3 +29,8 @@ let replace_ext filename ext =
   filename ^ "." ^ ext
 
 let fold f acc l = List.rev (List.fold_left f acc l)
+
+let rec string_of_list f = function
+  | [] -> ""
+  | x::[] -> f x
+  | x::xs -> f x ^ ", " ^ string_of_list f xs
