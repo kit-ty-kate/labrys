@@ -23,7 +23,7 @@ open BatteriesExceptionless
 open Monomorphic.None
 
 type args =
-  { print : bool
+  { print_llvm : bool
   ; lto : bool
   ; opt : int
   ; o : string option
@@ -34,6 +34,34 @@ type args =
 exception ParseError of string
 
 let fmt = Printf.sprintf
+
+let print_error () =
+  prerr_endline "\nThe compilation processes exited abnormally"
+
+let link ~tmp ~o =
+    let tmp = Filename.quote tmp in
+    let o = Filename.quote o in
+    let ld = Sys.command (fmt "cc -lgc %s -o %s" tmp o) in
+    if Int.(ld <> 0) then begin
+      print_error ();
+    end
+
+let with_tmp_file f =
+  let tmp = Filename.temp_file "cervoise" "" in
+  f tmp;
+  Sys.remove tmp
+
+let write {o; _} result =
+  let o = Option.default "a.out" o in
+  let aux tmp =
+    Backend.emit_object_file ~tmp result;
+    link ~tmp ~o;
+  in
+  with_tmp_file aux
+
+let print_or_write = function
+  | {print_llvm = true; _} -> print_endline % Backend.to_string
+  | {print_llvm = false; _} as args -> write args
 
 let parse filename parser =
   let aux file =
@@ -80,7 +108,7 @@ let rec build_impl =
         let impl =
           compile
             ~interface
-            {args with print = false; lto = false; file; modul}
+            {args with print_llvm = false; lto = false; file; modul}
         in
         let impl = match impl_acc with
           | Some impl_acc -> Backend.link impl impl_acc
@@ -107,4 +135,6 @@ and compile ?(with_main = false) ~interface args =
   | Some code -> Backend.link dst code
   | None -> dst
 
-let compile = compile ~with_main:true ~interface:Gamma.empty
+let compile args =
+  compile ~with_main:true ~interface:Gamma.empty args
+  |> print_or_write args

@@ -20,7 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type args =
-  { print : bool
+  { print_llvm : bool
   ; lto : bool
   ; opt : int
   ; o : string option
@@ -30,4 +30,4 @@ type args =
 
 exception ParseError of string
 
-val compile : args -> Backend.t
+val compile : args -> unit
