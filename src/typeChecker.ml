@@ -24,6 +24,22 @@ open Monomorphic.None
 
 open TypedTree
 
+let fail_rec_val ~loc =
+  Error.fail ~loc "Recursive values are not allowed"
+
+let rec well_formed_rec = function
+  | ParseTree.Abs _ ->
+      true
+  | ParseTree.TAbs (_, _, t) ->
+      well_formed_rec t
+  | ParseTree.App _
+  | ParseTree.TApp _
+  | ParseTree.Val _
+  | ParseTree.PatternMatching _
+  | ParseTree.Let _
+  | ParseTree.LetRec _ ->
+      false
+
 let get_type = function
   | Abs ({abs_ty; _}, _) -> abs_ty
   | TAbs ({abs_ty; _}, _) -> abs_ty
@@ -130,12 +146,14 @@ let rec aux gamma gammaT gammaC gammaD = function
       let gamma = Gamma.Value.add name (get_type t) gamma in
       let xs = aux gamma gammaT gammaC gammaD xs in
       Let (name, t, xs, get_type xs)
-  | ParseTree.LetRec (loc, name, ty, t, xs) ->
+  | ParseTree.LetRec (loc, name, ty, t, xs) when well_formed_rec t ->
       let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
       let gamma = Gamma.Value.add name ty gamma in
       let t = aux gamma gammaT gammaC gammaD t in
       let xs = aux gamma gammaT gammaC gammaD xs in
       LetRec (name, ty, t, xs, get_type xs)
+  | ParseTree.LetRec (loc, _, _, _, _) ->
+      fail_rec_val ~loc
 
 let transform_variants ~datatype gamma gammaT gammaC gammaD =
   let rec aux index = function
@@ -162,7 +180,7 @@ let rec from_parse_tree gamma gammaT gammaC gammaD = function
       let ty = get_type x in
       let xs = from_parse_tree (Gamma.Value.add name ty gamma) gammaT gammaC gammaD xs in
       Value ({name; ty}, x) :: xs
-  | ParseTree.RecValue (loc, name, ty, term) :: xs ->
+  | ParseTree.RecValue (loc, name, ty, term) :: xs when well_formed_rec term ->
       let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
       let gamma = Gamma.Value.add name ty gamma in
       let x = aux gamma gammaT gammaC gammaD term in
@@ -171,6 +189,8 @@ let rec from_parse_tree gamma gammaT gammaC gammaD = function
         TypesBeta.Error.fail ~loc ~has:ty_x ~expected:ty;
       let xs = from_parse_tree gamma gammaT gammaC gammaD xs in
       RecValue ({name; ty}, x) :: xs
+  | ParseTree.RecValue (loc, _, _, _) :: _ ->
+      fail_rec_val ~loc
   | ParseTree.Type (loc, name, ty) :: xs ->
       let ty = Types.from_parse_tree ~loc gammaT ty in
       from_parse_tree gamma (Gamma.Types.add ~loc name (`Alias ty) gammaT) gammaC gammaD xs
