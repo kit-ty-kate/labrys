@@ -25,6 +25,8 @@ type output_file = string option
 type printer =
   | NoPrinter
   | ParseTree
+  | TypedTree
+  | UntypedTree
   | LLVM
 
 exception ParseError of string

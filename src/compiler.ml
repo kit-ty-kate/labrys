@@ -28,6 +28,8 @@ type output_file = string option
 type printer =
   | NoPrinter
   | ParseTree
+  | TypedTree
+  | UntypedTree
   | LLVM
 
 type modul =
@@ -143,6 +145,12 @@ and compile
   in
   match printer with
   | ParseTree ->
+      (* TODO *)
+      raise Break
+  | TypedTree ->
+      (* TODO *)
+      raise Break
+  | UntypedTree ->
       (* TODO *)
       raise Break
   | LLVM ->
