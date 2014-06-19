@@ -22,17 +22,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let start print_llvm lto opt o file' =
+let start printer lto opt o file =
 (*  if lto && c then
     Some
       "Error: Cannot enable the lto optimization while compiling.\n\
        This is allowed only during linking"
 *)
-  let file = ModulePath.of_file file' in
-  let modul = ModulePath.to_module file in
-  let args = {Compiler.print_llvm; lto; opt; o; file; modul} in
-  try Compiler.compile args; None with
-  | Error.Exn x -> Some (Error.dump ~file:file' x)
+  try Compiler.compile ~printer ~lto ~opt ~o file; None with
+  | Error.Exn x -> Some (Error.dump ~file x)
   | Compiler.ParseError x -> Some x
   | Sys_error x -> Some x
   | Llvm_irreader.Error x -> Some x
@@ -41,8 +38,13 @@ let cmd =
   let module Term = Cmdliner.Term in
   let module Arg = Cmdliner.Arg in
   let ($) = Cmdliner.Term.($) in
+  let printers =
+    [ (Compiler.ParseTree, Arg.info ["print-parse-tree"])
+    ; (Compiler.LLVM, Arg.info ["print-llvm"])
+    ]
+  in
   let args = Term.pure start in
-  let args = args $ Arg.(value & flag & info ["print-llvm"]) in
+  let args = args $ Arg.(value & vflag Compiler.NoPrinter printers) in
   let args = args $ Arg.(value & flag & info ["lto"]) in
   let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
   let args = args $ Arg.(value & opt (some string) None & info ["o"]) in

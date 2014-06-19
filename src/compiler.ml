@@ -22,16 +22,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type args =
-  { print_llvm : bool
-  ; lto : bool
-  ; opt : int
-  ; o : string option
-  ; file : ModulePath.t
+type input_file = string
+type output_file = string option
+
+type printer =
+  | NoPrinter
+  | ParseTree
+  | LLVM
+
+type modul =
+  { file : ModulePath.t
   ; modul : Gamma.Type.t
   }
 
 exception ParseError of string
+exception Break
 
 let fmt = Printf.sprintf
 
@@ -51,17 +56,13 @@ let with_tmp_file f =
   f tmp;
   Sys.remove tmp
 
-let write {o; _} result =
+let write ~o result =
   let o = Option.default "a.out" o in
   let aux tmp =
     Backend.emit_object_file ~tmp result;
     link ~tmp ~o;
   in
   with_tmp_file aux
-
-let print_or_write = function
-  | {print_llvm = true; _} -> print_endline % Backend.to_string
-  | {print_llvm = false; _} as args -> write args
 
 let parse filename parser =
   let aux file =
@@ -95,7 +96,7 @@ let rec build_intf path =
 
 let rec build_impl =
   let tbl = Hashtbl.create 32 in
-  fun args imports ->
+  fun self imports ->
   (* TODO: file that checks the hash of the dependencies *)
   (* TODO: We don't nececary need .sfw in the .sfwi contains only types *)
   let aux ((imports_acc, gamma_acc, impl_acc) as acc) modul =
@@ -103,12 +104,12 @@ let rec build_impl =
     | Some () ->
         acc
     | None ->
-        let interface = build_intf args.file imports in
-        let file = ModulePath.impl args.file modul in
+        let interface = build_intf self.file imports in
+        let file = ModulePath.impl self.file modul in
         let impl =
           compile
             ~interface
-            {args with print_llvm = false; lto = false; file; modul}
+            {file; modul}
         in
         let impl = match impl_acc with
           | Some impl_acc -> Backend.link impl impl_acc
@@ -120,21 +121,43 @@ let rec build_impl =
   in
   List.fold_left aux ([], Gamma.empty, None) imports
 
-and compile ?(with_main = false) ~interface args =
+and compile
+      ?(printer = NoPrinter)
+      ?(with_main = false)
+      ~interface
+      self =
   (* TODO: Check interface *)
-  let file = ModulePath.to_string args.file in
+  let file = ModulePath.to_string self.file in
   let (imports, parse_tree) = parse file Parser.main in
-  let (imports, gamma, code) = build_impl args imports in
-  let dst =
-    TypeChecker.from_parse_tree (gamma, parse_tree)
-    |> Lambda.of_typed_tree
-    |> Backend.make ~with_main ~name:args.modul ~imports
-    |> Backend.optimize ~lto:args.lto ~opt:args.opt
+  let (imports, gamma, code) = build_impl self imports in
+  let typed_tree = lazy (TypeChecker.from_parse_tree (gamma, parse_tree)) in
+  let untyped_tree = lazy (Lambda.of_typed_tree (Lazy.force typed_tree)) in
+  let dst = lazy (Backend.make ~with_main ~name:self.modul ~imports (Lazy.force untyped_tree)) in
+  let res =
+    lazy begin
+      let dst = Lazy.force dst in
+      match code with
+      | Some code -> Backend.link dst code
+      | None -> dst
+    end
   in
-  match code with
-  | Some code -> Backend.link dst code
-  | None -> dst
+  match printer with
+  | ParseTree ->
+      (* TODO *)
+      raise Break
+  | LLVM ->
+      print_endline (Backend.to_string (Lazy.force res));
+      raise Break
+  | NoPrinter ->
+      Lazy.force res
 
-let compile args =
-  compile ~with_main:true ~interface:Gamma.empty args
-  |> print_or_write args
+let compile ~printer ~lto ~opt ~o file =
+  let file = ModulePath.of_file file in
+  let modul = ModulePath.to_module file in
+  let self = {file; modul} in
+  try
+    compile ~printer ~with_main:true ~interface:Gamma.empty self
+    |> Backend.optimize ~lto ~opt
+    |> write ~o
+  with
+  | Break -> ()

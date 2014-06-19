@@ -19,15 +19,20 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type args =
-  { print_llvm : bool
-  ; lto : bool
-  ; opt : int
-  ; o : string option
-  ; file : ModulePath.t
-  ; modul : Gamma.Type.t
-  }
+type input_file = string
+type output_file = string option
+
+type printer =
+  | NoPrinter
+  | ParseTree
+  | LLVM
 
 exception ParseError of string
 
-val compile : args -> unit
+val compile :
+  printer:printer ->
+  lto:bool ->
+  opt:int ->
+  o:output_file ->
+  input_file ->
+  unit
