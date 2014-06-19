@@ -19,7 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open Cmdliner
 open BatteriesExceptionless
 open Monomorphic.None
 
@@ -39,15 +38,19 @@ let start print_llvm lto opt o file' =
   | Llvm_irreader.Error x -> Some x
 
 let cmd =
-  let print_llvm = Arg.(value & flag & info ["print-llvm"]) in
-  let lto = Arg.(value & flag & info ["lto"]) in
-  let opt = Arg.(value & opt int 0 & info ["opt"]) in
-  let o = Arg.(value & opt (some string) None & info ["o"]) in
-  let file = Arg.(required & pos 0 (some non_dir_file) None & info []) in
-  (Term.(pure start $ print_llvm $ lto $ opt $ o $ file), Term.info "cervoise")
+  let module Term = Cmdliner.Term in
+  let module Arg = Cmdliner.Arg in
+  let ($) = Cmdliner.Term.($) in
+  let args = Term.pure start in
+  let args = args $ Arg.(value & flag & info ["print-llvm"]) in
+  let args = args $ Arg.(value & flag & info ["lto"]) in
+  let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
+  let args = args $ Arg.(value & opt (some string) None & info ["o"]) in
+  let args = args $ Arg.(required & pos 0 (some non_dir_file) None & info []) in
+  (args, Term.info "cervoise")
 
 let () =
-  match Term.eval cmd with
+  match Cmdliner.Term.eval cmd with
   | `Ok None -> exit 0
   | `Ok (Some x) -> prerr_endline x; exit 1
   | _ -> exit 1
