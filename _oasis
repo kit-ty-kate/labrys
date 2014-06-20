@@ -15,6 +15,7 @@ Executable cervoise
   BuildDepends:
     unix,
     cmdliner,
+    pprint,
     llvm (>= 3.5),
     llvm.irreader,
     llvm.passmgr_builder,

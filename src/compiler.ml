@@ -134,7 +134,12 @@ and compile
   let (imports, gamma, code) = build_impl self imports in
   let typed_tree = lazy (TypeChecker.from_parse_tree (gamma, parse_tree)) in
   let untyped_tree = lazy (Lambda.of_typed_tree (Lazy.force typed_tree)) in
-  let dst = lazy (Backend.make ~with_main ~name:self.modul ~imports (Lazy.force untyped_tree)) in
+  let dst =
+    lazy begin
+      let untyped_tree = Lazy.force untyped_tree in
+      Backend.make ~with_main ~name:self.modul ~imports untyped_tree
+    end
+  in
   let res =
     lazy begin
       let dst = Lazy.force dst in
@@ -145,7 +150,7 @@ and compile
   in
   match printer with
   | ParseTree ->
-      (* TODO *)
+      print_endline (Printers.ParseTree.dump parse_tree);
       raise Break
   | TypedTree ->
       (* TODO *)
