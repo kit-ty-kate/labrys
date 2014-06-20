@@ -119,7 +119,8 @@ module ParseTree = struct
     | LetRec (_, name, ty, t, xs) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "let %s : %s =" (dump_name name) (dump_ty ty))
+           ^^ PPrint.string
+                (fmt "let rec %s : %s =" (dump_name name) (dump_ty ty))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
@@ -154,7 +155,7 @@ module ParseTree = struct
           )
     | RecValue (_, name, ty, t) ->
         PPrint.group
-          (PPrint.string (fmt "let %s : %s =" (dump_name name) (dump_ty ty))
+          (PPrint.string (fmt "let rec %s : %s =" (dump_name name) (dump_ty ty))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
     | Type (_, name, ty) ->
