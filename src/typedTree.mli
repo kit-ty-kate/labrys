@@ -20,29 +20,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Gamma.Name.t
-type t_name = Gamma.Type.t
-
-type 'a value' = {name : 'a; ty : TypesBeta.t}
-type 'a abs = {abs_ty : TypesBeta.t; param : 'a value'; ty_expr : TypesBeta.t}
-
-type value = name value'
+type ty_size = int
 type used_vars = (Pattern.var * name) list
 
 type t =
-  | Abs of (name abs * t)
-  | TAbs of (t_name abs * t)
-  | App of (TypesBeta.t * t * t)
-  | TApp of (TypesBeta.t * t * TypesBeta.t)
-  | Val of value
-  | PatternMatching of (t * (used_vars * t) list * Pattern.t * TypesBeta.t)
-  | Let of (name * t * t * TypesBeta.t)
-  | LetRec of (name * TypesBeta.t * t * t * TypesBeta.t)
+  | Abs of (name * t)
+  | TAbs of t
+  | App of (t * t)
+  | TApp of t
+  | Val of name
+  | PatternMatching of (t * (used_vars * t) list * Pattern.t)
+  | Let of (name * t * t)
+  | LetRec of (name * t * t)
 
 type variant =
-  | Variant of (name * TypesBeta.t)
+  | Variant of (name * ty_size)
 
 type top =
-  | Value of (value * t)
-  | RecValue of (value * t)
-  | Binding of (value * string)
-  | Datatype of (t_name * variant list)
+  | Value of (name * t)
+  | RecValue of (name * t)
+  | Binding of (name * string)
+  | Datatype of variant list

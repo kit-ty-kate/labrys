@@ -36,7 +36,6 @@ val of_parse_tree :
   t
 
 val func : param:t -> res:t -> t
-val atom : name -> t
 val forall : param:name -> kind:Kinds.t -> res:t -> t
 
 val to_string : t -> string

@@ -43,30 +43,30 @@ let rec of_results m =
   (List.rev a, b)
 
 and of_typed_term = function
-  | TypedTree.Abs ({TypedTree.param = {TypedTree.name; _}; _}, t) ->
+  | TypedTree.Abs (name, t) ->
       let (t, used_vars) = of_typed_term t in
       let used_vars = Set.remove name used_vars in
       (Abs (name, used_vars, t), used_vars)
-  | TypedTree.TApp (_, t, _)
-  | TypedTree.TAbs (_, t) ->
+  | TypedTree.TApp t
+  | TypedTree.TAbs t ->
       of_typed_term t
-  | TypedTree.App (_, f, x) ->
+  | TypedTree.App (f, x) ->
       let (f, used_vars1) = of_typed_term f in
       let (x, used_vars2) = of_typed_term x in
       (App (f, x), Set.union used_vars1 used_vars2)
-  | TypedTree.Val {TypedTree.name; _} ->
+  | TypedTree.Val name ->
       (Val name, Set.singleton name)
-  | TypedTree.PatternMatching (t, results, patterns, _) ->
+  | TypedTree.PatternMatching (t, results, patterns) ->
       let (t, used_vars1) = of_typed_term t in
       let (results, used_vars2) = of_results results in
       let patterns = of_patterns patterns in
       (PatternMatching (t, results, patterns), Set.union used_vars1 used_vars2)
-  | TypedTree.Let (name, t, xs, _) ->
+  | TypedTree.Let (name, t, xs) ->
       let (t, used_vars1) = of_typed_term t in
       let (xs, used_vars2) = of_typed_term xs in
       let used_vars = Set.union used_vars1 (Set.remove name used_vars2) in
       (Let (name, t, xs), used_vars)
-  | TypedTree.LetRec (name, _, t, xs, _) ->
+  | TypedTree.LetRec (name, t, xs) ->
       let (t, used_vars1) = of_typed_term t in
       let (xs, used_vars2) = of_typed_term xs in
       let used_vars =
@@ -75,7 +75,7 @@ and of_typed_term = function
       (LetRec (name, t, xs), used_vars)
 
 let of_typed_variant acc i = function
-  | TypedTree.Variant (name, ty) ->
+  | TypedTree.Variant (name, ty_size) ->
       let variant =
         let rec aux params = function
           | 0 ->
@@ -87,22 +87,21 @@ let of_typed_variant acc i = function
               let used_vars = Set.remove name used_vars in
               (Abs (name, used_vars, t), used_vars)
         in
-        let size = TypesBeta.size ty in
-        let (t, _) = aux Set.empty size in
+        let (t, _) = aux Set.empty ty_size in
         Value (name, t)
       in
       variant :: acc
 
 let rec of_typed_tree = function
-  | TypedTree.Value ({TypedTree.name; _}, t) :: xs ->
+  | TypedTree.Value (name, t) :: xs ->
       let (t, _) = of_typed_term t in
       Value (name, t) :: of_typed_tree xs
-  | TypedTree.RecValue ({TypedTree.name; _}, t) :: xs ->
+  | TypedTree.RecValue (name, t) :: xs ->
       let (t, _) = of_typed_term t in
       RecValue (name, t) :: of_typed_tree xs
-  | TypedTree.Binding ({TypedTree.name; _}, value) :: xs ->
+  | TypedTree.Binding (name, value) :: xs ->
       Binding (name, value) :: of_typed_tree xs
-  | TypedTree.Datatype (_, variants) :: xs ->
+  | TypedTree.Datatype variants :: xs ->
       let variants = List.fold_lefti of_typed_variant [] variants in
       let variants = List.rev variants in
       variants @ of_typed_tree xs

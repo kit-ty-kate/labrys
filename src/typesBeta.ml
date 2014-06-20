@@ -73,7 +73,6 @@ let of_parse_tree ~loc gammaT ty =
   of_ty ty
 
 let func ~param ~res = Fun (param, res)
-let atom name = Ty name
 let forall ~param ~kind ~res = Forall (param, kind, res)
 
 let rec to_string = function
