@@ -11,6 +11,7 @@
 
 * Cleaning (parser, typechecker, backend, …)
 * Unit-tests
+* Recursive type aliases
 
 
 == Short/Medium term ==
