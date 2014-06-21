@@ -26,3 +26,7 @@ end
 module TypedTree : sig
   val dump : TypedTree.top list -> string
 end
+
+module UntypedTree : sig
+  val dump : UntypedTree.top list -> string
+end

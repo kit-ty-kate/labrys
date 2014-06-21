@@ -156,7 +156,7 @@ and compile
       print_endline (Printers.TypedTree.dump (Lazy.force typed_tree));
       raise Break
   | UntypedTree ->
-      (* TODO *)
+      print_endline (Printers.UntypedTree.dump (Lazy.force untyped_tree));
       raise Break
   | LLVM ->
       print_endline (Backend.to_string (Lazy.force res));

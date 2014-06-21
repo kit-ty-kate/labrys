@@ -322,3 +322,132 @@ module TypedTree = struct
     let doc = dump_top dump PPrint.empty top in
     string_of_doc doc
 end
+
+module UntypedTree = struct
+  open UntypedTree
+
+  let dump_pattern_matching t content =
+    PPrint.group
+      (PPrint.string "match"
+       ^^ PPrint.break 1
+       ^^ t
+       ^^ PPrint.break 1
+       ^^ PPrint.string "with"
+      )
+    ^^ content
+
+  let rec dump_var = function
+    | Pattern.VLeaf -> "VLeaf"
+    | Pattern.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
+
+  let rec dump_cases cases =
+    let aux doc (index, t) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %d ->" index)
+            ^^ PPrint.nest 4 (dump_patterns t)
+           )
+
+    in
+    List.fold_left aux PPrint.empty cases
+
+  and dump_patterns = function
+    | Leaf i ->
+        PPrint.break 1
+        ^^ PPrint.OCaml.int i
+    | Node (var, cases) ->
+        dump_pattern_matching (PPrint.string (dump_var var)) (dump_cases cases)
+
+  let dump_vars vars =
+    let aux acc (var, name) =
+      fmt "%s (%s = %s)" acc (dump_name name) (dump_var var)
+    in
+    List.fold_left aux "Ø" vars
+
+  let dump_used_vars used_vars =
+    let aux name acc =
+      fmt "%s %s" acc (dump_name name)
+    in
+    Set.fold aux used_vars "Ø"
+
+  let rec dump_t = function
+    | Abs (name, used_vars, t) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string
+                (fmt "λ %s [%s] ->" (dump_name name) (dump_used_vars used_vars))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | App (f, x) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ dump_t f
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t x)
+           ^^ PPrint.rparen
+          )
+    | Val name ->
+        PPrint.string (dump_name name)
+    | Variant index ->
+        PPrint.OCaml.int index
+    | PatternMatching (t, results, patterns) ->
+        dump_pattern_matching
+          (dump_t t)
+          (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
+    | Let (name, t, xs) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "let %s =" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.break 1
+           ^^ PPrint.string "in"
+           ^^ PPrint.break 1
+           ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+    | LetRec (name, t, xs) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "let %s =" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.break 1
+           ^^ PPrint.string "in"
+           ^^ PPrint.break 1
+           ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+
+  and dump_results results =
+    let aux doc i (vars, result) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %d with %s ->" i (dump_vars vars))
+            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
+           )
+    in
+    List.fold_lefti aux PPrint.empty results
+
+  let dump = function
+    | Value (name, t) ->
+        PPrint.group
+          (PPrint.string (fmt "let %s =" (dump_name name))
+           ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
+          )
+    | RecValue (name, t) ->
+        PPrint.group
+          (PPrint.string (fmt "let rec %s =" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+          )
+    | Binding (name, content) ->
+        PPrint.string (fmt "let %s = begin" (dump_name name))
+        ^^ PPrint.string content
+        ^^ PPrint.string "end"
+
+  let dump top =
+    let doc = dump_top dump PPrint.empty top in
+    string_of_doc doc
+end
