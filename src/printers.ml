@@ -34,6 +34,11 @@ let rec dump_top f doc = function
   | [x] -> doc ^^ f x
   | x::xs -> dump_top f (doc ^^ f x ^^ PPrint.hardline ^^ PPrint.hardline) xs
 
+let string_of_doc doc =
+  let buf = Buffer.create 1024 in
+  PPrint.ToBuffer.pretty 0.9 80 buf doc;
+  Buffer.contents buf
+
 module ParseTree = struct
   open ParseTree
 
@@ -170,9 +175,7 @@ module ParseTree = struct
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
-    let buf = Buffer.create 1024 in
-    PPrint.ToBuffer.pretty 0.9 80 buf doc;
-    Buffer.contents buf
+    string_of_doc doc
 end
 
 module TypedTree = struct
@@ -317,7 +320,5 @@ module TypedTree = struct
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
-    let buf = Buffer.create 1024 in
-    PPrint.ToBuffer.pretty 0.9 80 buf doc;
-    Buffer.contents buf
+    string_of_doc doc
 end
