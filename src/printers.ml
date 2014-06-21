@@ -174,3 +174,150 @@ module ParseTree = struct
     PPrint.ToBuffer.pretty 0.9 80 buf doc;
     Buffer.contents buf
 end
+
+module TypedTree = struct
+  open TypedTree
+
+  let dump_pattern_matching t content =
+    PPrint.group
+      (PPrint.string "match"
+       ^^ PPrint.break 1
+       ^^ t
+       ^^ PPrint.break 1
+       ^^ PPrint.string "with"
+      )
+    ^^ content
+
+  let rec dump_var = function
+    | Pattern.VLeaf -> "VLeaf"
+    | Pattern.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
+
+  let rec dump_cases cases =
+    let aux doc ((name, index), t) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %s <=> %d ->" (dump_name name) index)
+            ^^ PPrint.nest 4 (dump_patterns t)
+           )
+
+    in
+    List.fold_left aux PPrint.empty cases
+
+  and dump_patterns = function
+    | Pattern.Leaf i ->
+        PPrint.break 1
+        ^^ PPrint.OCaml.int i
+    | Pattern.Node (var, cases) ->
+        dump_pattern_matching (PPrint.string (dump_var var)) (dump_cases cases)
+
+  let dump_used_vars used_vars =
+    let aux acc (var, name) =
+      fmt "%s (%s = %s)" acc (dump_name name) (dump_var var)
+    in
+    List.fold_left aux "Ø" used_vars
+
+  let rec dump_t = function
+    | Abs (name, t) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "λ %s ->" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | TAbs t ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string "λ ?? ->"
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | App (f, x) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ dump_t f
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t x)
+           ^^ PPrint.rparen
+          )
+    | TApp f ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ dump_t f
+           ^^ PPrint.blank 1
+           ^^ PPrint.string "[]"
+           ^^ PPrint.rparen
+          )
+    | Val name ->
+        PPrint.string (dump_name name)
+    | PatternMatching (t, results, patterns) ->
+        dump_pattern_matching
+          (dump_t t)
+          (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
+    | Let (name, t, xs) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "let %s =" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.break 1
+           ^^ PPrint.string "in"
+           ^^ PPrint.break 1
+           ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+    | LetRec (name, t, xs) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "let %s =" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.break 1
+           ^^ PPrint.string "in"
+           ^^ PPrint.break 1
+           ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+
+  and dump_results results =
+    let aux doc i (used_vars, result) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %d with %s ->" i (dump_used_vars used_vars))
+            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
+           )
+    in
+    List.fold_lefti aux PPrint.empty results
+
+  let dump_variants (Variant (name, ty_size)) =
+    PPrint.string (fmt "| %s of size %d" (dump_name name) ty_size)
+
+  let dump_variants variants =
+    let aux doc x = doc ^^ PPrint.break 1 ^^ dump_variants x in
+    List.fold_left aux PPrint.empty variants
+
+  let dump = function
+    | Value (name, t) ->
+        PPrint.group
+          (PPrint.string (fmt "let %s =" (dump_name name))
+           ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
+          )
+    | RecValue (name, t) ->
+        PPrint.group
+          (PPrint.string (fmt "let rec %s =" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+          )
+    | Binding (name, content) ->
+        PPrint.string (fmt "let %s = begin" (dump_name name))
+        ^^ PPrint.string content
+        ^^ PPrint.string "end"
+    | Datatype variants ->
+        PPrint.string "type ?? ="
+        ^^ PPrint.nest 2 (dump_variants variants)
+
+  let dump top =
+    let doc = dump_top dump PPrint.empty top in
+    let buf = Buffer.create 1024 in
+    PPrint.ToBuffer.pretty 0.9 80 buf doc;
+    Buffer.contents buf
+end

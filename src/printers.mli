@@ -22,3 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 module ParseTree : sig
   val dump : ParseTree.top list -> string
 end
+
+module TypedTree : sig
+  val dump : TypedTree.top list -> string
+end
