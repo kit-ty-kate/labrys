@@ -96,6 +96,11 @@ module Make (I : sig val name : string end) = struct
     LLVM.build_store values allocated builder;
     allocated
 
+  let malloc_and_init_array size values builder =
+    match size with
+    | 0 -> null
+    | size -> malloc_and_init (Type.array size) values builder
+
   let debug_trap = LLVM.declare_function "llvm.debugtrap" Type.unit_function m
 
   let create_default_branch func =
@@ -135,7 +140,7 @@ module Make (I : sig val name : string end) = struct
       | None -> gamma
     in
     let (env_size, values, gamma) = fold_env ~env gamma builder in
-    let env = malloc_and_init (Type.array env_size) values builder in
+    let env = malloc_and_init_array env_size values builder in
     let closure = List.fold_lefti aux (LLVM.undef Type.closure) [f; env] in
     LLVM.build_store closure allocated builder;
     (allocated, gamma)
@@ -255,7 +260,7 @@ module Make (I : sig val name : string end) = struct
         end
     | UntypedTree.Variant i ->
         let (env_size, values, _) = fold_env ~env gamma builder in
-        let env = malloc_and_init (Type.array env_size) values builder in
+        let env = malloc_and_init_array env_size values builder in
         (malloc_and_init Type.variant [i32 i; env] builder, builder)
     | UntypedTree.Let (name, t, xs) ->
         let (t, builder) = lambda func ~env ~globals gamma builder t in
