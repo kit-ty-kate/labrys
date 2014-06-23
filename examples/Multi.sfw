@@ -1,0 +1,9 @@
+type Int =
+  | O : Int
+  | S : Int -> Int
+
+let id = λ(x:Int->Int) -> x
+
+let val = id (λ(x:Int) -> x)
+
+let idprime = id

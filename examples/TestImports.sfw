@@ -1,0 +1,3 @@
+import Multi
+
+let test = Multi.id Multi.S
