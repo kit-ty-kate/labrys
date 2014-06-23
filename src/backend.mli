@@ -23,7 +23,7 @@ type t
 
 val make :
   with_main:bool ->
-  name:Gamma.Type.t ->
+  name:Gamma.Module.t ->
   imports:ParseTree.imports ->
   UntypedTree.top list ->
   t

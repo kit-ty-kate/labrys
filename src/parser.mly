@@ -95,7 +95,7 @@ import:
 
 module_name:
 | name = upperName
-    { Gamma.Type.of_list name }
+    { Gamma.Module.of_list name }
 
 (********* Implementation *********)
 

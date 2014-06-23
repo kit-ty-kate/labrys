@@ -35,7 +35,7 @@ let of_file file =
   }
 
 let impl self modul =
-  let base_filename = Gamma.Type.to_file modul in
+  let base_filename = Gamma.Module.to_file modul in
   let path = Filename.dirname base_filename in
   let path = if String.equal path "." then "" else path in
   let path = Filename.concat self.path path in
@@ -52,7 +52,7 @@ let to_module {base_path; path; file} =
   let file = Filename.chop_extension file in
   let file = String.nsplit file ~by:Filename.dir_sep in
   let file = List.map String.capitalize file in
-  Gamma.Type.of_list file
+  Gamma.Module.of_list file
 
 let to_string {base_path; path; file} =
   Filename.concat base_path (Filename.concat path file)

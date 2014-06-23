@@ -23,8 +23,8 @@ type t
 
 val of_file : string -> t
 
-val impl : t -> Gamma.Type.t -> t
-val intf : t -> Gamma.Type.t -> t
+val impl : t -> Gamma.Module.t -> t
+val intf : t -> Gamma.Module.t -> t
 
-val to_module : t -> Gamma.Type.t
+val to_module : t -> Gamma.Module.t
 val to_string : t -> string

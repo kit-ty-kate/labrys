@@ -28,27 +28,41 @@ type t =
   | Datatype of ParseTree.datatype
   | TypeAlias of (Location.t * ParseTree.t_name * ParseTree.ty)
 
-let rec compile gamma = function
-  | Val (loc, name, ty) :: xs ->
-      let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
-      let values = Gamma.Value.add name ty gamma.Gamma.values in
-      compile {gamma with Gamma.values} xs
-  | AbstractType (loc, (name, k)) :: xs ->
-      let types = Gamma.Types.add ~loc name (`Abstract k) gamma.Gamma.types in
-      compile {gamma with Gamma.types} xs
-  | Datatype (loc, name, k, variants) :: xs ->
-      let types = Gamma.Types.add ~loc name (`Abstract k) gamma.Gamma.types in
-      let indexes =
-        let aux acc i (ParseTree.Variant (loc, name, ty)) =
-          let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
-          Gamma.Index.add name (ty, i) acc
+let compile modul gamma =
+  let rec compile gammaT gamma = function
+    | Val (loc, name, ty) :: xs ->
+        let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
+        let values = Gamma.Value.add (Gamma.Name.prepend modul name) ty gamma.Gamma.values in
+        let gamma = {gamma with Gamma.values} in
+        compile gammaT gamma xs
+    | AbstractType (loc, (name, k)) :: xs ->
+        let types = Gamma.Types.add ~loc (Gamma.Type.prepend modul name) (`Abstract k) gamma.Gamma.types in
+        let gamma = {gamma with Gamma.types} in
+        let gammaT = Gamma.Types.add ~loc name (`Abstract k) gammaT in
+        compile gammaT gamma xs
+    | Datatype (loc, name, k, variants) :: xs ->
+        let types = Gamma.Types.add ~loc (Gamma.Type.prepend modul name) (`Abstract k) gamma.Gamma.types in
+        let gamma = {gamma with Gamma.types} in
+        let gammaT = Gamma.Types.add ~loc name (`Abstract k) gammaT in
+        let gamma =
+          let aux ~datatype gamma i (ParseTree.Variant (loc, name, ty)) =
+            let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
+            {gamma with
+             Gamma.values = Gamma.Value.add (Gamma.Name.prepend modul name) ty gamma.Gamma.values;
+             Gamma.indexes = Gamma.Index.add (Gamma.Name.prepend modul name) (ty, i) gamma.Gamma.indexes;
+             Gamma.constructors = Gamma.Constr.append datatype (Gamma.Name.prepend modul name) gamma.Gamma.constructors;
+            }
+          in
+          List.fold_lefti (aux ~datatype:name) gamma variants
         in
-        List.fold_lefti aux gamma.Gamma.indexes variants
-      in
-      compile {gamma with Gamma.types; indexes} xs
-  | TypeAlias (loc, name, ty) :: xs ->
-      let ty = Types.from_parse_tree ~loc gamma.Gamma.types ty in
-      let types = Gamma.Types.add ~loc name (`Alias ty) gamma.Gamma.types in
-      compile {gamma with Gamma.types} xs
-  | [] ->
-      gamma
+        compile gammaT gamma xs
+    | TypeAlias (loc, name, ty) :: xs ->
+        let ty = Types.from_parse_tree ~loc gammaT ty in
+        let types = Gamma.Types.add ~loc (Gamma.Type.prepend modul name) (`Alias ty) gamma.Gamma.types in
+        let gamma = {gamma with Gamma.types} in
+        let gammaT = Gamma.Types.add ~loc name (`Alias ty) gammaT in
+        compile gammaT gamma xs
+    | [] ->
+        gamma
+  in
+  compile gamma.Gamma.types gamma

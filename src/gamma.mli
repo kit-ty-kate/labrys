@@ -19,15 +19,23 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+module Module : sig
+  type t
+
+  val of_list : string list -> t
+  val to_file : t -> string
+  val to_module_name : t -> string
+end
+
 module Name : sig
   type t
 
   val equal : t -> t -> bool
 
+  val prepend : Module.t -> t -> t
+
   val of_list : string list -> t
   val to_string : t -> string
-  val to_file : t -> string
-  val to_module_name : t -> string
 end
 
 module Type : module type of Name
@@ -61,5 +69,13 @@ type ('values, 'types, 'indexes, 'constr) t =
   }
 
 val empty : ('a, 'b, 'c, 'd) t
+val of_gamma :
+  gamma:'a Value.t ->
+  gammaT:'b Types.t ->
+  gammaC:'c Index.t ->
+  gammaD:'d Constr.t ->
+  ('a, 'b, 'c, 'd) t
 
-val union : (Type.t * ('a, 'b, 'c, 'd) t) -> ('a, 'b, 'c, 'd) t -> ('a, 'b, 'c, 'd) t
+val union : ('a, 'b, 'c, 'd) t -> ('a, 'b, 'c, 'd) t -> ('a, 'b, 'c, 'd) t
+
+val subset : ('a, 'b, 'c, 'd) t -> ('a, 'b, 'c, 'd) t -> Name.t list

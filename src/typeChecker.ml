@@ -24,6 +24,13 @@ open Monomorphic.None
 
 open TypedTree
 
+type gamma =
+  ( TypesBeta.t
+  , [`Abstract of Kinds.t | `Alias of Types.t * Kinds.t]
+  , (TypesBeta.t * int)
+  , Gamma.Name.t list
+  ) Gamma.t
+
 let fail_rec_val ~loc =
   Error.fail ~loc "Recursive values are not allowed"
 
@@ -123,16 +130,16 @@ let rec from_parse_tree gamma gammaT gammaC gammaD = function
   | ParseTree.Value (name, term) :: xs ->
       let (x, ty) = aux gamma gammaT gammaC gammaD term in
       let gamma = Gamma.Value.add name ty gamma in
-      let xs = from_parse_tree gamma gammaT gammaC gammaD xs in
-      Value (name, x) :: xs
+      let (xs, gamma, gammaT, gammaC, gammaD) = from_parse_tree gamma gammaT gammaC gammaD xs in
+      (Value (name, x) :: xs, gamma, gammaT, gammaC, gammaD)
   | ParseTree.RecValue (loc, name, ty, term) :: xs when well_formed_rec term ->
       let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
       let gamma = Gamma.Value.add name ty gamma in
       let (x, ty_x) = aux gamma gammaT gammaC gammaD term in
       if not (TypesBeta.equal ty ty_x) then
         TypesBeta.Error.fail ~loc ~has:ty_x ~expected:ty;
-      let xs = from_parse_tree gamma gammaT gammaC gammaD xs in
-      RecValue (name, x) :: xs
+      let (xs, gamma, gammaT, gammaC, gammaD) = from_parse_tree gamma gammaT gammaC gammaD xs in
+      (RecValue (name, x) :: xs, gamma, gammaT, gammaC, gammaD)
   | ParseTree.RecValue (loc, _, _, _) :: _ ->
       fail_rec_val ~loc
   | ParseTree.Type (loc, name, ty) :: xs ->
@@ -142,17 +149,31 @@ let rec from_parse_tree gamma gammaT gammaC gammaD = function
   | ParseTree.Binding (loc, name, ty, binding) :: xs ->
       let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
       let gamma = Gamma.Value.add name ty gamma in
-      let xs = from_parse_tree gamma gammaT gammaC gammaD xs in
-      Binding (name, binding) :: xs
+      let (xs, gamma, gammaT, gammaC, gammaD) = from_parse_tree gamma gammaT gammaC gammaD xs in
+      (Binding (name, binding) :: xs, gamma, gammaT, gammaC, gammaD)
   | ParseTree.Datatype (loc, name, kind, variants) :: xs ->
       let gammaT = Gamma.Types.add ~loc name (`Abstract kind) gammaT in
       let (variants, gamma, gammaC, gammaD) =
         transform_variants ~datatype:name gamma gammaT gammaC gammaD variants
       in
-      let xs = from_parse_tree gamma gammaT gammaC gammaD xs in
-      Datatype variants :: xs
+      let (xs, gamma, gammaT, gammaC, gammaD) = from_parse_tree gamma gammaT gammaC gammaD xs in
+      (Datatype variants :: xs, gamma, gammaT, gammaC, gammaD)
   | [] ->
-      []
+      ([], gamma, gammaT, gammaC, gammaD)
 
-let from_parse_tree ({Gamma.values; types; indexes; constructors}, x) =
-  from_parse_tree values types indexes constructors x
+let from_parse_tree
+      ~interface
+      ({Gamma.values; types; indexes; constructors}, x) =
+  let (res, gamma, gammaT, gammaC, gammaD) =
+    from_parse_tree values types indexes constructors x
+  in
+  (* TODO: Improve *)
+  begin match Gamma.subset interface (Gamma.of_gamma ~gamma ~gammaT ~gammaC ~gammaD) with
+  | [] ->
+      ()
+  | diff ->
+      (* TODO: Improve *)
+      failwith
+        (Printf.sprintf "Interface and implementation not compatible (%s)" (String.concat ", " (List.map Gamma.Name.to_string diff)))
+  end;
+  res

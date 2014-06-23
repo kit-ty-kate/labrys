@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = Gamma.Name.t
 type t_name = Gamma.Type.t
+type module_name = Gamma.Module.t
 type loc = Location.t
 
 type t_value = (t_name * Kinds.t)
@@ -66,4 +67,4 @@ type top =
   | Binding of (loc * name * ty * string)
   | Datatype of datatype
 
-type imports = t_name list
+type imports = module_name list

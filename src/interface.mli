@@ -26,6 +26,7 @@ type t =
   | TypeAlias of (Location.t * ParseTree.t_name * ParseTree.ty)
 
 val compile :
+  Gamma.Module.t ->
   (TypesBeta.t, [`Abstract of Kinds.t | `Alias of Types.t * Kinds.t], (TypesBeta.t * int), Gamma.Name.t list) Gamma.t ->
   t list ->
   (TypesBeta.t, [`Abstract of Kinds.t | `Alias of Types.t * Kinds.t], (TypesBeta.t * int), Gamma.Name.t list) Gamma.t

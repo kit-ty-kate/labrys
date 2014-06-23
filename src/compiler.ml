@@ -34,7 +34,7 @@ type printer =
 
 type modul =
   { file : ModulePath.t
-  ; modul : Gamma.Type.t
+  ; modul : Gamma.Module.t
   }
 
 exception ParseError of string
@@ -91,8 +91,8 @@ let rec build_intf path =
     let ifile = ModulePath.to_string ifile in
     let (imports, tree) = parse ifile Parser.mainInterface in
     let gamma = build_intf path imports in
-    let gamma = Interface.compile gamma tree in
-    Gamma.union (module_name, gamma) acc
+    let gamma = Interface.compile module_name gamma tree in
+    Gamma.union gamma acc
   in
   List.fold_left aux Gamma.empty
 
@@ -118,7 +118,7 @@ let rec build_impl =
           | None -> impl
         in
         Hashtbl.add tbl modul ();
-        let gamma = Gamma.union (modul, interface) gamma_acc in
+        let gamma = Gamma.union interface gamma_acc in
         (imports_acc @ [modul], gamma, Some impl)
   in
   List.fold_left aux ([], Gamma.empty, None) imports
@@ -128,11 +128,14 @@ and compile
       ?(with_main = false)
       ~interface
       self =
-  (* TODO: Check interface *)
   let file = ModulePath.to_string self.file in
   let (imports, parse_tree) = parse file Parser.main in
   let (imports, gamma, code) = build_impl self imports in
-  let typed_tree = lazy (TypeChecker.from_parse_tree (gamma, parse_tree)) in
+  let typed_tree =
+    lazy begin
+      TypeChecker.from_parse_tree ~interface (gamma, parse_tree)
+    end
+  in
   let untyped_tree = lazy (Lambda.of_typed_tree (Lazy.force typed_tree)) in
   let dst =
     lazy begin

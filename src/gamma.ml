@@ -22,6 +22,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
+module Module = struct
+  type t = string list
+
+  let of_list x = x
+  let to_file = String.concat "/"
+  let to_module_name = String.concat "_"
+end
+
 module Name = struct
   type t = string list
 
@@ -29,10 +37,10 @@ module Name = struct
 
   let equal = List.eq String.equal
 
+  let prepend modul x = modul @ x
+
   let of_list x = x
   let to_string = String.concat "."
-  let to_file = String.concat "/"
-  let to_module_name = String.concat "_"
 end
 
 module Type = Name
@@ -79,13 +87,34 @@ let empty =
   ; constructors = Constr.empty
   }
 
-let union (module_name, interface) self =
-  let aux interface self =
-    let aux k x acc = Value.add (module_name @ k) x acc in
-    Value.fold aux interface self
-  in
-  { values = aux interface.values self.values
-  ; types = aux interface.types self.types
-  ; indexes = aux interface.indexes self.indexes
-  ; constructors = aux interface.constructors self.constructors
+let of_gamma ~gamma ~gammaT ~gammaC ~gammaD =
+  { values = gamma
+  ; types = gammaT
+  ; indexes = gammaC
+  ; constructors = gammaD
   }
+
+let union a b =
+  let aux a b =
+    let aux k x acc = Value.add k x acc in
+    Value.fold aux a b
+  in
+  { values = aux a.values b.values
+  ; types = aux a.types b.types
+  ; indexes = aux a.indexes b.indexes
+  ; constructors = aux a.constructors b.constructors
+  }
+
+let subset a {values; types; indexes; constructors} =
+  let aux a b =
+    let aux k x =
+      match Value.find k b with
+      | Some y -> Pervasives.(x = y)
+      | None -> false
+    in
+    List.map fst (Value.bindings (Value.filter aux a))
+  in
+  aux a.values values
+  @ aux a.types types
+  @ aux a.indexes indexes
+  @ aux a.constructors constructors
