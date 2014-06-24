@@ -43,7 +43,7 @@ module Constr : sig
   include BatMap.S with type key = Ident.Type.t
   include module type of Exceptionless
 
-  val append : key -> 'a -> 'a list t -> 'a list t
+  val add : key -> Index.key -> 'a -> 'a Index.t t -> 'a Index.t t
 
   val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list

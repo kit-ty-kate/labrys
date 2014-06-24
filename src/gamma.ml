@@ -22,30 +22,25 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-(* TODO: Merge indexes and constructors *)
 type t =
   { values : TypesBeta.t GammaMap.Value.t
   ; types : Types.ty GammaMap.Types.t
-  ; indexes : (TypesBeta.t * int) GammaMap.Index.t
-  ; constructors : Ident.Name.t list GammaMap.Constr.t
+  ; constructors : ((TypesBeta.t * int) GammaMap.Index.t) GammaMap.Constr.t
   }
 
 let empty =
   { values = GammaMap.Value.empty
   ; types = GammaMap.Types.empty
-  ; indexes = GammaMap.Index.empty
   ; constructors = GammaMap.Constr.empty
   }
 
 let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
 let add_type ~loc k x self = {self with types = GammaMap.Types.add ~loc k x self.types}
-let add_index k x self = {self with indexes = GammaMap.Index.add k x self.indexes}
-let append_constr k x self = {self with constructors = GammaMap.Constr.append k x self.constructors}
+let add_constr k k2 x self = {self with constructors = GammaMap.Constr.add k k2 x self.constructors}
 
 let union (modul, a) b =
   { values = GammaMap.Value.union (modul, a.values) b.values
   ; types = GammaMap.Types.union (modul, a.types) b.types
-  ; indexes = GammaMap.Index.union (modul, a.indexes) b.indexes
   ; constructors = GammaMap.Constr.union (modul, a.constructors) b.constructors
   }
 
@@ -53,5 +48,4 @@ let union (modul, a) b =
 let is_subset_of a b =
   GammaMap.Value.diff ~eq:TypesBeta.equal a.values b.values
   @ GammaMap.Types.diff ~eq:Pervasives.(=) a.types b.types
-  @ GammaMap.Index.diff ~eq:Pervasives.(=) a.indexes b.indexes
   @ GammaMap.Constr.diff ~eq:Pervasives.(=) a.constructors b.constructors

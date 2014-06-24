@@ -45,8 +45,7 @@ let compile gamma =
           let aux ~datatype gamma i (ParseTree.Variant (loc, name, ty)) =
             let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
             let gamma = Gamma.add_value name ty gamma in
-            let gamma = Gamma.add_index name (ty, i) gamma in
-            Gamma.append_constr datatype name gamma
+            Gamma.add_constr datatype name (ty, i) gamma
           in
           List.fold_lefti (aux ~datatype:name) gamma variants
         in

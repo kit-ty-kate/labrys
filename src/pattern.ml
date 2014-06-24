@@ -85,7 +85,7 @@ let create ~loc gammaD =
           Option.default_delayed (fun () -> assert false) variants
         in
         let variants =
-          let aux name =
+          let aux name (_, index) acc =
             let xs =
               match specialize name m with
               | ([], code_index) :: _ -> Leaf code_index
@@ -96,11 +96,9 @@ let create ~loc gammaD =
                     (Ident.Name.to_string name)
               | m -> aux m
             in
-            let index = List.index_of name variants in
-            let index = Option.default_delayed (fun () -> assert false) index in
-            ((name, index), xs)
+            ((name, index), xs) :: acc
           in
-          List.map aux variants
+          GammaMap.Index.fold aux variants []
         in
         Node (var, variants)
     | ([], _) :: _

@@ -48,25 +48,44 @@ let create ~loc =
         let gamma = Gamma.add_value name ty' gamma in
         (MAny (name, TypesBeta.head ty'), gamma)
     | ParseTree.TyConstr (name, args) ->
-        let ty = GammaMap.Index.find name gamma.Gamma.indexes in
-        let (ty, _) = Option.default_delayed (fun () -> assert false) ty in
-        let aux (args, ty, gamma) = function
-          | ParseTree.PVal p ->
-              let (param_ty, res_ty) = TypesBeta.apply ~loc ty in
-              let (arg, gamma) = aux gamma param_ty p in
-              (arg :: args, res_ty, gamma)
-          | ParseTree.PTy pty ->
-              let (pty, kx) = TypesBeta.of_parse_tree_kind ~loc gamma.Gamma.types pty in
-              let (_, res) = TypesBeta.apply_ty ~loc ~ty_x:pty ~kind_x:kx ty in
-              (args, res, gamma)
+        let head_ty = TypesBeta.head ty' in
+        let constructors =
+          GammaMap.Constr.find head_ty gamma.Gamma.constructors
         in
-        let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
-        let args = List.rev args in
-        if not (TypesBeta.equal ty ty') then
-          Error.fail
-            ~loc
-            "The type of the pattern is not equal to the type of the value matched";
-        (MConstr ((name, TypesBeta.head ty), args), gamma)
+        let constructors =
+          Option.default_delayed (fun () -> assert false) constructors
+        in
+        begin match GammaMap.Index.find name constructors with
+        | None ->
+            Error.fail
+              ~loc
+              "Constructor '%s' not found in type '%s'"
+              (Ident.Name.to_string name)
+              (Ident.Type.to_string head_ty)
+        | Some (ty, _) ->
+            let aux (args, ty, gamma) = function
+              | ParseTree.PVal p ->
+                  let (param_ty, res_ty) = TypesBeta.apply ~loc ty in
+                  let (arg, gamma) = aux gamma param_ty p in
+                  (arg :: args, res_ty, gamma)
+              | ParseTree.PTy pty ->
+                  let (pty, kx) =
+                    TypesBeta.of_parse_tree_kind ~loc gamma.Gamma.types pty
+                  in
+                  let (_, res) =
+                    TypesBeta.apply_ty ~loc ~ty_x:pty ~kind_x:kx ty
+                  in
+                  (args, res, gamma)
+            in
+            let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
+            let args = List.rev args in
+            if not (TypesBeta.equal ty ty') then
+              Error.fail
+                ~loc
+                "The type of the pattern is not equal to the type \
+                 of the value matched";
+            (MConstr ((name, TypesBeta.head ty), args), gamma)
+        end
   in
   aux
 

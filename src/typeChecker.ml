@@ -105,8 +105,7 @@ let transform_variants ~datatype gamma =
         if TypesBeta.check_if_returns_type ~datatype ty then
           let (xs, gamma) = aux (succ index) xs in
           let gamma = Gamma.add_value name ty gamma in
-          let gamma = Gamma.add_index name (ty, index) gamma in
-          let gamma = Gamma.append_constr datatype name gamma in
+          let gamma = Gamma.add_constr datatype name (ty, index) gamma in
           (Variant (name, TypesBeta.size ty) :: xs, gamma)
         else
           Error.fail

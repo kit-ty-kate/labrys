@@ -87,8 +87,8 @@ module Constr = struct
     in
     fold aux a []
 
-  let append k x map =
+  let add k k2 x map =
     match find k map with
-    | None -> add k [x] map
-    | Some xs -> add k (x :: xs) map
+    | None -> add k (Index.singleton k2 x) map
+    | Some xs -> add k (Index.add k2 x xs) map
 end
