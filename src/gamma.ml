@@ -48,4 +48,4 @@ let union (modul, a) b =
 let is_subset_of a b =
   GammaMap.Value.diff ~eq:TypesBeta.equal a.values b.values
   @ GammaMap.Types.diff ~eq:Pervasives.(=) a.types b.types
-  @ GammaMap.Constr.diff ~eq:Pervasives.(=) a.constructors b.constructors
+  @ GammaMap.Constr.diff ~eq:(GammaMap.Index.equal Pervasives.(=)) a.constructors b.constructors
