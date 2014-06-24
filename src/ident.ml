@@ -19,20 +19,28 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t = private
-  { values : TypesBeta.t GammaMap.Value.t
-  ; types : Types.ty GammaMap.Types.t
-  ; indexes : (TypesBeta.t * int) GammaMap.Index.t
-  ; constructors : Ident.Name.t list GammaMap.Constr.t
-  }
+open BatteriesExceptionless
+open Monomorphic.None
 
-val empty : t
+module Module = struct
+  type t = string list
 
-val add_value : Ident.Name.t -> TypesBeta.t -> t -> t
-val add_type : loc:Location.t -> Ident.Type.t -> Types.ty -> t -> t
-val add_index : Ident.Name.t -> (TypesBeta.t * int) -> t -> t
-val append_constr : Ident.Type.t -> Ident.Name.t -> t -> t
+  let of_list x = x
+  let to_file = String.concat "/"
+  let to_module_name = String.concat "_"
+end
 
-val union : (Ident.Module.t * t) -> t -> t
+module Name = struct
+  type t = string list
 
-val is_subset_of : t -> t -> string list
+  let compare = List.compare String.compare
+
+  let equal = List.eq String.equal
+
+  let prepend modul x = modul @ x
+
+  let of_list x = x
+  let to_string = String.concat "."
+end
+
+module Type = Name

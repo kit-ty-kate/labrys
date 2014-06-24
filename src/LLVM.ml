@@ -46,7 +46,7 @@ let bind c ~name s m =
   let m' = Llvm_irreader.parse_ir c membuffer in
   Llvm_linker.link_modules m m' Llvm_linker.Mode.DestroySource;
   Llvm.dispose_module m';
-  BatOption.get (lookup_global (Gamma.Name.to_string name) m)
+  BatOption.get (lookup_global (Ident.Name.to_string name) m)
 
 let optimize ~lto ~opt layout m =
   let pm = PassManager.create () in

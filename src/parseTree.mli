@@ -19,9 +19,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Gamma.Name.t
-type t_name = Gamma.Type.t
-type module_name = Gamma.Module.t
+type name = Ident.Name.t
+type t_name = Ident.Type.t
+type module_name = Ident.Module.t
 type loc = Location.t
 
 type t_value = (t_name * Kinds.t)

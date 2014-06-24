@@ -23,8 +23,8 @@ type t
 
 val make :
   with_main:bool ->
-  name:Gamma.Module.t ->
-  imports:ParseTree.imports ->
+  name:Ident.Module.t ->
+  imports:ModulePath.t list ->
   UntypedTree.top list ->
   t
 

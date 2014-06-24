@@ -34,25 +34,24 @@ let of_file file =
   ; file = Filename.basename file
   }
 
-let impl self modul =
-  let base_filename = Gamma.Module.to_file modul in
+let of_module ~parent_module modul =
+  let base_filename = Ident.Module.to_file modul in
   let path = Filename.dirname base_filename in
   let path = if String.equal path "." then "" else path in
-  let path = Filename.concat self.path path in
+  let path = Filename.concat parent_module.path path in
   let file = Filename.basename (base_filename ^ ".sfw") in
-  {self with path; file}
+  {parent_module with path; file}
 
-let intf self modul =
-  let self = impl self modul in
-  let file = self.file ^ "i" in
-  {self with file}
+let impl {base_path; path; file} =
+  Filename.concat (Filename.concat base_path path) file
 
-let to_module {base_path; path; file} =
+let intf self =
+  let file = impl self in
+  file ^ "i"
+
+let to_module {path; file; _} =
   let file = Filename.concat path file in
   let file = Filename.chop_extension file in
   let file = String.nsplit file ~by:Filename.dir_sep in
   let file = List.map String.capitalize file in
-  Gamma.Module.of_list file
-
-let to_string {base_path; path; file} =
-  Filename.concat base_path (Filename.concat path file)
+  Ident.Module.of_list file

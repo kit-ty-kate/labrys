@@ -22,9 +22,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type t
 
 val of_file : string -> t
+val of_module : parent_module:t -> Ident.Module.t -> t
 
-val impl : t -> Gamma.Module.t -> t
-val intf : t -> Gamma.Module.t -> t
+val impl : t -> string
+val intf : t -> string
 
-val to_module : t -> Gamma.Module.t
-val to_string : t -> string
+val to_module : t -> Ident.Module.t

@@ -19,20 +19,32 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t = private
-  { values : TypesBeta.t GammaMap.Value.t
-  ; types : Types.ty GammaMap.Types.t
-  ; indexes : (TypesBeta.t * int) GammaMap.Index.t
-  ; constructors : Ident.Name.t list GammaMap.Constr.t
-  }
+module Value : sig
+  include BatMap.S with type key = Ident.Name.t
+  include module type of Exceptionless
 
-val empty : t
+  val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
+  val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
+end
 
-val add_value : Ident.Name.t -> TypesBeta.t -> t -> t
-val add_type : loc:Location.t -> Ident.Type.t -> Types.ty -> t -> t
-val add_index : Ident.Name.t -> (TypesBeta.t * int) -> t -> t
-val append_constr : Ident.Type.t -> Ident.Name.t -> t -> t
+module Types : sig
+  include BatMap.S with type key = Ident.Type.t
+  include module type of Exceptionless
 
-val union : (Ident.Module.t * t) -> t -> t
+  val add : loc:Location.t -> key -> 'a -> 'a t -> 'a t
 
-val is_subset_of : t -> t -> string list
+  val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
+  val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
+end
+
+module Index : module type of Value
+
+module Constr : sig
+  include BatMap.S with type key = Ident.Type.t
+  include module type of Exceptionless
+
+  val append : key -> 'a -> 'a list t -> 'a list t
+
+  val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
+  val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
+end

@@ -19,7 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Gamma.Name.t
+type name = Ident.Name.t
 
 type var = private
   | VLeaf
@@ -35,11 +35,8 @@ type t =
 
 val create :
   loc:Location.t ->
-  (TypesBeta.t Gamma.Value.t -> ParseTree.t -> ('a * TypesBeta.t)) ->
-  TypesBeta.t Gamma.Value.t ->
-  [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t -> (* TODO: define types in a specific module *)
-  (TypesBeta.t * int) Gamma.Index.t ->
-  name list Gamma.Constr.t ->
+  (Gamma.t -> ParseTree.t -> ('a * TypesBeta.t)) ->
+  Gamma.t ->
   TypesBeta.t ->
   ((Location.t * ParseTree.pattern) * (Location.t * ParseTree.t)) list ->
   (t * ((var * name) list * 'a) list * TypesBeta.t)

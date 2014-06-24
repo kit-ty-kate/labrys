@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type name = Gamma.Type.t
+type name = Ident.Type.t
 
 type t =
   | Ty of (name * Kinds.t)
@@ -31,6 +31,10 @@ type t =
   | Forall of (name * Kinds.t * t)
   | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
+
+type ty =
+  | Abstract of Kinds.t
+  | Alias of (t * Kinds.t)
 
 let fail_not_star ~loc x =
   Error.fail ~loc "The type construct '%s' cannot be applied with kind /= '*'" x
@@ -47,18 +51,18 @@ let rec from_parse_tree ~loc gammaT = function
         fail_not_star ~loc "->";
       (Fun (x, y), Kinds.Star)
   | ParseTree.Ty name ->
-      begin match Gamma.Types.find name gammaT with
-      | Some (`Alias (ty, k)) -> (Alias (name, ty), k)
-      | Some (`Abstract k) -> (Ty (name, k), k)
-      | None -> Error.fail ~loc "The type '%s' was not found in Γ" (Gamma.Type.to_string name)
+      begin match GammaMap.Types.find name gammaT with
+      | Some (Alias (ty, k)) -> (Alias (name, ty), k)
+      | Some (Abstract k) -> (Ty (name, k), k)
+      | None -> Error.fail ~loc "The type '%s' was not found in Γ" (Ident.Type.to_string name)
       end
   | ParseTree.Forall ((name, k), ret) ->
-      let (ret, kx) = from_parse_tree ~loc (Gamma.Types.add ~loc name (`Abstract k) gammaT) ret in
+      let (ret, kx) = from_parse_tree ~loc (GammaMap.Types.add ~loc name (Abstract k) gammaT) ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
   | ParseTree.AbsOnTy ((name, k), ret) ->
-      let (ret, kret) = from_parse_tree ~loc (Gamma.Types.add ~loc name (`Abstract k) gammaT) ret in
+      let (ret, kret) = from_parse_tree ~loc (GammaMap.Types.add ~loc name (Abstract k) gammaT) ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
   | ParseTree.AppOnTy (f, x) ->
       let (f, kf) = from_parse_tree ~loc gammaT f in

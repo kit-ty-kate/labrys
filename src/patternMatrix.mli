@@ -19,7 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Gamma.Name.t
+type name = Ident.Name.t
 
 type var = private
   | VLeaf
@@ -32,18 +32,16 @@ type 'a t = (mconstr * 'a) list
 type code_index = int
 
 type pattern = private
-  | Constr of (var * (name * Gamma.Type.t) * pattern list)
-  | Any of (var * (name * Gamma.Type.t))
+  | Constr of (var * (name * Ident.Type.t) * pattern list)
+  | Any of (var * (name * Ident.Type.t))
 
 type matrix = (pattern list * code_index) list
 
 val create :
   loc:Location.t ->
-  TypesBeta.t Gamma.Value.t ->
-  [`Alias of (Types.t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t -> (* TODO: define types in a specific module *)
-  (TypesBeta.t * int) Gamma.Index.t ->
+  Gamma.t ->
   TypesBeta.t ->
   ParseTree.pattern ->
-  (mconstr * TypesBeta.t Gamma.Value.t)
+  (mconstr * Gamma.t)
 
 val split : 'a t -> (matrix * ((var * name) list * 'a) list)

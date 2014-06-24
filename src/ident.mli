@@ -19,20 +19,24 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t = private
-  { values : TypesBeta.t GammaMap.Value.t
-  ; types : Types.ty GammaMap.Types.t
-  ; indexes : (TypesBeta.t * int) GammaMap.Index.t
-  ; constructors : Ident.Name.t list GammaMap.Constr.t
-  }
+module Module : sig
+  type t
 
-val empty : t
+  val of_list : string list -> t
+  val to_file : t -> string
+  val to_module_name : t -> string
+end
 
-val add_value : Ident.Name.t -> TypesBeta.t -> t -> t
-val add_type : loc:Location.t -> Ident.Type.t -> Types.ty -> t -> t
-val add_index : Ident.Name.t -> (TypesBeta.t * int) -> t -> t
-val append_constr : Ident.Type.t -> Ident.Name.t -> t -> t
+module Name : sig
+  type t
 
-val union : (Ident.Module.t * t) -> t -> t
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
 
-val is_subset_of : t -> t -> string list
+  val prepend : Module.t -> t -> t
+
+  val of_list : string list -> t
+  val to_string : t -> string
+end
+
+module Type : module type of Name

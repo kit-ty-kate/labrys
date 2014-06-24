@@ -25,8 +25,8 @@ open Monomorphic.None
 let fmt = Printf.sprintf
 let (^^) = PPrint.(^^)
 
-let dump_name = Gamma.Name.to_string
-let dump_t_name = Gamma.Type.to_string
+let dump_name = Ident.Name.to_string
+let dump_t_name = Ident.Type.to_string
 let dump_k = Kinds.to_string
 
 let rec dump_top f doc = function

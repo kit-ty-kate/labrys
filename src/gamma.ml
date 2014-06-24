@@ -22,99 +22,36 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-module Module = struct
-  type t = string list
-
-  let of_list x = x
-  let to_file = String.concat "/"
-  let to_module_name = String.concat "_"
-end
-
-module Name = struct
-  type t = string list
-
-  let compare = List.compare String.compare
-
-  let equal = List.eq String.equal
-
-  let prepend modul x = modul @ x
-
-  let of_list x = x
-  let to_string = String.concat "."
-end
-
-module Type = Name
-
-module Value = struct
-  include Map.Make(Name)
-  include Exceptionless
-end
-
-module Types = struct
-  include Value
-
-  let add ~loc k x map =
-    if mem k map then
-      Error.fail
-        ~loc
-        "A module cannot contain several times the type '%s'"
-        (Name.to_string k);
-    add k x map
-end
-
-module Index = Value
-
-module Constr = struct
-  include Value
-
-  let append k x map =
-    match find k map with
-    | None -> add k [x] map
-    | Some xs -> add k (x :: xs) map
-end
-
-type ('values, 'types, 'indexes, 'constr) t =
-  { values : 'values Value.t
-  ; types : 'types Types.t
-  ; indexes : 'indexes Index.t
-  ; constructors : 'constr Constr.t
+(* TODO: Merge indexes and constructors *)
+type t =
+  { values : TypesBeta.t GammaMap.Value.t
+  ; types : Types.ty GammaMap.Types.t
+  ; indexes : (TypesBeta.t * int) GammaMap.Index.t
+  ; constructors : Ident.Name.t list GammaMap.Constr.t
   }
 
 let empty =
-  { values = Value.empty
-  ; types = Types.empty
-  ; indexes = Index.empty
-  ; constructors = Constr.empty
+  { values = GammaMap.Value.empty
+  ; types = GammaMap.Types.empty
+  ; indexes = GammaMap.Index.empty
+  ; constructors = GammaMap.Constr.empty
   }
 
-let of_gamma ~gamma ~gammaT ~gammaC ~gammaD =
-  { values = gamma
-  ; types = gammaT
-  ; indexes = gammaC
-  ; constructors = gammaD
+let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
+let add_type ~loc k x self = {self with types = GammaMap.Types.add ~loc k x self.types}
+let add_index k x self = {self with indexes = GammaMap.Index.add k x self.indexes}
+let append_constr k x self = {self with constructors = GammaMap.Constr.append k x self.constructors}
+
+let union (modul, a) b =
+  { values = GammaMap.Value.union (modul, a.values) b.values
+  ; types = GammaMap.Types.union (modul, a.types) b.types
+  ; indexes = GammaMap.Index.union (modul, a.indexes) b.indexes
+  ; constructors = GammaMap.Constr.union (modul, a.constructors) b.constructors
   }
 
-let union a b =
-  let aux a b =
-    let aux k x acc = Value.add k x acc in
-    Value.fold aux a b
-  in
-  { values = aux a.values b.values
-  ; types = aux a.types b.types
-  ; indexes = aux a.indexes b.indexes
-  ; constructors = aux a.constructors b.constructors
-  }
-
-let subset a {values; types; indexes; constructors} =
-  let aux a b =
-    let aux k x =
-      match Value.find k b with
-      | Some y -> Pervasives.(x = y)
-      | None -> false
-    in
-    List.map fst (Value.bindings (Value.filter aux a))
-  in
-  aux a.values values
-  @ aux a.types types
-  @ aux a.indexes indexes
-  @ aux a.constructors constructors
+(* TODO: Remove those Pervasives.(=) *)
+let is_subset_of a b =
+  GammaMap.Value.diff ~eq:TypesBeta.equal a.values b.values
+  @ GammaMap.Types.diff ~eq:Pervasives.(=) a.types b.types
+  @ GammaMap.Index.diff ~eq:Pervasives.(=) a.indexes b.indexes
+  @ GammaMap.Constr.diff ~eq:Pervasives.(=) a.constructors b.constructors

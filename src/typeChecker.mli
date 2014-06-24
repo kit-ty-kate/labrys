@@ -19,14 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type gamma =
-  ( TypesBeta.t
-  , [`Abstract of Kinds.t | `Alias of Types.t * Kinds.t]
-  , (TypesBeta.t * int)
-  , Gamma.Name.t list
-  ) Gamma.t
-
 val from_parse_tree :
-  interface:gamma ->
-  (gamma * ParseTree.top list) ->
+  interface:Gamma.t ->
+  Gamma.t ->
+  ParseTree.top list ->
   TypedTree.top list

@@ -22,33 +22,33 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type name = Gamma.Name.t
+type name = Ident.Name.t
 
 type var =
   | VLeaf
   | VNode of (int * var)
 
 type mconstr =
-  | MConstr of ((name * Gamma.Type.t) * mconstr list)
-  | MAny of (name * Gamma.Type.t)
+  | MConstr of ((name * Ident.Type.t) * mconstr list)
+  | MAny of (name * Ident.Type.t)
 
 type 'a t = (mconstr * 'a) list
 
 type code_index = int
 
 type pattern =
-  | Constr of (var * (name * Gamma.Type.t) * pattern list)
-  | Any of (var * (name * Gamma.Type.t))
+  | Constr of (var * (name * Ident.Type.t) * pattern list)
+  | Any of (var * (name * Ident.Type.t))
 
 type matrix = (pattern list * code_index) list
 
-let create ~loc gammaT gammaC =
+let create ~loc =
   let rec aux gamma ty' = function
     | ParseTree.Any name ->
-        let gamma = Gamma.Value.add name ty' gamma in
+        let gamma = Gamma.add_value name ty' gamma in
         (MAny (name, TypesBeta.head ty'), gamma)
     | ParseTree.TyConstr (name, args) ->
-        let ty = Gamma.Index.find name gammaC in
+        let ty = GammaMap.Index.find name gamma.Gamma.indexes in
         let (ty, _) = Option.default_delayed (fun () -> assert false) ty in
         let aux (args, ty, gamma) = function
           | ParseTree.PVal p ->
@@ -56,7 +56,7 @@ let create ~loc gammaT gammaC =
               let (arg, gamma) = aux gamma param_ty p in
               (arg :: args, res_ty, gamma)
           | ParseTree.PTy pty ->
-              let (pty, kx) = TypesBeta.of_parse_tree_kind ~loc gammaT pty in
+              let (pty, kx) = TypesBeta.of_parse_tree_kind ~loc gamma.Gamma.types pty in
               let (_, res) = TypesBeta.apply_ty ~loc ~ty_x:pty ~kind_x:kx ty in
               (args, res, gamma)
         in
@@ -69,8 +69,6 @@ let create ~loc gammaT gammaC =
         (MConstr ((name, TypesBeta.head ty), args), gamma)
   in
   aux
-
-let create ~loc gamma gammaT gammaC ty p = create ~loc gammaT gammaC gamma ty p
 
 let succ_var = function
   | VLeaf -> VLeaf

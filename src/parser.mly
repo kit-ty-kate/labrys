@@ -95,7 +95,7 @@ import:
 
 module_name:
 | name = upperName
-    { Gamma.Module.of_list name }
+    { Ident.Module.of_list name }
 
 (********* Implementation *********)
 
@@ -106,19 +106,19 @@ main:
 body:
 | Let name = LowerName args = list(arg) Equal term = term xs = body
     { let term = let_lambda_sugar term args in
-      ParseTree.Value (Gamma.Name.of_list [name], term) :: xs
+      ParseTree.Value (Ident.Name.of_list [name], term) :: xs
     }
 | Let Rec name = LowerName args = list(arg) Colon ty = typeExpr Equal term = term xs = body
     { let (term, ty) = let_rec_lambda_sugar term ty args in
       ParseTree.RecValue
-        (get_loc $startpos $endpos(term), Gamma.Name.of_list [name], ty, term)
+        (get_loc $startpos $endpos(term), Ident.Name.of_list [name], ty, term)
       :: xs
     }
 | typeAlias = typeAlias xs = body
     { ParseTree.Type typeAlias :: xs }
 | Let name = LowerName Colon ty = typeExpr Equal binding = Binding xs = body
     { ParseTree.Binding
-        (get_loc $startpos $endpos(binding), Gamma.Name.of_list [name], ty, binding)
+        (get_loc $startpos $endpos(binding), Ident.Name.of_list [name], ty, binding)
       :: xs
     }
 | datatype = datatype xs = body
@@ -128,11 +128,11 @@ body:
 
 datatype:
 | Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
-    { (get_loc $startpos $endpos, Gamma.Type.of_list [name], k, variants) }
+    { (get_loc $startpos $endpos, Ident.Type.of_list [name], k, variants) }
 
 typeAlias:
 | Type Alias name = UpperName Equal ty = typeExpr
-    { (get_loc $startpos $endpos, Gamma.Type.of_list [name], ty) }
+    { (get_loc $startpos $endpos, Ident.Type.of_list [name], ty) }
 
 term:
 | Lambda args = nonempty_list(arg) Arrow term = term
@@ -142,24 +142,24 @@ term:
 | term1 = term LBracket ty = typeExpr RBracket
     { ParseTree.TApp (get_loc $startpos $endpos, term1, ty) }
 | name = name
-    { ParseTree.Val (get_loc $startpos $endpos, Gamma.Name.of_list name) }
+    { ParseTree.Val (get_loc $startpos $endpos, Ident.Name.of_list name) }
 | LParen term = term RParen
     { term }
 | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
     { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
 | Let name = LowerName args = list(arg) Equal t = term In xs = term
     { let t = let_lambda_sugar t args in
-      ParseTree.Let (Gamma.Name.of_list [name], t, xs)
+      ParseTree.Let (Ident.Name.of_list [name], t, xs)
     }
 | Let Rec name = LowerName args = list(arg) Colon ty = typeExpr Equal t = term In xs = term
     { let (t, ty) = let_rec_lambda_sugar t ty args in
       ParseTree.LetRec
-        (get_loc $startpos $endpos(ty), Gamma.Name.of_list [name], ty, t, xs)
+        (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty, t, xs)
     }
 
 arg:
 | LParen name = LowerName Colon ty = typeExpr RParen
-    { `Val (get_loc $startpos $endpos, (Gamma.Name.of_list [name], ty)) }
+    { `Val (get_loc $startpos $endpos, (Ident.Name.of_list [name], ty)) }
 | ty = kind_and_name
     { `Ty (get_loc $startpos $endpos, ty) }
 
@@ -178,7 +178,7 @@ upperName:
 
 typeExpr:
 | name = upperName
-    { ParseTree.Ty (Gamma.Type.of_list name) }
+    { ParseTree.Ty (Ident.Type.of_list name) }
 | param = typeExpr Arrow ret = typeExpr
     { ParseTree.Fun (param, ret) }
 | Forall values = nonempty_list(kind_and_name) Comma ret = typeExpr
@@ -201,7 +201,7 @@ kind:
 variant:
 | name = UpperName Colon ty = typeExpr
     { ParseTree.Variant
-        (get_loc $startpos $endpos, Gamma.Name.of_list [name], ty)
+        (get_loc $startpos $endpos, Ident.Name.of_list [name], ty)
     }
 
 kindopt:
@@ -210,9 +210,9 @@ kindopt:
 
 kind_and_name:
 | name = UpperName
-    { (Gamma.Type.of_list [name], Kinds.Star) }
+    { (Ident.Type.of_list [name], Kinds.Star) }
 | LParen name = UpperName Colon k = kind RParen
-    { (Gamma.Type.of_list [name], k) }
+    { (Ident.Type.of_list [name], k) }
 
 pattern:
 | p = pat Arrow t = term
@@ -220,15 +220,15 @@ pattern:
 
 pat:
 | name = LowerName
-    { ParseTree.Any (Gamma.Name.of_list [name]) }
+    { ParseTree.Any (Ident.Name.of_list [name]) }
 | name = upperName args = list(pat_arg)
-    { ParseTree.TyConstr (Gamma.Name.of_list name, args) }
+    { ParseTree.TyConstr (Ident.Name.of_list name, args) }
 
 pat_arg:
 | name = LowerName
-    { ParseTree.PVal (ParseTree.Any (Gamma.Name.of_list [name])) }
+    { ParseTree.PVal (ParseTree.Any (Ident.Name.of_list [name])) }
 | name = upperName
-    { ParseTree.PVal (ParseTree.TyConstr (Gamma.Name.of_list name, [])) }
+    { ParseTree.PVal (ParseTree.TyConstr (Ident.Name.of_list name, [])) }
 | LParen p = pat RParen
     { ParseTree.PVal p }
 | LBracket ty = typeExpr RBracket
@@ -243,12 +243,12 @@ mainInterface:
 bodyInterface:
 | Let name = LowerName Colon ty = typeExpr xs = bodyInterface
     { Interface.Val
-        (get_loc $startpos $endpos(ty), Gamma.Name.of_list [name], ty)
+        (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty)
       :: xs
     }
 | Type name = UpperName k = kindopt xs = bodyInterface
     { Interface.AbstractType
-        (get_loc $startpos $endpos(name), (Gamma.Type.of_list [name], k))
+        (get_loc $startpos $endpos(name), (Ident.Type.of_list [name], k))
       :: xs
     }
 | datatype = datatype xs = bodyInterface

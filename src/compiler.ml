@@ -32,11 +32,6 @@ type printer =
   | UntypedTree
   | LLVM
 
-type modul =
-  { file : ModulePath.t
-  ; modul : Gamma.Module.t
-  }
-
 exception ParseError of string
 exception Break
 
@@ -85,40 +80,34 @@ let parse filename parser =
   in
   File.with_file_in filename aux
 
-let rec build_intf path =
-  let aux acc module_name =
-    let ifile = ModulePath.intf path module_name in
-    let ifile = ModulePath.to_string ifile in
-    let (imports, tree) = parse ifile Parser.mainInterface in
-    let gamma = build_intf path imports in
-    let gamma = Interface.compile module_name gamma tree in
-    Gamma.union gamma acc
+let rec build_intf parent_module =
+  let (imports, tree) = parse (ModulePath.intf parent_module) Parser.mainInterface in
+  let aux acc x =
+    let x = ModulePath.of_module ~parent_module x in
+    Gamma.union (ModulePath.to_module x, build_intf x) acc
   in
-  List.fold_left aux Gamma.empty
+  let gamma = List.fold_left aux Gamma.empty imports in
+  Interface.compile gamma tree
 
 let rec build_impl =
   let tbl = Hashtbl.create 32 in
-  fun self imports ->
+  fun parent_module imports ->
   (* TODO: file that checks the hash of the dependencies *)
   (* TODO: We don't nececary need .sfw in the .sfwi contains only types *)
   let aux ((imports_acc, gamma_acc, impl_acc) as acc) modul =
+    let modul = ModulePath.of_module ~parent_module modul in
     match Hashtbl.find tbl modul with
     | Some () ->
         acc
     | None ->
-        let interface = build_intf self.file imports in
-        let file = ModulePath.impl self.file modul in
-        let impl =
-          compile
-            ~interface
-            {file; modul}
-        in
+        let interface = build_intf modul in
+        let impl = compile ~interface modul in
         let impl = match impl_acc with
           | Some impl_acc -> Backend.link impl impl_acc
           | None -> impl
         in
         Hashtbl.add tbl modul ();
-        let gamma = Gamma.union interface gamma_acc in
+        let gamma = Gamma.union (ModulePath.to_module modul, interface) gamma_acc in
         (imports_acc @ [modul], gamma, Some impl)
   in
   List.fold_left aux ([], Gamma.empty, None) imports
@@ -127,20 +116,19 @@ and compile
       ?(printer = NoPrinter)
       ?(with_main = false)
       ~interface
-      self =
-  let file = ModulePath.to_string self.file in
-  let (imports, parse_tree) = parse file Parser.main in
-  let (imports, gamma, code) = build_impl self imports in
+      modul =
+  let (imports, parse_tree) = parse (ModulePath.impl modul) Parser.main in
+  let (imports, gamma, code) = build_impl modul imports in
   let typed_tree =
     lazy begin
-      TypeChecker.from_parse_tree ~interface (gamma, parse_tree)
+      TypeChecker.from_parse_tree ~interface gamma parse_tree
     end
   in
   let untyped_tree = lazy (Lambda.of_typed_tree (Lazy.force typed_tree)) in
   let dst =
     lazy begin
       let untyped_tree = Lazy.force untyped_tree in
-      Backend.make ~with_main ~name:self.modul ~imports untyped_tree
+      Backend.make ~with_main ~name:(ModulePath.to_module modul) ~imports untyped_tree
     end
   in
   let res =
@@ -168,11 +156,9 @@ and compile
       Lazy.force res
 
 let compile ~printer ~lto ~opt ~o file =
-  let file = ModulePath.of_file file in
-  let modul = ModulePath.to_module file in
-  let self = {file; modul} in
+  let modul = ModulePath.of_file file in
   try
-    compile ~printer ~with_main:true ~interface:Gamma.empty self
+    compile ~printer ~with_main:true ~interface:Gamma.empty modul
     |> Backend.optimize ~lto ~opt
     |> write ~o
   with

@@ -32,7 +32,7 @@ val build_unreachable : llbuilder -> unit
 
 val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * llbuilder)
 
-val bind : llcontext -> name:Gamma.Name.t -> string -> llmodule -> llvalue
+val bind : llcontext -> name:Ident.Name.t -> string -> llmodule -> llvalue
 
 val optimize :
   lto:bool ->

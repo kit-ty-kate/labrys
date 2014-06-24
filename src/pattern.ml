@@ -24,7 +24,7 @@ open Monomorphic.None
 
 module Matrix = PatternMatrix
 
-type name = Gamma.Name.t
+type name = Ident.Name.t
 
 type var = Matrix.var = private
   | VLeaf
@@ -46,7 +46,7 @@ let are_any =
   List.for_all aux
 
 let specialize name m =
-  let eq = Gamma.Name.equal in
+  let eq = Ident.Name.equal in
   let size =
     let rec aux = function
       | (Matrix.Constr (_, (x, _), args) :: _, _) :: m when eq name x ->
@@ -80,7 +80,7 @@ let create ~loc gammaD =
         Leaf code_index
     | (Matrix.Any (var, (_, ty)) :: _, _) :: _
     | (Matrix.Constr (var, (_, ty), _) :: _, _) :: _->
-        let variants = Gamma.Constr.find ty gammaD in
+        let variants = GammaMap.Constr.find ty gammaD in
         let variants =
           Option.default_delayed (fun () -> assert false) variants
         in
@@ -93,7 +93,7 @@ let create ~loc gammaD =
                   Error.fail
                     ~loc
                     "Pattern non-exostive on constructor '%s'"
-                    (Gamma.Name.to_string name)
+                    (Ident.Name.to_string name)
               | m -> aux m
             in
             let index = List.index_of name variants in
@@ -115,20 +115,20 @@ let rec get_unused_cases ~loc results = function
   | Node (_, l) ->
       List.fold_left (fun r (_, p) -> get_unused_cases ~loc r p) results l
 
-let create ~loc f gamma gammaT gammaC gammaD ty patterns =
+let create ~loc f gamma ty patterns =
   let (head, tail) = match patterns with
     | [] -> assert false
     | x::xs -> (x, xs)
   in
   let (initial_pattern, initial_ty) =
     let ((loc, head_p), (_, head_t)) = head in
-    let (pattern, gamma) = Matrix.create ~loc gamma gammaT gammaC ty head_p in
+    let (pattern, gamma) = Matrix.create ~loc gamma ty head_p in
     let (term, ty_term) = f gamma head_t in
     ([(pattern, term)], ty_term)
   in
   let patterns =
     let f patterns ((loc_p, p), (loc_t, t)) =
-      let (pattern, gamma) = Matrix.create ~loc:loc_p gamma gammaT gammaC ty p in
+      let (pattern, gamma) = Matrix.create ~loc:loc_p gamma ty p in
       let (t, has) = f gamma t in
       if not (TypesBeta.equal has initial_ty) then
         TypesBeta.Error.fail ~loc:loc_t ~has ~expected:initial_ty;
@@ -137,7 +137,7 @@ let create ~loc f gamma gammaT gammaC gammaD ty patterns =
     Utils.fold f initial_pattern tail
   in
   let (patterns, results) = Matrix.split patterns in
-  let patterns = create ~loc gammaD patterns in
+  let patterns = create ~loc gamma.Gamma.constructors patterns in
   let unused_cases =
     get_unused_cases ~loc (List.mapi (fun i _ -> i) results) patterns
   in

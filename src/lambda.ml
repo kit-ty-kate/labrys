@@ -81,7 +81,7 @@ let of_typed_variant acc i = function
           | 0 ->
               (Variant i, params)
           | n ->
-              let name = Gamma.Name.of_list [string_of_int n] in
+              let name = Ident.Name.of_list [string_of_int n] in
               let params = Set.add name params in
               let (t, used_vars) = aux params (pred n) in
               let used_vars = Set.remove name used_vars in

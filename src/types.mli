@@ -19,7 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Gamma.Type.t
+type name = Ident.Type.t
 
 type t =
   | Ty of (name * Kinds.t)
@@ -29,8 +29,12 @@ type t =
   | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
 
+type ty =
+  | Abstract of Kinds.t
+  | Alias of (t * Kinds.t)
+
 val from_parse_tree :
   loc:Location.t ->
-  [`Alias of (t * Kinds.t) | `Abstract of Kinds.t] Gamma.Types.t ->
+  ty GammaMap.Types.t ->
   ParseTree.ty ->
   (t * Kinds.t)

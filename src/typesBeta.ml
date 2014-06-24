@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type name = Gamma.Type.t
+type name = Ident.Type.t
 
 type t =
   | Ty of name
@@ -35,14 +35,14 @@ let fmt = Printf.sprintf
 
 let rec replace ~from ~ty =
   let rec aux = function
-    | Ty x when Gamma.Type.equal x from -> ty
+    | Ty x when Ident.Type.equal x from -> ty
     | Ty _ as t -> t
     | Fun (param, ret) -> Fun (aux param, aux ret)
     | (AbsOnTy (x, _, _) as t)
-    | (Forall (x, _, _) as t) when Gamma.Type.equal x from -> t
+    | (Forall (x, _, _) as t) when Ident.Type.equal x from -> t
     | Forall (x, k, t) -> Forall (x, k, aux t)
     | AbsOnTy (x, k, t) -> AbsOnTy (x, k, aux t)
-    | AppOnTy (AbsOnTy (from', _, t), x) when Gamma.Type.equal from from' ->
+    | AppOnTy (AbsOnTy (from', _, t), x) when Ident.Type.equal from from' ->
         replace ~from:from' ~ty:x t
     | AppOnTy (AbsOnTy (from, _, t), x) ->
         aux (replace ~from ~ty:x t)
@@ -76,22 +76,22 @@ let func ~param ~res = Fun (param, res)
 let forall ~param ~kind ~res = Forall (param, kind, res)
 
 let rec to_string = function
-  | Ty x -> Gamma.Type.to_string x
-  | Fun (Ty x, ret) -> Gamma.Type.to_string x ^ " -> " ^ to_string ret
+  | Ty x -> Ident.Type.to_string x
+  | Fun (Ty x, ret) -> Ident.Type.to_string x ^ " -> " ^ to_string ret
   | Fun (x, ret) -> "(" ^ to_string x ^ ") -> " ^ to_string ret
   | Forall (x, k, t) ->
-      fmt "forall %s : %s. %s" (Gamma.Type.to_string x) (Kinds.to_string k) (to_string t)
+      fmt "forall %s : %s. %s" (Ident.Type.to_string x) (Kinds.to_string k) (to_string t)
   | AbsOnTy (name, k, t) ->
-      fmt "λ%s : %s. %s" (Gamma.Type.to_string name) (Kinds.to_string k) (to_string t)
-  | AppOnTy (Ty f, Ty x) -> fmt "%s %s" (Gamma.Type.to_string f) (Gamma.Type.to_string x)
-  | AppOnTy (Ty f, x) -> fmt "%s (%s)" (Gamma.Type.to_string f) (to_string x)
-  | AppOnTy (f, Ty x) -> fmt "(%s) %s" (to_string f) (Gamma.Type.to_string x)
+      fmt "λ%s : %s. %s" (Ident.Type.to_string name) (Kinds.to_string k) (to_string t)
+  | AppOnTy (Ty f, Ty x) -> fmt "%s %s" (Ident.Type.to_string f) (Ident.Type.to_string x)
+  | AppOnTy (Ty f, x) -> fmt "%s (%s)" (Ident.Type.to_string f) (to_string x)
+  | AppOnTy (f, Ty x) -> fmt "(%s) %s" (to_string f) (Ident.Type.to_string x)
   | AppOnTy (f, x) -> fmt "(%s) (%s)" (to_string f) (to_string x)
 
 let equal x y =
   let rec aux eq_list = function
     | Ty x, Ty x' ->
-        let eq = Gamma.Type.equal in
+        let eq = Ident.Type.equal in
         List.exists (fun (y, y') -> eq x y && eq x' y') eq_list
         || (eq x x' && List.for_all (fun (y, y') -> eq x y || eq x' y') eq_list)
     | Fun (param, res), Fun (param', res') ->
@@ -179,7 +179,7 @@ let apply_ty ~loc ~ty_x ~kind_x = function
       assert false
 
 let rec check_if_returns_type ~datatype = function
-  | Ty x -> Gamma.Type.equal x datatype
+  | Ty x -> Ident.Type.equal x datatype
   | Forall (_, _, ret)
   | AppOnTy (ret, _)
   | Fun (_, ret) -> check_if_returns_type ~datatype ret
