@@ -19,22 +19,23 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Ident.Type.t
+open BatteriesExceptionless
+open Monomorphic.None
 
-type t =
-  | Ty of (name * Kinds.t)
-  | TyAlias of (name * t)
-  | Fun of (t * Effects.t * t)
-  | Forall of (name * Kinds.t * t)
-  | AbsOnTy of (name * Kinds.t * t)
-  | AppOnTy of (t * t)
+let fmt = Printf.sprintf
 
-type visibility =
-  | Abstract of Kinds.t
-  | Alias of (t * Kinds.t)
+type t = Ident.Name.t Set.t
 
-val from_parse_tree :
-  loc:Location.t ->
-  visibility GammaMap.Types.t ->
-  ParseTree.ty ->
-  (t * Kinds.t)
+let empty = Set.empty
+
+let union = Set.union
+let union3 x y z = Set.union (Set.union x y) z
+
+let is_empty = Set.is_empty
+
+let to_string x =
+  fmt "[%s]" (String.concat " | " (List.map Ident.Name.to_string (Set.to_list x)))
+
+let equal = Set.equal
+
+let add = Set.add

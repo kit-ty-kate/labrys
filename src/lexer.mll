@@ -40,6 +40,8 @@ rule main = parse
   | '*' { Parser.Star }
   | "λ" { Parser.Lambda }
   | "->" { Parser.Arrow }
+  | "-[" { Parser.LArrowEff }
+  | "]->" { Parser.RArrowEff }
   | "let" { Parser.Let }
   | "rec" { Parser.Rec }
   | "in" { Parser.In }

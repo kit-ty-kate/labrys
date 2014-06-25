@@ -27,7 +27,7 @@ type loc = Location.t
 type t_value = (t_name * Kinds.t)
 
 type ty =
-  | Fun of (ty * ty)
+  | Fun of (ty * name list * ty)
   | Ty of t_name
   | Forall of (t_value * ty)
   | AbsOnTy of (t_value * ty)

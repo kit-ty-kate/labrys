@@ -118,22 +118,23 @@ let create ~loc f gamma ty patterns =
     | [] -> assert false
     | x::xs -> (x, xs)
   in
-  let (initial_pattern, initial_ty) =
+  let (initial_pattern, initial_ty, effect) =
     let ((loc, head_p), (_, head_t)) = head in
     let (pattern, gamma) = Matrix.create ~loc gamma ty head_p in
-    let (term, ty_term) = f gamma head_t in
-    ([(pattern, term)], ty_term)
+    let (term, ty_term, effect) = f gamma head_t in
+    ([(pattern, term)], ty_term, effect)
   in
-  let patterns =
-    let f patterns ((loc_p, p), (loc_t, t)) =
+  let (patterns, effect) =
+    let f (patterns, effects) ((loc_p, p), (loc_t, t)) =
       let (pattern, gamma) = Matrix.create ~loc:loc_p gamma ty p in
-      let (t, has) = f gamma t in
+      let (t, has, effect) = f gamma t in
       if not (TypesBeta.equal has initial_ty) then
         TypesBeta.Error.fail ~loc:loc_t ~has ~expected:initial_ty;
-      (pattern, t) :: patterns
+      ((pattern, t) :: patterns, Effects.union effect effects)
     in
-    Utils.fold f initial_pattern tail
+    List.fold_left f (initial_pattern, effect) tail
   in
+  let patterns = List.rev patterns in
   let (patterns, results) = Matrix.split patterns in
   let patterns = create ~loc gamma.Gamma.constructors patterns in
   let unused_cases =
@@ -145,4 +146,4 @@ let create ~loc f gamma ty patterns =
       "The pattern matching contains the following unused cases (%s)"
       (Utils.string_of_list (fun x -> string_of_int (succ x)) unused_cases);
   List.
-  (patterns, results, initial_ty)
+  (patterns, results, initial_ty, effect)

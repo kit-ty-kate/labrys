@@ -65,7 +65,9 @@ let create ~loc =
         | Some (ty, _) ->
             let aux (args, ty, gamma) = function
               | ParseTree.PVal p ->
-                  let (param_ty, res_ty) = TypesBeta.apply ~loc ty in
+                  let (param_ty, effect, res_ty) = TypesBeta.apply ~loc ty in
+                  if not (Effects.is_empty effect) then
+                    assert false;
                   let (arg, gamma) = aux gamma param_ty p in
                   (arg :: args, res_ty, gamma)
               | ParseTree.PTy pty ->

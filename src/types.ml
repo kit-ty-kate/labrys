@@ -27,7 +27,7 @@ type name = Ident.Type.t
 type t =
   | Ty of (name * Kinds.t)
   | TyAlias of (name * t)
-  | Fun of (t * t)
+  | Fun of (t * Effects.t * t)
   | Forall of (name * Kinds.t * t)
   | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
@@ -44,12 +44,16 @@ let fail_apply ~loc x f =
   Error.fail ~loc "Kind '%s' can't be applied on '%s'" (conv x) (conv f)
 
 let rec from_parse_tree ~loc gammaT = function
-  | ParseTree.Fun (x, y) ->
+  | ParseTree.Fun (x, eff, y) ->
       let (x, k1) = from_parse_tree ~loc gammaT x in
+      let eff =
+        let aux acc ty = Effects.add ty acc in
+        List.fold_left aux Effects.empty eff
+      in
       let (y, k2) = from_parse_tree ~loc gammaT y in
       if Kinds.not_star k1 || Kinds.not_star k2 then
         fail_not_star ~loc "->";
-      (Fun (x, y), Kinds.Star)
+      (Fun (x, eff, y), Kinds.Star)
   | ParseTree.Ty name ->
       begin match GammaMap.Types.find name gammaT with
       | Some (Alias (ty, k)) -> (TyAlias (name, ty), k)

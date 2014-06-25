@@ -19,22 +19,17 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Ident.Type.t
+type t
 
-type t =
-  | Ty of (name * Kinds.t)
-  | TyAlias of (name * t)
-  | Fun of (t * Effects.t * t)
-  | Forall of (name * Kinds.t * t)
-  | AbsOnTy of (name * Kinds.t * t)
-  | AppOnTy of (t * t)
+val empty : t
 
-type visibility =
-  | Abstract of Kinds.t
-  | Alias of (t * Kinds.t)
+val union : t -> t -> t
+val union3 : t -> t -> t -> t
 
-val from_parse_tree :
-  loc:Location.t ->
-  visibility GammaMap.Types.t ->
-  ParseTree.ty ->
-  (t * Kinds.t)
+val is_empty : t -> bool
+
+val to_string : t -> string
+
+val equal : t -> t -> bool
+
+val add : Ident.Name.t -> t -> t

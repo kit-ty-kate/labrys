@@ -35,7 +35,7 @@ val of_parse_tree :
   ParseTree.ty ->
   t
 
-val func : param:t -> res:t -> t
+val func : param:t -> eff:Effects.t -> res:t -> t
 val forall : param:name -> kind:Kinds.t -> res:t -> t
 
 val to_string : t -> string
@@ -55,7 +55,7 @@ end
 val apply :
   loc:Location.t ->
   t ->
-  (t * t)
+  (t * Effects.t * t)
 
 val apply_ty :
   loc:Location.t ->

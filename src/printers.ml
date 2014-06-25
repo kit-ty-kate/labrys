@@ -42,8 +42,11 @@ let string_of_doc doc =
 module ParseTree = struct
   open ParseTree
 
+  let dump_eff x = String.concat " | " (List.map dump_name x)
+
   let rec dump_ty = function
-    | Fun (param, res) -> fmt "(%s -> %s)" (dump_ty param) (dump_ty res)
+    | Fun (param, eff, res) ->
+        fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
     | Ty name -> dump_t_name name
     | Forall ((name, k), res) ->
         fmt "(forall %s : %s, %s)" (dump_t_name name) (dump_k k) (dump_ty res)

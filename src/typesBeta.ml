@@ -26,7 +26,7 @@ type name = Ident.Type.t
 
 type t =
   | Ty of name
-  | Fun of (t * t)
+  | Fun of (t * Effects.t * t)
   | Forall of (name * Kinds.t * t)
   | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
@@ -37,7 +37,7 @@ let rec replace ~from ~ty =
   let rec aux = function
     | Ty x when Ident.Type.equal x from -> ty
     | Ty _ as t -> t
-    | Fun (param, ret) -> Fun (aux param, aux ret)
+    | Fun (param, eff, ret) -> Fun (aux param, eff, aux ret)
     | (AbsOnTy (x, _, _) as t)
     | (Forall (x, _, _) as t) when Ident.Type.equal x from -> t
     | Forall (x, k, t) -> Forall (x, k, aux t)
@@ -58,7 +58,7 @@ let rec replace ~from ~ty =
 let rec of_ty = function
   | Types.Ty (name, _) -> Ty name
   | Types.TyAlias (_, t) -> of_ty t
-  | Types.Fun (p, r) -> Fun (of_ty p, of_ty r)
+  | Types.Fun (p, eff, r) -> Fun (of_ty p, eff, of_ty r)
   | Types.Forall (name, k, t) -> Forall (name, k, of_ty t)
   | Types.AbsOnTy (name, k, t) -> AbsOnTy (name, k, of_ty t)
   | Types.AppOnTy (Types.AbsOnTy (name, _, t), x) ->
@@ -77,13 +77,15 @@ let of_parse_tree ~loc gammaT ty =
     Error.fail ~loc "Values cannot be of kind /= '*'";
   of_ty ty
 
-let func ~param ~res = Fun (param, res)
+let func ~param ~eff ~res = Fun (param, eff, res)
 let forall ~param ~kind ~res = Forall (param, kind, res)
 
 let rec to_string = function
   | Ty x -> Ident.Type.to_string x
-  | Fun (Ty x, ret) -> Ident.Type.to_string x ^ " -> " ^ to_string ret
-  | Fun (x, ret) -> "(" ^ to_string x ^ ") -> " ^ to_string ret
+  | Fun (Ty x, eff, ret) ->
+      fmt "%s -%s-> %s" (Ident.Type.to_string x) (Effects.to_string eff) (to_string ret)
+  | Fun (x, eff, ret) ->
+      fmt "(%s) -%s-> %s" (to_string x) (Effects.to_string eff) (to_string ret)
   | Forall (x, k, t) ->
       fmt "forall %s : %s. %s" (Ident.Type.to_string x) (Kinds.to_string k) (to_string t)
   | AbsOnTy (name, k, t) ->
@@ -99,8 +101,10 @@ let equal x y =
         let eq = Ident.Type.equal in
         List.exists (fun (y, y') -> eq x y && eq x' y') eq_list
         || (eq x x' && List.for_all (fun (y, y') -> eq x y || eq x' y') eq_list)
-    | Fun (param, res), Fun (param', res') ->
-        aux eq_list (param, param') && aux eq_list (res, res')
+    | Fun (param, eff1, res), Fun (param', eff2, res') ->
+        aux eq_list (param, param')
+        && Effects.equal eff1 eff2
+        && aux eq_list (res, res')
     | AppOnTy (f, x), AppOnTy (f', x') ->
         aux eq_list (f, f') && aux eq_list (x, x')
     | AbsOnTy (name1, k1, t), AbsOnTy (name2, k2, t')
@@ -115,7 +119,7 @@ let equal x y =
   aux [] (x, y)
 
 let rec size = function
-  | Fun (_, t) -> succ (size t)
+  | Fun (_, _, t) -> succ (size t)
   | AppOnTy _
   | AbsOnTy _
   | Ty _ -> 0
@@ -123,7 +127,7 @@ let rec size = function
 
 let rec head = function
   | Ty name -> name
-  | Fun (_, t)
+  | Fun (_, _, t)
   | Forall (_, _, t)
   | AbsOnTy (_, _, t)
   | AppOnTy (t, _) -> head t
@@ -187,5 +191,5 @@ let rec check_if_returns_type ~datatype = function
   | Ty x -> Ident.Type.equal x datatype
   | Forall (_, _, ret)
   | AppOnTy (ret, _)
-  | Fun (_, ret) -> check_if_returns_type ~datatype ret
+  | Fun (_, _, ret) -> check_if_returns_type ~datatype ret
   | AbsOnTy _ -> false
