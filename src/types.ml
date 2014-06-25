@@ -26,13 +26,13 @@ type name = Ident.Type.t
 
 type t =
   | Ty of (name * Kinds.t)
-  | Alias of (name * t)
+  | TyAlias of (name * t)
   | Fun of (t * t)
   | Forall of (name * Kinds.t * t)
   | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
 
-type ty =
+type visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
@@ -52,7 +52,7 @@ let rec from_parse_tree ~loc gammaT = function
       (Fun (x, y), Kinds.Star)
   | ParseTree.Ty name ->
       begin match GammaMap.Types.find name gammaT with
-      | Some (Alias (ty, k)) -> (Alias (name, ty), k)
+      | Some (Alias (ty, k)) -> (TyAlias (name, ty), k)
       | Some (Abstract k) -> (Ty (name, k), k)
       | None -> Error.fail ~loc "The type '%s' was not found in Γ" (Ident.Type.to_string name)
       end

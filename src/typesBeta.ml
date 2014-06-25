@@ -57,7 +57,7 @@ let rec replace ~from ~ty =
 
 let rec of_ty = function
   | Types.Ty (name, _) -> Ty name
-  | Types.Alias (_, t) -> of_ty t
+  | Types.TyAlias (_, t) -> of_ty t
   | Types.Fun (p, r) -> Fun (of_ty p, of_ty r)
   | Types.Forall (name, k, t) -> Forall (name, k, of_ty t)
   | Types.AbsOnTy (name, k, t) -> AbsOnTy (name, k, of_ty t)

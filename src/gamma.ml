@@ -24,7 +24,7 @@ open Monomorphic.None
 
 type t =
   { values : TypesBeta.t GammaMap.Value.t
-  ; types : Types.ty GammaMap.Types.t
+  ; types : Types.visibility GammaMap.Types.t
   ; constructors : ((TypesBeta.t * int) GammaMap.Index.t) GammaMap.Constr.t
   }
 

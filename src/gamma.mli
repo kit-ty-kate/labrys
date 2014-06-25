@@ -21,14 +21,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type t = private
   { values : TypesBeta.t GammaMap.Value.t
-  ; types : Types.ty GammaMap.Types.t
+  ; types : Types.visibility GammaMap.Types.t
   ; constructors : ((TypesBeta.t * int) GammaMap.Index.t) GammaMap.Constr.t
   }
 
 val empty : t
 
 val add_value : Ident.Name.t -> TypesBeta.t -> t -> t
-val add_type : loc:Location.t -> Ident.Type.t -> Types.ty -> t -> t
+val add_type : loc:Location.t -> Ident.Type.t -> Types.visibility -> t -> t
 val add_constr : Ident.Type.t -> Ident.Name.t -> (TypesBeta.t * int) -> t -> t
 
 val union : (Ident.Module.t * t) -> t -> t

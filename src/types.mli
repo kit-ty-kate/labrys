@@ -23,18 +23,18 @@ type name = Ident.Type.t
 
 type t =
   | Ty of (name * Kinds.t)
-  | Alias of (name * t)
+  | TyAlias of (name * t)
   | Fun of (t * t)
   | Forall of (name * Kinds.t * t)
   | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
 
-type ty =
+type visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
 val from_parse_tree :
   loc:Location.t ->
-  ty GammaMap.Types.t ->
+  visibility GammaMap.Types.t ->
   ParseTree.ty ->
   (t * Kinds.t)
