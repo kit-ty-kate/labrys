@@ -41,12 +41,17 @@ let rec replace ~from ~ty =
     | (AbsOnTy (x, _, _) as t)
     | (Forall (x, _, _) as t) when Ident.Type.equal x from -> t
     | Forall (x, k, t) -> Forall (x, k, aux t)
+    | (AbsOnTy (x, _, _) as t) when Ident.Type.equal x from -> t
     | AbsOnTy (x, k, t) -> AbsOnTy (x, k, aux t)
-    | AppOnTy (AbsOnTy (from', _, t), x) when Ident.Type.equal from from' ->
-        replace ~from:from' ~ty:x t
-    | AppOnTy (AbsOnTy (from, _, t), x) ->
-        aux (replace ~from ~ty:x t)
-    | AppOnTy (f, x) -> AppOnTy (aux f, aux x)
+    | AppOnTy (f, x) ->
+        let x = aux x in
+        begin match aux f with
+        | AbsOnTy (from', _, t) -> replace ~from:from' ~ty:x t
+        | (Ty _ as f)
+        | (AppOnTy _ as f) -> AppOnTy (f, x)
+        | Fun _
+        | Forall _ -> assert false
+        end
   in
   aux
 
