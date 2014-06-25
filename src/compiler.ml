@@ -31,9 +31,9 @@ type printer =
   | TypedTree
   | UntypedTree
   | LLVM
+  | OptimizedLLVM
 
 exception ParseError of string
-exception Break
 
 let fmt = Printf.sprintf
 
@@ -101,7 +101,8 @@ let rec build_impl =
         acc
     | None ->
         let interface = build_intf modul in
-        let impl = compile ~interface modul in
+        let (_, _, _, impl) = compile ~interface modul in
+        let impl = Lazy.force impl in
         let impl = match impl_acc with
           | Some impl_acc -> Backend.link impl impl_acc
           | None -> impl
@@ -112,11 +113,7 @@ let rec build_impl =
   in
   List.fold_left aux ([], Gamma.empty, None) imports
 
-and compile
-      ?(printer = NoPrinter)
-      ?(with_main = false)
-      ~interface
-      modul =
+and compile ?(with_main = false) ~interface modul =
   let (imports, parse_tree) = parse (ModulePath.impl modul) Parser.main in
   let (imports, gamma, code) = build_impl modul imports in
   let typed_tree =
@@ -139,27 +136,25 @@ and compile
       | None -> dst
     end
   in
-  match printer with
-  | ParseTree ->
-      print_endline (Printers.ParseTree.dump parse_tree);
-      raise Break
-  | TypedTree ->
-      print_endline (Printers.TypedTree.dump (Lazy.force typed_tree));
-      raise Break
-  | UntypedTree ->
-      print_endline (Printers.UntypedTree.dump (Lazy.force untyped_tree));
-      raise Break
-  | LLVM ->
-      print_endline (Backend.to_string (Lazy.force res));
-      raise Break
-  | NoPrinter ->
-      Lazy.force res
+  (parse_tree, typed_tree, untyped_tree, res)
 
 let compile ~printer ~lto ~opt ~o file =
   let modul = ModulePath.of_file file in
-  try
-    compile ~printer ~with_main:true ~interface:Gamma.empty modul
-    |> Backend.optimize ~lto ~opt
-    |> write ~o
-  with
-  | Break -> ()
+  let (parse_tree, typed_tree, untyped_tree, res) =
+    compile ~with_main:true ~interface:Gamma.empty modul
+  in
+  let optimized_res = lazy (Backend.optimize ~lto ~opt (Lazy.force res)) in
+  begin match printer with
+  | ParseTree ->
+      print_endline (Printers.ParseTree.dump parse_tree);
+  | TypedTree ->
+      print_endline (Printers.TypedTree.dump (Lazy.force typed_tree));
+  | UntypedTree ->
+      print_endline (Printers.UntypedTree.dump (Lazy.force untyped_tree));
+  | LLVM ->
+      print_endline (Backend.to_string (Lazy.force res));
+  | OptimizedLLVM ->
+      print_endline (Backend.to_string (Lazy.force optimized_res));
+  | NoPrinter ->
+      write ~o (Lazy.force optimized_res)
+  end

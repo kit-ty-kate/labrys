@@ -28,6 +28,7 @@ type printer =
   | TypedTree
   | UntypedTree
   | LLVM
+  | OptimizedLLVM
 
 exception ParseError of string
 

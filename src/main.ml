@@ -43,6 +43,7 @@ let cmd =
     ; (Compiler.TypedTree, Arg.info ["print-typed-tree"])
     ; (Compiler.UntypedTree, Arg.info ["print-untyped-tree"])
     ; (Compiler.LLVM, Arg.info ["print-llvm"])
+    ; (Compiler.OptimizedLLVM, Arg.info ["print-optimized-llvm"])
     ]
   in
   let args = Term.pure start in
