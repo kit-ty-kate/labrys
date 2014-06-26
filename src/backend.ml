@@ -87,8 +87,6 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let get {loaded; _} = loaded
   end
 
-  (* TODO: Use the module name as prefix for global values *)
-
   let malloc_and_init ty values builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
     let values = List.fold_lefti aux (LLVM.undef ty) values in
@@ -298,7 +296,6 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let globals = Globals.store globals value i builder in
         init func ~globals gamma global_values builder xs
     | [] ->
-        (* TODO: Use global (needs a real build-system) *)
         let aux name value =
           let name = Ident.Name.prepend I.name name in
           let name = Ident.Name.to_string name in
