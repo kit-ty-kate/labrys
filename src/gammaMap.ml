@@ -22,42 +22,46 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-(* TODO: Remove duplicate *)
+module type BASE = sig
+  include Map.S
+  include module type of Exceptionless
+end
 
-module Value = struct
-  include Map.Make(Ident.Name)
-  include Exceptionless
-
+module Utils
+         (M : BASE)
+         (Ident : module type of Ident.Name with type t = M.key) = struct
   let union (modul, a) b =
-    let aux k = add (Ident.Name.prepend modul k) in
-    fold aux a b
+    let aux k = M.add (Ident.prepend modul k) in
+    M.fold aux a b
 
   let diff ~eq a b =
     let aux k x acc =
-      match find k b with
+      match M.find k b with
       | Some y when eq x y -> acc
-      | Some _ -> Ident.Name.to_string k :: acc
-      | None -> Ident.Name.to_string k :: acc
+      | Some _ -> Ident.to_string k :: acc
+      | None -> Ident.to_string k :: acc
     in
-    fold aux a []
+    M.fold aux a []
+end
+
+module Value = struct
+  module Self = struct
+    include Map.Make(Ident.Name)
+    include Exceptionless
+  end
+
+  include Self
+  include Utils(Self)(Ident.Name)
 end
 
 module Types = struct
-  include Map.Make(Ident.Type)
-  include Exceptionless
+  module Self = struct
+    include Map.Make(Ident.Type)
+    include Exceptionless
+  end
 
-  let union (modul, a) b =
-    let aux k = add (Ident.Type.prepend modul k) in
-    fold aux a b
-
-  let diff ~eq a b =
-    let aux k x acc =
-      match find k b with
-      | Some y when eq x y -> acc
-      | Some _ -> Ident.Type.to_string k :: acc
-      | None -> Ident.Type.to_string k :: acc
-    in
-    fold aux a []
+  include Self
+  include Utils(Self)(Ident.Type)
 
   let add ~loc k x map =
     if mem k map then
@@ -71,21 +75,13 @@ end
 module Index = Value
 
 module Constr = struct
-  include Map.Make(Ident.Type)
-  include Exceptionless
+  module Self = struct
+    include Map.Make(Ident.Type)
+    include Exceptionless
+  end
 
-  let union (modul, a) b =
-    let aux k = add (Ident.Type.prepend modul k) in
-    fold aux a b
-
-  let diff ~eq a b =
-    let aux k x acc =
-      match find k b with
-      | Some y when eq x y -> acc
-      | Some _ -> Ident.Type.to_string k :: acc
-      | None -> Ident.Type.to_string k :: acc
-    in
-    fold aux a []
+  include Self
+  include Utils(Self)(Ident.Type)
 
   let add k k2 x map =
     match find k map with
