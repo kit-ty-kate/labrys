@@ -22,11 +22,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type name = Ident.Name.t
 type ty_size = int
 type used_vars = (Pattern.var * name) list
+type with_exn = bool
 
 type t =
-  | Abs of (name * t)
+  | Abs of (name * with_exn * t)
   | TAbs of t
-  | App of (t * t)
+  | App of (t * with_exn * t)
   | TApp of t
   | Val of name
   | PatternMatching of (t * (used_vars * t) list * Pattern.t)

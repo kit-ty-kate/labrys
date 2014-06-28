@@ -40,10 +40,14 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let i8 = LLVM.i8_type c
     let i32 = LLVM.i32_type c
     let star = LLVM.pointer_type i8
-    let lambda = LLVM.function_type star [|star; star|]
-    let lambda_ptr = LLVM.pointer_type lambda
-    let closure = LLVM.struct_type c [|lambda_ptr; star|]
-    let closure_ptr = LLVM.pointer_type closure
+    let exn = LLVM.struct_type c [|star; star|]
+    let exn_ptr = LLVM.pointer_type exn
+    let lambda = function
+      | true -> LLVM.function_type star [|star; star; exn_ptr|]
+      | false -> LLVM.function_type star [|star; star|]
+    let lambda_ptr with_exn = LLVM.pointer_type (lambda with_exn)
+    let closure with_exn = LLVM.struct_type c [|lambda_ptr with_exn; star|]
+    let closure_ptr with_exn = LLVM.pointer_type (closure with_exn)
     let variant = LLVM.struct_type c [|i32; star|]
     let variant_ptr = LLVM.pointer_type variant
     let array = LLVM.array_type star
@@ -131,9 +135,9 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let (a, b, c) = GammaMap.Value.fold aux gamma (0, [], GammaMap.Value.empty) in
     (a, List.rev b, c)
 
-  let create_closure ~isrec ~used_vars ~f ~env gamma builder =
+  let create_closure ~isrec ~used_vars ~with_exn ~f ~env gamma builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
-    let allocated = LLVM.build_malloc Type.closure "" builder in
+    let allocated = LLVM.build_malloc (Type.closure with_exn) "" builder in
     let gamma = GammaMap.Value.filter (fun x _ -> Set.mem x used_vars) gamma in
     let gamma = match isrec with
       | Some rec_name -> GammaMap.Value.add rec_name (Value allocated) gamma
@@ -141,7 +145,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     in
     let (env_size, values, gamma) = fold_env ~env gamma builder in
     let env = malloc_and_init_array env_size values builder in
-    let closure = List.fold_lefti aux (LLVM.undef Type.closure) [f; env] in
+    let closure = List.fold_lefti aux (LLVM.undef (Type.closure with_exn)) [f; env] in
     LLVM.build_store closure allocated builder;
     (allocated, gamma)
 
@@ -171,7 +175,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     create_tree func ~env ~default vars gamma builder value results tree;
     block
 
-  and create_result func ~env ~globals ~res ~next_block gamma builder (vars, result) =
+  and create_result func ~env ~exn ~globals ~res ~next_block ~exn_block gamma builder (vars, result) =
     let block = LLVM.append_block c "" func in
     let builder' = LLVM.builder_at_end c block in
     let (gamma, pattern_vars) =
@@ -182,7 +186,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
       in
       List.fold_left aux (gamma, []) vars
     in
-    let (v, builder') = lambda func ~env ~globals gamma builder' result in
+    let (v, builder') = lambda func ~env ~exn ~globals ~exn_block gamma builder' result in
     LLVM.build_store v res builder';
     LLVM.build_br next_block builder';
     (block, pattern_vars)
@@ -210,36 +214,61 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           )
           cases
 
-  and lambda func ?isrec ~env ~globals gamma builder = function
-    | UntypedTree.Abs (name, used_vars, t) ->
-        let (f, builder') = LLVM.define_function c "__lambda" Type.lambda m in
+  and lambda func ?isrec ~env ~exn ~exn_block ~globals gamma builder = function
+    | UntypedTree.Abs (name, with_exn, used_vars, t) ->
+        let (f, builder') = LLVM.define_function c "__lambda" (Type.lambda with_exn) m in
         LLVM.set_linkage LLVM.Linkage.Private f;
         let (closure, gamma) =
-          create_closure ~isrec ~used_vars ~f ~env gamma builder
+          create_closure ~isrec ~used_vars ~with_exn ~f ~env gamma builder
         in
         let param = LLVM.param f 0 in
         let env = LLVM.param f 1 in
+        let exn = lazy (LLVM.param f 2) in
         let env_size = GammaMap.Value.cardinal gamma in
         let env = LLVM.build_bitcast env (Type.array_ptr env_size) "" builder' in
         let env = lazy (LLVM.build_load env "" builder') in
         let globals = Globals.load globals builder' in
         let gamma = GammaMap.Value.add name (Value param) gamma in
-        let (v, builder') = lambda f ~env ~globals gamma builder' t in
+        let exn_block =
+          let block = LLVM.append_block c "exn" f in
+          let builder = LLVM.builder_at_end c block in
+          LLVM.build_ret null builder;
+          lazy block
+        in
+        let (v, builder') = lambda f ~env ~exn ~exn_block ~globals gamma builder' t in
         LLVM.build_ret v builder';
         (closure, builder)
-    | UntypedTree.App (f, x) ->
-        let (boxed_f, builder) = lambda func ~env ~globals gamma builder f in
-        let boxed_f = LLVM.build_bitcast boxed_f Type.closure_ptr "extract_f_cast" builder in
+    | UntypedTree.App (f, with_exn, x) ->
+        let (boxed_f, builder) = lambda func ~env ~exn ~exn_block ~globals gamma builder f in
+        let boxed_f = LLVM.build_bitcast boxed_f (Type.closure_ptr with_exn) "extract_f_cast" builder in
         let boxed_f = LLVM.build_load boxed_f "exctract_f" builder in
         let f = LLVM.build_extractvalue boxed_f 0 "f" builder in
         let env_f = LLVM.build_extractvalue boxed_f 1 "env" builder in
-        let (x, builder) = lambda func ~env ~globals gamma builder x in
-        (LLVM.build_call f [|x; env_f|] "tmp" builder, builder)
+        let (x, builder) = lambda func ~env ~exn ~exn_block ~globals gamma builder x in
+        begin match with_exn with
+        | true ->
+            let exn = Lazy.force exn in
+            let res = LLVM.build_call f [|x; env_f; exn|] "tmp" builder in
+            let next_block = LLVM.append_block c "" func in
+            let exn_block = Lazy.force exn_block in
+            let exn_block =
+              let block = LLVM.append_block c "exn" func in
+              let builder = LLVM.builder_at_end c block in
+              LLVM.build_br exn_block builder;
+              block
+            in
+            let exn = LLVM.build_load exn "" builder in
+            let exn_is_null = LLVM.build_is_null exn "" builder in
+            LLVM.build_cond_br exn_is_null next_block exn_block builder;
+            (res, LLVM.builder_at_end c next_block)
+        | false ->
+            (LLVM.build_call f [|x; env_f|] "tmp" builder, builder)
+        end
     | UntypedTree.PatternMatching (t, results, tree) ->
-        let (t, builder) = lambda func ~env ~globals gamma builder t in
+        let (t, builder) = lambda func ~env ~globals ~exn ~exn_block gamma builder t in
         let res = LLVM.build_alloca Type.star "" builder in
         let next_block = LLVM.append_block c "" func in
-        let results = List.map (create_result func ~env ~globals ~res ~next_block gamma builder) results in
+        let results = List.map (create_result func ~env ~globals ~res ~next_block ~exn ~exn_block gamma builder) results in
         let builder' = LLVM.builder_at_end c next_block in
         let default = create_default_branch func in
         create_tree func ~env ~default Map.empty gamma builder t results tree;
@@ -265,18 +294,20 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let env = malloc_and_init_array env_size values builder in
         (malloc_and_init Type.variant [i32 i; env] builder, builder)
     | UntypedTree.Let (name, t, xs) ->
-        let (t, builder) = lambda func ~env ~globals gamma builder t in
+        let (t, builder) = lambda func ~env ~globals ~exn ~exn_block gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
-        lambda func ~env ~globals gamma builder xs
+        lambda func ~env ~globals ~exn ~exn_block gamma builder xs
     | UntypedTree.LetRec (name, t, xs) ->
-        let (t, builder) = lambda func ~isrec:name ~env ~globals gamma builder t in
+        let (t, builder) = lambda func ~isrec:name ~env ~globals ~exn ~exn_block gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
-        lambda func ~env ~globals gamma builder xs
+        lambda func ~env ~globals ~exn ~exn_block gamma builder xs
 
   let lambda func ~globals gamma builder t =
-    let env = lazy null in
+    let env = lazy (assert false) in
+    let exn = lazy (assert false) in
+    let exn_block = lazy (assert false) in
     let globals = Globals.load globals builder in
-    lambda func ~env ~globals gamma builder t
+    lambda func ~env ~exn ~globals ~exn_block gamma builder t
 
   let rec init func ~globals gamma global_values builder = function
     | `Val (name, i, t) :: xs ->

@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type name = Ident.Name.t
 type used_vars = name BatSet.t
 type index = int
-
+type with_exn = bool
 type constr = int
 
 type tree =
@@ -30,8 +30,8 @@ type tree =
   | Leaf of int
 
 and t =
-  | Abs of (name * used_vars * t)
-  | App of (t * t)
+  | Abs of (name * with_exn * used_vars * t)
+  | App of (t * with_exn * t)
   | Val of name
   | Variant of index
   | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)

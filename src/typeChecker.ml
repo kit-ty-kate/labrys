@@ -46,7 +46,7 @@ let rec aux gamma = function
       let gamma = Gamma.add_value name ty gamma in
       let (expr, ty_expr, effect) = aux gamma t in
       let abs_ty = TypesBeta.func ~param:ty ~eff:effect ~res:ty_expr in
-      (Abs (name, expr), abs_ty, Effects.empty)
+      (Abs (name, not (Effects.is_empty effect), expr), abs_ty, Effects.empty)
   | ParseTree.TAbs (loc, (name, k), t) ->
       let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
       let (expr, ty_expr, effect) = aux gamma t in
@@ -57,7 +57,7 @@ let rec aux gamma = function
       let (x, ty_x, effect2) = aux gamma x in
       let (param, effect3, res) = TypesBeta.apply ~loc ty_f in
       if TypesBeta.equal param ty_x then
-        (App (f, x), res, Effects.union3 effect1 effect2 effect3)
+        (App (f, not (Effects.is_empty effect3), x), res, Effects.union3 effect1 effect2 effect3)
       else
         TypesBeta.Error.fail ~loc ~has:ty_x ~expected:param
   | ParseTree.TApp (loc, f, ty_x) ->
