@@ -40,7 +40,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   let let_rec_lambda_sugar term ty args =
     let aux (term, ty) = function
       | `Val (loc, ((_, ty') as arg)) ->
-          (ParseTree.Abs (loc, arg, term), ParseTree.Fun (ty', ty))
+          (ParseTree.Abs (loc, arg, term), ParseTree.Fun (ty', [], ty))
       | `Ty (loc, ty') ->
           (ParseTree.TAbs (loc, ty', term), ParseTree.Forall (ty', ty))
     in
@@ -58,6 +58,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Dot
 %token Comma
 %token Arrow
+%token LArrowEff RArrowEff
 %token Forall
 %token Match With End
 %token Type
@@ -65,6 +66,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Pipe
 %token Colon
 %token Star
+%token Fail
 %token <string> LowerName
 %token <string> UpperName
 %token <string> Binding
@@ -72,8 +74,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token LBracket RBracket
 %token EOF
 
-%left Lambda Comma Forall Match Let In
-%right Arrow
+%left Lambda Comma Forall Match Let In Fail
+%right Arrow LArrowEff RArrowEff
 %nonassoc LowerName UpperName LParen LBracket
 %nonassoc app tapp
 
@@ -156,6 +158,8 @@ term:
       ParseTree.LetRec
         (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty, t, xs)
     }
+| Fail LBracket ty = typeExpr RBracket exn = effect
+    { ParseTree.Fail (get_loc $startpos $endpos, ty, exn) }
 
 arg:
 | LParen name = LowerName Colon ty = typeExpr RParen
@@ -180,7 +184,9 @@ typeExpr:
 | name = upperName
     { ParseTree.Ty (Ident.Type.of_list name) }
 | param = typeExpr Arrow ret = typeExpr
-    { ParseTree.Fun (param, ret) }
+    { ParseTree.Fun (param, [], ret) }
+| param = typeExpr LArrowEff eff = separated_list(Pipe, effect) RArrowEff ret = typeExpr
+    { ParseTree.Fun (param, eff, ret) }
 | Forall values = nonempty_list(kind_and_name) Comma ret = typeExpr
     { param_ty_sugar (fun x -> ParseTree.Forall x) values ret }
 | Lambda values = nonempty_list(kind_and_name) Comma ret = typeExpr
@@ -197,6 +203,10 @@ kind:
     { Kinds.KFun (k1, k2) }
 | LParen k = kind RParen
     { k }
+
+effect:
+  | name = upperName
+      { Ident.Name.of_list name }
 
 variant:
 | name = UpperName Colon ty = typeExpr

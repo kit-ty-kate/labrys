@@ -27,7 +27,7 @@ type loc = Location.t
 type t_value = (t_name * Kinds.t)
 
 type ty =
-  | Fun of (ty * ty)
+  | Fun of (ty * name list * ty)
   | Ty of t_name
   | Forall of (t_value * ty)
   | AbsOnTy of (t_value * ty)
@@ -52,6 +52,7 @@ type t =
   | PatternMatching of (loc * t * ((loc * pattern) * (loc * t)) list)
   | Let of (name * t * t)
   | LetRec of (loc * name * ty * t * t)
+  | Fail of (loc * ty * name)
 
 type variant =
   | Variant of (loc * name * ty)

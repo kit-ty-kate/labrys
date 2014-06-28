@@ -43,17 +43,17 @@ let rec of_results m =
   (List.rev a, b)
 
 and of_typed_term = function
-  | TypedTree.Abs (name, t) ->
+  | TypedTree.Abs (name, with_exn, t) ->
       let (t, used_vars) = of_typed_term t in
       let used_vars = Set.remove name used_vars in
-      (Abs (name, used_vars, t), used_vars)
+      (Abs (name, with_exn, used_vars, t), used_vars)
   | TypedTree.TApp t
   | TypedTree.TAbs t ->
       of_typed_term t
-  | TypedTree.App (f, x) ->
+  | TypedTree.App (f, with_exn, x) ->
       let (f, used_vars1) = of_typed_term f in
       let (x, used_vars2) = of_typed_term x in
-      (App (f, x), Set.union used_vars1 used_vars2)
+      (App (f, with_exn, x), Set.union used_vars1 used_vars2)
   | TypedTree.Val name ->
       (Val name, Set.singleton name)
   | TypedTree.PatternMatching (t, results, patterns) ->
@@ -73,6 +73,8 @@ and of_typed_term = function
         Set.union (Set.remove name used_vars1) (Set.remove name used_vars2)
       in
       (LetRec (name, t, xs), used_vars)
+  | TypedTree.Fail name ->
+      (Fail name, Set.empty)
 
 let of_typed_variant acc i = function
   | TypedTree.Variant (name, ty_size) ->
@@ -85,7 +87,7 @@ let of_typed_variant acc i = function
               let params = Set.add name params in
               let (t, used_vars) = aux params (pred n) in
               let used_vars = Set.remove name used_vars in
-              (Abs (name, used_vars, t), used_vars)
+              (Abs (name, false, used_vars, t), used_vars)
         in
         let (t, _) = aux Set.empty ty_size in
         Value (name, t)

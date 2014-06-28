@@ -42,8 +42,11 @@ let string_of_doc doc =
 module ParseTree = struct
   open ParseTree
 
+  let dump_eff x = String.concat " | " (List.map dump_name x)
+
   let rec dump_ty = function
-    | Fun (param, res) -> fmt "(%s -> %s)" (dump_ty param) (dump_ty res)
+    | Fun (param, eff, res) ->
+        fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
     | Ty name -> dump_t_name name
     | Forall ((name, k), res) ->
         fmt "(forall %s : %s, %s)" (dump_t_name name) (dump_k k) (dump_ty res)
@@ -131,6 +134,16 @@ module ParseTree = struct
            ^^ PPrint.string "in"
            ^^ PPrint.break 1
            ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+    | Fail (_, ty, name) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string "fail"
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (dump_name name)
            ^^ PPrint.rparen
           )
 
@@ -221,10 +234,10 @@ module TypedTree = struct
     List.fold_left aux "Ø" used_vars
 
   let rec dump_t = function
-    | Abs (name, t) ->
+    | Abs (name, with_exn, t) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "λ %s ->" (dump_name name))
+           ^^ PPrint.string (fmt "λ %s [exn = %b] ->" (dump_name name) with_exn)
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
@@ -235,10 +248,12 @@ module TypedTree = struct
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
-    | App (f, x) ->
+    | App (f, with_exn, x) ->
         PPrint.group
           (PPrint.lparen
            ^^ dump_t f
+           ^^ PPrint.blank 1
+           ^^ PPrint.OCaml.bool with_exn
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t x)
            ^^ PPrint.rparen
           )
@@ -278,6 +293,14 @@ module TypedTree = struct
            ^^ PPrint.string "in"
            ^^ PPrint.break 1
            ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+    | Fail name ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string "fail"
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (dump_name name)
            ^^ PPrint.rparen
           )
 
@@ -372,18 +395,20 @@ module UntypedTree = struct
     Set.fold aux used_vars "Ø"
 
   let rec dump_t = function
-    | Abs (name, used_vars, t) ->
+    | Abs (name, with_exn, used_vars, t) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string
-                (fmt "λ %s [%s] ->" (dump_name name) (dump_used_vars used_vars))
+                (fmt "λ %s [exn = %b] [%s] ->" (dump_name name) with_exn (dump_used_vars used_vars))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
-    | App (f, x) ->
+    | App (f, with_exn, x) ->
         PPrint.group
           (PPrint.lparen
            ^^ dump_t f
+           ^^ PPrint.blank 1
+           ^^ PPrint.OCaml.bool with_exn
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t x)
            ^^ PPrint.rparen
           )
@@ -417,6 +442,14 @@ module UntypedTree = struct
            ^^ PPrint.string "in"
            ^^ PPrint.break 1
            ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+    | Fail name ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string "fail"
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (dump_name name)
            ^^ PPrint.rparen
           )
 

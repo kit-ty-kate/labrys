@@ -24,7 +24,7 @@ type name = Ident.Type.t
 type t =
   | Ty of (name * Kinds.t)
   | TyAlias of (name * t)
-  | Fun of (t * t)
+  | Fun of (t * Effects.t * t)
   | Forall of (name * Kinds.t * t)
   | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)

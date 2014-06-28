@@ -19,27 +19,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Ident.Name.t
-type ty_size = int
-type used_vars = (Pattern.var * name) list
-type with_exn = bool
+type t
 
-type t =
-  | Abs of (name * with_exn * t)
-  | TAbs of t
-  | App of (t * with_exn * t)
-  | TApp of t
-  | Val of name
-  | PatternMatching of (t * (used_vars * t) list * Pattern.t)
-  | Let of (name * t * t)
-  | LetRec of (name * t * t)
-  | Fail of name
+val empty : t
 
-type variant =
-  | Variant of (name * ty_size)
+val union : t -> t -> t
+val union3 : t -> t -> t -> t
 
-type top =
-  | Value of (name * t)
-  | RecValue of (name * t)
-  | Binding of (name * string)
-  | Datatype of variant list
+val is_empty : t -> bool
+
+val to_string : t -> string
+
+val equal : t -> t -> bool
+
+val add : Ident.Name.t -> t -> t
+
+val singleton : Ident.Name.t -> t
