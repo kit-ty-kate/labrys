@@ -33,6 +33,7 @@ type t =
   | PatternMatching of (t * (used_vars * t) list * Pattern.t)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
+  | Fail of name
 
 type variant =
   | Variant of (name * ty_size)

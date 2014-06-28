@@ -136,6 +136,16 @@ module ParseTree = struct
            ^^ dump_t xs
            ^^ PPrint.rparen
           )
+    | Fail (_, ty, name) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string "fail"
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (dump_name name)
+           ^^ PPrint.rparen
+          )
 
   and dump_cases cases =
     let aux doc ((_, pattern), (_, t)) =
@@ -285,6 +295,14 @@ module TypedTree = struct
            ^^ dump_t xs
            ^^ PPrint.rparen
           )
+    | Fail name ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string "fail"
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (dump_name name)
+           ^^ PPrint.rparen
+          )
 
   and dump_results results =
     let aux doc i (used_vars, result) =
@@ -424,6 +442,14 @@ module UntypedTree = struct
            ^^ PPrint.string "in"
            ^^ PPrint.break 1
            ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+    | Fail name ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string "fail"
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (dump_name name)
            ^^ PPrint.rparen
           )
 

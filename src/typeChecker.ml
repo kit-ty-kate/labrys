@@ -37,7 +37,8 @@ let rec well_formed_rec = function
   | ParseTree.Val _
   | ParseTree.PatternMatching _
   | ParseTree.Let _
-  | ParseTree.LetRec _ ->
+  | ParseTree.LetRec _
+  | ParseTree.Fail _ ->
       false
 
 let rec aux gamma = function
@@ -98,6 +99,9 @@ let rec aux gamma = function
       (LetRec (name, t, xs), ty_xs, Effects.union effect1 effect2)
   | ParseTree.LetRec (loc, _, _, _, _) ->
       fail_rec_val ~loc
+  | ParseTree.Fail (loc, ty, exn) ->
+      let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
+      (Fail exn, ty, Effects.singleton exn)
 
 let transform_variants ~datatype gamma =
   let rec aux index = function

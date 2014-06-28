@@ -33,3 +33,5 @@ val to_string : t -> string
 val equal : t -> t -> bool
 
 val add : Ident.Name.t -> t -> t
+
+val singleton : Ident.Name.t -> t

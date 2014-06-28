@@ -66,6 +66,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Pipe
 %token Colon
 %token Star
+%token Fail
 %token <string> LowerName
 %token <string> UpperName
 %token <string> Binding
@@ -73,7 +74,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token LBracket RBracket
 %token EOF
 
-%left Lambda Comma Forall Match Let In
+%left Lambda Comma Forall Match Let In Fail
 %right Arrow LArrowEff RArrowEff
 %nonassoc LowerName UpperName LParen LBracket
 %nonassoc app tapp
@@ -157,6 +158,8 @@ term:
       ParseTree.LetRec
         (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty, t, xs)
     }
+| Fail LBracket ty = typeExpr RBracket exn = effect
+    { ParseTree.Fail (get_loc $startpos $endpos, ty, exn) }
 
 arg:
 | LParen name = LowerName Colon ty = typeExpr RParen

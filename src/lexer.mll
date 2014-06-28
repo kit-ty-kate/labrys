@@ -45,6 +45,7 @@ rule main = parse
   | "let" { Parser.Let }
   | "rec" { Parser.Rec }
   | "in" { Parser.In }
+  | "fail" { Parser.Fail }
   | "match" { Parser.Match }
   | "with" { Parser.With }
   | "end" { Parser.End }

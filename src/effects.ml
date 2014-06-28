@@ -39,3 +39,5 @@ let to_string x =
 let equal = Set.equal
 
 let add = Set.add
+
+let singleton = Set.singleton

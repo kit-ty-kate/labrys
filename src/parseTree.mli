@@ -52,6 +52,7 @@ type t =
   | PatternMatching of (loc * t * ((loc * pattern) * (loc * t)) list)
   | Let of (name * t * t)
   | LetRec of (loc * name * ty * t * t)
+  | Fail of (loc * ty * name)
 
 type variant =
   | Variant of (loc * name * ty)

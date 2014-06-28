@@ -301,6 +301,14 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let (t, builder) = lambda func ~isrec:name ~env ~globals ~exn ~exn_block gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
         lambda func ~env ~globals ~exn ~exn_block gamma builder xs
+    | UntypedTree.Fail name ->
+        (* TODO *)
+        let v = LLVM.build_malloc Type.star "" builder in
+        let exn = Lazy.force exn in
+        let exn_block = Lazy.force exn_block in
+        LLVM.build_store v exn builder;
+        LLVM.build_br exn_block builder;
+        (null, LLVM.builder_at_end c (LLVM.append_block c "" func))
 
   let lambda func ~globals gamma builder t =
     let env = lazy (assert false) in
