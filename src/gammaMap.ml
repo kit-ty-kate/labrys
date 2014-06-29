@@ -88,3 +88,21 @@ module Constr = struct
     | None -> add k (Index.singleton k2 x) map
     | Some xs -> add k (Index.add k2 x xs) map
 end
+
+module Exn = struct
+  module Self = struct
+    include Map.Make(Ident.Name)
+    include Exceptionless
+  end
+
+  include Self
+  include Utils(Self)(Ident.Name)
+
+  let add ~loc k x map =
+    if mem k map then
+      Error.fail
+        ~loc
+        "A module cannot contain several times the type '%s'"
+        (Ident.Name.to_string k);
+    add k x map
+end

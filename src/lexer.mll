@@ -53,6 +53,7 @@ rule main = parse
   | "type" { Parser.Type }
   | "alias" { Parser.Alias }
   | "import" { Parser.Import }
+  | "exception" { Parser.Exception }
   | "begin" { let buffer = Buffer.create 4096 in
               get_binding buffer lexbuf;
               Parser.Binding (Buffer.contents buffer)

@@ -48,3 +48,13 @@ module Constr : sig
   val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
 end
+
+module Exn : sig
+  include BatMap.S with type key = Ident.Name.t
+  include module type of Exceptionless
+
+  val add : loc:Location.t -> key -> 'a -> 'a t -> 'a t
+
+  val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
+  val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
+end

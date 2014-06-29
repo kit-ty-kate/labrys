@@ -67,5 +67,6 @@ type top =
   | Type of typeAlias
   | Binding of (loc * name * ty * string)
   | Datatype of datatype
+  | Exception of (loc * name)
 
 type imports = module_name list

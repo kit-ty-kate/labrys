@@ -57,6 +57,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
 
   let i32 = LLVM.const_int Type.i32
   let null = LLVM.const_null Type.star
+  let string = LLVM.const_string c
 
   module Globals : sig
     type t
@@ -374,6 +375,12 @@ module Make (I : sig val name : Ident.Module.t end) = struct
       | UntypedTree.Binding (name, binding) :: xs ->
           let v = LLVM.bind c ~name binding m in
           top (`Bind (name, v, i) :: init_list) (succ i) gamma xs
+      | UntypedTree.Exception name :: xs ->
+          let name = Ident.Name.prepend I.name name in
+          let name = Ident.Name.to_string name in
+          let v = LLVM.define_global name (string name) m in
+          LLVM.set_global_constant true v;
+          top init_list i gamma xs
       | [] ->
           let (f, builder) =
             LLVM.define_function c (init_name I.name) Type.unit_function m

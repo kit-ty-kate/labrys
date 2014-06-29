@@ -67,6 +67,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Colon
 %token Star
 %token Fail
+%token Exception
 %token <string> LowerName
 %token <string> UpperName
 %token <string> Binding
@@ -125,6 +126,8 @@ body:
     }
 | datatype = datatype xs = body
     { ParseTree.Datatype datatype :: xs }
+| Exception name = UpperName xs = body
+    { ParseTree.Exception (get_loc $startpos $endpos(name), Ident.Name.of_list [name]) :: xs }
 | EOF
     { [] }
 
@@ -265,5 +268,7 @@ bodyInterface:
     { Interface.Datatype datatype :: xs }
 | typeAlias = typeAlias xs = bodyInterface
     { Interface.TypeAlias typeAlias :: xs }
+| Exception name = UpperName xs = bodyInterface
+    { Interface.Exception (get_loc $startpos $endpos(name), Ident.Name.of_list [name]) :: xs }
 | EOF
     { [] }

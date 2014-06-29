@@ -34,4 +34,6 @@ val equal : t -> t -> bool
 
 val add : Ident.Name.t -> t -> t
 
+val remove : Ident.Name.t -> t -> t
+
 val singleton : Ident.Name.t -> t

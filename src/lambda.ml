@@ -107,5 +107,7 @@ let rec of_typed_tree = function
       let variants = List.fold_lefti of_typed_variant [] variants in
       let variants = List.rev variants in
       variants @ of_typed_tree xs
+  | TypedTree.Exception name :: xs ->
+      Exception name :: of_typed_tree xs
   | [] ->
       []

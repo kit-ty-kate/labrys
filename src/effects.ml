@@ -40,4 +40,6 @@ let equal = Set.equal
 
 let add = Set.add
 
+let remove = Set.remove
+
 let singleton = Set.singleton

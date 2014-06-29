@@ -158,6 +158,10 @@ let rec from_parse_tree gamma = function
       let (variants, gamma) = transform_variants ~datatype:name gamma variants in
       let (xs, gamma) = from_parse_tree gamma xs in
       (Datatype variants :: xs, gamma)
+  | ParseTree.Exception (loc, name) :: xs ->
+      let gamma = Gamma.add_exception ~loc name gamma in
+      let (xs, gamma) = from_parse_tree gamma xs in
+      (Exception name :: xs, gamma)
   | [] ->
       ([], gamma)
 

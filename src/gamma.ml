@@ -26,22 +26,26 @@ type t =
   { values : TypesBeta.t GammaMap.Value.t
   ; types : Types.visibility GammaMap.Types.t
   ; constructors : ((TypesBeta.t * int) GammaMap.Index.t) GammaMap.Constr.t
+  ; exceptions : unit GammaMap.Exn.t
   }
 
 let empty =
   { values = GammaMap.Value.empty
   ; types = GammaMap.Types.empty
   ; constructors = GammaMap.Constr.empty
+  ; exceptions = GammaMap.Exn.empty
   }
 
 let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
 let add_type ~loc k x self = {self with types = GammaMap.Types.add ~loc k x self.types}
 let add_constr k k2 x self = {self with constructors = GammaMap.Constr.add k k2 x self.constructors}
+let add_exception ~loc k self = {self with exceptions = GammaMap.Exn.add ~loc k () self.exceptions}
 
 let union (modul, a) b =
   { values = GammaMap.Value.union (modul, a.values) b.values
   ; types = GammaMap.Types.union (modul, a.types) b.types
   ; constructors = GammaMap.Constr.union (modul, a.constructors) b.constructors
+  ; exceptions = GammaMap.Exn.union (modul, a.exceptions) b.exceptions
   }
 
 (* TODO: Remove those Pervasives.(=) *)
@@ -49,3 +53,4 @@ let is_subset_of a b =
   GammaMap.Value.diff ~eq:TypesBeta.equal a.values b.values
   @ GammaMap.Types.diff ~eq:Pervasives.(=) a.types b.types
   @ GammaMap.Constr.diff ~eq:(GammaMap.Index.equal Pervasives.(=)) a.constructors b.constructors
+  @ GammaMap.Exn.diff ~eq:Unit.equal a.exceptions b.exceptions

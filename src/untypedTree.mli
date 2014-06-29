@@ -43,3 +43,4 @@ type top =
   | Value of (name * t)
   | RecValue of (name * t)
   | Binding of (name * string)
+  | Exception of name

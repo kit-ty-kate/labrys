@@ -27,6 +27,7 @@ type t =
   | AbstractType of (Location.t * ParseTree.t_value)
   | Datatype of ParseTree.datatype
   | TypeAlias of (Location.t * ParseTree.t_name * ParseTree.ty)
+  | Exception of (Location.t * Ident.Name.t)
 
 let compile gamma =
   let rec compile gammaT gamma = function
@@ -55,6 +56,9 @@ let compile gamma =
         let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
         let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
         let gammaT = GammaMap.Types.add ~loc name (Types.Alias ty) gammaT in
+        compile gammaT gamma xs
+    | Exception (loc, name) :: xs ->
+        let gamma = Gamma.add_exception ~loc name gamma in
         compile gammaT gamma xs
     | [] ->
         gamma

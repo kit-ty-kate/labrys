@@ -43,3 +43,4 @@ type top =
   | RecValue of (name * t)
   | Binding of (name * string)
   | Datatype of variant list
+  | Exception of name
