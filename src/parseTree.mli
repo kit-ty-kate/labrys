@@ -53,6 +53,7 @@ type t =
   | Let of (name * t * t)
   | LetRec of (loc * name * ty * t * t)
   | Fail of (loc * ty * name)
+  | Try of (loc * t * (name * t) list)
 
 type variant =
   | Variant of (loc * name * ty)

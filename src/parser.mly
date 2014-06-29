@@ -67,6 +67,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Colon
 %token Star
 %token Fail
+%token Try
 %token Exception
 %token <string> LowerName
 %token <string> UpperName
@@ -75,7 +76,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token LBracket RBracket
 %token EOF
 
-%left Lambda Comma Forall Match Let In Fail
+%left Lambda Comma Forall Match Try Let In Fail
 %right Arrow LArrowEff RArrowEff
 %nonassoc LowerName UpperName LParen LBracket
 %nonassoc app tapp
@@ -152,6 +153,8 @@ term:
     { term }
 | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
     { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
+| Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
+    { ParseTree.Try (get_loc $startpos $endpos, t, p) }
 | Let name = LowerName args = list(arg) Equal t = term In xs = term
     { let t = let_lambda_sugar t args in
       ParseTree.Let (Ident.Name.of_list [name], t, xs)
@@ -210,6 +213,10 @@ kind:
 effect:
   | name = upperName
       { Ident.Name.of_list name }
+
+exn_pattern:
+  | exn = upperName Arrow t = term
+      { (Ident.Name.of_list exn, t) }
 
 variant:
 | name = UpperName Colon ty = typeExpr

@@ -42,6 +42,13 @@ let rec of_results m =
   let (a, b) = List.fold_left aux ([], Set.empty) m in
   (List.rev a, b)
 
+and of_branches branches =
+  let aux (acc, used_vars_acc) (name, t) =
+    let (t, used_vars) = of_typed_term t in
+    ((name, t) :: acc, Set.union used_vars used_vars_acc)
+  in
+  List.fold_left aux ([], Set.empty) branches
+
 and of_typed_term = function
   | TypedTree.Abs (name, with_exn, t) ->
       let (t, used_vars) = of_typed_term t in
@@ -61,6 +68,10 @@ and of_typed_term = function
       let (results, used_vars2) = of_results results in
       let patterns = of_patterns patterns in
       (PatternMatching (t, results, patterns), Set.union used_vars1 used_vars2)
+  | TypedTree.Try (t, with_exn, branches) ->
+      let (t, used_vars1) = of_typed_term t in
+      let (branches, used_vars2) = of_branches branches in
+      (Try (t, with_exn, branches), Set.union used_vars1 used_vars2)
   | TypedTree.Let (name, t, xs) ->
       let (t, used_vars1) = of_typed_term t in
       let (xs, used_vars2) = of_typed_term xs in

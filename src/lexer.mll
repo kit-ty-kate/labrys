@@ -46,6 +46,7 @@ rule main = parse
   | "rec" { Parser.Rec }
   | "in" { Parser.In }
   | "fail" { Parser.Fail }
+  | "try" { Parser.Try }
   | "match" { Parser.Match }
   | "with" { Parser.With }
   | "end" { Parser.End }

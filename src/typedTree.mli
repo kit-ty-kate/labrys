@@ -34,6 +34,7 @@ type t =
   | Let of (name * t * t)
   | LetRec of (name * t * t)
   | Fail of name
+  | Try of (t * with_exn * (name * t) list)
 
 type variant =
   | Variant of (name * ty_size)

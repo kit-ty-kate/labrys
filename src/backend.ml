@@ -40,7 +40,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let i8 = LLVM.i8_type c
     let i32 = LLVM.i32_type c
     let star = LLVM.pointer_type i8
-    let exn = LLVM.struct_type c [|star; star|]
+    let exn = LLVM.struct_type c [|LLVM.pointer_type star; star|]
     let exn_ptr = LLVM.pointer_type exn
     let lambda = function
       | true -> LLVM.function_type star [|star; star; exn_ptr|]
@@ -148,6 +148,11 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     LLVM.build_store closure allocated builder;
     (allocated, gamma)
 
+  let get_exn name =
+    let name = Ident.Name.prepend I.name name in
+    let name = Ident.Name.to_string name in
+    LLVM.declare_global Type.star name m
+
   let rec llvalue_of_pattern_var vars value builder var =
     match Map.find var vars with
     | Some value ->
@@ -213,6 +218,27 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           )
           cases
 
+  and create_exn_branches func ~env ~exn ~globals ~res ~next_block ~exn_block ~new_exn ~with_exn gamma builder branches =
+    let new_exn_loaded = LLVM.build_load new_exn "" builder in
+    let exn_tag = LLVM.build_extractvalue new_exn_loaded 0 "" builder in
+    let aux builder (name, t) =
+      let (block, _) = create_result func ~env ~globals ~res ~next_block ~exn ~exn_block gamma builder ([], t) in
+      let exn = get_exn name in
+      let next_block = LLVM.append_block c "" func in
+      let cond = LLVM.build_icmp LLVM.Icmp.Eq exn exn_tag "" builder in
+      LLVM.build_cond_br cond block next_block builder;
+      LLVM.builder_at_end c next_block
+    in
+    let builder = List.fold_left aux builder branches in
+    if with_exn then begin
+      let exn = Lazy.force exn in
+      let exn_block = Lazy.force exn_block in
+      LLVM.build_store new_exn_loaded exn builder;
+      LLVM.build_br exn_block builder;
+    end else begin
+      LLVM.build_ret null builder
+    end
+
   and lambda func ?isrec ~env ~exn ~exn_block ~globals gamma builder = function
     | UntypedTree.Abs (name, with_exn, used_vars, t) ->
         let (f, builder') = LLVM.define_function c "__lambda" (Type.lambda with_exn) m in
@@ -229,10 +255,12 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let globals = Globals.load globals builder' in
         let gamma = GammaMap.Value.add name (Value param) gamma in
         let exn_block =
-          let block = LLVM.append_block c "exn" f in
-          let builder = LLVM.builder_at_end c block in
-          LLVM.build_ret null builder;
-          lazy block
+          lazy begin
+            let block = LLVM.append_block c "exn" f in
+            let builder = LLVM.builder_at_end c block in
+            LLVM.build_ret null builder;
+            block
+          end
         in
         let (v, builder') = lambda f ~env ~exn ~exn_block ~globals gamma builder' t in
         LLVM.build_ret v builder';
@@ -301,13 +329,33 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let gamma = GammaMap.Value.add name (Value t) gamma in
         lambda func ~env ~globals ~exn ~exn_block gamma builder xs
     | UntypedTree.Fail name ->
-        (* TODO *)
-        let v = LLVM.build_malloc Type.star "" builder in
+        let tag = get_exn name in
+        let v = malloc_and_init Type.exn [tag; null] builder in
         let exn = Lazy.force exn in
         let exn_block = Lazy.force exn_block in
         LLVM.build_store v exn builder;
         LLVM.build_br exn_block builder;
         (null, LLVM.builder_at_end c (LLVM.append_block c "" func))
+    | UntypedTree.Try (t, with_exn, branches) ->
+        let new_exn = LLVM.build_alloca Type.exn_ptr "" builder in
+        let new_exn_block = LLVM.append_block c "" func in
+        let (t, builder) = lambda func ~env ~globals ~exn:(lazy new_exn) ~exn_block:(lazy new_exn_block) gamma builder t in
+        let res = LLVM.build_alloca Type.star "" builder in
+        let new_exn = LLVM.build_load new_exn "" builder in
+        let next_block = LLVM.append_block c "" func in
+        let non_exn_block =
+          let block = LLVM.append_block c "" func in
+          let builder = LLVM.builder_at_end c block in
+          LLVM.build_store t res builder;
+          LLVM.build_br next_block builder;
+          block
+        in
+        let exn_is_null = LLVM.build_is_null new_exn "" builder in
+        LLVM.build_cond_br exn_is_null non_exn_block new_exn_block builder;
+        let builder = LLVM.builder_at_end c new_exn_block in
+        create_exn_branches func ~env ~exn ~globals ~res ~next_block ~exn_block ~new_exn ~with_exn gamma builder branches;
+        let builder = LLVM.builder_at_end c next_block in
+        (LLVM.build_load res "" builder, builder)
 
   let lambda func ~globals gamma builder t =
     let env = lazy (assert false) in

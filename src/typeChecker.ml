@@ -38,7 +38,8 @@ let rec well_formed_rec = function
   | ParseTree.PatternMatching _
   | ParseTree.Let _
   | ParseTree.LetRec _
-  | ParseTree.Fail _ ->
+  | ParseTree.Fail _
+  | ParseTree.Try _ ->
       false
 
 let rec aux gamma = function
@@ -101,7 +102,32 @@ let rec aux gamma = function
       fail_rec_val ~loc
   | ParseTree.Fail (loc, ty, exn) ->
       let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
-      (Fail exn, ty, Effects.singleton exn)
+      begin match GammaMap.Exn.find exn gamma.Gamma.exceptions with
+      | Some () ->
+          (Fail exn, ty, Effects.singleton exn)
+      | None ->
+          Error.fail
+            ~loc
+            "The exception '%s' is not defined in Γ"
+            (Ident.Name.to_string exn)
+      end
+  | ParseTree.Try (loc, e, branches) ->
+      let (e, ty, effect) = aux gamma e in
+      let effect =
+        List.fold_left
+          (fun effect (name, _) -> Effects.remove name effect)
+          effect
+          branches
+      in
+      let aux (acc, effect) (name, t) =
+        let (t, ty', eff) = aux gamma t in
+        if not (TypesBeta.equal ty ty') then
+          TypesBeta.Error.fail ~loc ~has:ty' ~expected:ty;
+        ((name, t) :: acc, Effects.union eff effect)
+      in
+      let (branches, effect) = List.fold_left aux ([], effect) branches in
+      let branches = List.rev branches in
+      (Try (e, not (Effects.is_empty effect), branches), ty, effect)
 
 let transform_variants ~datatype gamma =
   let rec aux index = function
