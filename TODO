@@ -9,6 +9,7 @@
   * Add more explicit type names (like « type name = string » instead of just use a string)
   * Remove Types in favor of TypesBeta (and so rename it to Types)
   * Create Ident.Exn to replace Ident.Name
+  * Find a way to optimize malloc calls
 
 * Cleaning (parser, typechecker, backend, …)
 * Unit-tests
