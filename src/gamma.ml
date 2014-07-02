@@ -23,9 +23,9 @@ open BatteriesExceptionless
 open Monomorphic.None
 
 type t =
-  { values : TypesBeta.t GammaMap.Value.t
+  { values : Types.t GammaMap.Value.t
   ; types : Types.visibility GammaMap.Types.t
-  ; constructors : ((TypesBeta.t * int) GammaMap.Index.t) GammaMap.Constr.t
+  ; constructors : ((Types.t * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : unit GammaMap.Exn.t
   }
 
@@ -48,9 +48,17 @@ let union (modul, a) b =
   ; exceptions = GammaMap.Exn.union (modul, a.exceptions) b.exceptions
   }
 
-(* TODO: Remove those Pervasives.(=) *)
+let ty_equal x y = match x, y with
+  | (Types.Abstract k1 | Types.Alias (_, k1)), Types.Abstract k2
+  | Types.Abstract k1, Types.Alias (_, k2) ->
+      Kinds.equal k1 k2
+  | Types.Alias (ty1, k1), Types.Alias (ty2, k2) ->
+      Types.equal ty1 ty2 && Kinds.equal k1 k2
+
+let constr_equal (x, y) (x', y') = Types.equal x x' && Int.equal y y'
+
 let is_subset_of a b =
-  GammaMap.Value.diff ~eq:TypesBeta.equal a.values b.values
-  @ GammaMap.Types.diff ~eq:Pervasives.(=) a.types b.types
-  @ GammaMap.Constr.diff ~eq:(GammaMap.Index.equal Pervasives.(=)) a.constructors b.constructors
+  GammaMap.Value.diff ~eq:Types.equal a.values b.values
+  @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
+  @ GammaMap.Constr.diff ~eq:(GammaMap.Index.equal constr_equal) a.constructors b.constructors
   @ GammaMap.Exn.diff ~eq:Unit.equal a.exceptions b.exceptions

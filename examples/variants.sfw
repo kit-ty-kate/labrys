@@ -1,6 +1,7 @@
 type Nat =
   | O : Nat
   | S : Nat -> Nat
+  | D : Nat -> Nat -> Nat
 
 type Unit = Unit : Unit
 
@@ -62,10 +63,13 @@ end
 
 let f (x : Nat) =
   match x with
-  | O -> let lol = printZero Unit in Unit
-  | S O -> let lol = printOne Unit in Unit
-  | S (S O) -> let lol = printTwo Unit in Unit
-  | S (S (S a)) -> let lol = printOther Unit in Unit
+  | O -> let lol = printZero Unit in O
+  | S O -> let lol = printOne Unit in O
+  | S (S O) -> let lol = printTwo Unit in O
+  | S (S (S O)) -> let lol = printZero Unit in O
+  | S (S (S a)) -> let lol = printOther Unit in a
+  | D a b -> b
+  | a -> a
   end
 
 let test = f O

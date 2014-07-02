@@ -40,7 +40,7 @@ type matrix = (pattern list * code_index) list
 val create :
   loc:Location.t ->
   Gamma.t ->
-  TypesBeta.t ->
+  Types.t ->
   ParseTree.pattern ->
   (mconstr * Gamma.t)
 

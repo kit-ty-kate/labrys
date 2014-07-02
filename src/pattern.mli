@@ -35,8 +35,8 @@ type t =
 
 val create :
   loc:Location.t ->
-  (Gamma.t -> ParseTree.t -> ('a * TypesBeta.t * Effects.t)) ->
+  (Gamma.t -> ParseTree.t -> ('a * Types.t * Effects.t)) ->
   Gamma.t ->
-  TypesBeta.t ->
+  Types.t ->
   ((Location.t * ParseTree.pattern) * (Location.t * ParseTree.t)) list ->
-  (t * ((var * name) list * 'a) list * TypesBeta.t * Effects.t)
+  (t * ((var * name) list * 'a) list * Types.t * Effects.t)

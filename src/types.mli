@@ -21,20 +21,51 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = Ident.Type.t
 
-type t =
-  | Ty of (name * Kinds.t)
-  | TyAlias of (name * t)
-  | Fun of (t * Effects.t * t)
-  | Forall of (name * Kinds.t * t)
-  | AbsOnTy of (name * Kinds.t * t)
-  | AppOnTy of (t * t)
+type t
 
 type visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
-val from_parse_tree :
+val of_parse_tree_kind :
   loc:Location.t ->
   visibility GammaMap.Types.t ->
   ParseTree.ty ->
   (t * Kinds.t)
+
+val of_parse_tree :
+  loc:Location.t ->
+  visibility GammaMap.Types.t ->
+  ParseTree.ty ->
+  t
+
+val func : param:t -> eff:Effects.t -> res:t -> t
+val forall : param:name -> kind:Kinds.t -> res:t -> t
+
+val to_string : t -> string
+
+val equal : t -> t -> bool
+
+val replace : from:name -> ty:t -> t -> t
+
+val size : t -> int
+
+val head : t -> name
+
+module Error : sig
+  val fail : loc:Location.t -> has:t -> expected:t -> 'a
+end
+
+val apply :
+  loc:Location.t ->
+  t ->
+  (t * Effects.t * t)
+
+val apply_ty :
+  loc:Location.t ->
+  ty_x:t ->
+  kind_x:Kinds.t ->
+  t ->
+  (name * t)
+
+val check_if_returns_type : datatype:name -> t -> bool

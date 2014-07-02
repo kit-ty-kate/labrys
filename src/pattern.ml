@@ -128,8 +128,8 @@ let create ~loc f gamma ty patterns =
     let f (patterns, effects) ((loc_p, p), (loc_t, t)) =
       let (pattern, gamma) = Matrix.create ~loc:loc_p gamma ty p in
       let (t, has, effect) = f gamma t in
-      if not (TypesBeta.equal has initial_ty) then
-        TypesBeta.Error.fail ~loc:loc_t ~has ~expected:initial_ty;
+      if not (Types.equal has initial_ty) then
+        Types.Error.fail ~loc:loc_t ~has ~expected:initial_ty;
       ((pattern, t) :: patterns, Effects.union effect effects)
     in
     List.fold_left f (initial_pattern, effect) tail

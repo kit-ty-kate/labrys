@@ -44,29 +44,29 @@ let rec well_formed_rec = function
 
 let rec aux gamma = function
   | ParseTree.Abs (loc, (name, ty), t) ->
-      let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
+      let ty = Types.of_parse_tree ~loc gamma.Gamma.types ty in
       let gamma = Gamma.add_value name ty gamma in
       let (expr, ty_expr, effect) = aux gamma t in
-      let abs_ty = TypesBeta.func ~param:ty ~eff:effect ~res:ty_expr in
+      let abs_ty = Types.func ~param:ty ~eff:effect ~res:ty_expr in
       (Abs (name, not (Effects.is_empty effect), expr), abs_ty, Effects.empty)
   | ParseTree.TAbs (loc, (name, k), t) ->
       let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
       let (expr, ty_expr, effect) = aux gamma t in
-      let abs_ty = TypesBeta.forall ~param:name ~kind:k ~res:ty_expr in
+      let abs_ty = Types.forall ~param:name ~kind:k ~res:ty_expr in
       (TAbs expr, abs_ty, effect)
   | ParseTree.App (loc, f, x) ->
       let (f, ty_f, effect1) = aux gamma f in
       let (x, ty_x, effect2) = aux gamma x in
-      let (param, effect3, res) = TypesBeta.apply ~loc ty_f in
-      if TypesBeta.equal param ty_x then
+      let (param, effect3, res) = Types.apply ~loc ty_f in
+      if Types.equal param ty_x then
         (App (f, not (Effects.is_empty effect3), x), res, Effects.union3 effect1 effect2 effect3)
       else
-        TypesBeta.Error.fail ~loc ~has:ty_x ~expected:param
+        Types.Error.fail ~loc ~has:ty_x ~expected:param
   | ParseTree.TApp (loc, f, ty_x) ->
       let (f, ty_f, effect) = aux gamma f in
-      let (ty_x, kx) = TypesBeta.of_parse_tree_kind ~loc gamma.Gamma.types ty_x in
-      let (param, res) = TypesBeta.apply_ty ~loc ~ty_x ~kind_x:kx ty_f in
-      let res = TypesBeta.replace ~from:param ~ty:ty_x res in
+      let (ty_x, kx) = Types.of_parse_tree_kind ~loc gamma.Gamma.types ty_x in
+      let (param, res) = Types.apply_ty ~loc ~ty_x ~kind_x:kx ty_f in
+      let res = Types.replace ~from:param ~ty:ty_x res in
       (TApp f, res, effect)
   | ParseTree.Val (loc, name) ->
       begin match GammaMap.Value.find name gamma.Gamma.values with
@@ -91,17 +91,17 @@ let rec aux gamma = function
       let (xs, ty_xs, effect2) = aux gamma xs in
       (Let (name, t, xs), ty_xs, Effects.union effect1 effect2)
   | ParseTree.LetRec (loc, name, ty, t, xs) when well_formed_rec t ->
-      let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
+      let ty = Types.of_parse_tree ~loc gamma.Gamma.types ty in
       let gamma = Gamma.add_value name ty gamma in
       let (t, ty_t, effect1) = aux gamma t in
-      if not (TypesBeta.equal ty ty_t) then
-        TypesBeta.Error.fail ~loc ~has:ty_t ~expected:ty;
+      if not (Types.equal ty ty_t) then
+        Types.Error.fail ~loc ~has:ty_t ~expected:ty;
       let (xs, ty_xs, effect2) = aux gamma xs in
       (LetRec (name, t, xs), ty_xs, Effects.union effect1 effect2)
   | ParseTree.LetRec (loc, _, _, _, _) ->
       fail_rec_val ~loc
   | ParseTree.Fail (loc, ty, exn) ->
-      let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
+      let ty = Types.of_parse_tree ~loc gamma.Gamma.types ty in
       begin match GammaMap.Exn.find exn gamma.Gamma.exceptions with
       | Some () ->
           (Fail exn, ty, Effects.singleton exn)
@@ -121,8 +121,8 @@ let rec aux gamma = function
       in
       let aux (acc, effect) (name, t) =
         let (t, ty', eff) = aux gamma t in
-        if not (TypesBeta.equal ty ty') then
-          TypesBeta.Error.fail ~loc ~has:ty' ~expected:ty;
+        if not (Types.equal ty ty') then
+          Types.Error.fail ~loc ~has:ty' ~expected:ty;
         ((name, t) :: acc, Effects.union eff effect)
       in
       let (branches, effect) = List.fold_left aux ([], effect) branches in
@@ -132,12 +132,12 @@ let rec aux gamma = function
 let transform_variants ~datatype gamma =
   let rec aux index = function
     | ParseTree.Variant (loc, name, ty) :: xs ->
-        let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
-        if TypesBeta.check_if_returns_type ~datatype ty then
+        let ty = Types.of_parse_tree ~loc gamma.Gamma.types ty in
+        if Types.check_if_returns_type ~datatype ty then
           let (xs, gamma) = aux (succ index) xs in
           let gamma = Gamma.add_value name ty gamma in
           let gamma = Gamma.add_constr datatype name (ty, index) gamma in
-          (Variant (name, TypesBeta.size ty) :: xs, gamma)
+          (Variant (name, Types.size ty) :: xs, gamma)
         else
           Error.fail
             ~loc
@@ -161,21 +161,21 @@ let rec from_parse_tree gamma = function
       let (xs, gamma) = from_parse_tree gamma xs in
       (Value (name, x) :: xs, gamma)
   | ParseTree.RecValue (loc, name, ty, term) :: xs when well_formed_rec term ->
-      let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
+      let ty = Types.of_parse_tree ~loc gamma.Gamma.types ty in
       let gamma = Gamma.add_value name ty gamma in
       let (x, ty_x) = check_effects (aux gamma term) in
-      if not (TypesBeta.equal ty ty_x) then
-        TypesBeta.Error.fail ~loc ~has:ty_x ~expected:ty;
+      if not (Types.equal ty ty_x) then
+        Types.Error.fail ~loc ~has:ty_x ~expected:ty;
       let (xs, gamma) = from_parse_tree gamma xs in
       (RecValue (name, x) :: xs, gamma)
   | ParseTree.RecValue (loc, _, _, _) :: _ ->
       fail_rec_val ~loc
   | ParseTree.Type (loc, name, ty) :: xs ->
-      let ty = Types.from_parse_tree ~loc gamma.Gamma.types ty in
+      let ty = Types.of_parse_tree_kind ~loc gamma.Gamma.types ty in
       let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
       from_parse_tree gamma xs
   | ParseTree.Binding (loc, name, ty, binding) :: xs ->
-      let ty = TypesBeta.of_parse_tree ~loc gamma.Gamma.types ty in
+      let ty = Types.of_parse_tree ~loc gamma.Gamma.types ty in
       let gamma = Gamma.add_value name ty gamma in
       let (xs, gamma) = from_parse_tree gamma xs in
       (Binding (name, binding) :: xs, gamma)

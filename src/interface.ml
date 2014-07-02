@@ -32,7 +32,7 @@ type t =
 let compile gamma =
   let rec compile gammaT gamma = function
     | Val (loc, name, ty) :: xs ->
-        let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
+        let ty = Types.of_parse_tree ~loc gammaT ty in
         let gamma = Gamma.add_value name ty gamma in
         compile gammaT gamma xs
     | AbstractType (loc, (name, k)) :: xs ->
@@ -44,7 +44,7 @@ let compile gamma =
         let gammaT = GammaMap.Types.add ~loc name (Types.Abstract k) gammaT in
         let gamma =
           let aux ~datatype gamma i (ParseTree.Variant (loc, name, ty)) =
-            let ty = TypesBeta.of_parse_tree ~loc gammaT ty in
+            let ty = Types.of_parse_tree ~loc gammaT ty in
             let gamma = Gamma.add_value name ty gamma in
             Gamma.add_constr datatype name (ty, i) gamma
           in
@@ -52,7 +52,7 @@ let compile gamma =
         in
         compile gammaT gamma xs
     | TypeAlias (loc, name, ty) :: xs ->
-        let ty = Types.from_parse_tree ~loc gammaT ty in
+        let ty = Types.of_parse_tree_kind ~loc gammaT ty in
         let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
         let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
         let gammaT = GammaMap.Types.add ~loc name (Types.Alias ty) gammaT in

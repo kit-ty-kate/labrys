@@ -46,9 +46,9 @@ let create ~loc =
   let rec aux gamma ty' = function
     | ParseTree.Any name ->
         let gamma = Gamma.add_value name ty' gamma in
-        (MAny (name, TypesBeta.head ty'), gamma)
+        (MAny (name, Types.head ty'), gamma)
     | ParseTree.TyConstr (name, args) ->
-        let head_ty = TypesBeta.head ty' in
+        let head_ty = Types.head ty' in
         let constructors =
           GammaMap.Constr.find head_ty gamma.Gamma.constructors
         in
@@ -65,28 +65,28 @@ let create ~loc =
         | Some (ty, _) ->
             let aux (args, ty, gamma) = function
               | ParseTree.PVal p ->
-                  let (param_ty, effect, res_ty) = TypesBeta.apply ~loc ty in
+                  let (param_ty, effect, res_ty) = Types.apply ~loc ty in
                   if not (Effects.is_empty effect) then
                     assert false;
                   let (arg, gamma) = aux gamma param_ty p in
                   (arg :: args, res_ty, gamma)
               | ParseTree.PTy pty ->
                   let (pty, kx) =
-                    TypesBeta.of_parse_tree_kind ~loc gamma.Gamma.types pty
+                    Types.of_parse_tree_kind ~loc gamma.Gamma.types pty
                   in
                   let (_, res) =
-                    TypesBeta.apply_ty ~loc ~ty_x:pty ~kind_x:kx ty
+                    Types.apply_ty ~loc ~ty_x:pty ~kind_x:kx ty
                   in
                   (args, res, gamma)
             in
             let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
             let args = List.rev args in
-            if not (TypesBeta.equal ty ty') then
+            if not (Types.equal ty ty') then
               Error.fail
                 ~loc
                 "The type of the pattern is not equal to the type \
                  of the value matched";
-            (MConstr ((name, TypesBeta.head ty), args), gamma)
+            (MConstr ((name, Types.head ty), args), gamma)
         end
   in
   aux
