@@ -146,6 +146,17 @@ module ParseTree = struct
            ^^ PPrint.string (dump_name name)
            ^^ PPrint.rparen
           )
+    | Try (_, t, branches) ->
+        PPrint.group
+          (PPrint.string "try"
+           ^^ PPrint.break 1
+           ^^ dump_t t
+           ^^ PPrint.break 1
+           ^^ PPrint.string "with"
+          )
+        ^^ dump_exn_branches branches
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
 
   and dump_cases cases =
     let aux doc ((_, pattern), (_, t)) =
@@ -157,6 +168,17 @@ module ParseTree = struct
            )
     in
     List.fold_left aux PPrint.empty cases
+
+  and dump_exn_branches branches =
+    let aux doc (name, t) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %s ->" (dump_name name))
+            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
+           )
+    in
+    List.fold_left aux PPrint.empty branches
 
   let dump_variants (Variant (_, name, ty)) =
     PPrint.string (fmt "| %s : %s" (dump_name name) (dump_ty ty))
@@ -185,6 +207,8 @@ module ParseTree = struct
     | Datatype (_, name, k, variants) ->
         PPrint.string (fmt "type %s : %s =" (dump_t_name name) (dump_k k))
         ^^ PPrint.nest 2 (dump_variants variants)
+    | Exception (_, name) ->
+        PPrint.string (fmt "exception %s" (dump_name name))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
@@ -303,6 +327,17 @@ module TypedTree = struct
            ^^ PPrint.string (dump_name name)
            ^^ PPrint.rparen
           )
+    | Try (t, with_exn, branches) ->
+        PPrint.group
+          (PPrint.string (fmt "try [with_exn = %b]" with_exn)
+           ^^ PPrint.break 1
+           ^^ dump_t t
+           ^^ PPrint.break 1
+           ^^ PPrint.string "with"
+          )
+        ^^ dump_exn_branches branches
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
 
   and dump_results results =
     let aux doc i (used_vars, result) =
@@ -314,6 +349,17 @@ module TypedTree = struct
            )
     in
     List.fold_lefti aux PPrint.empty results
+
+  and dump_exn_branches branches =
+    let aux doc (name, t) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %s ->" (dump_name name))
+            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
+           )
+    in
+    List.fold_left aux PPrint.empty branches
 
   let dump_variants (Variant (name, ty_size)) =
     PPrint.string (fmt "| %s of size %d" (dump_name name) ty_size)
@@ -340,6 +386,8 @@ module TypedTree = struct
     | Datatype variants ->
         PPrint.string "type ?? ="
         ^^ PPrint.nest 2 (dump_variants variants)
+    | Exception name ->
+        PPrint.string (fmt "exception %s" (dump_name name))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
@@ -452,6 +500,17 @@ module UntypedTree = struct
            ^^ PPrint.string (dump_name name)
            ^^ PPrint.rparen
           )
+    | Try (t, with_exn, branches) ->
+        PPrint.group
+          (PPrint.string (fmt "try [with_exn = %b]" with_exn)
+           ^^ PPrint.break 1
+           ^^ dump_t t
+           ^^ PPrint.break 1
+           ^^ PPrint.string "with"
+          )
+        ^^ dump_exn_branches branches
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
 
   and dump_results results =
     let aux doc i (vars, result) =
@@ -463,6 +522,17 @@ module UntypedTree = struct
            )
     in
     List.fold_lefti aux PPrint.empty results
+
+  and dump_exn_branches branches =
+    let aux doc (name, t) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %s ->" (dump_name name))
+            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
+           )
+    in
+    List.fold_left aux PPrint.empty branches
 
   let dump = function
     | Value (name, t) ->
@@ -479,6 +549,8 @@ module UntypedTree = struct
         PPrint.string (fmt "let %s = begin" (dump_name name))
         ^^ PPrint.string content
         ^^ PPrint.string "end"
+    | Exception name ->
+        PPrint.string (fmt "exception %s" (dump_name name))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
