@@ -44,6 +44,13 @@ let fail_apply ~loc x f =
   let conv = Kinds.to_string in
   Error.fail ~loc "Kind '%s' can't be applied on '%s'" (conv x) (conv f)
 
+let kind_missmatch ~loc ~has ~on =
+  Error.fail
+    ~loc
+    "Cannot apply something with kind '%s' on '%s'"
+    (Kinds.to_string has)
+    (Kinds.to_string on)
+
 let rec replace ~from ~ty =
   let rec aux = function
     | Ty x when Ident.Type.equal x from -> ty
@@ -66,14 +73,14 @@ let rec replace ~from ~ty =
   in
   aux
 
-let rec from_parse_tree ~loc gammaT = function
+let rec of_parse_tree_kind ~loc gammaT = function
   | ParseTree.Fun (x, eff, y) ->
-      let (x, k1) = from_parse_tree ~loc gammaT x in
+      let (x, k1) = of_parse_tree_kind ~loc gammaT x in
       let eff =
         let aux acc ty = Effects.add ty acc in
         List.fold_left aux Effects.empty eff
       in
-      let (y, k2) = from_parse_tree ~loc gammaT y in
+      let (y, k2) = of_parse_tree_kind ~loc gammaT y in
       if Kinds.not_star k1 || Kinds.not_star k2 then
         fail_not_star ~loc "->";
       (Fun (x, eff, y), Kinds.Star)
@@ -84,16 +91,23 @@ let rec from_parse_tree ~loc gammaT = function
       | None -> Error.fail ~loc "The type '%s' was not found in Γ" (Ident.Type.to_string name)
       end
   | ParseTree.Forall ((name, k), ret) ->
-      let (ret, kx) = from_parse_tree ~loc (GammaMap.Types.add ~loc name (Abstract k) gammaT) ret in
+      let (ret, kx) = of_parse_tree_kind ~loc (GammaMap.Types.add ~loc name (Abstract k) gammaT) ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
   | ParseTree.AbsOnTy ((name, k), ret) ->
-      let (ret, kret) = from_parse_tree ~loc (GammaMap.Types.add ~loc name (Abstract k) gammaT) ret in
+      let (ret, kret) = of_parse_tree_kind ~loc (GammaMap.Types.add ~loc name (Abstract k) gammaT) ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
+  | ParseTree.AppOnTy (ParseTree.AbsOnTy ((name, k), t), x) ->
+      let (x, kx) = of_parse_tree_kind ~loc gammaT x in
+      if not (Kinds.equal k kx) then
+        kind_missmatch ~loc ~has:kx ~on:k;
+      let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
+      let (t, kt) = of_parse_tree_kind ~loc gammaT t in
+      (replace ~from:name ~ty:x t, kt)
   | ParseTree.AppOnTy (f, x) ->
-      let (f, kf) = from_parse_tree ~loc gammaT f in
-      let (x, kx) = from_parse_tree ~loc gammaT x in
+      let (f, kf) = of_parse_tree_kind ~loc gammaT f in
+      let (x, kx) = of_parse_tree_kind ~loc gammaT x in
       let k =
         match kf with
         | Kinds.KFun (p, r) when Kinds.equal p kx -> r
@@ -101,21 +115,6 @@ let rec from_parse_tree ~loc gammaT = function
         | (Kinds.Star as k) -> fail_apply ~loc kx k
       in
       (AppOnTy (f, x), k)
-
-let rec of_ty = function
-  | Ty name -> Ty name
-  | Fun (p, eff, r) -> Fun (of_ty p, eff, of_ty r)
-  | Forall (name, k, t) -> Forall (name, k, of_ty t)
-  | AbsOnTy (name, k, t) -> AbsOnTy (name, k, of_ty t)
-  | AppOnTy (AbsOnTy (name, _, t), x) ->
-      let x = of_ty x in
-      replace ~from:name ~ty:x (of_ty t)
-  | AppOnTy (f, x) ->
-      AppOnTy (of_ty f, of_ty x)
-
-let of_parse_tree_kind ~loc gammaT ty =
-  let (ty, k) = from_parse_tree ~loc gammaT ty in
-  (of_ty ty, k)
 
 let of_parse_tree ~loc gammaT ty =
   let (ty, k) = of_parse_tree_kind ~loc gammaT ty in
@@ -201,13 +200,6 @@ module Error = struct
       "Error: This expression has type '%s'. \
        This is not a type abstraction; it cannot be applied by a value."
       (to_string ty)
-
-  let kind_missmatch ~loc ~has ~on =
-    Error.fail
-      ~loc
-      "Cannot apply something with kind '%s' on '%s'"
-      (Kinds.to_string has)
-      (Kinds.to_string on)
 end
 
 let apply ~loc = function
@@ -225,7 +217,7 @@ let apply_ty ~loc ~ty_x ~kind_x = function
       let res = replace ~from:ty ~ty:ty_x res in
       (ty, res)
   | Forall (_, k, _) ->
-      Error.kind_missmatch ~loc ~has:kind_x ~on:k
+      kind_missmatch ~loc ~has:kind_x ~on:k
   | (Fun _ as ty)
   | (AppOnTy _ as ty)
   | (Ty _ as ty) ->
