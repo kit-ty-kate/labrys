@@ -19,6 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+(* NOTE: Types are in normal form *)
+
 open BatteriesExceptionless
 open Monomorphic.None
 
@@ -88,15 +90,21 @@ let rec of_parse_tree_kind ~loc gammaT = function
       begin match GammaMap.Types.find name gammaT with
       | Some (Alias (ty, k)) -> (ty, k)
       | Some (Abstract k) -> (Ty name, k)
-      | None -> Error.fail ~loc "The type '%s' was not found in Γ" (Ident.Type.to_string name)
+      | None ->
+          Error.fail
+            ~loc
+            "The type '%s' was not found in Γ"
+            (Ident.Type.to_string name)
       end
   | ParseTree.Forall ((name, k), ret) ->
-      let (ret, kx) = of_parse_tree_kind ~loc (GammaMap.Types.add ~loc name (Abstract k) gammaT) ret in
+      let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
+      let (ret, kx) = of_parse_tree_kind ~loc gammaT ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
   | ParseTree.AbsOnTy ((name, k), ret) ->
-      let (ret, kret) = of_parse_tree_kind ~loc (GammaMap.Types.add ~loc name (Abstract k) gammaT) ret in
+      let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
+      let (ret, kret) = of_parse_tree_kind ~loc gammaT ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
   | ParseTree.AppOnTy (ParseTree.AbsOnTy ((name, k), t), x) ->
       let (x, kx) = of_parse_tree_kind ~loc gammaT x in
