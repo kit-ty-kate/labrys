@@ -246,8 +246,11 @@ effectValueArgs:
       { [x] }
 
 exn_pattern:
-  | exn = upperName Arrow t = term
-      { (Ident.Name.of_list exn, t) }
+  | exn = upperName args = list(exn_pattern_arg) Arrow t = term
+      { ((Ident.Name.of_list exn, args), t) }
+
+exn_pattern_arg:
+  | name = LowerName { Ident.Name.of_list [name] }
 
 variant:
 | name = UpperName Colon ty = typeExpr

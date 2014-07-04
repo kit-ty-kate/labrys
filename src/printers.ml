@@ -171,11 +171,14 @@ module ParseTree = struct
     List.fold_left aux PPrint.empty cases
 
   and dump_exn_branches branches =
-    let aux doc (name, t) =
+    let dump_args args =
+      String.concat " " (List.map Ident.Name.to_string args)
+    in
+    let aux doc ((name, args), t) =
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %s ->" (dump_name name))
+           (PPrint.string (fmt "| %s %s ->" (dump_name name) (dump_args args))
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
            )
     in
@@ -357,11 +360,14 @@ module TypedTree = struct
     List.fold_lefti aux PPrint.empty results
 
   and dump_exn_branches branches =
-    let aux doc (name, t) =
+    let dump_args args =
+      String.concat " " (List.map Ident.Name.to_string args)
+    in
+    let aux doc ((name, args), t) =
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %s ->" (dump_name name))
+           (PPrint.string (fmt "| %s %s ->" (dump_name name) (dump_args args))
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
            )
     in
@@ -535,11 +541,14 @@ module UntypedTree = struct
     List.fold_lefti aux PPrint.empty results
 
   and dump_exn_branches branches =
-    let aux doc (name, t) =
+    let dump_args args =
+      String.concat " " (List.map Ident.Name.to_string args)
+    in
+    let aux doc ((name, args), t) =
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %s ->" (dump_name name))
+           (PPrint.string (fmt "| %s %s ->" (dump_name name) (dump_args args))
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
            )
     in

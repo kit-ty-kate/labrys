@@ -43,9 +43,11 @@ let rec of_results m =
   (List.rev a, b)
 
 and of_branches branches =
-  let aux (acc, used_vars_acc) (name, t) =
+  let aux (acc, used_vars_acc) ((name, args), t) =
     let (t, used_vars) = of_typed_term t in
-    ((name, t) :: acc, Set.union used_vars used_vars_acc)
+    let remove acc name = Set.remove name acc in
+    let used_vars = List.fold_left remove used_vars args in
+    (((name, args), t) :: acc, Set.union used_vars used_vars_acc)
   in
   List.fold_left aux ([], Set.empty) branches
 

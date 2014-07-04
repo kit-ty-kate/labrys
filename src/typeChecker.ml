@@ -129,15 +129,15 @@ let rec aux gamma = function
       let (e, ty, effect) = aux gamma e in
       let effect =
         List.fold_left
-          (fun effect (name, _) -> Effects.remove name effect)
+          (fun effect ((name, _), _) -> Effects.remove name effect)
           effect
           branches
       in
-      let aux (acc, effect) (name, t) =
+      let aux (acc, effect) ((name, args), t) =
         let (t, ty', eff) = aux gamma t in
         if not (Types.equal ty ty') then
           Types.Error.fail ~loc ~has:ty' ~expected:ty;
-        ((name, t) :: acc, Effects.union eff effect)
+        (((name, args), t) :: acc, Effects.union eff effect)
       in
       let (branches, effect) = List.fold_left aux ([], effect) branches in
       let branches = List.rev branches in

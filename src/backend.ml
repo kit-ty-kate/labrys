@@ -218,12 +218,28 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           )
           cases
 
+  and create_exn_result func ~env ~exn ~globals ~res ~next_block ~exn_block ~exn_args gamma builder (args, result) =
+    let block = LLVM.append_block c "" func in
+    let builder' = LLVM.builder_at_end c block in
+    let gamma =
+      let aux gamma i name =
+        let value = LLVM.build_extractvalue exn_args i "" builder in
+        GammaMap.Value.add name (Value value) gamma
+      in
+      List.fold_lefti aux gamma args
+    in
+    let (v, builder') = lambda func ~env ~exn ~globals ~exn_block gamma builder' result in
+    LLVM.build_store v res builder';
+    LLVM.build_br next_block builder';
+    block
+
   and create_exn_branches func ~env ~exn ~globals ~res ~next_block ~exn_block ~new_exn ~with_exn gamma builder branches =
     let new_exn = LLVM.build_load new_exn "" builder in
     let new_exn_loaded = LLVM.build_load new_exn "" builder in
     let exn_tag = LLVM.build_extractvalue new_exn_loaded 0 "" builder in
-    let aux builder (name, t) =
-      let (block, _) = create_result func ~env ~globals ~res ~next_block ~exn ~exn_block gamma builder ([], t) in
+    let exn_args = LLVM.build_extractvalue new_exn_loaded 1 "" builder in
+    let aux builder ((name, args), t) =
+      let block = create_exn_result func ~env ~globals ~res ~next_block ~exn ~exn_block ~exn_args gamma builder (args, t) in
       let exn = get_exn name in
       let next_block = LLVM.append_block c "" func in
       let cond = LLVM.build_icmp LLVM.Icmp.Eq exn exn_tag "" builder in
