@@ -101,6 +101,7 @@ module_name:
 | name = upperName
     { Ident.Module.of_list name }
 
+
 (********* Implementation *********)
 
 main:
@@ -148,32 +149,37 @@ typeAlias:
 | Type Alias name = UpperName Equal ty = typeExpr
     { (get_loc $startpos $endpos, Ident.Type.of_list [name], ty) }
 
+termUnclosed:
+  | Lambda args = nonempty_list(arg) Arrow term = term
+      { let_lambda_sugar term args }
+  | term1 = term term2 = term %prec app
+      { ParseTree.App (get_loc $startpos $endpos(term2), term1, term2) }
+  | term1 = term LBracket ty = typeExpr RBracket
+      { ParseTree.TApp (get_loc $startpos $endpos, term1, ty) }
+  | Let name = LowerName args = list(arg) Equal t = term In xs = term
+      { let t = let_lambda_sugar t args in
+        ParseTree.Let (Ident.Name.of_list [name], t, xs)
+      }
+  | Let Rec name = LowerName args = list(arg) Colon ty = typeExpr Equal t = term In xs = term
+      { let (t, ty) = let_rec_lambda_sugar t ty args in
+        ParseTree.LetRec
+          (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty, t, xs)
+      }
+  | Fail LBracket ty = typeExpr RBracket exn = effectValue
+      { ParseTree.Fail (get_loc $startpos $endpos, ty, exn) }
+
+termClosed:
+  | name = name
+      { ParseTree.Val (get_loc $startpos $endpos, Ident.Name.of_list name) }
+  | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
+      { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
+  | Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
+      { ParseTree.Try (get_loc $startpos $endpos, t, p) }
+
 term:
-| Lambda args = nonempty_list(arg) Arrow term = term
-    { let_lambda_sugar term args }
-| term1 = term term2 = term %prec app
-    { ParseTree.App (get_loc $startpos $endpos(term2), term1, term2) }
-| term1 = term LBracket ty = typeExpr RBracket
-    { ParseTree.TApp (get_loc $startpos $endpos, term1, ty) }
-| name = name
-    { ParseTree.Val (get_loc $startpos $endpos, Ident.Name.of_list name) }
-| LParen term = term RParen
-    { term }
-| Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
-    { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
-| Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
-    { ParseTree.Try (get_loc $startpos $endpos, t, p) }
-| Let name = LowerName args = list(arg) Equal t = term In xs = term
-    { let t = let_lambda_sugar t args in
-      ParseTree.Let (Ident.Name.of_list [name], t, xs)
-    }
-| Let Rec name = LowerName args = list(arg) Colon ty = typeExpr Equal t = term In xs = term
-    { let (t, ty) = let_rec_lambda_sugar t ty args in
-      ParseTree.LetRec
-        (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty, t, xs)
-    }
-| Fail LBracket ty = typeExpr RBracket exn = effectValue
-    { ParseTree.Fail (get_loc $startpos $endpos, ty, exn) }
+  | x = termUnclosed { x }
+  | x = termClosed { x }
+  | LParen x = term RParen { x }
 
 arg:
 | LParen name = LowerName Colon ty = typeExpr RParen
@@ -194,9 +200,7 @@ upperName:
 | m = UpperName Dot xs = upperName
     { m :: xs }
 
-typeExpr:
-| name = upperName
-    { ParseTree.Ty (Ident.Type.of_list name) }
+typeExprUnclosed:
 | param = typeExpr Arrow ret = typeExpr
     { ParseTree.Fun (param, [], ret) }
 | param = typeExpr LArrowEff eff = separated_list(Pipe, effectName) RArrowEff ret = typeExpr
@@ -207,8 +211,15 @@ typeExpr:
     { param_ty_sugar (fun x -> ParseTree.AbsOnTy x) values ret }
 | f = typeExpr x = typeExpr %prec tapp
     { ParseTree.AppOnTy (f, x) }
-| LParen term = typeExpr RParen
-    { term }
+
+typeExprClosed:
+| name = upperName
+    { ParseTree.Ty (Ident.Type.of_list name) }
+
+typeExpr:
+  | x = typeExprUnclosed { x }
+  | x = typeExprClosed { x }
+  | LParen x = typeExpr RParen { x }
 
 kind:
 | Star
@@ -274,6 +285,7 @@ pat_arg:
 | LBracket ty = typeExpr RBracket
     { ParseTree.PTy ty }
 
+
 (********* Interface *********)
 
 mainInterface:
@@ -304,44 +316,12 @@ bodyInterface:
     { [] }
 
 
-(********* Protected rules (To be removed if possible) ***********)
-
+(********* Protected rules ***********)
 
 termProtected:
-| LParen Lambda args = nonempty_list(arg) Arrow term = term RParen
-    { let_lambda_sugar term args }
-| LParen term1 = term term2 = term RParen
-    { ParseTree.App (get_loc $startpos $endpos(term2), term1, term2) }
-| LParen term1 = term LBracket ty = typeExpr RBracket RParen
-    { ParseTree.TApp (get_loc $startpos $endpos, term1, ty) }
-| name = name
-    { ParseTree.Val (get_loc $startpos $endpos, Ident.Name.of_list name) }
-| Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
-    { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
-| Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
-    { ParseTree.Try (get_loc $startpos $endpos, t, p) }
-| LParen Let name = LowerName args = list(arg) Equal t = term In xs = term RParen
-    { let t = let_lambda_sugar t args in
-      ParseTree.Let (Ident.Name.of_list [name], t, xs)
-    }
-| LParen Let Rec name = LowerName args = list(arg) Colon ty = typeExpr Equal t = term In xs = term RParen
-    { let (t, ty) = let_rec_lambda_sugar t ty args in
-      ParseTree.LetRec
-        (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty, t, xs)
-    }
-| LParen Fail LBracket ty = typeExpr RBracket exn = effectValue RParen
-    { ParseTree.Fail (get_loc $startpos $endpos, ty, exn) }
+  | LParen x = termUnclosed RParen { x }
+  | x = termClosed { x }
 
 typeExprProtected:
-| name = upperName
-    { ParseTree.Ty (Ident.Type.of_list name) }
-| LParen param = typeExpr Arrow ret = typeExpr RParen
-    { ParseTree.Fun (param, [], ret) }
-| LParen param = typeExpr LArrowEff eff = separated_list(Pipe, effectName) RArrowEff ret = typeExpr RParen
-    { ParseTree.Fun (param, eff, ret) }
-| LParen Forall values = nonempty_list(kind_and_name) Comma ret = typeExpr RParen
-    { param_ty_sugar (fun x -> ParseTree.Forall x) values ret }
-| LParen Lambda values = nonempty_list(kind_and_name) Comma ret = typeExpr RParen
-    { param_ty_sugar (fun x -> ParseTree.AbsOnTy x) values ret }
-| LParen f = typeExpr x = typeExpr RParen
-    { ParseTree.AppOnTy (f, x) }
+  | LParen x = typeExprUnclosed RParen { x }
+  | x = typeExprClosed { x }
