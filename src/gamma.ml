@@ -26,7 +26,7 @@ type t =
   { values : Types.t GammaMap.Value.t
   ; types : Types.visibility GammaMap.Types.t
   ; constructors : ((Types.t * int) GammaMap.Index.t) GammaMap.Constr.t
-  ; exceptions : unit GammaMap.Exn.t
+  ; exceptions : Types.t list GammaMap.Exn.t
   }
 
 let empty =
@@ -39,7 +39,7 @@ let empty =
 let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
 let add_type ~loc k x self = {self with types = GammaMap.Types.add ~loc k x self.types}
 let add_constr k k2 x self = {self with constructors = GammaMap.Constr.add k k2 x self.constructors}
-let add_exception ~loc k self = {self with exceptions = GammaMap.Exn.add ~loc k () self.exceptions}
+let add_exception ~loc k x self = {self with exceptions = GammaMap.Exn.add ~loc k x self.exceptions}
 
 let union (modul, a) b =
   { values = GammaMap.Value.union (modul, a.values) b.values
@@ -61,4 +61,4 @@ let is_subset_of a b =
   GammaMap.Value.diff ~eq:Types.equal a.values b.values
   @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
   @ GammaMap.Constr.diff ~eq:(GammaMap.Index.equal constr_equal) a.constructors b.constructors
-  @ GammaMap.Exn.diff ~eq:Unit.equal a.exceptions b.exceptions
+  @ GammaMap.Exn.diff ~eq:(List.eq Types.equal) a.exceptions b.exceptions

@@ -52,7 +52,7 @@ type t =
   | PatternMatching of (loc * t * ((loc * pattern) * (loc * t)) list)
   | Let of (name * t * t)
   | LetRec of (loc * name * ty * t * t)
-  | Fail of (loc * ty * name)
+  | Fail of (loc * ty * (name * t list))
   | Try of (loc * t * (name * t) list)
 
 type variant =
@@ -68,6 +68,6 @@ type top =
   | Type of typeAlias
   | Binding of (loc * name * ty * string)
   | Datatype of datatype
-  | Exception of (loc * name)
+  | Exception of (loc * name * ty list)
 
 type imports = module_name list

@@ -127,10 +127,18 @@ body:
     }
 | datatype = datatype xs = body
     { ParseTree.Datatype datatype :: xs }
-| Exception name = UpperName xs = body
-    { ParseTree.Exception (get_loc $startpos $endpos(name), Ident.Name.of_list [name]) :: xs }
+| Exception name = UpperName args = exceptionArgs xs = body
+    { ParseTree.Exception
+        (get_loc $startpos $endpos(name), Ident.Name.of_list [name], args)
+      :: xs
+    }
 | EOF
     { [] }
+
+exceptionArgs:
+  | x = typeExprProtected xs = exceptionArgs
+      { x :: xs }
+  | { [] }
 
 datatype:
 | Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
@@ -164,7 +172,7 @@ term:
       ParseTree.LetRec
         (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty, t, xs)
     }
-| Fail LBracket ty = typeExpr RBracket exn = effect
+| Fail LBracket ty = typeExpr RBracket exn = effectValue
     { ParseTree.Fail (get_loc $startpos $endpos, ty, exn) }
 
 arg:
@@ -191,7 +199,7 @@ typeExpr:
     { ParseTree.Ty (Ident.Type.of_list name) }
 | param = typeExpr Arrow ret = typeExpr
     { ParseTree.Fun (param, [], ret) }
-| param = typeExpr LArrowEff eff = separated_list(Pipe, effect) RArrowEff ret = typeExpr
+| param = typeExpr LArrowEff eff = separated_list(Pipe, effectName) RArrowEff ret = typeExpr
     { ParseTree.Fun (param, eff, ret) }
 | Forall values = nonempty_list(kind_and_name) Comma ret = typeExpr
     { param_ty_sugar (fun x -> ParseTree.Forall x) values ret }
@@ -210,9 +218,21 @@ kind:
 | LParen k = kind RParen
     { k }
 
-effect:
+effectName:
   | name = upperName
       { Ident.Name.of_list name }
+
+effectValue:
+  | LParen name = upperName args = effectValueArgs RParen
+      { (Ident.Name.of_list name, args) }
+  | name = upperName
+      { (Ident.Name.of_list name, []) }
+
+effectValueArgs:
+  | x = termProtected xs = effectValueArgs
+      { x :: xs }
+  | x = termProtected
+      { [x] }
 
 exn_pattern:
   | exn = upperName Arrow t = term
@@ -275,7 +295,53 @@ bodyInterface:
     { Interface.Datatype datatype :: xs }
 | typeAlias = typeAlias xs = bodyInterface
     { Interface.TypeAlias typeAlias :: xs }
-| Exception name = UpperName xs = bodyInterface
-    { Interface.Exception (get_loc $startpos $endpos(name), Ident.Name.of_list [name]) :: xs }
+| Exception name = UpperName args = exceptionArgs xs = bodyInterface
+    { Interface.Exception
+        (get_loc $startpos $endpos(name), Ident.Name.of_list [name], args)
+      :: xs
+    }
 | EOF
     { [] }
+
+
+(********* Protected rules (To be removed if possible) ***********)
+
+
+termProtected:
+| LParen Lambda args = nonempty_list(arg) Arrow term = term RParen
+    { let_lambda_sugar term args }
+| LParen term1 = term term2 = term RParen
+    { ParseTree.App (get_loc $startpos $endpos(term2), term1, term2) }
+| LParen term1 = term LBracket ty = typeExpr RBracket RParen
+    { ParseTree.TApp (get_loc $startpos $endpos, term1, ty) }
+| name = name
+    { ParseTree.Val (get_loc $startpos $endpos, Ident.Name.of_list name) }
+| Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
+    { ParseTree.PatternMatching (get_loc $startpos $endpos, t, p) }
+| Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
+    { ParseTree.Try (get_loc $startpos $endpos, t, p) }
+| LParen Let name = LowerName args = list(arg) Equal t = term In xs = term RParen
+    { let t = let_lambda_sugar t args in
+      ParseTree.Let (Ident.Name.of_list [name], t, xs)
+    }
+| LParen Let Rec name = LowerName args = list(arg) Colon ty = typeExpr Equal t = term In xs = term RParen
+    { let (t, ty) = let_rec_lambda_sugar t ty args in
+      ParseTree.LetRec
+        (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty, t, xs)
+    }
+| LParen Fail LBracket ty = typeExpr RBracket exn = effectValue RParen
+    { ParseTree.Fail (get_loc $startpos $endpos, ty, exn) }
+
+typeExprProtected:
+| name = upperName
+    { ParseTree.Ty (Ident.Type.of_list name) }
+| LParen param = typeExpr Arrow ret = typeExpr RParen
+    { ParseTree.Fun (param, [], ret) }
+| LParen param = typeExpr LArrowEff eff = separated_list(Pipe, effectName) RArrowEff ret = typeExpr RParen
+    { ParseTree.Fun (param, eff, ret) }
+| LParen Forall values = nonempty_list(kind_and_name) Comma ret = typeExpr RParen
+    { param_ty_sugar (fun x -> ParseTree.Forall x) values ret }
+| LParen Lambda values = nonempty_list(kind_and_name) Comma ret = typeExpr RParen
+    { param_ty_sugar (fun x -> ParseTree.AbsOnTy x) values ret }
+| LParen f = typeExpr x = typeExpr RParen
+    { ParseTree.AppOnTy (f, x) }

@@ -24,6 +24,6 @@ type t =
   | AbstractType of (Location.t * ParseTree.t_value)
   | Datatype of ParseTree.datatype
   | TypeAlias of (Location.t * ParseTree.t_name * ParseTree.ty)
-  | Exception of (Location.t * Ident.Name.t)
+  | Exception of (Location.t * Ident.Name.t * ParseTree.ty list)
 
 val compile : Gamma.t -> t list -> Gamma.t

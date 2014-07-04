@@ -37,7 +37,7 @@ and t =
   | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
-  | Fail of name
+  | Fail of (name * t list)
   | Try of (t * with_exn * (name * t) list)
 
 type top =

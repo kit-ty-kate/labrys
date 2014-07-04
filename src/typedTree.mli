@@ -33,7 +33,7 @@ type t =
   | PatternMatching of (t * (used_vars * t) list * Pattern.t)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
-  | Fail of name
+  | Fail of (name * t list)
   | Try of (t * with_exn * (name * t) list)
 
 type variant =

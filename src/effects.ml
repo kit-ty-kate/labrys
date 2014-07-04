@@ -24,22 +24,13 @@ open Monomorphic.None
 
 let fmt = Printf.sprintf
 
-type t = Ident.Name.t Set.t
+include Set.Make(struct
+  type t = Ident.Name.t
 
-let empty = Set.empty
+  let compare = Ident.Name.compare
+end)
 
-let union = Set.union
-let union3 x y z = Set.union (Set.union x y) z
-
-let is_empty = Set.is_empty
+let union3 x y z = union (union x y) z
 
 let to_string x =
-  fmt "[%s]" (String.concat " | " (List.map Ident.Name.to_string (Set.to_list x)))
-
-let equal = Set.equal
-
-let add = Set.add
-
-let remove = Set.remove
-
-let singleton = Set.singleton
+  fmt "[%s]" (String.concat " | " (List.map Ident.Name.to_string (to_list x)))

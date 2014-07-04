@@ -100,11 +100,25 @@ let rec aux gamma = function
       (LetRec (name, t, xs), ty_xs, Effects.union effect1 effect2)
   | ParseTree.LetRec (loc, _, _, _, _) ->
       fail_rec_val ~loc
-  | ParseTree.Fail (loc, ty, exn) ->
+  | ParseTree.Fail (loc, ty, (exn, args)) ->
       let ty = Types.of_parse_tree ~loc gamma.Gamma.types ty in
       begin match GammaMap.Exn.find exn gamma.Gamma.exceptions with
-      | Some () ->
-          (Fail exn, ty, Effects.singleton exn)
+      | Some tys ->
+          let (args, effects) =
+            let aux (acc, effects) ty_exn arg =
+              let (arg, ty_arg, eff) = aux gamma arg in
+              if not (Types.equal ty_arg ty_exn) then
+                Types.Error.fail ~loc ~has:ty_arg ~expected:ty_exn;
+              (arg :: acc, Effects.union eff effects)
+            in
+            try List.fold_left2 aux ([], Effects.empty) tys args with
+            | Invalid_argument _ ->
+                Error.fail
+                  ~loc
+                  "Cannot fail with an exception applied partially"
+          in
+          let args = List.rev args in
+          (Fail (exn, args), ty, Effects.add exn effects)
       | None ->
           Error.fail
             ~loc
@@ -184,8 +198,9 @@ let rec from_parse_tree gamma = function
       let (variants, gamma) = transform_variants ~datatype:name gamma variants in
       let (xs, gamma) = from_parse_tree gamma xs in
       (Datatype variants :: xs, gamma)
-  | ParseTree.Exception (loc, name) :: xs ->
-      let gamma = Gamma.add_exception ~loc name gamma in
+  | ParseTree.Exception (loc, name, args) :: xs ->
+      let args = List.map (Types.of_parse_tree ~loc gamma.Gamma.types) args in
+      let gamma = Gamma.add_exception ~loc name args gamma in
       let (xs, gamma) = from_parse_tree gamma xs in
       (Exception name :: xs, gamma)
   | [] ->

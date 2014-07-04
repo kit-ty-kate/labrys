@@ -23,7 +23,7 @@ type t = private
   { values : Types.t GammaMap.Value.t
   ; types : Types.visibility GammaMap.Types.t
   ; constructors : ((Types.t * int) GammaMap.Index.t) GammaMap.Constr.t
-  ; exceptions : unit GammaMap.Exn.t
+  ; exceptions : Types.t list GammaMap.Exn.t
   }
 
 val empty : t
@@ -31,7 +31,7 @@ val empty : t
 val add_value : Ident.Name.t -> Types.t -> t -> t
 val add_type : loc:Location.t -> Ident.Type.t -> Types.visibility -> t -> t
 val add_constr : Ident.Type.t -> Ident.Name.t -> (Types.t * int) -> t -> t
-val add_exception : loc:Location.t -> Ident.Name.t -> t -> t
+val add_exception : loc:Location.t -> Ident.Name.t -> Types.t list -> t -> t
 
 val union : (Ident.Module.t * t) -> t -> t
 

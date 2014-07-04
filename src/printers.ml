@@ -136,7 +136,7 @@ module ParseTree = struct
            ^^ dump_t xs
            ^^ PPrint.rparen
           )
-    | Fail (_, ty, name) ->
+    | Fail (_, ty, (name, args)) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string "fail"
@@ -144,6 +144,7 @@ module ParseTree = struct
            ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
            ^^ PPrint.blank 1
            ^^ PPrint.string (dump_name name)
+           ^^ dump_exn_args args
            ^^ PPrint.rparen
           )
     | Try (_, t, branches) ->
@@ -180,6 +181,10 @@ module ParseTree = struct
     in
     List.fold_left aux PPrint.empty branches
 
+  and dump_exn_args args =
+    let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
+    List.fold_left aux PPrint.empty args
+
   let dump_variants (Variant (_, name, ty)) =
     PPrint.string (fmt "| %s : %s" (dump_name name) (dump_ty ty))
 
@@ -207,8 +212,8 @@ module ParseTree = struct
     | Datatype (_, name, k, variants) ->
         PPrint.string (fmt "type %s : %s =" (dump_t_name name) (dump_k k))
         ^^ PPrint.nest 2 (dump_variants variants)
-    | Exception (_, name) ->
-        PPrint.string (fmt "exception %s" (dump_name name))
+    | Exception (_, name, args) ->
+        PPrint.string (fmt "exception %s %s" (dump_name name) (String.concat " " (List.map dump_ty args)))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
@@ -319,12 +324,13 @@ module TypedTree = struct
            ^^ dump_t xs
            ^^ PPrint.rparen
           )
-    | Fail name ->
+    | Fail (name, args) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string "fail"
            ^^ PPrint.blank 1
            ^^ PPrint.string (dump_name name)
+           ^^ dump_exn_args args
            ^^ PPrint.rparen
           )
     | Try (t, with_exn, branches) ->
@@ -360,6 +366,10 @@ module TypedTree = struct
            )
     in
     List.fold_left aux PPrint.empty branches
+
+  and dump_exn_args args =
+    let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
+    List.fold_left aux PPrint.empty args
 
   let dump_variants (Variant (name, ty_size)) =
     PPrint.string (fmt "| %s of size %d" (dump_name name) ty_size)
@@ -492,12 +502,13 @@ module UntypedTree = struct
            ^^ dump_t xs
            ^^ PPrint.rparen
           )
-    | Fail name ->
+    | Fail (name, args) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string "fail"
            ^^ PPrint.blank 1
            ^^ PPrint.string (dump_name name)
+           ^^ dump_exn_args args
            ^^ PPrint.rparen
           )
     | Try (t, with_exn, branches) ->
@@ -533,6 +544,10 @@ module UntypedTree = struct
            )
     in
     List.fold_left aux PPrint.empty branches
+
+  and dump_exn_args args =
+    let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
+    List.fold_left aux PPrint.empty args
 
   let dump = function
     | Value (name, t) ->

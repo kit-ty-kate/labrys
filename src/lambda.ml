@@ -84,8 +84,15 @@ and of_typed_term = function
         Set.union (Set.remove name used_vars1) (Set.remove name used_vars2)
       in
       (LetRec (name, t, xs), used_vars)
-  | TypedTree.Fail name ->
-      (Fail name, Set.empty)
+  | TypedTree.Fail (name, args) ->
+      let (args, used_vars) =
+        let aux (acc, used_vars_acc) t =
+          let (t, used_vars) = of_typed_term t in
+          (t :: acc, Set.union used_vars used_vars_acc)
+        in
+        List.fold_left aux ([], Set.empty) args
+      in
+      (Fail (name, args), used_vars)
 
 let of_typed_variant acc i = function
   | TypedTree.Variant (name, ty_size) ->
