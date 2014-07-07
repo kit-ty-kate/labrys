@@ -24,9 +24,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 let alpha = ['a'-'z' 'A'-'Z']
 let term_name = (['a'-'z'] alpha*)
 let type_name = (['A'-'Z'] alpha*)
+let blank = [' ' '\t']
 
 rule main = parse
-  | [' ' '\t'] { main lexbuf }
+  | blank { main lexbuf }
   | '\n' { Lexing.new_line lexbuf; main lexbuf }
   | '=' { Parser.Equal }
   | '.' { Parser.Dot }
@@ -55,10 +56,11 @@ rule main = parse
   | "alias" { Parser.Alias }
   | "import" { Parser.Import }
   | "exception" { Parser.Exception }
-  | "begin" { let buffer = Buffer.create 4096 in
-              get_binding buffer lexbuf;
-              Parser.Binding (Buffer.contents buffer)
-            }
+  | "begin" blank* '\n'
+      { let buffer = Buffer.create 4096 in
+        get_binding buffer lexbuf;
+        Parser.Binding (Buffer.contents buffer)
+      }
   | "--" { simple_comment lexbuf; main lexbuf }
   | term_name as name { Parser.LowerName name }
   | type_name as name { Parser.UpperName name }
@@ -66,11 +68,11 @@ rule main = parse
   | _ { raise Error }
 
 and get_binding buffer = parse
+  | '\n' blank* "end" blank* '\n' { () }
   | '\n' as lxm { Buffer.add_char buffer lxm;
                   Lexing.new_line lexbuf;
                   get_binding buffer lexbuf
                 }
-  | "end" { () }
   | eof { raise Error }
   | _ as lxm { Buffer.add_char buffer lxm;
                get_binding buffer lexbuf
