@@ -84,52 +84,42 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 %%
 
-entry(body):
-| imports = list(import) body = body
-    { (imports, body) }
+(********* Main functions *********)
 
-import:
-| Import modul = module_name
-    { modul }
+main: entry(body) { $1 }
 
-module_name:
-| name = upperName
-    { Ident.Module.of_list name }
+mainInterface: entry(bodyInterface) { $1 }
 
 
 (********* Implementation *********)
 
-main:
-| x = entry(body)
-    { x }
-
 body:
-| Let name = LowerName args = list(arg) Equal term = term xs = body
-    { let term = let_lambda_sugar term args in
-      ParseTree.Value (Ident.Name.of_list [name], term) :: xs
-    }
-| Let Rec name = LowerName args = list(arg) Colon ty = typeExpr Equal term = term xs = body
-    { let (term, ty) = let_rec_lambda_sugar term ty args in
-      ParseTree.RecValue
-        (get_loc $startpos $endpos(term), Ident.Name.of_list [name], ty, term)
-      :: xs
-    }
-| typeAlias = typeAlias xs = body
-    { ParseTree.Type typeAlias :: xs }
-| Let name = LowerName Colon ty = typeExpr Equal binding = Binding xs = body
-    { ParseTree.Binding
-        (get_loc $startpos $endpos(binding), Ident.Name.of_list [name], ty, binding)
-      :: xs
-    }
-| datatype = datatype xs = body
-    { ParseTree.Datatype datatype :: xs }
-| Exception name = UpperName args = exceptionArgs xs = body
-    { ParseTree.Exception
-        (get_loc $startpos $endpos(name), Ident.Name.of_list [name], args)
-      :: xs
-    }
-| EOF
-    { [] }
+  | Let name = LowerName args = list(arg) Equal term = term xs = body
+      { let term = let_lambda_sugar term args in
+        ParseTree.Value (Ident.Name.of_list [name], term) :: xs
+      }
+  | Let Rec name = LowerName args = list(arg) Colon ty = typeExpr Equal term = term xs = body
+      { let (term, ty) = let_rec_lambda_sugar term ty args in
+        ParseTree.RecValue
+          (get_loc $startpos $endpos(term), Ident.Name.of_list [name], ty, term)
+        :: xs
+      }
+  | typeAlias = typeAlias xs = body
+      { ParseTree.Type typeAlias :: xs }
+  | Let name = LowerName Colon ty = typeExpr Equal binding = Binding xs = body
+      { ParseTree.Binding
+          (get_loc $startpos $endpos(binding), Ident.Name.of_list [name], ty, binding)
+        :: xs
+      }
+  | datatype = datatype xs = body
+      { ParseTree.Datatype datatype :: xs }
+  | Exception name = UpperName args = exceptionArgs xs = body
+      { ParseTree.Exception
+          (get_loc $startpos $endpos(name), Ident.Name.of_list [name], args)
+        :: xs
+      }
+  | EOF
+      { [] }
 
 exceptionArgs:
   | x = typeExprProtected xs = exceptionArgs
@@ -137,12 +127,12 @@ exceptionArgs:
   | { [] }
 
 datatype:
-| Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
-    { (get_loc $startpos $endpos, Ident.Type.of_list [name], k, variants) }
+  | Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
+      { (get_loc $startpos $endpos, Ident.Type.of_list [name], k, variants) }
 
 typeAlias:
-| Type Alias name = UpperName Equal ty = typeExpr
-    { (get_loc $startpos $endpos, Ident.Type.of_list [name], ty) }
+  | Type Alias name = UpperName Equal ty = typeExpr
+      { (get_loc $startpos $endpos, Ident.Type.of_list [name], ty) }
 
 termUnclosed:
   | Lambda args = nonempty_list(arg) Arrow term = term
@@ -182,39 +172,39 @@ app:
       { ParseTree.App (get_loc $startpos $endpos, f, x) }
 
 arg:
-| LParen name = LowerName Colon ty = typeExpr RParen
-    { `Val (get_loc $startpos $endpos, (Ident.Name.of_list [name], ty)) }
-| ty = kind_and_name
-    { `Ty (get_loc $startpos $endpos, ty) }
+  | LParen name = LowerName Colon ty = typeExpr RParen
+      { `Val (get_loc $startpos $endpos, (Ident.Name.of_list [name], ty)) }
+  | ty = kind_and_name
+      { `Ty (get_loc $startpos $endpos, ty) }
 
 name:
-| name = LowerName
-| name = UpperName
-    { [name] }
-| m = UpperName Dot xs = name
-    { m :: xs }
+  | name = LowerName
+  | name = UpperName
+      { [name] }
+  | m = UpperName Dot xs = name
+      { m :: xs }
 
 upperName:
-| name = UpperName
-    { [name] }
-| m = UpperName Dot xs = upperName
-    { m :: xs }
+  | name = UpperName
+      { [name] }
+  | m = UpperName Dot xs = upperName
+      { m :: xs }
 
 typeExprUnclosed:
-| param = typeExprProtected Arrow ret = typeExpr
-    { ParseTree.Fun (param, [], ret) }
-| param = typeExprProtected LArrowEff eff = separated_list(Pipe, effectName) RArrowEff ret = typeExpr
-    { ParseTree.Fun (param, eff, ret) }
-| Forall values = nonempty_list(kind_and_name) Comma ret = typeExpr
-    { param_ty_sugar (fun x -> ParseTree.Forall x) values ret }
-| Lambda values = nonempty_list(kind_and_name) Comma ret = typeExpr
-    { param_ty_sugar (fun x -> ParseTree.AbsOnTy x) values ret }
-| x = tyApp
-    { x }
+  | param = typeExprProtected Arrow ret = typeExpr
+      { ParseTree.Fun (param, [], ret) }
+  | param = typeExprProtected LArrowEff eff = separated_list(Pipe, effectName) RArrowEff ret = typeExpr
+      { ParseTree.Fun (param, eff, ret) }
+  | Forall values = nonempty_list(kind_and_name) Comma ret = typeExpr
+      { param_ty_sugar (fun x -> ParseTree.Forall x) values ret }
+  | Lambda values = nonempty_list(kind_and_name) Comma ret = typeExpr
+      { param_ty_sugar (fun x -> ParseTree.AbsOnTy x) values ret }
+  | x = tyApp
+      { x }
 
 typeExprClosed:
-| name = upperName
-    { ParseTree.Ty (Ident.Type.of_list name) }
+  | name = upperName
+      { ParseTree.Ty (Ident.Type.of_list name) }
 
 typeExpr:
   | x = typeExprUnclosed { x }
@@ -260,82 +250,86 @@ exn_pattern_arg:
   | name = LowerName { Ident.Name.of_list [name] }
 
 variant:
-| name = UpperName Colon ty = typeExpr
-    { ParseTree.Variant
-        (get_loc $startpos $endpos, Ident.Name.of_list [name], ty)
-    }
+  | name = UpperName Colon ty = typeExpr
+      { ParseTree.Variant
+          (get_loc $startpos $endpos, Ident.Name.of_list [name], ty)
+      }
 
 kindopt:
-| { Kinds.Star }
-| Colon k = kind { k }
+  | { Kinds.Star }
+  | Colon k = kind { k }
 
 kind_and_name:
-| name = UpperName
-    { (Ident.Type.of_list [name], Kinds.Star) }
-| LParen name = UpperName Colon k = kind RParen
-    { (Ident.Type.of_list [name], k) }
+  | name = UpperName
+      { (Ident.Type.of_list [name], Kinds.Star) }
+  | LParen name = UpperName Colon k = kind RParen
+      { (Ident.Type.of_list [name], k) }
 
 pattern:
-| p = pat Arrow t = term
-    { ((get_loc $startpos $endpos(p), p), (get_loc $startpos(t) $endpos(t), t)) }
+  | p = pat Arrow t = term
+      { ((get_loc $startpos $endpos(p), p), (get_loc $startpos(t) $endpos(t), t)) }
 
 pat:
-| name = LowerName
-    { ParseTree.Any (Ident.Name.of_list [name]) }
-| name = upperName args = list(pat_arg)
-    { ParseTree.TyConstr (Ident.Name.of_list name, args) }
+  | name = LowerName
+      { ParseTree.Any (Ident.Name.of_list [name]) }
+  | name = upperName args = list(pat_arg)
+      { ParseTree.TyConstr (Ident.Name.of_list name, args) }
 
 pat_arg:
-| name = LowerName
-    { ParseTree.PVal (ParseTree.Any (Ident.Name.of_list [name])) }
-| name = upperName
-    { ParseTree.PVal (ParseTree.TyConstr (Ident.Name.of_list name, [])) }
-| LParen p = pat RParen
-    { ParseTree.PVal p }
-| LBracket ty = typeExpr RBracket
-    { ParseTree.PTy ty }
+  | name = LowerName
+      { ParseTree.PVal (ParseTree.Any (Ident.Name.of_list [name])) }
+  | name = upperName
+      { ParseTree.PVal (ParseTree.TyConstr (Ident.Name.of_list name, [])) }
+  | LParen p = pat RParen
+      { ParseTree.PVal p }
+  | LBracket ty = typeExpr RBracket
+      { ParseTree.PTy ty }
 
 
 (********* Interface *********)
 
-mainInterface:
-| x = entry(bodyInterface)
-    { x }
-
 bodyInterface:
-| Let name = LowerName Colon ty = typeExpr xs = bodyInterface
-    { Interface.Val
-        (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty)
-      :: xs
-    }
-| Type name = UpperName k = kindopt xs = bodyInterface
-    { Interface.AbstractType
-        (get_loc $startpos $endpos(name), (Ident.Type.of_list [name], k))
-      :: xs
-    }
-| datatype = datatype xs = bodyInterface
-    { Interface.Datatype datatype :: xs }
-| typeAlias = typeAlias xs = bodyInterface
-    { Interface.TypeAlias typeAlias :: xs }
-| Exception name = UpperName args = exceptionArgs xs = bodyInterface
-    { Interface.Exception
-        (get_loc $startpos $endpos(name), Ident.Name.of_list [name], args)
-      :: xs
-    }
-| EOF
-    { [] }
+  | Let name = LowerName Colon ty = typeExpr xs = bodyInterface
+      { Interface.Val
+          (get_loc $startpos $endpos(ty), Ident.Name.of_list [name], ty)
+        :: xs
+      }
+  | Type name = UpperName k = kindopt xs = bodyInterface
+      { Interface.AbstractType
+          (get_loc $startpos $endpos(name), (Ident.Type.of_list [name], k))
+        :: xs
+      }
+  | datatype = datatype xs = bodyInterface
+      { Interface.Datatype datatype :: xs }
+  | typeAlias = typeAlias xs = bodyInterface
+      { Interface.TypeAlias typeAlias :: xs }
+  | Exception name = UpperName args = exceptionArgs xs = bodyInterface
+      { Interface.Exception
+          (get_loc $startpos $endpos(name), Ident.Name.of_list [name], args)
+        :: xs
+      }
+  | EOF
+      { [] }
+
+
+(********* Module utils *********)
+
+import:
+  | Import modul = module_name
+      { modul }
+
+module_name:
+  | name = upperName
+      { Ident.Module.of_list name }
 
 
 (********* Protected rules ***********)
 
-termProtected:
-  | x = protect(termUnclosed, termClosed) { x }
+termProtected: protect(termUnclosed, termClosed) { $1 }
 
-typeExprProtected:
-  | x = protect(typeExprUnclosed, typeExprClosed) { x }
+typeExprProtected: protect(typeExprUnclosed, typeExprClosed) { $1 }
 
-kindProtected:
-  | x = protect(kindUnclosed, kindClosed) { x }
+kindProtected: protect(kindUnclosed, kindClosed) { $1 }
 
 
 (********* Functions ***********)
@@ -343,3 +337,7 @@ kindProtected:
 protect(Unclosed, Closed):
   | LParen x = Unclosed RParen { x }
   | x = Closed { x }
+
+entry(body):
+  | imports = list(import) body = body
+      { (imports, body) }
