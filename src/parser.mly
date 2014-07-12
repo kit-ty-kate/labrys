@@ -76,11 +76,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token LBracket RBracket
 %token EOF
 
-%left Lambda Comma Forall Match Try Let In Fail
-%right Arrow LArrowEff RArrowEff
-%nonassoc LowerName UpperName LParen LBracket
-%nonassoc app tapp
-
 %start main
 %type <(ParseTree.imports * ParseTree.top list)> main
 
@@ -152,10 +147,8 @@ typeAlias:
 termUnclosed:
   | Lambda args = nonempty_list(arg) Arrow term = term
       { let_lambda_sugar term args }
-  | term1 = term term2 = term %prec app
-      { ParseTree.App (get_loc $startpos $endpos(term2), term1, term2) }
-  | term1 = term LBracket ty = typeExpr RBracket
-      { ParseTree.TApp (get_loc $startpos $endpos, term1, ty) }
+  | x = app
+      { x }
   | Let name = LowerName args = list(arg) Equal t = term In xs = term
       { let t = let_lambda_sugar t args in
         ParseTree.Let (Ident.Name.of_list [name], t, xs)
@@ -179,7 +172,14 @@ termClosed:
 term:
   | x = termUnclosed { x }
   | x = termClosed { x }
-  | LParen x = term RParen { x }
+
+app:
+  | f = termProtected LBracket ty = typeExpr RBracket
+  | f = app LBracket ty = typeExpr RBracket
+      { ParseTree.TApp (get_loc $startpos $endpos, f, ty) }
+  | f = termProtected x = termProtected
+  | f = app x = termProtected
+      { ParseTree.App (get_loc $startpos $endpos, f, x) }
 
 arg:
 | LParen name = LowerName Colon ty = typeExpr RParen
@@ -201,16 +201,16 @@ upperName:
     { m :: xs }
 
 typeExprUnclosed:
-| param = typeExpr Arrow ret = typeExpr
+| param = typeExprProtected Arrow ret = typeExpr
     { ParseTree.Fun (param, [], ret) }
-| param = typeExpr LArrowEff eff = separated_list(Pipe, effectName) RArrowEff ret = typeExpr
+| param = typeExprProtected LArrowEff eff = separated_list(Pipe, effectName) RArrowEff ret = typeExpr
     { ParseTree.Fun (param, eff, ret) }
 | Forall values = nonempty_list(kind_and_name) Comma ret = typeExpr
     { param_ty_sugar (fun x -> ParseTree.Forall x) values ret }
 | Lambda values = nonempty_list(kind_and_name) Comma ret = typeExpr
     { param_ty_sugar (fun x -> ParseTree.AbsOnTy x) values ret }
-| f = typeExpr x = typeExpr %prec tapp
-    { ParseTree.AppOnTy (f, x) }
+| x = tyApp
+    { x }
 
 typeExprClosed:
 | name = upperName
@@ -219,15 +219,22 @@ typeExprClosed:
 typeExpr:
   | x = typeExprUnclosed { x }
   | x = typeExprClosed { x }
-  | LParen x = typeExpr RParen { x }
+
+tyApp:
+  | f = typeExprProtected x = typeExprProtected
+  | f = tyApp x = typeExprProtected
+      { ParseTree.AppOnTy (f, x) }
+
+kindUnclosed:
+  | k1 = kindProtected Arrow k2 = kind
+      { Kinds.KFun (k1, k2) }
+
+kindClosed:
+  | Star { Kinds.Star }
 
 kind:
-| Star
-    { Kinds.Star }
-| k1 = kind Arrow k2 = kind
-    { Kinds.KFun (k1, k2) }
-| LParen k = kind RParen
-    { k }
+  | x = kindUnclosed { x }
+  | x = kindClosed { x }
 
 effectName:
   | name = upperName
@@ -322,9 +329,17 @@ bodyInterface:
 (********* Protected rules ***********)
 
 termProtected:
-  | LParen x = termUnclosed RParen { x }
-  | x = termClosed { x }
+  | x = protect(termUnclosed, termClosed) { x }
 
 typeExprProtected:
-  | LParen x = typeExprUnclosed RParen { x }
-  | x = typeExprClosed { x }
+  | x = protect(typeExprUnclosed, typeExprClosed) { x }
+
+kindProtected:
+  | x = protect(kindUnclosed, kindClosed) { x }
+
+
+(********* Functions ***********)
+
+protect(Unclosed, Closed):
+  | LParen x = Unclosed RParen { x }
+  | x = Closed { x }
