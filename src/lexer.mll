@@ -58,6 +58,7 @@ rule main = parse
   | "exception" { Parser.Exception }
   | "begin" blank* '\n'
       { let buffer = Buffer.create 4096 in
+        Lexing.new_line lexbuf;
         get_binding buffer lexbuf;
         Parser.Binding (Buffer.contents buffer)
       }
@@ -68,7 +69,8 @@ rule main = parse
   | _ { raise Error }
 
 and get_binding buffer = parse
-  | '\n' blank* "end" blank* '\n' { () }
+  | '\n' blank* "end" blank* '\n'
+      { Lexing.new_line lexbuf; Lexing.new_line lexbuf }
   | '\n' as lxm { Buffer.add_char buffer lxm;
                   Lexing.new_line lexbuf;
                   get_binding buffer lexbuf
