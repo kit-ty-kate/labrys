@@ -45,10 +45,13 @@ let compile gamma =
         let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
         let gammaT = GammaMap.Types.add ~loc name (Types.Abstract k) gammaT in
         let gamma =
-          let aux ~datatype gamma i (ParseTree.Variant (_loc, name, ty)) =
+          let aux ~datatype gamma i (ParseTree.Variant (loc, name, ty)) =
             let ty = Types.of_parse_tree gammaT ty in
-            let gamma = Gamma.add_value name ty gamma in
-            Gamma.add_constr datatype name (ty, i) gamma
+            if Types.check_if_returns_type ~datatype ty then
+              let gamma = Gamma.add_value name ty gamma in
+              Gamma.add_constr datatype name (ty, i) gamma
+            else
+              Types.Error.fail_return_type ~loc name
           in
           List.fold_lefti (aux ~datatype:name) gamma variants
         in

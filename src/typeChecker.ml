@@ -153,10 +153,7 @@ let transform_variants ~datatype gamma =
           let gamma = Gamma.add_constr datatype name (ty, index) gamma in
           (Variant (name, Types.size ty) :: xs, gamma)
         else
-          Error.fail
-            ~loc
-            "The variant '%s' doesn't return its type"
-            (Ident.Name.to_string name)
+          Types.Error.fail_return_type ~loc name
     | [] ->
         ([], gamma)
   in

@@ -52,6 +52,8 @@ val head : t -> name
 
 module Error : sig
   val fail : loc:Location.t -> has:t -> expected:t -> 'a
+
+  val fail_return_type : loc:Location.t -> Ident.Name.t -> 'a
 end
 
 val apply :

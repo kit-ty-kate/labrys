@@ -209,6 +209,12 @@ module Error = struct
       "Error: This expression has type '%s'. \
        This is not a type abstraction; it cannot be applied by a value."
       (to_string ty)
+
+  let fail_return_type ~loc name =
+    Error.fail
+      ~loc
+      "The variant '%s' doesn't return its type"
+      (Ident.Name.to_string name)
 end
 
 let apply ~loc = function
