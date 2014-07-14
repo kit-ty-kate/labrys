@@ -26,48 +26,49 @@ type loc = Location.t
 
 type t_value = (t_name * Kinds.t)
 
-type ty =
+type ty' =
   | Fun of (ty * name list * ty)
   | Ty of t_name
   | Forall of (t_value * ty)
   | AbsOnTy of (t_value * ty)
   | AppOnTy of (ty * ty)
 
+and ty = (loc * ty')
+
 type value = (name * ty)
 
 type pattern =
-  | TyConstr of (name * pattern_arg list)
+  | TyConstr of (loc * name * pattern_arg list)
   | Any of name
 
 and pattern_arg =
   | PVal of pattern
   | PTy of ty
 
-type t =
-  | Abs of (loc * value * t)
-  | TAbs of (loc * t_value * t)
-  | App of (loc * t * t)
-  | TApp of (loc * t * ty)
-  | Val of (loc * name)
-  | PatternMatching of (loc * t * ((loc * pattern) * (loc * t)) list)
+type t' =
+  | Abs of (value * t)
+  | TAbs of (t_value * t)
+  | App of (t * t)
+  | TApp of (t * ty)
+  | Val of name
+  | PatternMatching of (t * (pattern * t) list)
   | Let of (name * t * t)
-  | LetRec of (loc * name * ty * t * t)
-  | Fail of (loc * ty * (name * t list))
-  | Try of (loc * t * ((name * name list) * t) list)
+  | LetRec of (name * ty * t * t)
+  | Fail of (ty * (name * t list))
+  | Try of (t * ((name * name list) * t) list)
 
-type variant =
-  | Variant of (loc * name * ty)
+and t = (loc * t')
 
-type datatype = (loc * t_name * Kinds.t * variant list)
+type variant = Variant of (loc * name * ty)
 
-type typeAlias = (loc * t_name * ty)
-
-type top =
+type top' =
   | Value of (name * t)
-  | RecValue of (loc * name * ty * t)
-  | Type of typeAlias
-  | Binding of (loc * name * ty * string)
-  | Datatype of datatype
-  | Exception of (loc * name * ty list)
+  | RecValue of (name * ty * t)
+  | Type of (t_name * ty)
+  | Binding of (name * ty * string)
+  | Datatype of (t_name * Kinds.t * variant list)
+  | Exception of (name * ty list)
+
+and top = (loc * top')
 
 type imports = module_name list

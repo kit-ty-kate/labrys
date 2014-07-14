@@ -22,43 +22,45 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type t =
-  | Val of (Location.t * ParseTree.name * ParseTree.ty)
-  | AbstractType of (Location.t * ParseTree.t_value)
-  | Datatype of ParseTree.datatype
-  | TypeAlias of (Location.t * ParseTree.t_name * ParseTree.ty)
-  | Exception of (Location.t * Ident.Name.t * ParseTree.ty list)
+type t' =
+  | Val of (ParseTree.name * ParseTree.ty)
+  | AbstractType of ParseTree.t_value
+  | Datatype of (ParseTree.t_name * Kinds.t * ParseTree.variant list)
+  | TypeAlias of (ParseTree.t_name * ParseTree.ty)
+  | Exception of (Ident.Name.t * ParseTree.ty list)
+
+type t = (ParseTree.loc * t')
 
 let compile gamma =
   let rec compile gammaT gamma = function
-    | Val (loc, name, ty) :: xs ->
-        let ty = Types.of_parse_tree ~loc gammaT ty in
+    | (_loc, Val (name, ty)) :: xs ->
+        let ty = Types.of_parse_tree gammaT ty in
         let gamma = Gamma.add_value name ty gamma in
         compile gammaT gamma xs
-    | AbstractType (loc, (name, k)) :: xs ->
+    | (loc, AbstractType (name, k)) :: xs ->
         let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
         let gammaT = GammaMap.Types.add ~loc name (Types.Abstract k) gammaT in
         compile gammaT gamma xs
-    | Datatype (loc, name, k, variants) :: xs ->
+    | (loc, Datatype (name, k, variants)) :: xs ->
         let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
         let gammaT = GammaMap.Types.add ~loc name (Types.Abstract k) gammaT in
         let gamma =
-          let aux ~datatype gamma i (ParseTree.Variant (loc, name, ty)) =
-            let ty = Types.of_parse_tree ~loc gammaT ty in
+          let aux ~datatype gamma i (ParseTree.Variant (_loc, name, ty)) =
+            let ty = Types.of_parse_tree gammaT ty in
             let gamma = Gamma.add_value name ty gamma in
             Gamma.add_constr datatype name (ty, i) gamma
           in
           List.fold_lefti (aux ~datatype:name) gamma variants
         in
         compile gammaT gamma xs
-    | TypeAlias (loc, name, ty) :: xs ->
-        let ty = Types.of_parse_tree_kind ~loc gammaT ty in
+    | (loc, TypeAlias (name, ty)) :: xs ->
+        let ty = Types.of_parse_tree_kind gammaT ty in
         let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
         let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
         let gammaT = GammaMap.Types.add ~loc name (Types.Alias ty) gammaT in
         compile gammaT gamma xs
-    | Exception (loc, name, args) :: xs ->
-        let args = List.map (Types.of_parse_tree ~loc gammaT) args in
+    | (loc, Exception (name, args)) :: xs ->
+        let args = List.map (Types.of_parse_tree gammaT) args in
         let gamma = Gamma.add_exception ~loc name args gamma in
         compile gammaT gamma xs
     | [] ->

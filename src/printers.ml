@@ -45,20 +45,20 @@ module ParseTree = struct
   let dump_eff x = String.concat " | " (List.map dump_name x)
 
   let rec dump_ty = function
-    | Fun (param, eff, res) ->
+    | (_, Fun (param, eff, res)) ->
         fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
-    | Ty name -> dump_t_name name
-    | Forall ((name, k), res) ->
+    | (_, Ty name) -> dump_t_name name
+    | (_, Forall ((name, k), res)) ->
         fmt "(forall %s : %s, %s)" (dump_t_name name) (dump_k k) (dump_ty res)
-    | AbsOnTy ((name, k), res) ->
+    | (_, AbsOnTy ((name, k), res)) ->
         fmt "(λ (%s : %s) -> %s)" (dump_t_name name) (dump_k k) (dump_ty res)
-    | AppOnTy (f, x) ->
+    | (_, AppOnTy (f, x)) ->
         fmt "(%s [%s])" (dump_ty f) (dump_ty x)
 
   let rec dump_pattern = function
-    | TyConstr (name, []) ->
+    | TyConstr (_, name, []) ->
         dump_name name
-    | TyConstr (name, args) ->
+    | TyConstr (_, name, args) ->
         fmt
           "(%s %s)"
           (dump_name name)
@@ -71,28 +71,28 @@ module ParseTree = struct
     | PTy ty -> fmt "[%s]" (dump_ty ty)
 
   let rec dump_t = function
-    | Abs (_, (name, ty), t) ->
+    | (_, Abs ((name, ty), t)) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string (fmt "λ (%s : %s) ->" (dump_name name) (dump_ty ty))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
-    | TAbs (_, (name, k), t) ->
+    | (_, TAbs ((name, k), t)) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string (fmt "λ (%s : %s) ->" (dump_t_name name) (dump_k k))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
-    | App (_, f, x) ->
+    | (_, App (f, x)) ->
         PPrint.group
           (PPrint.lparen
            ^^ dump_t f
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t x)
            ^^ PPrint.rparen
           )
-    | TApp (_, f, ty) ->
+    | (_, TApp (f, ty)) ->
         PPrint.group
           (PPrint.lparen
            ^^ dump_t f
@@ -100,9 +100,9 @@ module ParseTree = struct
            ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
            ^^ PPrint.rparen
           )
-    | Val (_, name) ->
+    | (_, Val name) ->
         PPrint.string (dump_name name)
-    | PatternMatching (_, t, cases) ->
+    | (_, PatternMatching (t, cases)) ->
         PPrint.group
           (PPrint.string "match"
            ^^ PPrint.break 1
@@ -113,7 +113,7 @@ module ParseTree = struct
         ^^ dump_cases cases
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Let (name, t, xs) ->
+    | (_, Let (name, t, xs)) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string (fmt "let %s =" (dump_name name))
@@ -124,7 +124,7 @@ module ParseTree = struct
            ^^ dump_t xs
            ^^ PPrint.rparen
           )
-    | LetRec (_, name, ty, t, xs) ->
+    | (_, LetRec (name, ty, t, xs)) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string
@@ -136,7 +136,7 @@ module ParseTree = struct
            ^^ dump_t xs
            ^^ PPrint.rparen
           )
-    | Fail (_, ty, (name, args)) ->
+    | (_, Fail (ty, (name, args))) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string "fail"
@@ -147,7 +147,7 @@ module ParseTree = struct
            ^^ dump_exn_args args
            ^^ PPrint.rparen
           )
-    | Try (_, t, branches) ->
+    | (_, Try (t, branches)) ->
         PPrint.group
           (PPrint.string "try"
            ^^ PPrint.break 1
@@ -160,7 +160,7 @@ module ParseTree = struct
         ^^ PPrint.string "end"
 
   and dump_cases cases =
-    let aux doc ((_, pattern), (_, t)) =
+    let aux doc (pattern, t) =
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
@@ -196,26 +196,26 @@ module ParseTree = struct
     List.fold_left aux PPrint.empty variants
 
   let dump = function
-    | Value (name, t) ->
+    | (_, Value (name, t)) ->
         PPrint.group
           (PPrint.string (fmt "let %s =" (dump_name name))
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
-    | RecValue (_, name, ty, t) ->
+    | (_, RecValue (name, ty, t)) ->
         PPrint.group
           (PPrint.string (fmt "let rec %s : %s =" (dump_name name) (dump_ty ty))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
-    | Type (_, name, ty) ->
+    | (_, Type (name, ty)) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
-    | Binding (_, name, ty, content) ->
+    | (_, Binding (name, ty, content)) ->
         PPrint.string (fmt "let %s : %s = begin" (dump_name name) (dump_ty ty))
         ^^ PPrint.string content
         ^^ PPrint.string "end"
-    | Datatype (_, name, k, variants) ->
+    | (_, Datatype (name, k, variants)) ->
         PPrint.string (fmt "type %s : %s =" (dump_t_name name) (dump_k k))
         ^^ PPrint.nest 2 (dump_variants variants)
-    | Exception (_, name, args) ->
+    | (_, Exception (name, args)) ->
         PPrint.string (fmt "exception %s %s" (dump_name name) (String.concat " " (List.map dump_ty args)))
 
   let dump top =

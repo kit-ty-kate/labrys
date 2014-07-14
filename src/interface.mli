@@ -19,11 +19,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t =
-  | Val of (Location.t * ParseTree.name * ParseTree.ty)
-  | AbstractType of (Location.t * ParseTree.t_value)
-  | Datatype of ParseTree.datatype
-  | TypeAlias of (Location.t * ParseTree.t_name * ParseTree.ty)
-  | Exception of (Location.t * Ident.Name.t * ParseTree.ty list)
+type t' =
+  | Val of (ParseTree.name * ParseTree.ty)
+  | AbstractType of ParseTree.t_value
+  | Datatype of (ParseTree.t_name * Kinds.t * ParseTree.variant list)
+  | TypeAlias of (ParseTree.t_name * ParseTree.ty)
+  | Exception of (Ident.Name.t * ParseTree.ty list)
+
+type t = (ParseTree.loc * t')
 
 val compile : Gamma.t -> t list -> Gamma.t

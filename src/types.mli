@@ -28,13 +28,11 @@ type visibility =
   | Alias of (t * Kinds.t)
 
 val of_parse_tree_kind :
-  loc:Location.t ->
   visibility GammaMap.Types.t ->
   ParseTree.ty ->
   (t * Kinds.t)
 
 val of_parse_tree :
-  loc:Location.t ->
   visibility GammaMap.Types.t ->
   ParseTree.ty ->
   t

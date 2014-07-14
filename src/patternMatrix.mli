@@ -38,7 +38,6 @@ type pattern = private
 type matrix = (pattern list * code_index) list
 
 val create :
-  loc:Location.t ->
   Gamma.t ->
   Types.t ->
   ParseTree.pattern ->

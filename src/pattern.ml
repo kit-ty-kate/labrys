@@ -119,14 +119,15 @@ let create ~loc f gamma ty patterns =
     | x::xs -> (x, xs)
   in
   let (initial_pattern, initial_ty, effect) =
-    let ((loc, head_p), (_, head_t)) = head in
-    let (pattern, gamma) = Matrix.create ~loc gamma ty head_p in
+    let (head_p, head_t) = head in
+    let (pattern, gamma) = Matrix.create gamma ty head_p in
     let (term, ty_term, effect) = f gamma head_t in
     ([(pattern, term)], ty_term, effect)
   in
   let (patterns, effect) =
-    let f (patterns, effects) ((loc_p, p), (loc_t, t)) =
-      let (pattern, gamma) = Matrix.create ~loc:loc_p gamma ty p in
+    let f (patterns, effects) (p, t) =
+      let (pattern, gamma) = Matrix.create gamma ty p in
+      let (loc_t, _) = t in
       let (t, has, effect) = f gamma t in
       if not (Types.equal has initial_ty) then
         Types.Error.fail ~loc:loc_t ~has ~expected:initial_ty;

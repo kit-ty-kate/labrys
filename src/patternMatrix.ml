@@ -42,12 +42,12 @@ type pattern =
 
 type matrix = (pattern list * code_index) list
 
-let create ~loc =
+let create =
   let rec aux gamma ty' = function
     | ParseTree.Any name ->
         let gamma = Gamma.add_value name ty' gamma in
         (MAny (name, Types.head ty'), gamma)
-    | ParseTree.TyConstr (name, args) ->
+    | ParseTree.TyConstr (loc, name, args) ->
         let head_ty = Types.head ty' in
         let constructors =
           GammaMap.Constr.find head_ty gamma.Gamma.constructors
@@ -72,7 +72,7 @@ let create ~loc =
                   (arg :: args, res_ty, gamma)
               | ParseTree.PTy pty ->
                   let (pty, kx) =
-                    Types.of_parse_tree_kind ~loc gamma.Gamma.types pty
+                    Types.of_parse_tree_kind gamma.Gamma.types pty
                   in
                   let (_, res) =
                     Types.apply_ty ~loc ~ty_x:pty ~kind_x:kx ty

@@ -38,5 +38,5 @@ val create :
   (Gamma.t -> ParseTree.t -> ('a * Types.t * Effects.t)) ->
   Gamma.t ->
   Types.t ->
-  ((Location.t * ParseTree.pattern) * (Location.t * ParseTree.t)) list ->
+  (ParseTree.pattern * ParseTree.t) list ->
   (t * ((var * name) list * 'a) list * Types.t * Effects.t)

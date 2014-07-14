@@ -75,18 +75,18 @@ let rec replace ~from ~ty =
   in
   aux
 
-let rec of_parse_tree_kind ~loc gammaT = function
-  | ParseTree.Fun (x, eff, y) ->
-      let (x, k1) = of_parse_tree_kind ~loc gammaT x in
+let rec of_parse_tree_kind gammaT = function
+  | (loc, ParseTree.Fun (x, eff, y)) ->
+      let (x, k1) = of_parse_tree_kind gammaT x in
       let eff =
         let aux acc ty = Effects.add ty acc in
         List.fold_left aux Effects.empty eff
       in
-      let (y, k2) = of_parse_tree_kind ~loc gammaT y in
+      let (y, k2) = of_parse_tree_kind gammaT y in
       if Kinds.not_star k1 || Kinds.not_star k2 then
         fail_not_star ~loc "->";
       (Fun (x, eff, y), Kinds.Star)
-  | ParseTree.Ty name ->
+  | (loc, ParseTree.Ty name) ->
       begin match GammaMap.Types.find name gammaT with
       | Some (Alias (ty, k)) -> (ty, k)
       | Some (Abstract k) -> (Ty name, k)
@@ -96,26 +96,26 @@ let rec of_parse_tree_kind ~loc gammaT = function
             "The type '%s' was not found in Γ"
             (Ident.Type.to_string name)
       end
-  | ParseTree.Forall ((name, k), ret) ->
+  | (loc, ParseTree.Forall ((name, k), ret)) ->
       let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
-      let (ret, kx) = of_parse_tree_kind ~loc gammaT ret in
+      let (ret, kx) = of_parse_tree_kind gammaT ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
-  | ParseTree.AbsOnTy ((name, k), ret) ->
+  | (loc, ParseTree.AbsOnTy ((name, k), ret)) ->
       let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
-      let (ret, kret) = of_parse_tree_kind ~loc gammaT ret in
+      let (ret, kret) = of_parse_tree_kind gammaT ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
-  | ParseTree.AppOnTy (ParseTree.AbsOnTy ((name, k), t), x) ->
-      let (x, kx) = of_parse_tree_kind ~loc gammaT x in
+  | (loc, ParseTree.AppOnTy ((_, ParseTree.AbsOnTy ((name, k), t)), x)) ->
+      let (x, kx) = of_parse_tree_kind gammaT x in
       if not (Kinds.equal k kx) then
         kind_missmatch ~loc ~has:kx ~on:k;
       let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
-      let (t, kt) = of_parse_tree_kind ~loc gammaT t in
+      let (t, kt) = of_parse_tree_kind gammaT t in
       (replace ~from:name ~ty:x t, kt)
-  | ParseTree.AppOnTy (f, x) ->
-      let (f, kf) = of_parse_tree_kind ~loc gammaT f in
-      let (x, kx) = of_parse_tree_kind ~loc gammaT x in
+  | (loc, ParseTree.AppOnTy (f, x)) ->
+      let (f, kf) = of_parse_tree_kind gammaT f in
+      let (x, kx) = of_parse_tree_kind gammaT x in
       let k =
         match kf with
         | Kinds.KFun (p, r) when Kinds.equal p kx -> r
@@ -124,8 +124,9 @@ let rec of_parse_tree_kind ~loc gammaT = function
       in
       (AppOnTy (f, x), k)
 
-let of_parse_tree ~loc gammaT ty =
-  let (ty, k) = of_parse_tree_kind ~loc gammaT ty in
+let of_parse_tree gammaT ty =
+  let (loc, _) = ty in
+  let (ty, k) = of_parse_tree_kind gammaT ty in
   if Kinds.not_star k then
     Error.fail ~loc "Values cannot be of kind /= '*'";
   ty
