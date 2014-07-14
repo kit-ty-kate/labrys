@@ -74,12 +74,8 @@ mainInterface: entry(bodyInterface) { $1 }
 (********* Implementation *********)
 
 body:
-  | Let name = LowerName t = let_sugar
-      { ParseTree.Value (Ident.Name.of_list [name], t) }
-  | Let Rec name = LowerName t = let_rec_sugar
-      { let (ty, t) = t in
-        ParseTree.RecValue (Ident.Name.of_list [name], ty, t)
-      }
+  | x = let_case
+      { ParseTree.Value x }
   | typeAlias = typeAlias
       { ParseTree.Type typeAlias }
   | Let name = LowerName Colon ty = typeExpr Equal binding = Binding
@@ -94,6 +90,12 @@ exceptionArgs:
       { x :: xs }
   | { [] }
 
+let_case:
+  | Let Rec name = LowerName t = let_sugar
+      { (Ident.Name.of_list [name], ParseTree.Rec, t) }
+  | Let name = LowerName t = let_sugar
+      { (Ident.Name.of_list [name], ParseTree.NonRec, t) }
+
 datatype:
   | Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
       { (Ident.Type.of_list [name], k, variants) }
@@ -107,12 +109,8 @@ termUnclosed:
       { x }
   | x = app
       { x }
-  | Let name = LowerName t = let_sugar In xs = term
-      { ParseTree.Let (Ident.Name.of_list [name], t, xs) }
-  | Let Rec name = LowerName t = let_rec_sugar In xs = term
-      { let (ty, t) = t in
-        ParseTree.LetRec (Ident.Name.of_list [name], ty, t, xs)
-      }
+  | x = let_case In xs = term
+      { ParseTree.Let (x, xs) }
   | Fail LBracket ty = typeExpr RBracket exn = effectValue
       { ParseTree.Fail (ty, exn) }
 
@@ -290,28 +288,30 @@ forall_ty_sugar:
       { ParseTree.Forall (v, (get_loc $startpos(xs) $endpos(xs), xs)) }
 
 let_sugar:
-  | Equal t = term
-      { t }
-  | LParen name = LowerName Colon ty = typeExpr RParen xs = let_sugar
-      { let pos = get_loc $startpos $endpos in
-        (pos, ParseTree.Abs ((Ident.Name.of_list [name], ty), xs))
-      }
-  | ty = kind_and_name xs = let_sugar
-      { (get_loc $startpos $endpos, ParseTree.TAbs (ty, xs)) }
-
-let_rec_sugar:
   | Colon ty = typeExpr Equal t = term
-      { (ty, t) }
-  | arg = arg xs = let_rec_sugar
+      { (Some ty, t) }
+  | Equal t = term
+      { (None, t) }
+  | arg = arg xs = let_sugar
       { let (ty_xs, xs) = xs in
-        let ty_xs = ParseTree.Fun (snd arg, [], ty_xs) in
-        let ty_xs = (get_loc $startpos(arg) $endpos(arg), ty_xs) in
+        let ty_xs =
+          let aux ty_xs =
+            let ty_xs = ParseTree.Fun (snd arg, [], ty_xs) in
+            (get_loc $startpos(arg) $endpos(arg), ty_xs)
+          in
+          BatOption.map aux ty_xs
+        in
         (ty_xs, (get_loc $startpos $endpos, ParseTree.Abs (arg, xs)))
       }
-  | ty = kind_and_name xs = let_rec_sugar
+  | ty = kind_and_name xs = let_sugar
       { let (ty_xs, xs) = xs in
-        let ty_xs = ParseTree.Forall (ty, ty_xs) in
-        let ty_xs = (get_loc $startpos(ty) $endpos(ty), ty_xs) in
+        let ty_xs =
+          let aux ty_xs =
+            let ty_xs = ParseTree.Forall (ty, ty_xs) in
+            (get_loc $startpos(ty) $endpos(ty), ty_xs)
+          in
+          BatOption.map aux ty_xs
+        in
         (ty_xs, (get_loc $startpos $endpos, ParseTree.TAbs (ty, xs)))
       }
 

@@ -26,6 +26,10 @@ type loc = Location.t
 
 type t_value = (t_name * Kinds.t)
 
+type is_rec =
+  | Rec
+  | NonRec
+
 type ty' =
   | Fun of (ty * name list * ty)
   | Ty of t_name
@@ -52,8 +56,7 @@ type t' =
   | TApp of (t * ty)
   | Val of name
   | PatternMatching of (t * (pattern * t) list)
-  | Let of (name * t * t)
-  | LetRec of (name * ty * t * t)
+  | Let of ((name * is_rec * (ty option * t)) * t)
   | Fail of (ty * (name * t list))
   | Try of (t * ((name * name list) * t) list)
 
@@ -62,8 +65,7 @@ and t = (loc * t')
 type variant = Variant of (loc * name * ty)
 
 type top' =
-  | Value of (name * t)
-  | RecValue of (name * ty * t)
+  | Value of (name * is_rec * (ty option * t))
   | Type of (t_name * ty)
   | Binding of (name * ty * string)
   | Datatype of (t_name * Kinds.t * variant list)

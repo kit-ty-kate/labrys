@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: bedab533fcc7f9102f323b9aa1e8ce79)
+# DO NOT EDIT (digest: a4d75385351059db8a9dfcab9b488711)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -15,9 +15,9 @@
 "_darcs": not_hygienic
 # Executable cervoise
 <src/main.{native,byte}>: oasis_executable_cervoise_byte
-<src/*.ml{,i}>: oasis_executable_cervoise_byte
+<src/*.ml{,i,y}>: oasis_executable_cervoise_byte
 <src/main.{native,byte}>: oasis_executable_cervoise_native
-<src/*.ml{,i}>: oasis_executable_cervoise_native
+<src/*.ml{,i,y}>: oasis_executable_cervoise_native
 <src/main.{native,byte}>: package(batteries)
 <src/main.{native,byte}>: package(cmdliner)
 <src/main.{native,byte}>: package(llvm)
@@ -30,25 +30,25 @@
 <src/main.{native,byte}>: package(monomorphic)
 <src/main.{native,byte}>: package(pprint)
 <src/main.{native,byte}>: package(unix)
-<src/*.ml{,i}>: package(batteries)
-<src/*.ml{,i}>: package(cmdliner)
-<src/*.ml{,i}>: package(llvm)
-<src/*.ml{,i}>: package(llvm.all_backends)
-<src/*.ml{,i}>: package(llvm.bitwriter)
-<src/*.ml{,i}>: package(llvm.irreader)
-<src/*.ml{,i}>: package(llvm.linker)
-<src/*.ml{,i}>: package(llvm.passmgr_builder)
-<src/*.ml{,i}>: package(llvm.target)
-<src/*.ml{,i}>: package(monomorphic)
-<src/*.ml{,i}>: package(pprint)
-<src/*.ml{,i}>: package(unix)
+<src/*.ml{,i,y}>: package(batteries)
+<src/*.ml{,i,y}>: package(cmdliner)
+<src/*.ml{,i,y}>: package(llvm)
+<src/*.ml{,i,y}>: package(llvm.all_backends)
+<src/*.ml{,i,y}>: package(llvm.bitwriter)
+<src/*.ml{,i,y}>: package(llvm.irreader)
+<src/*.ml{,i,y}>: package(llvm.linker)
+<src/*.ml{,i,y}>: package(llvm.passmgr_builder)
+<src/*.ml{,i,y}>: package(llvm.target)
+<src/*.ml{,i,y}>: package(monomorphic)
+<src/*.ml{,i,y}>: package(pprint)
+<src/*.ml{,i,y}>: package(unix)
 # Executable test
 <tests/tests.{native,byte}>: oasis_executable_test_byte
-<tests/*.ml{,i}>: oasis_executable_test_byte
+<tests/*.ml{,i,y}>: oasis_executable_test_byte
 <tests/tests.{native,byte}>: oasis_executable_test_native
-<tests/*.ml{,i}>: oasis_executable_test_native
+<tests/*.ml{,i,y}>: oasis_executable_test_native
 <tests/tests.{native,byte}>: package(oUnit)
-<tests/*.ml{,i}>: package(oUnit)
+<tests/*.ml{,i,y}>: package(oUnit)
 # OASIS_STOP
 "examples": -traverse
 "examples": not_hygienic

@@ -37,10 +37,24 @@ let rec well_formed_rec = function
   | (_, ParseTree.Val _)
   | (_, ParseTree.PatternMatching _)
   | (_, ParseTree.Let _)
-  | (_, ParseTree.LetRec _)
   | (_, ParseTree.Fail _)
   | (_, ParseTree.Try _) ->
       false
+
+let get_rec_ty ~loc = function
+  | Some ty ->
+      ty
+  | None ->
+      Error.fail ~loc "Recursive values must have explicit return type"
+
+let check_type_opt ~loc ~ty ~ty_t gamma =
+  match ty with
+  | Some ty ->
+      let ty = Types.of_parse_tree gamma.Gamma.types ty in
+      if not (Types.equal ty ty_t) then
+        Types.Error.fail ~loc ~has:ty_t ~expected:ty;
+  | None ->
+      ()
 
 let rec aux gamma = function
   | (_loc, ParseTree.Abs ((name, ty), t)) ->
@@ -85,12 +99,14 @@ let rec aux gamma = function
       in
       let effect = Effects.union effect1 effect2 in
       (PatternMatching (t, results, patterns), initial_ty, effect)
-  | (_loc, ParseTree.Let (name, t, xs)) ->
+  | (loc, ParseTree.Let ((name, ParseTree.NonRec, (ty, t)), xs)) ->
       let (t, ty_t, effect1) = aux gamma t in
+      check_type_opt ~loc ~ty ~ty_t gamma;
       let gamma = Gamma.add_value name ty_t gamma in
       let (xs, ty_xs, effect2) = aux gamma xs in
       (Let (name, t, xs), ty_xs, Effects.union effect1 effect2)
-  | (loc, ParseTree.LetRec (name, ty, t, xs)) when well_formed_rec t ->
+  | (loc, ParseTree.Let ((name, ParseTree.Rec, (ty, t)), xs)) when well_formed_rec t ->
+      let ty = get_rec_ty ~loc ty in
       let ty = Types.of_parse_tree gamma.Gamma.types ty in
       let gamma = Gamma.add_value name ty gamma in
       let (t, ty_t, effect1) = aux gamma t in
@@ -98,7 +114,7 @@ let rec aux gamma = function
         Types.Error.fail ~loc ~has:ty_t ~expected:ty;
       let (xs, ty_xs, effect2) = aux gamma xs in
       (LetRec (name, t, xs), ty_xs, Effects.union effect1 effect2)
-  | (loc, ParseTree.LetRec _) ->
+  | (loc, ParseTree.Let ((_, ParseTree.Rec, _), _)) ->
       fail_rec_val ~loc
   | (loc, ParseTree.Fail (ty, (exn, args))) ->
       let ty = Types.of_parse_tree gamma.Gamma.types ty in
@@ -165,12 +181,14 @@ let check_effects ~loc (t, ty, effects) =
   (t, ty)
 
 let rec from_parse_tree gamma = function
-  | (loc, ParseTree.Value (name, term)) :: xs ->
-      let (x, ty) = check_effects ~loc (aux gamma term) in
-      let gamma = Gamma.add_value name ty gamma in
+  | (loc, ParseTree.Value (name, ParseTree.NonRec, (ty, term))) :: xs ->
+      let (x, ty_t) = check_effects ~loc (aux gamma term) in
+      check_type_opt ~loc ~ty ~ty_t gamma;
+      let gamma = Gamma.add_value name ty_t gamma in
       let (xs, gamma) = from_parse_tree gamma xs in
       (Value (name, x) :: xs, gamma)
-  | (loc, ParseTree.RecValue (name, ty, term)) :: xs when well_formed_rec term ->
+  | (loc, ParseTree.Value (name, ParseTree.Rec, (ty, term))) :: xs when well_formed_rec term ->
+      let ty = get_rec_ty ~loc ty in
       let ty = Types.of_parse_tree gamma.Gamma.types ty in
       let gamma = Gamma.add_value name ty gamma in
       let (x, ty_x) = check_effects ~loc (aux gamma term) in
@@ -178,7 +196,7 @@ let rec from_parse_tree gamma = function
         Types.Error.fail ~loc ~has:ty_x ~expected:ty;
       let (xs, gamma) = from_parse_tree gamma xs in
       (RecValue (name, x) :: xs, gamma)
-  | (loc, ParseTree.RecValue _) :: _ ->
+  | (loc, ParseTree.Value (_, ParseTree.Rec, _)) :: _ ->
       fail_rec_val ~loc
   | (loc, ParseTree.Type (name, ty)) :: xs ->
       let ty = Types.of_parse_tree_kind gamma.Gamma.types ty in

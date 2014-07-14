@@ -55,6 +55,14 @@ module ParseTree = struct
     | (_, AppOnTy (f, x)) ->
         fmt "(%s [%s])" (dump_ty f) (dump_ty x)
 
+  let dump_ty_opt ty = match ty with
+    | Some ty -> dump_ty ty
+    | None -> "???"
+
+  let dump_rec is_rec = match is_rec with
+    | Rec -> " rec"
+    | NonRec -> ""
+
   let rec dump_pattern = function
     | TyConstr (_, name, []) ->
         dump_name name
@@ -113,22 +121,12 @@ module ParseTree = struct
         ^^ dump_cases cases
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | (_, Let (name, t, xs)) ->
+    | (_, Let ((name, is_rec, (ty, t)), xs)) ->
+        let ty = dump_ty_opt ty in
+        let is_rec = dump_rec is_rec in
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "let %s =" (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
-           ^^ PPrint.break 1
-           ^^ PPrint.string "in"
-           ^^ PPrint.break 1
-           ^^ dump_t xs
-           ^^ PPrint.rparen
-          )
-    | (_, LetRec (name, ty, t, xs)) ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ PPrint.string
-                (fmt "let rec %s : %s =" (dump_name name) (dump_ty ty))
+           ^^ PPrint.string (fmt "let%s %s : %s =" (dump_name name) is_rec ty)
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
@@ -196,15 +194,12 @@ module ParseTree = struct
     List.fold_left aux PPrint.empty variants
 
   let dump = function
-    | (_, Value (name, t)) ->
+    | (_, Value (name, is_rec, (ty, t))) ->
+        let ty = dump_ty_opt ty in
+        let is_rec = dump_rec is_rec in
         PPrint.group
-          (PPrint.string (fmt "let %s =" (dump_name name))
+          (PPrint.string (fmt "let%s %s : %s =" (dump_name name) is_rec ty)
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
-          )
-    | (_, RecValue (name, ty, t)) ->
-        PPrint.group
-          (PPrint.string (fmt "let rec %s : %s =" (dump_name name) (dump_ty ty))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
     | (_, Type (name, ty)) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
