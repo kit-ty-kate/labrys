@@ -40,18 +40,25 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let i8 = LLVM.i8_type c
     let i32 = LLVM.i32_type c
     let star = LLVM.pointer_type i8
-    let exn = LLVM.struct_type c [|LLVM.pointer_type star; star|]
-    let exn_ptr = LLVM.pointer_type exn
-    let lambda = function
-      | true -> LLVM.function_type star [|star; star; exn_ptr|]
-      | false -> LLVM.function_type star [|star; star|]
-    let lambda_ptr with_exn = LLVM.pointer_type (lambda with_exn)
+    let star_ptr = LLVM.pointer_type star
     let array = LLVM.array_type star
     let array_ptr size = LLVM.pointer_type (array size)
     let variant = array
     let variant_ptr = array_ptr
     let closure = array
     let closure_ptr = array_ptr
+    let exn = LLVM.struct_type c [|star_ptr; star|]
+    let exn_ptr = LLVM.pointer_type exn
+    let lambda ~env_size ~with_exn = match with_exn with
+      | true ->
+          LLVM.function_type star [|star; closure_ptr env_size; star_ptr|]
+      | false ->
+          LLVM.function_type star [|star; closure_ptr env_size|]
+    let lambda_ptr = function
+      | true ->
+          LLVM.pointer_type (LLVM.function_type star [|star; star; star_ptr|])
+      | false ->
+          LLVM.pointer_type (LLVM.function_type star [|star; star|])
     let unit_function = LLVM.function_type (LLVM.void_type c) [||]
   end
 
@@ -134,7 +141,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let (_, b, c) = GammaMap.Value.fold aux gamma (1, [], GammaMap.Value.empty) in
     (List.rev b, c)
 
-  let create_closure ~isrec ~used_vars ~f ~env gamma builder =
+  let create_closure ~isrec ~with_exn ~used_vars ~env gamma builder =
     let gamma = GammaMap.Value.filter (fun x _ -> Set.mem x used_vars) gamma in
     let (values, gamma) = fold_env ~env gamma builder in
     let env_size = List.length values in
@@ -145,8 +152,10 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           gamma
     in
     let env_size = succ env_size in
+    let (f, builder') = LLVM.define_function c "__lambda" (Type.lambda ~env_size ~with_exn) m in
+    LLVM.set_linkage LLVM.Linkage.Private f;
     let closure = malloc_and_init (Type.closure env_size) (f :: values) builder in
-    (env_size, closure, gamma)
+    (f, builder', closure, gamma)
 
   let get_exn name =
     let name = Ident.Name.prepend I.name name in
@@ -261,16 +270,13 @@ module Make (I : sig val name : Ident.Module.t end) = struct
 
   and lambda func ?isrec ~env ~exn ~exn_block ~globals gamma builder = function
     | UntypedTree.Abs (name, with_exn, used_vars, t) ->
-        let (f, builder') = LLVM.define_function c "__lambda" (Type.lambda with_exn) m in
-        LLVM.set_linkage LLVM.Linkage.Private f;
-        let (env_size, closure, gamma) =
-          create_closure ~isrec ~used_vars ~f ~env gamma builder
+        let (f, builder', closure, gamma) =
+          create_closure ~isrec ~with_exn ~used_vars ~env gamma builder
         in
         let param = LLVM.param f 0 in
         let env = LLVM.param f 1 in
-        let exn = lazy (LLVM.param f 2) in
-        let env = LLVM.build_bitcast env (Type.array_ptr env_size) "" builder' in
         let env = lazy (LLVM.build_load env "" builder') in
+        let exn = lazy (LLVM.param f 2) in
         let globals = Globals.load globals builder' in
         let gamma = GammaMap.Value.add name (Value param) gamma in
         let exn_block =
