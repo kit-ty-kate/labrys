@@ -101,15 +101,15 @@ let of_typed_variant acc i = function
       let variant =
         let rec aux params = function
           | 0 ->
-              (Variant i, params)
+              (Variant (i, List.rev params), Set.of_list params)
           | n ->
               let name = Ident.Name.of_list [string_of_int n] in
-              let params = Set.add name params in
+              let params = name :: params in
               let (t, used_vars) = aux params (pred n) in
               let used_vars = Set.remove name used_vars in
               (Abs (name, false, used_vars, t), used_vars)
         in
-        let (t, _) = aux Set.empty ty_size in
+        let (t, _) = aux [] ty_size in
         Value (name, t)
       in
       variant :: acc

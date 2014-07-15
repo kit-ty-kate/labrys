@@ -473,8 +473,9 @@ module UntypedTree = struct
           )
     | Val name ->
         PPrint.string (dump_name name)
-    | Variant index ->
-        PPrint.OCaml.int index
+    | Variant (index, params) ->
+        let params = String.concat " " (List.map dump_name params) in
+        PPrint.string (fmt "[%d | %s]" index params)
     | PatternMatching (t, results, patterns) ->
         dump_pattern_matching
           (dump_t t)

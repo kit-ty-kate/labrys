@@ -33,7 +33,7 @@ and t =
   | Abs of (name * with_exn * used_vars * t)
   | App of (t * with_exn * t)
   | Val of name
-  | Variant of index
+  | Variant of (index * name list)
   | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)

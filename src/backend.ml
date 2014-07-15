@@ -46,12 +46,12 @@ module Make (I : sig val name : Ident.Module.t end) = struct
       | true -> LLVM.function_type star [|star; star; exn_ptr|]
       | false -> LLVM.function_type star [|star; star|]
     let lambda_ptr with_exn = LLVM.pointer_type (lambda with_exn)
-    let variant = LLVM.struct_type c [|i32; star|]
-    let variant_ptr = LLVM.pointer_type variant
     let array = LLVM.array_type star
     let array_ptr size = LLVM.pointer_type (array size)
+    let variant = array
+    let variant_ptr = array_ptr
     let closure = array
-    let closure_ptr size = LLVM.pointer_type (closure size)
+    let closure_ptr = array_ptr
     let unit_function = LLVM.function_type (LLVM.void_type c) [||]
   end
 
@@ -131,12 +131,13 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           let gamma = GammaMap.Value.add name (Glob j) gamma in
           (i, values, gamma)
     in
-    let (a, b, c) = GammaMap.Value.fold aux gamma (1, [], GammaMap.Value.empty) in
-    (a, List.rev b, c)
+    let (_, b, c) = GammaMap.Value.fold aux gamma (1, [], GammaMap.Value.empty) in
+    (List.rev b, c)
 
   let create_closure ~isrec ~used_vars ~f ~env gamma builder =
     let gamma = GammaMap.Value.filter (fun x _ -> Set.mem x used_vars) gamma in
-    let (env_size, values, gamma) = fold_env ~env gamma builder in
+    let (values, gamma) = fold_env ~env gamma builder in
+    let env_size = List.length values in
     let gamma = match isrec with
       | Some rec_name when Set.mem rec_name used_vars ->
           GammaMap.Value.add rec_name (Env 0) gamma
@@ -144,7 +145,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           gamma
     in
     let env_size = succ env_size in
-    let closure = malloc_and_init_array env_size (f :: values) builder in
+    let closure = malloc_and_init (Type.closure env_size) (f :: values) builder in
     (env_size, closure, gamma)
 
   let get_exn name =
@@ -162,11 +163,9 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           | Pattern.VLeaf ->
               (value, vars)
           | Pattern.VNode (i, var) ->
+              let i = succ i in
               let (value, vars) = llvalue_of_pattern_var vars value builder var in
-              let value = LLVM.build_bitcast value Type.variant_ptr "" builder in
-              let value = LLVM.build_load value "" builder in
-              let value = LLVM.build_extractvalue value 1 "" builder in
-              let value = LLVM.build_bitcast value (Type.array_ptr (succ i)) "" builder in
+              let value = LLVM.build_bitcast value (Type.variant_ptr (succ i)) "" builder in
               let value = LLVM.build_load value "" builder in
               (LLVM.build_extractvalue value i "" builder, vars)
         in
@@ -206,9 +205,10 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         LLVM.build_br block builder
     | UntypedTree.Node (var, cases) ->
         let (term, vars) = llvalue_of_pattern_var vars value builder var in
-        let term = LLVM.build_bitcast term Type.variant_ptr "" builder in
+        let term = LLVM.build_bitcast term (Type.variant_ptr 1) "" builder in
         let term = LLVM.build_load term "" builder in
         let term = LLVM.build_extractvalue term 0 "" builder in
+        let term = LLVM.build_ptrtoint term Type.i32 "" builder in
         let switch = LLVM.build_switch term default (List.length cases) builder in
         List.iter
           (fun (constr, tree) ->
@@ -335,10 +335,20 @@ module Make (I : sig val name : Ident.Module.t end) = struct
             let extern = LLVM.declare_global Type.star name m in
             (LLVM.build_load extern "" builder, builder)
         end
-    | UntypedTree.Variant i ->
-        let (env_size, values, _) = fold_env ~env gamma builder in
-        let env = malloc_and_init_array env_size values builder in
-        (malloc_and_init Type.variant [i32 i; env] builder, builder)
+    | UntypedTree.Variant (i, params) ->
+        let aux x =
+          match GammaMap.Value.find x gamma with
+          | Some (Value x) -> x
+          | Some (Env i) ->
+              let env = Lazy.force env in
+              LLVM.build_extractvalue env i "" builder
+          | Some (Glob _) | Some (ValueGlob _) | None ->
+              assert false
+        in
+        let values = List.map aux params in
+        let size = List.length values in
+        let i = LLVM.build_inttoptr (i32 i) Type.star "" builder in
+        (malloc_and_init (Type.variant (succ size)) (i :: values) builder, builder)
     | UntypedTree.Let (name, t, xs) ->
         let (t, builder) = lambda func ~env ~globals ~exn ~exn_block gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
