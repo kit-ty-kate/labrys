@@ -126,7 +126,7 @@ module ParseTree = struct
         let is_rec = dump_rec is_rec in
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "let%s %s : %s =" (dump_name name) is_rec ty)
+           ^^ PPrint.string (fmt "let%s %s : %s =" is_rec (dump_name name) ty)
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
@@ -198,14 +198,16 @@ module ParseTree = struct
         let ty = dump_ty_opt ty in
         let is_rec = dump_rec is_rec in
         PPrint.group
-          (PPrint.string (fmt "let%s %s : %s =" (dump_name name) is_rec ty)
+          (PPrint.string (fmt "let%s %s : %s =" is_rec (dump_name name) ty)
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
     | (_, Type (name, ty)) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
     | (_, Binding (name, ty, content)) ->
         PPrint.string (fmt "let %s : %s = begin" (dump_name name) (dump_ty ty))
-        ^^ PPrint.string content
+        ^^ PPrint.break 1
+        ^^ PPrint.group (PPrint.string content)
+        ^^ PPrint.break 1
         ^^ PPrint.string "end"
     | (_, Datatype (name, k, variants)) ->
         PPrint.string (fmt "type %s : %s =" (dump_t_name name) (dump_k k))
@@ -392,7 +394,9 @@ module TypedTree = struct
           )
     | Binding (name, content) ->
         PPrint.string (fmt "let %s = begin" (dump_name name))
-        ^^ PPrint.string content
+        ^^ PPrint.break 1
+        ^^ PPrint.group (PPrint.string content)
+        ^^ PPrint.break 1
         ^^ PPrint.string "end"
     | Datatype variants ->
         PPrint.string "type ?? ="
@@ -567,7 +571,9 @@ module UntypedTree = struct
           )
     | Binding (name, content) ->
         PPrint.string (fmt "let %s = begin" (dump_name name))
-        ^^ PPrint.string content
+        ^^ PPrint.break 1
+        ^^ PPrint.group (PPrint.string content)
+        ^^ PPrint.break 1
         ^^ PPrint.string "end"
     | Exception name ->
         PPrint.string (fmt "exception %s" (dump_name name))
