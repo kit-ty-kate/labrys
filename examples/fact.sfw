@@ -10,20 +10,18 @@ let printInt : Nat -> Unit = begin
   declare i32 @printf(i8*, ...)
   
   define internal i32 @__int_of_nat(i8*) {
-    %var = bitcast i8* %0 to { i32, i8* }*
-    %variant = load { i32, i8* }* %var
-    %key = extractvalue { i32, i8* } %variant, 0
+    %var = bitcast i8* %0 to [2 x i8*]*
+    %variant = load [2 x i8*]* %var
+    %keyp = extractvalue [2 x i8*] %variant, 0
+    %key = ptrtoint i8* %keyp to i32
     %cond = icmp eq i32 %key, 0
-    br i1 %cond, label %e, label %loop
+    br i1 %cond, label %end, label %loop
   loop:
-    %next = extractvalue { i32, i8* } %variant, 1
-    %lol = bitcast i8* %next to [1 x i8*]*
-    %lolol = load [1 x i8*]* %lol
-    %lololol = extractvalue [1 x i8*] %lolol, 0
-    %val = call i32 @__int_of_nat(i8* %lololol)
+    %next = extractvalue [2 x i8*] %variant, 1
+    %val = call i32 @__int_of_nat(i8* %next)
     %res = add i32 1, %val
     ret i32 %res
-  e:
+  end:
     ret i32 0
   }
 

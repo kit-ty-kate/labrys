@@ -61,14 +61,14 @@ let printOther : Unit -> Unit = begin
   @printOther = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
 end
 
-let f (x : Nat) =
+let rec f (x : Nat) : Nat =
   match x with
   | O -> let lol = printZero Unit in O
   | S O -> let lol = printOne Unit in O
   | S (S O) -> let lol = printTwo Unit in O
   | S (S (S O)) -> let lol = printZero Unit in O
   | S (S (S a)) -> let lol = printOther Unit in a
-  | D a b -> b
+  | D a b -> f b
   | a -> a
   end
 
@@ -79,3 +79,5 @@ let test = f (S (S (S O)))
 let test = f (S (S (S (S O))))
 let test = f (S (S (S (S (S O)))))
 let test = f (S (S (S (S (S (S O))))))
+let test = f (D (S O) O)
+let test = f (D O (S O))
