@@ -280,7 +280,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         in
         let param = LLVM.param f 0 in
         let env = LLVM.param f 1 in
-        let env = lazy (LLVM.build_load env "" builder') in
+        let env = LLVM.build_load env "" builder' in
+        let env = lazy env in
         let exn = lazy (LLVM.param f 2) in
         let globals = Globals.load globals builder' in
         let gamma = GammaMap.Value.add name (Value param) gamma in
