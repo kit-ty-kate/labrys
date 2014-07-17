@@ -19,4 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val of_typed_tree : TypedTree.top list -> UntypedTree.top list
+val of_typed_tree :
+  name:Ident.Module.t ->
+  TypedTree.top list ->
+  UntypedTree.top list

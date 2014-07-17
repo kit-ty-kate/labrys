@@ -13,12 +13,12 @@ let printInt : forall X, X -> Int = begin
     ret i8* %r
   }
   @_printInt = global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__printInt, i8** null}
-  @printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
+  @Print.printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
 end
 
 let zero : Int = begin
   @_zero = global i8 0
-  @zero = global i8* getelementptr(i8* @_zero)
+  @Print.zero = global i8* getelementptr(i8* @_zero)
 end
 
 let unit = printInt [Int] zero

@@ -564,11 +564,6 @@ module UntypedTree = struct
           (PPrint.string (fmt "let %s =" (dump_name name))
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
-    | RecValue (name, t) ->
-        PPrint.group
-          (PPrint.string (fmt "let rec %s =" (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
-          )
     | Binding (name, content) ->
         PPrint.string (fmt "let %s = begin" (dump_name name))
         ^^ PPrint.break 1
@@ -577,6 +572,8 @@ module UntypedTree = struct
         ^^ PPrint.string "end"
     | Exception name ->
         PPrint.string (fmt "exception %s" (dump_name name))
+    | ConstVariant (name, index) ->
+        PPrint.string (fmt "ConstVariant %s %d" (dump_name name) index)
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in

@@ -42,6 +42,6 @@ and t =
 
 type top =
   | Value of (name * t)
-  | RecValue of (name * t)
   | Binding of (name * string)
   | Exception of name
+  | ConstVariant of (name * index)

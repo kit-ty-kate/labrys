@@ -16,7 +16,7 @@ let printZero : Unit -> Unit = begin
     ret i8* %r
   }
   @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
-  @printZero = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+  @Variants.printZero = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
 end
 
 let printOne : Unit -> Unit = begin
@@ -30,7 +30,7 @@ let printOne : Unit -> Unit = begin
     ret i8* %r
   }
   @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
-  @printOne = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+  @Variants.printOne = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
 end
 
 let printTwo : Unit -> Unit = begin
@@ -44,7 +44,7 @@ let printTwo : Unit -> Unit = begin
     ret i8* %r
   }
   @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
-  @printTwo = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+  @Variants.printTwo = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
 end
 
 let printOther : Unit -> Unit = begin
@@ -58,7 +58,7 @@ let printOther : Unit -> Unit = begin
     ret i8* %r
   }
   @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
-  @printOther = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+  @Variants.printOther = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
 end
 
 let rec f (x : Nat) : Nat =

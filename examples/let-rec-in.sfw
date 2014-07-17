@@ -13,7 +13,7 @@ let printInt : Int -> Int = begin
     ret i8* %r
   }
   @_printInt = global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__printInt, i8** null}
-  @printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
+  @Let-rec-in.printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
 end
 
 type Unit = Unit : Unit

@@ -30,8 +30,8 @@ let printInt : Nat -> Unit = begin
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %i)
     ret i8* null
   }
-  @_printInt = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__printInt, i8** null}
-  @printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
+  @.Fact.printInt = internal constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__printInt to i8*)]
+  @Fact.printInt = constant i8* bitcast ([1 x i8*]* @.Fact.printInt to i8*)
 end
 
 let rec plus (n : Nat) (m : Nat) : Nat =

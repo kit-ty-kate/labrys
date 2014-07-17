@@ -13,12 +13,12 @@ let printInt : Int -> Int = begin
     ret i8* %r
   }
   @_printInt = global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__printInt, i8** null}
-  @printInt = global i8* bitcast({i8* (i8*, i8**)*, i8**}* @_printInt to i8*)
+  @Test.printInt = global i8* bitcast({i8* (i8*, i8**)*, i8**}* @_printInt to i8*)
 end
 
 let zero : Int = begin
   @_zero = global i8 0
-  @zero = global i8* getelementptr(i8* @_zero)
+  @Test.zero = global i8* getelementptr(i8* @_zero)
 end
 
 let app (x:Int->Int) (f:Int->Int->Int) = f
