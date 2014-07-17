@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: a4d75385351059db8a9dfcab9b488711)
+# DO NOT EDIT (digest: c7d71d945ffb61e679a3e345bb398355)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -26,6 +26,7 @@
 <src/main.{native,byte}>: package(llvm.irreader)
 <src/main.{native,byte}>: package(llvm.linker)
 <src/main.{native,byte}>: package(llvm.passmgr_builder)
+<src/main.{native,byte}>: package(llvm.scalar_opts)
 <src/main.{native,byte}>: package(llvm.target)
 <src/main.{native,byte}>: package(monomorphic)
 <src/main.{native,byte}>: package(pprint)
@@ -38,6 +39,7 @@
 <src/*.ml{,i,y}>: package(llvm.irreader)
 <src/*.ml{,i,y}>: package(llvm.linker)
 <src/*.ml{,i,y}>: package(llvm.passmgr_builder)
+<src/*.ml{,i,y}>: package(llvm.scalar_opts)
 <src/*.ml{,i,y}>: package(llvm.target)
 <src/*.ml{,i,y}>: package(monomorphic)
 <src/*.ml{,i,y}>: package(pprint)

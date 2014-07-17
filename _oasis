@@ -23,6 +23,7 @@ Executable cervoise
     llvm.bitwriter,
     llvm.all_backends,
     llvm.linker,
+    llvm.scalar_opts,
     batteries (>= 2.2),
     monomorphic
   CompiledObject: best

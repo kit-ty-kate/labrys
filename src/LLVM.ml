@@ -33,11 +33,6 @@ let build_br bb b = ignore (build_br bb b)
 let build_cond_br cond tbb fbb b = ignore (build_cond_br cond tbb fbb b)
 let build_unreachable b = ignore (build_unreachable b)
 
-let build_call f args name builder =
-  let value = build_call f args name builder in
-  set_tail_call true value;
-  value
-
 let define_function c s ty m =
   let f = define_function s ty m in
   f, builder_at_end c (entry_block f)
@@ -54,6 +49,7 @@ let optimize ~lto ~opt layout m =
   Llvm_target.DataLayout.add_to_pass_manager pm layout;
   let b = Llvm_passmgr_builder.create () in
   Llvm_passmgr_builder.set_opt_level opt b;
+  Llvm_scalar_opts.add_tail_call_elimination pm;
   Llvm_passmgr_builder.populate_module_pass_manager pm b;
   if lto then begin
     Llvm_passmgr_builder.populate_lto_pass_manager

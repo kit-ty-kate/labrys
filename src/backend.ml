@@ -307,7 +307,6 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         | true ->
             let exn = Lazy.force exn in
             let res = LLVM.build_call f [|x; closure; exn|] "" builder in
-            LLVM.set_tail_call false res;
             let next_block = LLVM.append_block c "" func in
             let exn_block = Lazy.force exn_block in
             let app_raised = LLVM.build_is_null res "" builder in
