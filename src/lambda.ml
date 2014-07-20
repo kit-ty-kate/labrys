@@ -134,11 +134,14 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         variant :: acc
 
   let rec of_typed_tree = function
-    | TypedTree.Value (name, t) :: xs
-    | TypedTree.RecValue (name, t) :: xs ->
+    | TypedTree.Value (name, t) :: xs ->
         let name = Ident.Name.prepend I.name name in
         let (t, _) = of_typed_term t in
         Value (name, t) :: of_typed_tree xs
+    | TypedTree.RecValue (name, t) :: xs ->
+        let name = Ident.Name.prepend I.name name in
+        let (t, _) = of_typed_term t in
+        RecValue (name, t) :: of_typed_tree xs
     | TypedTree.Binding (name, value) :: xs ->
         let name = Ident.Name.prepend I.name name in
         Binding (name, value) :: of_typed_tree xs
