@@ -27,7 +27,7 @@ module Module = struct
 
   let of_list x = x
   let to_file = String.concat "/"
-  let to_module_name = String.concat "_"
+  let to_module_name = String.concat "."
 end
 
 module Name = struct
