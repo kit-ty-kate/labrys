@@ -37,7 +37,10 @@ module Name = struct
 
   let equal = List.eq String.equal
 
-  let prepend modul x = modul @ x
+  let prepend modul = function
+    | [] -> assert false
+    | [_] as x -> modul @ x
+    | x -> x
 
   let of_list x = x
   let to_string = String.concat "."
