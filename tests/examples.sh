@@ -1,8 +1,9 @@
 #!/bin/sh
 
-EXAMPLES=`ls examples/*.sfw`
+cd examples
+
+EXAMPLES=`ls *.sfw`
 
 for x in $EXAMPLES; do
-    echo "File: $x"
-    ./main.native $x;
+    ../main.native $x;
 done

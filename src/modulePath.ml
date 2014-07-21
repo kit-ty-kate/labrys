@@ -23,16 +23,15 @@ open BatteriesExceptionless
 open Monomorphic.None
 
 type t =
-  { base_path : string
-  ; path : string
+  { path : string
   ; file : string
   }
 
 let of_file file =
-  { base_path = Filename.dirname file
-  ; path = ""
-  ; file = Filename.basename file
-  }
+  let path = Filename.dirname file in
+  let path = if String.equal path "." then "" else path in
+  let file = Filename.basename file in
+  {path; file}
 
 let of_module ~parent_module modul =
   let base_filename = Ident.Module.to_file modul in
@@ -40,16 +39,16 @@ let of_module ~parent_module modul =
   let path = if String.equal path "." then "" else path in
   let path = Filename.concat parent_module.path path in
   let file = Filename.basename (base_filename ^ ".sfw") in
-  {parent_module with path; file}
+  {path; file}
 
-let impl {base_path; path; file} =
-  Filename.concat (Filename.concat base_path path) file
+let impl {path; file} =
+  Filename.concat path file
 
 let intf self =
   let file = impl self in
   file ^ "i"
 
-let to_module {path; file; _} =
+let to_module {path; file} =
   let file = Filename.concat path file in
   let file = Filename.chop_extension file in
   let file = String.nsplit file ~by:Filename.dir_sep in
