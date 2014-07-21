@@ -137,6 +137,7 @@ and compile ?(with_main = false) ~interface modul =
       | None -> dst
     end
   in
+  print_endline (fmt "Compiling %s" (Ident.Module.to_module_name name));
   (parse_tree, typed_tree, untyped_tree, res)
 
 let compile ~printer ~lto ~opt ~o file =
