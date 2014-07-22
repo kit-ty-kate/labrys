@@ -7,80 +7,22 @@
   * Remove names in backend (« %comment = call donothing » or metadata instead) ?
   * Add functions in backend (like access_env …)
   * Add more explicit type names (like « type name = string » instead of just use a string)
-  * Remove Types in favor of TypesBeta (and so rename it to Types)
   * Create Ident.Exn to replace Ident.Name
   * Find a way to optimize malloc calls
 
 * Cleaning (parser, typechecker, backend, …)
 * Unit-tests
 * Recursive type aliases
+* Pure exceptions
+* Finish the module system
 
 
 == Short/Medium term ==
 
-* Records ? [1]
-
-
-== Medium term ==
-
-* Improve FFI [2]
-* Module and compilation definition [3]
+* Records
+* Improve FFI
 
 
 == Long term ==
 
-* Pure exceptions
-* GC
-
-
-
-=== Datatypes ===
-
-Defined as:
-
-datatype Nat =
-  | O : Nat
-  | S : Nat -> Nat
-
-Arrity 0 only.
-Effects:
-
-Γty, Nat :: *
-Γdatatypes, Nat ::= O : Nat | S : Nat -> Nat
-Γ, O : Nat
-Γ, S : Nat -> Nat
-
-Compiled into {int32, i8*}* in LLVM-IR
-
-
-
-=== Pattern matching ===
-
-For example:
-
-match x with
-| O -> unit
-| S (S n) -> unit
-| S n -> unit
-| n -> unit
-end
-
-compiled into a dataty list
-where dataty = Variant of (datatype * dataty list) | Any of string
-and datatype = {variant : string; var_params : dataty list}
-
-Merged (for compilation and checking purpose) before type checking into a
-brand new module: MergePatterns
-
-Unused or unchecked cases produces an error.
-
-Compiled into switches in LLVM-IR
-
-
-
-=== Current questions ===
-
-[1]: Should we implement records then ?
-[2]: Do we want a pure language and which level, which form ?
-[3]: How do we want to compile with multiple files ?
-     What about `main` ? (related to [2])
+* Compile libraries
