@@ -42,8 +42,8 @@ let cmd =
     [ (Compiler.ParseTree, Arg.info ["print-parse-tree"])
     ; (Compiler.TypedTree, Arg.info ["print-typed-tree"])
     ; (Compiler.UntypedTree, Arg.info ["print-untyped-tree"])
-    ; (Compiler.LLVM, Arg.info ["print-llvm"])
-    ; (Compiler.OptimizedLLVM, Arg.info ["print-optimized-llvm"])
+    ; (Compiler.LLVM, Arg.info ["print-early-llvm"])
+    ; (Compiler.OptimizedLLVM, Arg.info ["print-llvm"])
     ]
   in
   let args = Term.pure start in
