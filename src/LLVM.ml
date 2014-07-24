@@ -41,8 +41,8 @@ let bind c ~name s m =
   let membuffer = MemoryBuffer.of_string s in
   let m' = Llvm_irreader.parse_ir c membuffer in
   Llvm_linker.link_modules m m' Llvm_linker.Mode.DestroySource;
-  Llvm.dispose_module m';
-  lookup_global (Ident.Name.to_string name) m
+  dispose_module m';
+  lookup_global ("." ^ Ident.Name.to_string name) m
 
 let optimize ~lto ~opt layout m =
   let pm = PassManager.create () in

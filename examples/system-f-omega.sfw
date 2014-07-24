@@ -3,7 +3,7 @@ type Int =
   | S : Int -> Int
 
 let printInt : Int -> Int = begin
-  @msg = internal constant [4 x i8] c"%d\0a\00"
+  @msg = constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
   define i8* @__printInt(i8* %i, i8**) {
     %access_prim = load i8* %i
@@ -11,8 +11,7 @@ let printInt : Int -> Int = begin
     call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
     ret i8* %i
   }
-  @_printInt = global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__printInt, i8** null}
-  @System-f-omega.printInt = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_printInt)
+  @.printInt = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__printInt to i8*)]
 end
 
 let id X (x:X) (x:X) = x

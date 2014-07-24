@@ -6,59 +6,55 @@ type Nat =
 type Unit = Unit : Unit
 
 let printZero : Unit -> Unit = begin
-  @msg = internal constant [3 x i8] c"0\0a\00"
+  @msg = constant [3 x i8] c"0\0a\00"
 
   declare i32 @printf(i8*, ...)
 
-  define internal i8* @__print(i8*, i8**) {
+  define i8* @__print(i8*, i8**) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
   }
-  @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
-  @Variants.printZero = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+  @.printZero = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__print to i8*)]
 end
 
 let printOne : Unit -> Unit = begin
-  @msg = internal constant [3 x i8] c"1\0a\00"
+  @msg = constant [3 x i8] c"1\0a\00"
 
   declare i32 @printf(i8*, ...)
 
-  define internal i8* @__print(i8*, i8**) {
+  define i8* @__print(i8*, i8**) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
   }
-  @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
-  @Variants.printOne = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+  @.printOne = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__print to i8*)]
 end
 
 let printTwo : Unit -> Unit = begin
-  @msg = internal constant [3 x i8] c"2\0a\00"
+  @msg = constant [3 x i8] c"2\0a\00"
 
   declare i32 @printf(i8*, ...)
 
-  define internal i8* @__print(i8*, i8**) {
+  define i8* @__print(i8*, i8**) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
   }
-  @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
-  @Variants.printTwo = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+  @.printTwo = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__print to i8*)]
 end
 
 let printOther : Unit -> Unit = begin
-  @msg = internal constant [7 x i8] c"other\0a\00"
+  @msg = constant [7 x i8] c"other\0a\00"
 
   declare i32 @printf(i8*, ...)
 
-  define internal i8* @__print(i8*, i8**) {
+  define i8* @__print(i8*, i8**) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([7 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
   }
-  @_print = internal global {i8* (i8*, i8**)*, i8**} {i8* (i8*, i8**)* @__print, i8** null}
-  @Variants.printOther = global {i8* (i8*, i8**)*, i8**}* getelementptr({i8* (i8*, i8**)*, i8**}* @_print)
+  @.printOther = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__print to i8*)]
 end
 
 let rec f (x : Nat) : Nat =

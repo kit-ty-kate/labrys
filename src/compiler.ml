@@ -121,8 +121,8 @@ and compile ?(with_main = false) ~interface modul =
       TypeChecker.from_parse_tree ~interface gamma parse_tree
     end
   in
+  let untyped_tree = lazy (Lambda.of_typed_tree (Lazy.force typed_tree)) in
   let name = ModulePath.to_module modul in
-  let untyped_tree = lazy (Lambda.of_typed_tree ~name (Lazy.force typed_tree)) in
   let dst =
     lazy begin
       let untyped_tree = Lazy.force untyped_tree in

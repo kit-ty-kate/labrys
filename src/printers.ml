@@ -558,27 +558,33 @@ module UntypedTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
     List.fold_left aux PPrint.empty args
 
+  let dump_linkage = function
+    | Private -> "private"
+    | Public -> "public"
+
+  let dump_arg name = fmt "(%s : %b)" (dump_name name)
+
   let dump = function
-    | Value (name, t) ->
+    | Value (name, t, linkage) ->
         PPrint.group
-          (PPrint.string (fmt "let %s =" (dump_name name))
+          (PPrint.string (fmt "let %s : %s =" (dump_name name) (dump_linkage linkage))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
-    | RecValue (name, t) ->
+    | Function (name, (name', with_exn, t), linkage) ->
         PPrint.group
-          (PPrint.string (fmt "let rec %s =" (dump_name name))
+          (PPrint.string (fmt "function %s %s : %s =" (dump_name name) (dump_arg name' with_exn) (dump_linkage linkage))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
-    | Binding (name, content) ->
-        PPrint.string (fmt "let %s = begin" (dump_name name))
+    | Binding (name, content, linkage) ->
+        PPrint.string (fmt "let %s : %s = begin" (dump_name name) (dump_linkage linkage))
         ^^ PPrint.break 1
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
     | Exception name ->
         PPrint.string (fmt "exception %s" (dump_name name))
-    | ConstVariant (name, index) ->
-        PPrint.string (fmt "ConstVariant %s %d" (dump_name name) index)
+    | ConstVariant (name, index, linkage) ->
+        PPrint.string (fmt "ConstVariant %s %d : %s" (dump_name name) index (dump_linkage linkage))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in

@@ -40,9 +40,11 @@ and t =
   | Fail of (name * t list)
   | Try of (t * with_exn * ((name * name list) * t) list)
 
+type linkage = Public | Private
+
 type top =
-  | Value of (name * t)
-  | RecValue of (name * t)
-  | Binding of (name * string)
+  | Value of (name * t * linkage)
+  | Binding of (name * string * linkage)
   | Exception of name
-  | ConstVariant of (name * index)
+  | ConstVariant of (name * index * linkage)
+  | Function of (name * (name * with_exn * t) * linkage)

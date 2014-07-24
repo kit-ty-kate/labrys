@@ -19,6 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+type changed = bool
+
 module Module : sig
   type t
 
@@ -37,6 +39,8 @@ module Name : sig
 
   val of_list : string list -> t
   val to_string : t -> string
+
+  val unique : t -> int Utils.StrMap.t -> (t * int Utils.StrMap.t * changed)
 end
 
 module Type : module type of Name

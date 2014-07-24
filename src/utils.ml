@@ -34,3 +34,8 @@ let rec string_of_list f = function
   | [] -> ""
   | x::[] -> f x
   | x::xs -> f x ^ ", " ^ string_of_list f xs
+
+module StrMap = struct
+  include Map.Make(String)
+  include Exceptionless
+end
