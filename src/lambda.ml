@@ -108,7 +108,14 @@ and of_typed_term mapn = function
       in
       (Fail (name, args), used_vars)
 
-let of_typed_variant acc i (`Variant (name, ty_size, linkage)) =
+let get_name_and_linkage name' names mapn =
+  let (name, names, changed) = Ident.Name.unique name' names in
+  let mapn = GammaMap.Value.add name' name mapn in
+  let linkage = if changed then Private else Public in
+  (name, names, mapn, linkage)
+
+let of_typed_variant (acc, names, mapn) i (TypedTree.Variant (name, ty_size)) =
+  let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
   let variant =
     let rec aux params = function
       | 0 ->
@@ -131,59 +138,36 @@ let of_typed_variant acc i (`Variant (name, ty_size, linkage)) =
           assert false;
         Function (name, (name_param, false, t), linkage)
   in
-  variant :: acc
+  (variant :: acc, names, mapn)
 
-let rec of_typed_tree = function
-  | `RecValue (name, TypedTree.Abs (name', with_exn, t), linkage, mapn) :: xs
-  | `Value (name, TypedTree.Abs (name', with_exn, t), linkage, mapn) :: xs ->
+let of_typed_tree top (acc, names, mapn) = match top with
+  | TypedTree.RecValue (name, TypedTree.Abs (name', with_exn, t))
+  | TypedTree.Value (name, TypedTree.Abs (name', with_exn, t)) ->
+      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let (t, _) = of_typed_term mapn t in
-      Function (name, (name', with_exn, t), linkage) :: of_typed_tree xs
-  | `Value (name, t, linkage, mapn) :: xs ->
+      (Function (name, (name', with_exn, t), linkage) :: acc, names, mapn)
+  | TypedTree.RecValue (name, t)
+  | TypedTree.Value (name, t) ->
+      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let (t, _) = of_typed_term mapn t in
-      Value (name, t, linkage) :: of_typed_tree xs
-  | `RecValue (name, t, linkage, mapn) :: xs ->
-      let (t, _) = of_typed_term mapn t in
-      Value (name, t, linkage) :: of_typed_tree xs
-  | `Binding (name, value, linkage) :: xs ->
-      Binding (name, value, linkage) :: of_typed_tree xs
-  | `Datatype variants :: xs ->
-      let variants = List.fold_lefti of_typed_variant [] variants in
+      (Value (name, t, linkage) :: acc, names, mapn)
+  | TypedTree.Binding (name, value) ->
+      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
+      (Binding (name, value, linkage) :: acc, names, mapn)
+  | TypedTree.Datatype variants ->
+      let (variants, names, mapn) =
+        List.fold_lefti of_typed_variant ([], names, mapn) variants
+      in
       let variants = List.rev variants in
-      variants @ of_typed_tree xs
-  | `Exception name :: xs ->
-      Exception name :: of_typed_tree xs
-  | [] ->
-      []
-
-let get_linkage b = if b then Private else Public
+      (variants @ acc, names, mapn)
+  | TypedTree.Exception name ->
+      (Exception name :: acc, names, mapn)
 
 let of_typed_tree top =
-  let aux topx (acc, names, mapn) = match topx with
-    | TypedTree.Value (name', t) ->
-        let (name, names, changed) = Ident.Name.unique name' names in
-        let mapn = GammaMap.Value.add name' name mapn in
-        (`Value (name, t, get_linkage changed, mapn) :: acc, names, mapn)
-    | TypedTree.RecValue (name', t) ->
-        let (name, names, changed) = Ident.Name.unique name' names in
-        let mapn = GammaMap.Value.add name' name mapn in
-        (`RecValue (name, t, get_linkage changed, mapn) :: acc, names, mapn)
-    | TypedTree.Binding (name', value) ->
-        let (name, names, changed) = Ident.Name.unique name' names in
-        let mapn = GammaMap.Value.add name' name mapn in
-        (`Binding (name, value, get_linkage changed) :: acc, names, mapn)
-    | TypedTree.Datatype variants ->
-        let aux_variants (variants, names, mapn) (TypedTree.Variant (name', index)) =
-          let (name, names, changed) = Ident.Name.unique name' names in
-          let mapn = GammaMap.Value.add name' name mapn in
-          (`Variant (name, index, get_linkage changed) :: variants, names, mapn)
-        in
-        let (variants, names, mapn) =
-          List.fold_left aux_variants ([], names, mapn) variants
-        in
-        let variants = List.rev variants in
-        (`Datatype variants :: acc, names, mapn)
-    | TypedTree.Exception name ->
-        (`Exception name :: acc, names, mapn)
+  let (a, _, _) =
+    List.fold_right
+      of_typed_tree
+      top
+      ([], Utils.StrMap.empty, GammaMap.Value.empty)
   in
-  let (top, _, _) = List.fold_right aux top ([], Utils.StrMap.empty, GammaMap.Value.empty) in
-  of_typed_tree top
+  a
