@@ -54,4 +54,4 @@
 # OASIS_STOP
 "examples": -traverse
 "examples": not_hygienic
-true: use_menhir, explain
+true: use_menhir, explain, safe_string
