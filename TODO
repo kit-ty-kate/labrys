@@ -8,8 +8,8 @@
   * Add functions in backend (like access_env …)
   * Add more explicit type names (like « type name = string » instead of just use a string)
   * Create Ident.Exn to replace Ident.Name
-  * Find a way to optimize malloc calls
 
+* Replace the current implementation of exceptions (monades) by LLVM exceptions (resume, invoke, landingpad)
 * Cleaning (parser, typechecker, backend, …)
 * Unit-tests
 * Recursive type aliases
@@ -21,6 +21,7 @@
 
 * Records
 * Improve FFI
+* Dynamically create a wrapper when partially apply a function instead of creating a lambda for each arguments (needs an analysis)
 
 
 == Long term ==
