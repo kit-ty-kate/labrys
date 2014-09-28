@@ -35,6 +35,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
   let m = LLVM.create_module c (Ident.Module.to_module_name I.name)
 
   module Type = struct
+    let void = LLVM.void_type c
     let i8 = LLVM.i8_type c
     let i32 = LLVM.i32_type c
     let star = LLVM.pointer_type i8
@@ -45,19 +46,20 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let variant_ptr = array_ptr
     let closure = array
     let closure_ptr = array_ptr
-    let exn = LLVM.struct_type c [|star_ptr; star_ptr|]
-    let exn_ptr = LLVM.pointer_type exn
+    (** Note: jmp_buf is a five word buffer (see the LLVM doc). *)
+    let jmp_buf = LLVM.array_type star 5
+    let jmp_buf_ptr = LLVM.pointer_type jmp_buf
     let lambda ~env_size ~with_exn = match with_exn with
       | true ->
-          LLVM.function_type star [|star; closure_ptr env_size; exn_ptr|]
+          LLVM.function_type star [|star; closure_ptr env_size; jmp_buf_ptr|]
       | false ->
           LLVM.function_type star [|star; closure_ptr env_size|]
     let lambda_ptr = function
       | true ->
-          LLVM.pointer_type (LLVM.function_type star [|star; star_ptr; star_ptr|])
+          LLVM.pointer_type (LLVM.function_type star [|star; star_ptr; jmp_buf_ptr|])
       | false ->
           LLVM.pointer_type (LLVM.function_type star [|star; star_ptr|])
-    let unit_function = LLVM.function_type (LLVM.void_type c) [||]
+    let unit_function = LLVM.function_type void [||]
   end
 
   let i32 = LLVM.const_int Type.i32
@@ -81,11 +83,31 @@ module Make (I : sig val name : Ident.Module.t end) = struct
 
   let debug_trap = LLVM.declare_function "llvm.debugtrap" Type.unit_function m
 
-  let fail ~tag ~args ~exn ~exn_block builder =
-    let exn = Lazy.force exn in
-    let exn_block = Lazy.force exn_block in
-    init exn Type.exn [tag; args] builder;
-    LLVM.build_br exn_block builder
+  let longjmp =
+    let ty = LLVM.function_type Type.void [|Type.star|] in
+    LLVM.declare_function "llvm.eh.sjlj.longjmp" ty m
+
+  let setjmp =
+    let ty = LLVM.function_type Type.i32 [|Type.star|] in
+    LLVM.declare_function "llvm.eh.sjlj.setjmp" ty m
+
+  let frameaddress =
+    let ty = LLVM.function_type Type.star [|Type.i32|] in
+    LLVM.declare_function "llvm.frameaddress" ty m
+
+  let stacksave =
+    let ty = LLVM.function_type Type.star [||] in
+    LLVM.declare_function "llvm.stacksave" ty m
+
+  let exn_tag_var =
+    let v = LLVM.define_global "exn_tag" null m in
+    LLVM.set_thread_local true v;
+    v
+
+  let exn_args_var =
+    let v = LLVM.define_global "exn_args" null m in
+    LLVM.set_thread_local true v;
+    v
 
   let create_default_branch func =
     let block = LLVM.append_block c "" func in
@@ -93,6 +115,14 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     ignore (LLVM.build_call debug_trap [||] "" builder);
     LLVM.build_unreachable builder;
     block
+
+  let init_jmp_buf jmp_buf builder =
+    let v = LLVM.undef Type.jmp_buf in
+    let fp = LLVM.build_call frameaddress [|i32 0|] "" builder in
+    let v = LLVM.build_insertvalue v fp 0 "" builder in
+    let sp = LLVM.build_call stacksave [||] "" builder in
+    let v = LLVM.build_insertvalue v sp 2 "" builder in
+    LLVM.build_store v jmp_buf builder
 
   let fold_env ~env gamma builder =
     let aux name value (i, values, gamma) =
@@ -156,7 +186,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     create_tree func ~env ~default vars gamma builder value results tree;
     block
 
-  and create_result func ~env ~exn ~res ~next_block ~exn_block gamma builder (vars, result) =
+  and create_result func ~env ~jmp_buf ~res ~next_block gamma builder (vars, result) =
     let block = LLVM.append_block c "" func in
     let builder' = LLVM.builder_at_end c block in
     let (gamma, pattern_vars) =
@@ -167,7 +197,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
       in
       List.fold_left aux (gamma, []) vars
     in
-    let (v, builder') = lambda func ~env ~exn ~exn_block gamma builder' result in
+    let (v, builder') = lambda func ~env ~jmp_buf gamma builder' result in
     LLVM.build_store v res builder';
     LLVM.build_br next_block builder';
     (block, pattern_vars)
@@ -196,7 +226,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           )
           cases
 
-  and create_exn_result func ~env ~exn ~res ~next_block ~exn_block ~exn_args gamma (args, result) =
+  and create_exn_result func ~env ~jmp_buf ~res ~next_block ~exn_args gamma (args, result) =
     let block = LLVM.append_block c "" func in
     let builder = LLVM.builder_at_end c block in
     let exn_args = LLVM.build_bitcast exn_args (Type.array_ptr (List.length args)) "" builder in
@@ -209,17 +239,16 @@ module Make (I : sig val name : Ident.Module.t end) = struct
       in
       List.fold_lefti aux gamma args
     in
-    let (v, builder) = lambda func ~env ~exn ~exn_block gamma builder result in
+    let (v, builder) = lambda func ~env ~jmp_buf gamma builder result in
     LLVM.build_store v res builder;
     LLVM.build_br next_block builder;
     block
 
-  and create_exn_branches func ~env ~exn ~res ~next_block ~exn_block ~new_exn ~with_exn gamma builder branches =
-    let new_exn = LLVM.build_load new_exn "" builder in
-    let exn_tag = LLVM.build_extractvalue new_exn 0 "" builder in
-    let exn_args = LLVM.build_extractvalue new_exn 1 "" builder in
+  and create_exn_branches func ~env ~jmp_buf ~res ~next_block ~with_exn gamma builder branches =
+    let exn_tag = LLVM.build_load exn_tag_var "" builder in
+    let exn_args = LLVM.build_load exn_args_var "" builder in
     let aux builder ((name, args), t) =
-      let block = create_exn_result func ~env ~res ~next_block ~exn ~exn_block ~exn_args gamma (args, t) in
+      let block = create_exn_result func ~env ~res ~next_block ~jmp_buf ~exn_args gamma (args, t) in
       let exn = get_exn name in
       let next_block = LLVM.append_block c "" func in
       let cond = LLVM.build_icmp LLVM.Icmp.Eq exn exn_tag "" builder in
@@ -228,31 +257,23 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     in
     let builder = List.fold_left aux builder branches in
     if with_exn then begin
-      fail ~tag:exn_tag ~args:exn_args ~exn ~exn_block builder;
+      ignore (LLVM.build_call longjmp [|Lazy.force jmp_buf|] "" builder);
     end else begin
       ignore (LLVM.build_call debug_trap [||] "" builder);
-      LLVM.build_unreachable builder;
-    end
+    end;
+    LLVM.build_unreachable builder;
 
   and abs ~f ~name t gamma builder =
     let param = LLVM.param f 0 in
     let env = LLVM.param f 1 in
     let env = LLVM.build_load env "" builder in
     let env = lazy env in
-    let exn = lazy (LLVM.param f 2) in
+    let jmp_buf = lazy (LLVM.param f 2) in
     let gamma = GammaMap.Value.add name (Value param) gamma in
-    let exn_block =
-      lazy begin
-        let block = LLVM.append_block c "exn" f in
-        let builder = LLVM.builder_at_end c block in
-        LLVM.build_ret null builder;
-        block
-      end
-    in
-    let (v, builder) = lambda f ~env ~exn ~exn_block gamma builder t in
+    let (v, builder) = lambda f ~env ~jmp_buf gamma builder t in
     LLVM.build_ret v builder
 
-  and lambda func ?isrec ~env ~exn ~exn_block gamma builder = function
+  and lambda func ?isrec ~env ~jmp_buf gamma builder = function
     | UntypedTree.Abs (name, with_exn, used_vars, t) ->
         let (f, builder', closure, gamma) =
           create_closure ~isrec ~with_exn ~used_vars ~env gamma builder
@@ -260,29 +281,24 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         abs ~f ~name t gamma builder';
         (closure, builder)
     | UntypedTree.App (f, with_exn, x) ->
-        let (closure, builder) = lambda func ~env ~exn ~exn_block gamma builder f in
-        let (x, builder) = lambda func ~env ~exn ~exn_block gamma builder x in
+        let (closure, builder) = lambda func ~env ~jmp_buf gamma builder f in
+        let (x, builder) = lambda func ~env ~jmp_buf gamma builder x in
         let closure = LLVM.build_bitcast closure (Type.closure_ptr 1) "" builder in
         let f = LLVM.build_load closure "" builder in
         let f = LLVM.build_extractvalue f 0 "" builder in
         let f = LLVM.build_bitcast f (Type.lambda_ptr with_exn) "" builder in
         begin match with_exn with
         | true ->
-            let exn = Lazy.force exn in
-            let res = LLVM.build_call f [|x; closure; exn|] "" builder in
-            let next_block = LLVM.append_block c "" func in
-            let exn_block = Lazy.force exn_block in
-            let app_raised = LLVM.build_is_null res "" builder in
-            LLVM.build_cond_br app_raised exn_block next_block builder;
-            (res, LLVM.builder_at_end c next_block)
+            let jmp_buf = Lazy.force jmp_buf in
+            (LLVM.build_call f [|x; closure; jmp_buf|] "" builder, builder)
         | false ->
             (LLVM.build_call f [|x; closure|] "" builder, builder)
         end
     | UntypedTree.PatternMatching (t, results, tree) ->
-        let (t, builder) = lambda func ~env ~exn ~exn_block gamma builder t in
+        let (t, builder) = lambda func ~env ~jmp_buf gamma builder t in
         let res = LLVM.build_alloca Type.star "" builder in
         let next_block = LLVM.append_block c "" func in
-        let results = List.map (create_result func ~env ~res ~next_block ~exn ~exn_block gamma builder) results in
+        let results = List.map (create_result func ~env ~res ~next_block ~jmp_buf gamma builder) results in
         let builder' = LLVM.builder_at_end c next_block in
         let default = create_default_branch func in
         create_tree func ~env ~default Map.empty gamma builder t results tree;
@@ -315,49 +331,56 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let i = LLVM.build_inttoptr (i32 i) Type.star "" builder in
         (malloc_and_init (Type.variant (succ size)) (i :: values) builder, builder)
     | UntypedTree.Let (name, t, xs) ->
-        let (t, builder) = lambda func ~env ~exn ~exn_block gamma builder t in
+        let (t, builder) = lambda func ~env ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
-        lambda func ~env ~exn ~exn_block gamma builder xs
+        lambda func ~env ~jmp_buf gamma builder xs
     | UntypedTree.LetRec (name, t, xs) ->
-        let (t, builder) = lambda func ~isrec:name ~env ~exn ~exn_block gamma builder t in
+        let (t, builder) = lambda func ~isrec:name ~env ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
-        lambda func ~env ~exn ~exn_block gamma builder xs
+        lambda func ~env ~jmp_buf gamma builder xs
     | UntypedTree.Fail (name, args) ->
         let aux (acc, builder) x =
-          let (x, builder) = lambda func ~env ~exn ~exn_block gamma builder x in
+          let (x, builder) = lambda func ~env ~jmp_buf gamma builder x in
           (x :: acc, builder)
         in
         let (args, builder) = List.fold_left aux ([], builder) args in
         let args = List.rev args in
         let args = malloc_and_init_array (List.length args) args builder in
         let tag = get_exn name in
-        fail ~tag ~args ~exn ~exn_block builder;
+        LLVM.build_store args exn_args_var builder;
+        LLVM.build_store tag exn_tag_var builder;
+        ignore (LLVM.build_call longjmp [|Lazy.force jmp_buf|] "" builder);
+        LLVM.build_unreachable builder;
         (null, LLVM.builder_at_end c (LLVM.append_block c "" func))
     | UntypedTree.Try (t, with_exn, branches) ->
+        let jmp_buf' = LLVM.build_alloca Type.jmp_buf "" builder in
+        init_jmp_buf jmp_buf' builder;
         let res = LLVM.build_alloca Type.star "" builder in
-        let new_exn = LLVM.build_alloca Type.exn "" builder in
-        let new_exn_block = LLVM.append_block c "" func in
-        let (t, builder) = lambda func ~env ~exn:(lazy new_exn) ~exn_block:(lazy new_exn_block) gamma builder t in
         let next_block = LLVM.append_block c "" func in
-        let non_exn_block =
+        let try_block =
           let block = LLVM.append_block c "" func in
           let builder = LLVM.builder_at_end c block in
+          let (t, builder) = lambda func ~env ~jmp_buf:(lazy jmp_buf') gamma builder t in
           LLVM.build_store t res builder;
           LLVM.build_br next_block builder;
           block
         in
-        let raised = LLVM.build_is_null t "" builder in
-        LLVM.build_cond_br raised new_exn_block non_exn_block builder;
-        let builder = LLVM.builder_at_end c new_exn_block in
-        create_exn_branches func ~env ~exn ~res ~next_block ~exn_block ~new_exn ~with_exn gamma builder branches;
+        let catch_block =
+          let block = LLVM.append_block c "" func in
+          let builder = LLVM.builder_at_end c block in
+          create_exn_branches func ~env ~jmp_buf ~res ~next_block ~with_exn gamma builder branches;
+          block
+        in
+        let jmp_res = LLVM.build_call setjmp [|jmp_buf'|] "" builder in
+        let cond = LLVM.build_icmp LLVM.Icmp.Eq jmp_res (i32 0) "" builder in
+        LLVM.build_cond_br cond try_block catch_block builder;
         let builder = LLVM.builder_at_end c next_block in
         (LLVM.build_load res "" builder, builder)
 
   let lambda func gamma builder t =
     let env = lazy (assert false) in
-    let exn = lazy (assert false) in
-    let exn_block = lazy (assert false) in
-    lambda func ~env ~exn ~exn_block gamma builder t
+    let jmp_buf = lazy (assert false) in
+    lambda func ~env ~jmp_buf gamma builder t
 
   let set_linkage v = function
     | UntypedTree.Private -> LLVM.set_linkage LLVM.Linkage.Private v
