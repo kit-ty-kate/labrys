@@ -99,11 +99,13 @@ module Make (I : sig val name : Ident.Module.t end) = struct
   let exn_tag_var =
     let v = LLVM.define_global "exn_tag" null m in
     LLVM.set_thread_local true v;
+    LLVM.set_linkage LLVM.Linkage.Link_once_odr v;
     v
 
   let exn_args_var =
     let v = LLVM.define_global "exn_args" null m in
     LLVM.set_thread_local true v;
+    LLVM.set_linkage LLVM.Linkage.Link_once_odr v;
     v
 
   let create_default_branch func =
