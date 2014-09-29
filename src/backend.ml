@@ -112,7 +112,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
   let create_default_branch func =
     let block = LLVM.append_block c "" func in
     let builder = LLVM.builder_at_end c block in
-    ignore (LLVM.build_call debug_trap [||] "" builder);
+    LLVM.build_call_void debug_trap [||] builder;
     LLVM.build_unreachable builder;
     block
 
@@ -257,9 +257,9 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     in
     let builder = List.fold_left aux builder branches in
     if with_exn then begin
-      ignore (LLVM.build_call longjmp [|Lazy.force jmp_buf|] "" builder);
+      LLVM.build_call_void longjmp [|Lazy.force jmp_buf|] builder;
     end else begin
-      ignore (LLVM.build_call debug_trap [||] "" builder);
+      LLVM.build_call_void debug_trap [||] builder;
     end;
     LLVM.build_unreachable builder;
 
@@ -349,7 +349,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let tag = get_exn name in
         LLVM.build_store args exn_args_var builder;
         LLVM.build_store tag exn_tag_var builder;
-        ignore (LLVM.build_call longjmp [|Lazy.force jmp_buf|] "" builder);
+        LLVM.build_call_void longjmp [|Lazy.force jmp_buf|] builder;
         LLVM.build_unreachable builder;
         (null, LLVM.builder_at_end c (LLVM.append_block c "" func))
     | UntypedTree.Try (t, with_exn, branches) ->
@@ -417,7 +417,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
 
   let init_gc builder =
     let gc_init = LLVM.declare_function "GC_init" Type.unit_function m in
-    ignore (LLVM.build_call gc_init [||] "" builder)
+    LLVM.build_call_void gc_init [||] builder
 
   let init_name name = fmt "__%s_init" (Ident.Module.to_module_name name)
 
@@ -425,7 +425,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let aux import =
       let import = ModulePath.to_module import in
       let f = LLVM.declare_global Type.unit_function (init_name import) m in
-      ignore (LLVM.build_call f [||] "" builder)
+      LLVM.build_call_void f [||] builder
     in
     List.iter aux imports
 
@@ -475,7 +475,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           if with_main then begin
             let (_, builder) = LLVM.define_function c "main" Type.unit_function m in
             init_gc builder;
-            ignore (LLVM.build_call f [||] "" builder);
+            LLVM.build_call_void f [||] builder;
             LLVM.build_ret_void builder;
           end;
           m

@@ -30,6 +30,7 @@ val build_ret_void : llbuilder -> unit
 val build_br : llbasicblock -> llbuilder -> unit
 val build_cond_br : llvalue -> llbasicblock -> llbasicblock -> llbuilder -> unit
 val build_unreachable : llbuilder -> unit
+val build_call_void : llvalue -> llvalue array -> llbuilder -> unit
 
 val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * llbuilder)
 
