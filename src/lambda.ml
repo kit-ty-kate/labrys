@@ -62,9 +62,6 @@ and of_typed_term mapn = function
       let (t, used_vars) = of_typed_term mapn t in
       let used_vars = Set.remove name used_vars in
       (Abs (name, with_exn, used_vars, t), used_vars)
-  | TypedTree.TApp t
-  | TypedTree.TAbs t ->
-      of_typed_term mapn t
   | TypedTree.App (f, with_exn, x) ->
       let (f, used_vars1) = of_typed_term mapn f in
       let (x, used_vars2) = of_typed_term mapn x in

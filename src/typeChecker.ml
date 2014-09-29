@@ -67,7 +67,7 @@ let rec aux gamma = function
       let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
       let (expr, ty_expr, effect) = aux gamma t in
       let abs_ty = Types.forall ~param:name ~kind:k ~res:ty_expr in
-      (TAbs expr, abs_ty, effect)
+      (expr, abs_ty, effect)
   | (loc, ParseTree.App (f, x)) ->
       let (f, ty_f, effect1) = aux gamma f in
       let (x, ty_x, effect2) = aux gamma x in
@@ -81,7 +81,7 @@ let rec aux gamma = function
       let (ty_x, kx) = Types.of_parse_tree_kind gamma.Gamma.types ty_x in
       let (param, res) = Types.apply_ty ~loc ~ty_x ~kind_x:kx ty_f in
       let res = Types.replace ~from:param ~ty:ty_x res in
-      (TApp f, res, effect)
+      (f, res, effect)
   | (loc, ParseTree.Val name) ->
       begin match GammaMap.Value.find name gamma.Gamma.values with
       | None ->

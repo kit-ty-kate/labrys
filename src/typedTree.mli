@@ -26,9 +26,7 @@ type with_exn = bool
 
 type t =
   | Abs of (name * with_exn * t)
-  | TAbs of t
   | App of (t * with_exn * t)
-  | TApp of t
   | Val of name
   | PatternMatching of (t * (used_vars * t) list * Pattern.t)
   | Let of (name * t * t)

@@ -270,13 +270,6 @@ module TypedTree = struct
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
-    | TAbs t ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ PPrint.string "λ ?? ->"
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
-           ^^ PPrint.rparen
-          )
     | App (f, with_exn, x) ->
         PPrint.group
           (PPrint.lparen
@@ -284,14 +277,6 @@ module TypedTree = struct
            ^^ PPrint.blank 1
            ^^ PPrint.OCaml.bool with_exn
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t x)
-           ^^ PPrint.rparen
-          )
-    | TApp f ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ dump_t f
-           ^^ PPrint.blank 1
-           ^^ PPrint.string "[]"
            ^^ PPrint.rparen
           )
     | Val name ->
