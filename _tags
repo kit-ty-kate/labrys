@@ -1,57 +1,7 @@
 # OASIS_START
-# DO NOT EDIT (digest: c7d71d945ffb61e679a3e345bb398355)
-# Ignore VCS directories, you can use the same kind of rule outside
-# OASIS_START/STOP if you want to exclude directories that contains
-# useless stuff for the build process
-<**/.svn>: -traverse
-<**/.svn>: not_hygienic
-".bzr": -traverse
-".bzr": not_hygienic
-".hg": -traverse
-".hg": not_hygienic
-".git": -traverse
-".git": not_hygienic
-"_darcs": -traverse
-"_darcs": not_hygienic
-# Executable cervoise
-<src/main.{native,byte}>: oasis_executable_cervoise_byte
-<src/*.ml{,i,y}>: oasis_executable_cervoise_byte
-<src/main.{native,byte}>: oasis_executable_cervoise_native
-<src/*.ml{,i,y}>: oasis_executable_cervoise_native
-<src/main.{native,byte}>: package(batteries)
-<src/main.{native,byte}>: package(cmdliner)
-<src/main.{native,byte}>: package(llvm)
-<src/main.{native,byte}>: package(llvm.all_backends)
-<src/main.{native,byte}>: package(llvm.bitwriter)
-<src/main.{native,byte}>: package(llvm.irreader)
-<src/main.{native,byte}>: package(llvm.linker)
-<src/main.{native,byte}>: package(llvm.passmgr_builder)
-<src/main.{native,byte}>: package(llvm.scalar_opts)
-<src/main.{native,byte}>: package(llvm.target)
-<src/main.{native,byte}>: package(monomorphic)
-<src/main.{native,byte}>: package(pprint)
-<src/main.{native,byte}>: package(unix)
-<src/*.ml{,i,y}>: package(batteries)
-<src/*.ml{,i,y}>: package(cmdliner)
-<src/*.ml{,i,y}>: package(llvm)
-<src/*.ml{,i,y}>: package(llvm.all_backends)
-<src/*.ml{,i,y}>: package(llvm.bitwriter)
-<src/*.ml{,i,y}>: package(llvm.irreader)
-<src/*.ml{,i,y}>: package(llvm.linker)
-<src/*.ml{,i,y}>: package(llvm.passmgr_builder)
-<src/*.ml{,i,y}>: package(llvm.scalar_opts)
-<src/*.ml{,i,y}>: package(llvm.target)
-<src/*.ml{,i,y}>: package(monomorphic)
-<src/*.ml{,i,y}>: package(pprint)
-<src/*.ml{,i,y}>: package(unix)
-# Executable test
-<tests/tests.{native,byte}>: oasis_executable_test_byte
-<tests/*.ml{,i,y}>: oasis_executable_test_byte
-<tests/tests.{native,byte}>: oasis_executable_test_native
-<tests/*.ml{,i,y}>: oasis_executable_test_native
-<tests/tests.{native,byte}>: package(oUnit)
-<tests/*.ml{,i,y}>: package(oUnit)
 # OASIS_STOP
+
 "examples": -traverse
 "examples": not_hygienic
+
 true: use_menhir, explain, safe_string
