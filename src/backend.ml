@@ -56,6 +56,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let lambda_ptr ~env_size ~with_exn =
       LLVM.pointer_type (lambda ~env_size ~with_exn)
     let unit_function = LLVM.function_type void [||]
+    let main_function = LLVM.function_type i32 [||]
   end
 
   let i32 = LLVM.const_int Type.i32
@@ -481,10 +482,10 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           let builder = init f builder (List.rev init_list) in
           LLVM.build_ret_void builder;
           if with_main then begin
-            let (_, builder) = LLVM.define_function c "main" Type.unit_function m in
+            let (_, builder) = LLVM.define_function c "main" Type.main_function m in
             init_gc builder;
             LLVM.build_call_void f [||] builder;
-            LLVM.build_ret_void builder;
+            LLVM.build_ret (i32 0) builder;
           end;
           m
     in
