@@ -447,10 +447,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           set_linkage global linkage;
           top (`Val (global, t) :: init_list) xs
       | UntypedTree.Binding (name, binding, linkage) :: xs ->
-          let v = match LLVM.bind c ~name binding m with
-            | Some v -> v
-            | None -> failwith "wat" (* TODO *)
-          in
+          let v = LLVM.bind c ~name binding m in
           let name = Ident.Name.prepend I.name name in
           let name = Ident.Name.to_string name in
           let v = LLVM.define_global name (LLVM.const_bitcast v Type.star) m in

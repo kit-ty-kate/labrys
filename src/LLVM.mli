@@ -19,6 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+exception BackendFailure of string
+
 include module type of (Llvm :
                           module type of Llvm
                         with type llmodule = Llvm.llmodule
@@ -34,7 +36,7 @@ val build_call_void : llvalue -> llvalue array -> llbuilder -> unit
 
 val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * llbuilder)
 
-val bind : llcontext -> name:Ident.Name.t -> string -> llmodule -> llvalue option
+val bind : llcontext -> name:Ident.Name.t -> string -> llmodule -> llvalue
 
 val optimize :
   lto:bool ->

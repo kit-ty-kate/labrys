@@ -33,6 +33,7 @@ let start printer lto opt o file =
   | Compiler.ParseError x -> Some x
   | Sys_error x -> Some x
   | Llvm_irreader.Error x -> Some x
+  | LLVM.BackendFailure x -> Some x
 
 let cmd =
   let module Term = Cmdliner.Term in

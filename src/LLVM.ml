@@ -22,6 +22,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
+let fmt = Printf.sprintf
+
+exception BackendFailure of string
+
 include Llvm
 
 let () = enable_pretty_stacktrace ()
@@ -48,7 +52,12 @@ let bind c ~name s m =
   iter_functions set_link_priv m';
   Llvm_linker.link_modules m m' Llvm_linker.Mode.DestroySource;
   dispose_module m';
-  lookup_global ("." ^ Ident.Name.to_string name) m
+  let name = "." ^ Ident.Name.to_string name in
+  match lookup_global name m with
+  | Some v ->
+      v
+  | None ->
+      raise (BackendFailure (fmt "Cannot found the LLVM binding '%s'" name))
 
 let optimize ~lto ~opt layout m =
   let pm = PassManager.create () in
