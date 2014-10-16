@@ -22,8 +22,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type changed = bool
-
 let fmt = Printf.sprintf
 
 module Module = struct
@@ -49,17 +47,11 @@ module Name = struct
   let of_list x = x
   let to_string = String.concat "."
 
-  let unique self names = match self with
-    | [] -> assert false
+  let unique self n = match self with
     | [name] ->
-        begin match Utils.StrMap.find name names with
-        | Some i ->
-            ([fmt "%s__%d" name i], Utils.StrMap.add name (succ i) names, true)
-        | None ->
-            (self, Utils.StrMap.add name 0 names, false)
-        end
-    | _::_ ->
-        (self, names, false)
+        [fmt "%s__%d" name n]
+    | _::_
+    | [] -> assert false
 end
 
 module Type = Name
