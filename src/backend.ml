@@ -63,6 +63,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
   let undef = LLVM.undef Type.i8_ptr
   let string = LLVM.const_string c
 
+  let gc_roots = LLVM.define_global "gc_roots" null m
+
   let fill ty values builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
     List.fold_lefti aux (LLVM.undef ty) values
@@ -76,7 +78,10 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let ty = Type.value size in
     let allocated = LLVM.build_malloc ty "" builder in
     let value = fill (Type.array size) (hd :: tl) builder in
-    init allocated ty [i1 0; i32 (pred size); null; value] builder;
+    let old_gc_root = LLVM.build_load gc_roots "" builder in
+    init allocated ty [i1 0; i32 (pred size); old_gc_root; value] builder;
+    let new_gc_root = LLVM.build_bitcast allocated Type.i8_ptr "" builder in
+    LLVM.build_store new_gc_root gc_roots builder;
     allocated
 
   let malloc_and_init_array size values builder =
