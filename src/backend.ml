@@ -65,6 +65,26 @@ module Make (I : sig val name : Ident.Module.t end) = struct
 
   let gc_roots = LLVM.define_global "gc_roots" null m
 
+  let gc_finalizer =
+    let (f, builder) = LLVM.define_function c "gc_finalizer" Type.unit_function m in
+    LLVM.set_linkage LLVM.Linkage.Link_once_odr f;
+    let current = LLVM.build_load gc_roots "" builder in
+    let cond = LLVM.build_is_null current "" builder in
+    let ret_block = LLVM.append_block c "" f in
+    let next_block = LLVM.append_block c "" f in
+    LLVM.build_cond_br cond ret_block next_block builder;
+    let builder = LLVM.builder_at_end c next_block in
+    let next = LLVM.build_bitcast current (Type.value_ptr 1) "" builder in
+    let next = LLVM.build_load next "" builder in
+    let next = LLVM.build_extractvalue next 2 "" builder in
+    LLVM.build_store next gc_roots builder;
+    LLVM.build_free current builder;
+    LLVM.build_call_void f [||] builder;
+    LLVM.build_ret_void builder;
+    let builder = LLVM.builder_at_end c ret_block in
+    LLVM.build_ret_void builder;
+    f
+
   let fill ty values builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
     List.fold_lefti aux (LLVM.undef ty) values
@@ -440,17 +460,6 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     | [] ->
         builder
 
-  let () =
-    let malloc_type = (LLVM.function_type Type.i8_ptr [|Type.i32|]) in
-    let (malloc, builder) = LLVM.define_function c "malloc" malloc_type m in
-    LLVM.set_linkage LLVM.Linkage.Private malloc;
-    let gc_malloc = LLVM.declare_function "GC_malloc" malloc_type m in
-    LLVM.build_ret (LLVM.build_call gc_malloc (LLVM.params malloc) "" builder) builder
-
-  let init_gc builder =
-    let gc_init = LLVM.declare_function "GC_init" Type.unit_function m in
-    LLVM.build_call_void gc_init [||] builder
-
   let init_name name = fmt "__%s_init" (Ident.Module.to_module_name name)
 
   let init_imports imports builder =
@@ -507,8 +516,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           LLVM.build_ret_void builder;
           if with_main then begin
             let (_, builder) = LLVM.define_function c "main" Type.main_function m in
-            init_gc builder;
             LLVM.build_call_void f [||] builder;
+            LLVM.build_call_void gc_finalizer [||] builder;
             LLVM.build_ret (i32 0) builder;
           end;
           m

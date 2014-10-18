@@ -43,7 +43,7 @@ let print_error () =
 let link ~tmp ~o =
     let tmp = Filename.quote tmp in
     let o = Filename.quote o in
-    let ld = Sys.command (fmt "cc -lgc %s -o %s" tmp o) in
+    let ld = Sys.command (fmt "cc %s -o %s" tmp o) in
     if Int.(ld <> 0) then begin
       print_error ();
     end

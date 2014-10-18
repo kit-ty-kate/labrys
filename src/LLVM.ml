@@ -37,6 +37,7 @@ let build_br bb b = ignore (build_br bb b)
 let build_cond_br cond tbb fbb b = ignore (build_cond_br cond tbb fbb b)
 let build_unreachable b = ignore (build_unreachable b)
 let build_call_void f params b = ignore (build_call f params "" b)
+let build_free v b = ignore (build_free v b)
 
 let define_function c s ty m =
   let f = define_function s ty m in
