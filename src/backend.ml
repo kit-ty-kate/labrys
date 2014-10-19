@@ -55,6 +55,11 @@ module LLUtils (X : LLMOD) = struct
     let lambda_ptr ~with_exn = LLVM.pointer_type (lambda ~with_exn)
     let unit_function = LLVM.function_type void [||]
     let main_function = LLVM.function_type i32 [||]
+    let malloc_function = LLVM.function_type i8_ptr [|i32|]
+    let longjmp_function = LLVM.function_type void [|i8_ptr|]
+    let setjmp_function = LLVM.function_type i32 [|i8_ptr|]
+    let frameaddress_function = LLVM.function_type i8_ptr [|i32|]
+    let stacksave_function = LLVM.function_type i8_ptr [||]
   end
 
   let i1 = LLVM.const_int Type.i1
@@ -70,25 +75,48 @@ module Runtime (X : sig end) = struct
     let m = LLVM.create_module c "runtime"
   end)
 
-  let sbrk = LLVM.declare_function "sbrk" (LLVM.function_type Type.i8_ptr [|Type.i32|]) m
+  let malloc = LLVM.declare_function "malloc" Type.malloc_function m
 
   let gc_roots = LLVM.define_global "gc_roots" null m
-  let gc_free_roots = LLVM.define_global "gc_free_roots" null m
-  let gc_heap_start = LLVM.define_global "gc_heap" null m
-  let gc_heap_size = LLVM.define_global "gc_heap_size" (i32 0) m
+  let gc_free_roots = LLVM.define_global "gc_free_roots" null m (* TODO: Improve *)
+  let gc_minor_heap = LLVM.define_global "gc_minor_heap" null m
+  let gc_minor_heap_size = LLVM.define_global "gc_minor_heap_size" (i32 0) m
+  let gc_minor_heap_cursor = LLVM.define_global "gc_minor_heap_cursor" null m
+  let gc_major_heap = LLVM.define_global "gc_major_heap" null m
+  let gc_major_heap_size = LLVM.define_global "gc_major_heap_size" (i32 0) m
+  let gc_major_heap_cursor = LLVM.define_global "gc_major_heap_cursor" null m
 
   let exn_tag_var = LLVM.define_global "exn_tag" null m
   let exn_args_var = LLVM.define_global "exn_args" null m
 
   let gc_init =
     let (f, builder) = LLVM.define_function c "gc_init" Type.unit_function m in
-    let initial_value = i32 1000 in
-    let ptr = LLVM.build_call sbrk [|initial_value|] "" builder in
-    LLVM.build_store initial_value gc_heap_size builder;
-    LLVM.build_store ptr gc_heap_start builder;
+    let minor_size = i32 99999999 in
+    let major_size = LLVM.build_mul minor_size (i32 2) "" builder in
+    let minor_heap = LLVM.build_call malloc [|minor_size|] "" builder in (* TODO: Handle failures *)
+    let major_heap = LLVM.build_call malloc [|major_size|] "" builder in (* TODO: Handle failures *)
+    LLVM.build_store minor_heap gc_minor_heap builder;
+    LLVM.build_store minor_size gc_minor_heap_size builder;
+    LLVM.build_store minor_heap gc_minor_heap_cursor builder;
+    LLVM.build_store major_heap gc_major_heap builder;
+    LLVM.build_store major_size gc_major_heap_size builder;
+    LLVM.build_store major_heap gc_major_heap_cursor builder;
     LLVM.build_ret_void builder;
     f
 
+  let gc_malloc =
+    let (f, builder) = LLVM.define_function c "gc_malloc" Type.malloc_function m in
+    let size = LLVM.param f 0 in
+    let ptr = LLVM.build_load gc_minor_heap_cursor "" builder in
+    let cursor = LLVM.build_gep ptr [|size|] "" builder in
+(*    let cursor = LLVM.build_ptrtoint ptr Type.i32 "" builder in
+    let cursor = LLVM.build_add cursor size "" builder in
+    let cursor = LLVM.build_inttoptr cursor Type.i8_ptr "" builder in*)
+    LLVM.build_store cursor gc_minor_heap_cursor builder;
+    LLVM.build_ret ptr builder;
+    f
+
+(*
   let gc_finalize =
     let (f, builder) = LLVM.define_function c "gc_finalize" Type.unit_function m in
     let current = LLVM.build_load gc_roots "" builder in
@@ -107,17 +135,31 @@ module Runtime (X : sig end) = struct
     let builder = LLVM.builder_at_end c ret_block in
     LLVM.build_ret_void builder;
     f
+*)
+  let gc_finalize =
+    let (f, builder) = LLVM.define_function c "gc_finalize" Type.unit_function m in
+    let minor_heap = LLVM.build_load gc_minor_heap "" builder in
+    let major_heap = LLVM.build_load gc_major_heap "" builder in
+    LLVM.build_free minor_heap builder;
+    LLVM.build_free major_heap builder;
+    LLVM.build_ret_void builder;
+    f
 
   let init () = begin
     LLVM.set_linkage LLVM.Linkage.Private gc_roots;
     LLVM.set_linkage LLVM.Linkage.Private gc_free_roots;
-    LLVM.set_linkage LLVM.Linkage.Private gc_heap_start;
-    LLVM.set_linkage LLVM.Linkage.Private gc_heap_size;
+    LLVM.set_linkage LLVM.Linkage.Private gc_minor_heap;
+    LLVM.set_linkage LLVM.Linkage.Private gc_minor_heap_size;
+    LLVM.set_linkage LLVM.Linkage.Private gc_minor_heap_cursor;
+    LLVM.set_linkage LLVM.Linkage.Private gc_major_heap;
+    LLVM.set_linkage LLVM.Linkage.Private gc_major_heap_size;
+    LLVM.set_linkage LLVM.Linkage.Private gc_major_heap_cursor;
     LLVM.set_linkage LLVM.Linkage.Private exn_tag_var;
     LLVM.set_thread_local true exn_tag_var;
     LLVM.set_linkage LLVM.Linkage.Private exn_args_var;
     LLVM.set_thread_local true exn_args_var;
     LLVM.set_linkage LLVM.Linkage.Private gc_init;
+    LLVM.set_linkage LLVM.Linkage.Private gc_malloc;
     LLVM.set_linkage LLVM.Linkage.Private gc_finalize;
   end
 end
@@ -133,8 +175,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
   end)
 
   let gc_roots = LLVM.declare_global Type.i8_ptr "gc_roots" m
-  let gc_heap_start = LLVM.declare_global Type.i8_ptr "gc_heap" m
   let gc_init = LLVM.declare_function "gc_init" Type.unit_function m
+  let gc_malloc = LLVM.declare_function "gc_malloc" Type.malloc_function m
   let gc_finalize = LLVM.declare_function "gc_finalize" Type.unit_function m
 
   let fill ty values builder =
@@ -148,13 +190,14 @@ module Make (I : sig val name : Ident.Module.t end) = struct
   let malloc_and_init hd tl builder =
     let size = succ (List.length tl) in
     let ty = Type.value size in
-    let allocated = LLVM.build_malloc ty "" builder in
+    let ty_ptr = Type.value_ptr size in
+    let new_gc_root = LLVM.build_call gc_malloc [|LLVM.size_of ty|] "" builder in
+    let allocated = LLVM.build_bitcast new_gc_root ty_ptr "" builder in
     let value = fill (Type.array size) (hd :: tl) builder in
     let old_gc_root = LLVM.build_load gc_roots "" builder in
     init allocated ty [i1 0; i32 (pred size); old_gc_root; value] builder;
-    let new_gc_root = LLVM.build_bitcast allocated Type.i8_ptr "" builder in
     LLVM.build_store new_gc_root gc_roots builder;
-    allocated
+    new_gc_root
 
   let malloc_and_init_array size values builder =
     match size with
@@ -162,27 +205,16 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         null
     | size ->
         let ty = Type.array size in
-        let allocated = LLVM.build_malloc ty "" builder in
+        let allocated = LLVM.build_malloc ty "" builder in (* TODO: Free this *)
         init allocated ty values builder;
         allocated
 
   let debug_trap = LLVM.declare_function "llvm.debugtrap" Type.unit_function m
 
-  let longjmp =
-    let ty = LLVM.function_type Type.void [|Type.i8_ptr|] in
-    LLVM.declare_function "llvm.eh.sjlj.longjmp" ty m
-
-  let setjmp =
-    let ty = LLVM.function_type Type.i32 [|Type.i8_ptr|] in
-    LLVM.declare_function "llvm.eh.sjlj.setjmp" ty m
-
-  let frameaddress =
-    let ty = LLVM.function_type Type.i8_ptr [|Type.i32|] in
-    LLVM.declare_function "llvm.frameaddress" ty m
-
-  let stacksave =
-    let ty = LLVM.function_type Type.i8_ptr [||] in
-    LLVM.declare_function "llvm.stacksave" ty m
+  let longjmp = LLVM.declare_function "llvm.eh.sjlj.longjmp" Type.longjmp_function m
+  let setjmp = LLVM.declare_function "llvm.eh.sjlj.setjmp" Type.setjmp_function m
+  let frameaddress = LLVM.declare_function "llvm.frameaddress" Type.frameaddress_function m
+  let stacksave = LLVM.declare_function "llvm.stacksave" Type.stacksave_function m
 
   let exn_tag_var = LLVM.declare_global Type.i8_ptr "exn_tag" m
   let exn_args_var = LLVM.declare_global Type.i8_ptr "exn_args" m
@@ -364,7 +396,6 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           create_closure ~isrec ~with_exn ~used_vars ~env gamma builder
         in
         abs ~f ~env_size ~name t gamma builder';
-        let closure = LLVM.build_bitcast closure Type.i8_ptr "" builder in
         (closure, builder)
     | UntypedTree.App (f, with_exn, x) ->
         let (closure, builder) = lambda func ~env ~jmp_buf gamma builder f in
@@ -416,7 +447,6 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let values = List.map aux params in
         let i = LLVM.build_inttoptr (i32 i) Type.i8_ptr "" builder in
         let value = malloc_and_init i values builder in
-        let value = LLVM.build_bitcast value Type.i8_ptr "" builder in
         (value, builder)
     | UntypedTree.Let (name, t, xs) ->
         let (t, builder) = lambda func ~env ~jmp_buf gamma builder t in
