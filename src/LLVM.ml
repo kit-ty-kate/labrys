@@ -43,6 +43,8 @@ let define_function c s ty m =
   let f = define_function s ty m in
   f, builder_at_end c (entry_block f)
 
+let size_of c ty = const_trunc (size_of ty) (i32_type c)
+
 let bind c ~name s m =
   let membuffer = MemoryBuffer.of_string s in
   let m' = Llvm_irreader.parse_ir c membuffer in

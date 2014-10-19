@@ -37,6 +37,8 @@ val build_free : llvalue -> llbuilder -> unit
 
 val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * llbuilder)
 
+val size_of : llcontext -> lltype -> llvalue
+
 val bind : llcontext -> name:Ident.Name.t -> string -> llmodule -> llvalue
 
 val optimize :

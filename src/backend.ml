@@ -137,8 +137,10 @@ module Runtime (X : sig end) = struct
     let (f, builder) = LLVM.define_function c "gc_finalize" Type.unit_function m in
     let minor_heap = LLVM.build_load gc_minor_heap "" builder in
     let major_heap = LLVM.build_load gc_major_heap "" builder in
+    let exn_args = LLVM.build_load exn_args_var "" builder in
     LLVM.build_free minor_heap builder;
     LLVM.build_free major_heap builder;
+    LLVM.build_free exn_args builder;
     LLVM.build_ret_void builder;
     f
 
@@ -171,6 +173,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let m = LLVM.create_module c (Ident.Module.to_module_name I.name)
   end)
 
+  let malloc = LLVM.declare_function "malloc" Type.malloc_function m
+
   let gc_roots = LLVM.declare_global Type.i8_ptr "gc_roots" m
   let gc_init = LLVM.declare_function "gc_init" Type.unit_function m
   let gc_malloc = LLVM.declare_function "gc_malloc" Type.malloc_function m
@@ -188,7 +192,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let size = succ (List.length tl) in
     let ty = Type.value size in
     let ty_ptr = Type.value_ptr size in
-    let new_gc_root = LLVM.build_call gc_malloc [|LLVM.size_of ty|] "" builder in
+    let new_gc_root = LLVM.build_call gc_malloc [|LLVM.size_of c ty|] "" builder in
     let allocated = LLVM.build_bitcast new_gc_root ty_ptr "" builder in
     let value = fill (Type.array size) (hd :: tl) builder in
     let old_gc_root = LLVM.build_load gc_roots "" builder in
@@ -202,9 +206,11 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         null
     | size ->
         let ty = Type.array size in
-        let allocated = LLVM.build_malloc ty "" builder in (* TODO: Free this *)
+        let ty_ptr = Type.array_ptr size in
+        let ptr = LLVM.build_call malloc [|LLVM.size_of c ty|] "" builder in
+        let allocated = LLVM.build_bitcast ptr ty_ptr "" builder in
         init allocated ty values builder;
-        allocated
+        ptr
 
   let debug_trap = LLVM.declare_function "llvm.debugtrap" Type.unit_function m
 
@@ -462,6 +468,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let args = List.rev args in
         let args = malloc_and_init_array (List.length args) args builder in
         let tag = get_exn name in
+        let old_exn_args = LLVM.build_load exn_args_var "" builder in
+        LLVM.build_free old_exn_args builder;
         LLVM.build_store args exn_args_var builder;
         LLVM.build_store tag exn_tag_var builder;
         let jmp_buf = Lazy.force jmp_buf in
