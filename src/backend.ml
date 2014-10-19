@@ -26,13 +26,13 @@ type t = Llvm.llmodule
 
 let fmt = Printf.sprintf
 
-module Make (I : sig val name : Ident.Module.t end) = struct
-  type gamma =
-    | Value of LLVM.llvalue
-    | Env of int
+module type LLMOD = sig
+  val c : LLVM.llcontext
+  val m : t
+end
 
-  let c = LLVM.create_context ()
-  let m = LLVM.create_module c (Ident.Module.to_module_name I.name)
+module LLUtils (X : LLMOD) = struct
+  include X
 
   module Type = struct
     let void = LLVM.void_type c
@@ -62,12 +62,35 @@ module Make (I : sig val name : Ident.Module.t end) = struct
   let null = LLVM.const_null Type.i8_ptr
   let undef = LLVM.undef Type.i8_ptr
   let string = LLVM.const_string c
+end
+
+module Runtime (X : sig end) = struct
+  include LLUtils(struct
+    let c = LLVM.create_context ()
+    let m = LLVM.create_module c "runtime"
+  end)
+
+  let sbrk = LLVM.declare_function "sbrk" (LLVM.function_type Type.i8_ptr [|Type.i32|]) m
 
   let gc_roots = LLVM.define_global "gc_roots" null m
+  let gc_free_roots = LLVM.define_global "gc_free_roots" null m
+  let gc_heap_start = LLVM.define_global "gc_heap" null m
+  let gc_heap_size = LLVM.define_global "gc_heap_size" (i32 0) m
 
-  let gc_finalizer =
-    let (f, builder) = LLVM.define_function c "gc_finalizer" Type.unit_function m in
-    LLVM.set_linkage LLVM.Linkage.Link_once_odr f;
+  let exn_tag_var = LLVM.define_global "exn_tag" null m
+  let exn_args_var = LLVM.define_global "exn_args" null m
+
+  let gc_init =
+    let (f, builder) = LLVM.define_function c "gc_init" Type.unit_function m in
+    let initial_value = i32 1000 in
+    let ptr = LLVM.build_call sbrk [|initial_value|] "" builder in
+    LLVM.build_store initial_value gc_heap_size builder;
+    LLVM.build_store ptr gc_heap_start builder;
+    LLVM.build_ret_void builder;
+    f
+
+  let gc_finalize =
+    let (f, builder) = LLVM.define_function c "gc_finalize" Type.unit_function m in
     let current = LLVM.build_load gc_roots "" builder in
     let cond = LLVM.build_is_null current "" builder in
     let ret_block = LLVM.append_block c "" f in
@@ -84,6 +107,35 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let builder = LLVM.builder_at_end c ret_block in
     LLVM.build_ret_void builder;
     f
+
+  let init () = begin
+    LLVM.set_linkage LLVM.Linkage.Private gc_roots;
+    LLVM.set_linkage LLVM.Linkage.Private gc_free_roots;
+    LLVM.set_linkage LLVM.Linkage.Private gc_heap_start;
+    LLVM.set_linkage LLVM.Linkage.Private gc_heap_size;
+    LLVM.set_linkage LLVM.Linkage.Private exn_tag_var;
+    LLVM.set_thread_local true exn_tag_var;
+    LLVM.set_linkage LLVM.Linkage.Private exn_args_var;
+    LLVM.set_thread_local true exn_args_var;
+    LLVM.set_linkage LLVM.Linkage.Private gc_init;
+    LLVM.set_linkage LLVM.Linkage.Private gc_finalize;
+  end
+end
+
+module Make (I : sig val name : Ident.Module.t end) = struct
+  type gamma =
+    | Value of LLVM.llvalue
+    | Env of int
+
+  include LLUtils(struct
+    let c = LLVM.create_context ()
+    let m = LLVM.create_module c (Ident.Module.to_module_name I.name)
+  end)
+
+  let gc_roots = LLVM.declare_global Type.i8_ptr "gc_roots" m
+  let gc_heap_start = LLVM.declare_global Type.i8_ptr "gc_heap" m
+  let gc_init = LLVM.declare_function "gc_init" Type.unit_function m
+  let gc_finalize = LLVM.declare_function "gc_finalize" Type.unit_function m
 
   let fill ty values builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
@@ -132,17 +184,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let ty = LLVM.function_type Type.i8_ptr [||] in
     LLVM.declare_function "llvm.stacksave" ty m
 
-  let exn_tag_var =
-    let v = LLVM.define_global "exn_tag" null m in
-    LLVM.set_thread_local true v;
-    LLVM.set_linkage LLVM.Linkage.Link_once_odr v;
-    v
-
-  let exn_args_var =
-    let v = LLVM.define_global "exn_args" null m in
-    LLVM.set_thread_local true v;
-    LLVM.set_linkage LLVM.Linkage.Link_once_odr v;
-    v
+  let exn_tag_var = LLVM.declare_global Type.i8_ptr "exn_tag" m
+  let exn_args_var = LLVM.declare_global Type.i8_ptr "exn_args" m
 
   let create_default_branch func =
     let block = LLVM.append_block c "" func in
@@ -516,22 +559,29 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           LLVM.build_ret_void builder;
           if with_main then begin
             let (_, builder) = LLVM.define_function c "main" Type.main_function m in
+            LLVM.build_call_void gc_init [||] builder;
             LLVM.build_call_void f [||] builder;
-            LLVM.build_call_void gc_finalizer [||] builder;
+            LLVM.build_call_void gc_finalize [||] builder;
             LLVM.build_ret (i32 0) builder;
           end;
-          m
     in
     top []
 end
 
-let make ~with_main ~name ~imports x =
-  let module Module = Make(struct let name = name end) in
-  Module.make ~with_main ~imports x
-
 let link dst src =
   Llvm_linker.link_modules dst src Llvm_linker.Mode.DestroySource;
   dst
+
+let make ~with_main ~name ~imports x =
+  let module Module = Make(struct let name = name end) in
+  Module.make ~with_main ~imports x;
+  if with_main then
+    let module Runtime = Runtime(struct end) in
+    let m = link Runtime.m Module.m in
+    Runtime.init ();
+    m
+  else
+    Module.m
 
 let init = lazy (Llvm_all_backends.initialize ())
 
