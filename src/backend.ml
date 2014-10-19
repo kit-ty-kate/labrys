@@ -109,9 +109,6 @@ module Runtime (X : sig end) = struct
     let size = LLVM.param f 0 in
     let ptr = LLVM.build_load gc_minor_heap_cursor "" builder in
     let cursor = LLVM.build_gep ptr [|size|] "" builder in
-(*    let cursor = LLVM.build_ptrtoint ptr Type.i32 "" builder in
-    let cursor = LLVM.build_add cursor size "" builder in
-    let cursor = LLVM.build_inttoptr cursor Type.i8_ptr "" builder in*)
     LLVM.build_store cursor gc_minor_heap_cursor builder;
     LLVM.build_ret ptr builder;
     f
