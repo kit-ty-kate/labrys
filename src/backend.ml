@@ -78,13 +78,14 @@ module Runtime (X : sig end) = struct
   let malloc = LLVM.declare_function "malloc" Type.malloc_function m
 
   let gc_roots = LLVM.define_global "gc_roots" null m
-  let gc_free_roots = LLVM.define_global "gc_free_roots" null m (* TODO: Improve *)
   let gc_minor_heap = LLVM.define_global "gc_minor_heap" null m
   let gc_minor_heap_size = LLVM.define_global "gc_minor_heap_size" (i32 0) m
   let gc_minor_heap_cursor = LLVM.define_global "gc_minor_heap_cursor" null m
+  let gc_minor_heap_limit = LLVM.define_global "gc_minor_heap_limit" null m
   let gc_major_heap = LLVM.define_global "gc_major_heap" null m
   let gc_major_heap_size = LLVM.define_global "gc_major_heap_size" (i32 0) m
   let gc_major_heap_cursor = LLVM.define_global "gc_major_heap_cursor" null m
+  let gc_major_heap_limit = LLVM.define_global "gc_major_heap_limit" null m
 
   let exn_tag_var = LLVM.define_global "exn_tag" null m
   let exn_args_var = LLVM.define_global "exn_args" null m
@@ -95,19 +96,41 @@ module Runtime (X : sig end) = struct
     let major_size = LLVM.build_mul minor_size (i32 2) "" builder in
     let minor_heap = LLVM.build_call malloc [|minor_size|] "" builder in (* TODO: Handle failures *)
     let major_heap = LLVM.build_call malloc [|major_size|] "" builder in (* TODO: Handle failures *)
+    let minor_limit = LLVM.build_gep minor_heap [|minor_size|] "" builder in
+    let major_limit = LLVM.build_gep major_heap [|major_size|] "" builder in
     LLVM.build_store minor_heap gc_minor_heap builder;
     LLVM.build_store minor_size gc_minor_heap_size builder;
     LLVM.build_store minor_heap gc_minor_heap_cursor builder;
+    LLVM.build_store minor_limit gc_minor_heap_limit builder;
     LLVM.build_store major_heap gc_major_heap builder;
     LLVM.build_store major_size gc_major_heap_size builder;
     LLVM.build_store major_heap gc_major_heap_cursor builder;
+    LLVM.build_store major_limit gc_major_heap_limit builder;
     LLVM.build_ret_void builder;
+    f
+
+  let gc_copy =
+    let (f, builder) = LLVM.define_function c "gc_copy" Type.malloc_function m in
+    let size = LLVM.param f 0 in
+    (* TODO *)
+    LLVM.build_ret null builder;
     f
 
   let gc_malloc =
     let (f, builder) = LLVM.define_function c "gc_malloc" Type.malloc_function m in
     let size = LLVM.param f 0 in
     let ptr = LLVM.build_load gc_minor_heap_cursor "" builder in
+    let cursor = LLVM.build_gep ptr [|size|] "" builder in
+    let heap_limit = LLVM.build_load gc_minor_heap_limit "" builder in
+    let cond = LLVM.build_icmp LLVM.Icmp.Ule cursor heap_limit "" builder in
+    let then_block = LLVM.append_block c "" f in
+    let else_block = LLVM.append_block c "" f in
+    LLVM.build_cond_br cond then_block else_block builder;
+    let builder = LLVM.builder_at_end c then_block in
+    LLVM.build_store cursor gc_minor_heap_cursor builder;
+    LLVM.build_ret ptr builder;
+    let builder = LLVM.builder_at_end c else_block in
+    let ptr = LLVM.build_call gc_copy [|size|] "" builder in
     let cursor = LLVM.build_gep ptr [|size|] "" builder in
     LLVM.build_store cursor gc_minor_heap_cursor builder;
     LLVM.build_ret ptr builder;
@@ -146,18 +169,20 @@ module Runtime (X : sig end) = struct
 
   let init () = begin
     LLVM.set_linkage LLVM.Linkage.Private gc_roots;
-    LLVM.set_linkage LLVM.Linkage.Private gc_free_roots;
     LLVM.set_linkage LLVM.Linkage.Private gc_minor_heap;
     LLVM.set_linkage LLVM.Linkage.Private gc_minor_heap_size;
     LLVM.set_linkage LLVM.Linkage.Private gc_minor_heap_cursor;
+    LLVM.set_linkage LLVM.Linkage.Private gc_minor_heap_limit;
     LLVM.set_linkage LLVM.Linkage.Private gc_major_heap;
     LLVM.set_linkage LLVM.Linkage.Private gc_major_heap_size;
     LLVM.set_linkage LLVM.Linkage.Private gc_major_heap_cursor;
+    LLVM.set_linkage LLVM.Linkage.Private gc_major_heap_limit;
     LLVM.set_linkage LLVM.Linkage.Private exn_tag_var;
     LLVM.set_thread_local true exn_tag_var;
     LLVM.set_linkage LLVM.Linkage.Private exn_args_var;
     LLVM.set_thread_local true exn_args_var;
     LLVM.set_linkage LLVM.Linkage.Private gc_init;
+    LLVM.set_linkage LLVM.Linkage.Private gc_copy;
     LLVM.set_linkage LLVM.Linkage.Private gc_malloc;
     LLVM.set_linkage LLVM.Linkage.Private gc_finalize;
   end
