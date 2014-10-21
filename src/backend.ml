@@ -54,6 +54,7 @@ module Type = struct
   let setjmp_function = LLVM.function_type i32 [|i8_ptr|]
   let frameaddress_function = LLVM.function_type i8_ptr [|i32|]
   let stacksave_function = LLVM.function_type i8_ptr [||]
+  let gc_alloc_major_function = LLVM.function_type i8_ptr [||]
 end
 
 let i1 = LLVM.const_int Type.i1
@@ -94,20 +95,26 @@ module Runtime (Conf : CONFIG) = struct
   let gc_init =
     let (f, builder) = LLVM.define_function c "gc_init" Type.unit_function m in
     let minor_size = i32 Conf.initial_heap_size in
-    let major_size = LLVM.build_mul minor_size (i32 2) "" builder in
     let minor_heap = LLVM.build_call malloc [|minor_size|] "" builder in (* TODO: Handle failures *)
-    let major_heap = LLVM.build_call malloc [|major_size|] "" builder in (* TODO: Handle failures *)
     let minor_limit = LLVM.build_gep minor_heap [|minor_size|] "" builder in
-    let major_limit = LLVM.build_gep major_heap [|major_size|] "" builder in
     LLVM.build_store minor_heap gc_minor_heap builder;
     LLVM.build_store minor_size gc_minor_heap_size builder;
     LLVM.build_store minor_heap gc_minor_heap_cursor builder;
     LLVM.build_store minor_limit gc_minor_heap_limit builder;
+    LLVM.build_ret_void builder;
+    f
+
+  let gc_alloc_major =
+    let (f, builder) = LLVM.define_function c "gc_alloc_major" Type.gc_alloc_major_function m in
+    let minor_size = LLVM.build_load gc_minor_heap_size "" builder in
+    let major_size = LLVM.build_mul minor_size (i32 2) "" builder in
+    let major_heap = LLVM.build_call malloc [|major_size|] "" builder in (* TODO: Handle failures *)
+    let major_limit = LLVM.build_gep major_heap [|major_size|] "" builder in
     LLVM.build_store major_heap gc_major_heap builder;
     LLVM.build_store major_size gc_major_heap_size builder;
     LLVM.build_store major_heap gc_major_heap_cursor builder;
     LLVM.build_store major_limit gc_major_heap_limit builder;
-    LLVM.build_ret_void builder;
+    LLVM.build_ret major_heap builder;
     f
 
   let gc_copy =
@@ -183,6 +190,7 @@ module Runtime (Conf : CONFIG) = struct
     LLVM.set_linkage LLVM.Linkage.Private exn_args_var;
     LLVM.set_thread_local true exn_args_var;
     LLVM.set_linkage LLVM.Linkage.Private gc_init;
+    LLVM.set_linkage LLVM.Linkage.Private gc_alloc_major;
     LLVM.set_linkage LLVM.Linkage.Private gc_copy;
     LLVM.set_linkage LLVM.Linkage.Private gc_malloc;
     LLVM.set_linkage LLVM.Linkage.Private gc_finalize;
