@@ -25,55 +25,44 @@ open Monomorphic.None
 type t = Llvm.llmodule
 
 let fmt = Printf.sprintf
+let c = LLVM.global_context ()
 
-module type LLMOD = sig
-  val c : LLVM.llcontext
-  val m : t
+module Type = struct
+  let void = LLVM.void_type c
+  let i1 = LLVM.i1_type c
+  let i8 = LLVM.i8_type c
+  let i32 = LLVM.i32_type c
+  let i8_ptr = LLVM.pointer_type i8
+  let array = LLVM.array_type i8_ptr
+  let array_ptr size = LLVM.pointer_type (array size)
+  let value size = LLVM.struct_type c [|i1; i32; i8_ptr; array size|]
+  let value_ptr size = LLVM.pointer_type (value size)
+  (** Note: jmp_buf is a five word buffer (see the LLVM doc). *)
+  let jmp_buf = LLVM.array_type i8_ptr 5
+  let jmp_buf_ptr = LLVM.pointer_type jmp_buf
+  let lambda ~with_exn = match with_exn with
+    | true ->
+        LLVM.function_type i8_ptr [|i8_ptr; i8_ptr; jmp_buf_ptr|]
+    | false ->
+        LLVM.function_type i8_ptr [|i8_ptr; i8_ptr|]
+  let lambda_ptr ~with_exn = LLVM.pointer_type (lambda ~with_exn)
+  let unit_function = LLVM.function_type void [||]
+  let main_function = LLVM.function_type i32 [||]
+  let malloc_function = LLVM.function_type i8_ptr [|i32|]
+  let longjmp_function = LLVM.function_type void [|i8_ptr|]
+  let setjmp_function = LLVM.function_type i32 [|i8_ptr|]
+  let frameaddress_function = LLVM.function_type i8_ptr [|i32|]
+  let stacksave_function = LLVM.function_type i8_ptr [||]
 end
 
-module LLUtils (X : LLMOD) = struct
-  include X
-
-  module Type = struct
-    let void = LLVM.void_type c
-    let i1 = LLVM.i1_type c
-    let i8 = LLVM.i8_type c
-    let i32 = LLVM.i32_type c
-    let i8_ptr = LLVM.pointer_type i8
-    let array = LLVM.array_type i8_ptr
-    let array_ptr size = LLVM.pointer_type (array size)
-    let value size = LLVM.struct_type c [|i1; i32; i8_ptr; array size|]
-    let value_ptr size = LLVM.pointer_type (value size)
-    (** Note: jmp_buf is a five word buffer (see the LLVM doc). *)
-    let jmp_buf = LLVM.array_type i8_ptr 5
-    let jmp_buf_ptr = LLVM.pointer_type jmp_buf
-    let lambda ~with_exn = match with_exn with
-      | true ->
-          LLVM.function_type i8_ptr [|i8_ptr; i8_ptr; jmp_buf_ptr|]
-      | false ->
-          LLVM.function_type i8_ptr [|i8_ptr; i8_ptr|]
-    let lambda_ptr ~with_exn = LLVM.pointer_type (lambda ~with_exn)
-    let unit_function = LLVM.function_type void [||]
-    let main_function = LLVM.function_type i32 [||]
-    let malloc_function = LLVM.function_type i8_ptr [|i32|]
-    let longjmp_function = LLVM.function_type void [|i8_ptr|]
-    let setjmp_function = LLVM.function_type i32 [|i8_ptr|]
-    let frameaddress_function = LLVM.function_type i8_ptr [|i32|]
-    let stacksave_function = LLVM.function_type i8_ptr [||]
-  end
-
-  let i1 = LLVM.const_int Type.i1
-  let i32 = LLVM.const_int Type.i32
-  let null = LLVM.const_null Type.i8_ptr
-  let undef = LLVM.undef Type.i8_ptr
-  let string = LLVM.const_string c
-end
+let i1 = LLVM.const_int Type.i1
+let i32 = LLVM.const_int Type.i32
+let null = LLVM.const_null Type.i8_ptr
+let undef = LLVM.undef Type.i8_ptr
+let string = LLVM.const_string c
 
 module Runtime (X : sig end) = struct
-  include LLUtils(struct
-    let c = LLVM.create_context ()
-    let m = LLVM.create_module c "runtime"
-  end)
+  let m = LLVM.create_module c "runtime"
 
   let malloc = LLVM.declare_function "malloc" Type.malloc_function m
 
@@ -193,10 +182,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     | Value of LLVM.llvalue
     | Env of int
 
-  include LLUtils(struct
-    let c = LLVM.create_context ()
-    let m = LLVM.create_module c (Ident.Module.to_module_name I.name)
-  end)
+  let m = LLVM.create_module c (Ident.Module.to_module_name I.name)
 
   let malloc = LLVM.declare_function "malloc" Type.malloc_function m
 
