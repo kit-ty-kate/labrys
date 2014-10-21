@@ -20,15 +20,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type t
+type m
 
-val make :
-  with_main:bool ->
-  name:Ident.Module.t ->
-  imports:ModulePath.t list ->
-  UntypedTree.top list ->
-  t
+module type CONFIG = sig
+  val initial_heap_size : int
+end
 
-val link : t -> t -> t
+module Module (X : sig val name : Ident.Module.t end) : sig
+  val make :
+    imports:ModulePath.t list ->
+    UntypedTree.top list ->
+    m
+end
+
+module Runtime (Conf : CONFIG) : sig
+  val make : main_module:ModulePath.t -> m -> t
+end
+
+val link : m -> m -> m
 
 val optimize : opt:int -> lto:bool -> t -> t
 
@@ -37,3 +46,5 @@ val to_string : t -> string
 val write_bitcode : o:string -> t -> bool
 
 val emit_object_file : tmp:string -> t -> unit
+
+val default_heap_size : int

@@ -32,10 +32,16 @@ type printer =
 
 exception ParseError of string
 
-val compile :
-  printer:printer ->
-  lto:bool ->
-  opt:int ->
-  o:output_file ->
-  input_file ->
-  unit
+module type CONFIG = sig
+  val printer : printer
+  val lto : bool
+  val opt : int
+  include Backend.CONFIG
+end
+
+module Make (Conf : CONFIG) : sig
+  val compile :
+    o:output_file ->
+    input_file ->
+    unit
+end

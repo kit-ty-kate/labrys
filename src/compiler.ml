@@ -113,7 +113,7 @@ let rec build_impl =
   in
   List.fold_left aux ([], Gamma.empty, None) imports
 
-and compile ?(with_main = false) ~interface modul =
+and compile ~interface modul =
   let (imports, parse_tree) = parse (ModulePath.impl modul) Parser.main in
   let (imports, gamma, code) = build_impl modul imports in
   let typed_tree =
@@ -126,7 +126,10 @@ and compile ?(with_main = false) ~interface modul =
   let dst =
     lazy begin
       let untyped_tree = Lazy.force untyped_tree in
-      Backend.make ~with_main ~name ~imports untyped_tree
+      let module Module = Backend.Module(struct
+        let name = name
+      end) in
+      Module.make ~imports untyped_tree
     end
   in
   let res =
@@ -140,23 +143,36 @@ and compile ?(with_main = false) ~interface modul =
   prerr_endline (fmt "Compiling %s" (Ident.Module.to_module_name name));
   (parse_tree, typed_tree, untyped_tree, res)
 
-let compile ~printer ~lto ~opt ~o file =
-  let modul = ModulePath.of_file file in
-  let (parse_tree, typed_tree, untyped_tree, res) =
-    compile ~with_main:true ~interface:Gamma.empty modul
-  in
-  let optimized_res = lazy (Backend.optimize ~lto ~opt (Lazy.force res)) in
-  begin match printer with
-  | ParseTree ->
-      print_endline (Printers.ParseTree.dump parse_tree);
-  | TypedTree ->
-      print_endline (Printers.TypedTree.dump (Lazy.force typed_tree));
-  | UntypedTree ->
-      print_endline (Printers.UntypedTree.dump (Lazy.force untyped_tree));
-  | LLVM ->
-      print_endline (Backend.to_string (Lazy.force res));
-  | OptimizedLLVM ->
-      print_endline (Backend.to_string (Lazy.force optimized_res));
-  | NoPrinter ->
-      write ~o (Lazy.force optimized_res)
-  end
+module type CONFIG = sig
+  val printer : printer
+  val lto : bool
+  val opt : int
+  include Backend.CONFIG
+end
+
+module Make (Conf : CONFIG) = struct
+  let compile ~o file =
+    let modul = ModulePath.of_file file in
+    let (parse_tree, typed_tree, untyped_tree, res) =
+      compile ~interface:Gamma.empty modul
+    in
+    let module Runtime = Backend.Runtime(Conf) in
+    let res = lazy (Runtime.make ~main_module:modul (Lazy.force res)) in
+    let optimized_res =
+      lazy (Backend.optimize ~lto:Conf.lto ~opt:Conf.opt (Lazy.force res))
+    in
+    begin match Conf.printer with
+    | ParseTree ->
+        print_endline (Printers.ParseTree.dump parse_tree);
+    | TypedTree ->
+        print_endline (Printers.TypedTree.dump (Lazy.force typed_tree));
+    | UntypedTree ->
+        print_endline (Printers.UntypedTree.dump (Lazy.force untyped_tree));
+    | LLVM ->
+        print_endline (Backend.to_string (Lazy.force res));
+    | OptimizedLLVM ->
+        print_endline (Backend.to_string (Lazy.force optimized_res));
+    | NoPrinter ->
+        write ~o (Lazy.force optimized_res)
+    end
+end

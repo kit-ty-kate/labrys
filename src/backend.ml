@@ -23,6 +23,7 @@ open BatteriesExceptionless
 open Monomorphic.None
 
 type t = Llvm.llmodule
+type m = Llvm.llmodule
 
 let fmt = Printf.sprintf
 let c = LLVM.global_context ()
@@ -61,7 +62,18 @@ let null = LLVM.const_null Type.i8_ptr
 let undef = LLVM.undef Type.i8_ptr
 let string = LLVM.const_string c
 
-module Runtime (X : sig end) = struct
+let init_name name = fmt "__%s_init" (Ident.Module.to_module_name name)
+
+let init_import m builder import =
+  let import = ModulePath.to_module import in
+  let f = LLVM.declare_global Type.unit_function (init_name import) m in
+  LLVM.build_call_void f [||] builder
+
+module type CONFIG = sig
+  val initial_heap_size : int
+end
+
+module Runtime (Conf : CONFIG) = struct
   let m = LLVM.create_module c "runtime"
 
   let malloc = LLVM.declare_function "malloc" Type.malloc_function m
@@ -81,7 +93,7 @@ module Runtime (X : sig end) = struct
 
   let gc_init =
     let (f, builder) = LLVM.define_function c "gc_init" Type.unit_function m in
-    let minor_size = i32 99999999 in
+    let minor_size = i32 Conf.initial_heap_size in
     let major_size = LLVM.build_mul minor_size (i32 2) "" builder in
     let minor_heap = LLVM.build_call malloc [|minor_size|] "" builder in (* TODO: Handle failures *)
     let major_heap = LLVM.build_call malloc [|major_size|] "" builder in (* TODO: Handle failures *)
@@ -175,9 +187,19 @@ module Runtime (X : sig end) = struct
     LLVM.set_linkage LLVM.Linkage.Private gc_malloc;
     LLVM.set_linkage LLVM.Linkage.Private gc_finalize;
   end
+
+  let make ~main_module modul =
+    let (_, builder) = LLVM.define_function c "main" Type.main_function m in
+    LLVM.build_call_void gc_init [||] builder;
+    init_import m builder main_module;
+    LLVM.build_call_void gc_finalize [||] builder;
+    LLVM.build_ret (i32 0) builder;
+    Llvm_linker.link_modules m modul Llvm_linker.Mode.DestroySource;
+    init ();
+    m
 end
 
-module Make (I : sig val name : Ident.Module.t end) = struct
+module Module (I : sig val name : Ident.Module.t end) = struct
   type gamma =
     | Value of LLVM.llvalue
     | Env of int
@@ -187,9 +209,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
   let malloc = LLVM.declare_function "malloc" Type.malloc_function m
 
   let gc_roots = LLVM.declare_global Type.i8_ptr "gc_roots" m
-  let gc_init = LLVM.declare_function "gc_init" Type.unit_function m
   let gc_malloc = LLVM.declare_function "gc_malloc" Type.malloc_function m
-  let gc_finalize = LLVM.declare_function "gc_finalize" Type.unit_function m
 
   let fill ty values builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
@@ -549,21 +569,11 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     | [] ->
         builder
 
-  let init_name name = fmt "__%s_init" (Ident.Module.to_module_name name)
-
-  let init_imports imports builder =
-    let aux import =
-      let import = ModulePath.to_module import in
-      let f = LLVM.declare_global Type.unit_function (init_name import) m in
-      LLVM.build_call_void f [||] builder
-    in
-    List.iter aux imports
-
   let const_value v =
     let value = LLVM.const_array Type.i8_ptr [|v|] in
     LLVM.const_struct c [|i1 0; i32 0; null; value|]
 
-  let make ~with_main ~imports =
+  let make ~imports =
     let rec top init_list = function
       | UntypedTree.Value (name, t, linkage) :: xs ->
           let name = Ident.Name.prepend I.name name in
@@ -600,16 +610,10 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           let (f, builder) =
             LLVM.define_function c (init_name I.name) Type.unit_function m
           in
-          init_imports imports builder;
+          List.iter (init_import m builder) imports;
           let builder = init f builder (List.rev init_list) in
           LLVM.build_ret_void builder;
-          if with_main then begin
-            let (_, builder) = LLVM.define_function c "main" Type.main_function m in
-            LLVM.build_call_void gc_init [||] builder;
-            LLVM.build_call_void f [||] builder;
-            LLVM.build_call_void gc_finalize [||] builder;
-            LLVM.build_ret (i32 0) builder;
-          end;
+          m
     in
     top []
 end
@@ -617,17 +621,6 @@ end
 let link dst src =
   Llvm_linker.link_modules dst src Llvm_linker.Mode.DestroySource;
   dst
-
-let make ~with_main ~name ~imports x =
-  let module Module = Make(struct let name = name end) in
-  Module.make ~with_main ~imports x;
-  if with_main then
-    let module Runtime = Runtime(struct end) in
-    let m = link Runtime.m Module.m in
-    Runtime.init ();
-    m
-  else
-    Module.m
 
 let init = lazy (Llvm_all_backends.initialize ())
 
@@ -660,3 +653,5 @@ let emit_object_file ~tmp m =
     Llvm_target.CodeGenFileType.ObjectFile
     tmp
     target
+
+let default_heap_size = 99999999

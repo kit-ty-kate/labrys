@@ -22,13 +22,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let start printer lto opt o file =
+let start initial_heap_size printer lto opt o file =
 (*  if lto && c then
     Some
       "Error: Cannot enable the lto optimization while compiling.\n\
        This is allowed only during linking"
 *)
-  try Compiler.compile ~printer ~lto ~opt ~o file; None with
+  let module X = Compiler.Make(struct
+    let printer = printer
+    let lto = lto
+    let opt = opt
+    let initial_heap_size = initial_heap_size
+  end) in
+  try X.compile ~o file; None with
   | Error.Exn x -> Some (Error.dump ~file x)
   | Compiler.ParseError x -> Some x
   | Sys_error x -> Some x
@@ -48,6 +54,7 @@ let cmd =
     ]
   in
   let args = Term.pure start in
+  let args = args $ Arg.(value & opt int Backend.default_heap_size & info ["initial-heap-size"]) in
   let args = args $ Arg.(value & vflag Compiler.NoPrinter printers) in
   let args = args $ Arg.(value & flag & info ["lto"]) in
   let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
