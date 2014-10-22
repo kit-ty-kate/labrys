@@ -47,14 +47,19 @@ module Type = struct
     | false ->
         LLVM.function_type i8_ptr [|i8_ptr; i8_ptr|]
   let lambda_ptr ~with_exn = LLVM.pointer_type (lambda ~with_exn)
-  let unit_function = LLVM.function_type void [||]
-  let main_function = LLVM.function_type i32 [||]
-  let malloc_function = LLVM.function_type i8_ptr [|i32|]
-  let longjmp_function = LLVM.function_type void [|i8_ptr|]
-  let setjmp_function = LLVM.function_type i32 [|i8_ptr|]
-  let frameaddress_function = LLVM.function_type i8_ptr [|i32|]
-  let stacksave_function = LLVM.function_type i8_ptr [||]
-  let gc_alloc_major_function = LLVM.function_type i8_ptr [||]
+  let init = LLVM.function_type void [||]
+  let main = LLVM.function_type i32 [||]
+  let malloc = LLVM.function_type i8_ptr [|i32|]
+  let debugtrap = LLVM.function_type void [||]
+  let longjmp = LLVM.function_type void [|i8_ptr|]
+  let setjmp = LLVM.function_type i32 [|i8_ptr|]
+  let frameaddress = LLVM.function_type i8_ptr [|i32|]
+  let stacksave = LLVM.function_type i8_ptr [||]
+  let gc_init = LLVM.function_type void [||]
+  let gc_alloc_major = LLVM.function_type i8_ptr [||]
+  let gc_copy = LLVM.function_type i8_ptr [|i32|]
+  let gc_malloc = LLVM.function_type i8_ptr [|i32|]
+  let gc_finalize = LLVM.function_type void [||]
 end
 
 let i1 = LLVM.const_int Type.i1
@@ -67,7 +72,7 @@ let init_name name = fmt "__%s_init" (Ident.Module.to_module_name name)
 
 let init_import m builder import =
   let import = ModulePath.to_module import in
-  let f = LLVM.declare_global Type.unit_function (init_name import) m in
+  let f = LLVM.declare_global Type.init (init_name import) m in
   LLVM.build_call_void f [||] builder
 
 module type CONFIG = sig
@@ -77,7 +82,7 @@ end
 module Runtime (Conf : CONFIG) = struct
   let m = LLVM.create_module c "runtime"
 
-  let malloc = LLVM.declare_function "malloc" Type.malloc_function m
+  let malloc = LLVM.declare_function "malloc" Type.malloc m
 
   let gc_roots = LLVM.define_global "gc_roots" null m
   let gc_minor_heap = LLVM.define_global "gc_minor_heap" null m
@@ -93,7 +98,7 @@ module Runtime (Conf : CONFIG) = struct
   let exn_args_var = LLVM.define_global "exn_args" null m
 
   let gc_init =
-    let (f, builder) = LLVM.define_function c "gc_init" Type.unit_function m in
+    let (f, builder) = LLVM.define_function c "gc_init" Type.gc_init m in
     let minor_size = i32 Conf.initial_heap_size in
     let minor_heap = LLVM.build_call malloc [|minor_size|] "" builder in (* TODO: Handle failures *)
     let minor_limit = LLVM.build_gep minor_heap [|minor_size|] "" builder in
@@ -105,7 +110,7 @@ module Runtime (Conf : CONFIG) = struct
     f
 
   let gc_alloc_major =
-    let (f, builder) = LLVM.define_function c "gc_alloc_major" Type.gc_alloc_major_function m in
+    let (f, builder) = LLVM.define_function c "gc_alloc_major" Type.gc_alloc_major m in
     let minor_size = LLVM.build_load gc_minor_heap_size "" builder in
     let major_size = LLVM.build_mul minor_size (i32 2) "" builder in
     let major_heap = LLVM.build_call malloc [|major_size|] "" builder in (* TODO: Handle failures *)
@@ -118,14 +123,14 @@ module Runtime (Conf : CONFIG) = struct
     f
 
   let gc_copy =
-    let (f, builder) = LLVM.define_function c "gc_copy" Type.malloc_function m in
+    let (f, builder) = LLVM.define_function c "gc_copy" Type.gc_copy m in
     let size = LLVM.param f 0 in
     (* TODO *)
     LLVM.build_ret null builder;
     f
 
   let gc_malloc =
-    let (f, builder) = LLVM.define_function c "gc_malloc" Type.malloc_function m in
+    let (f, builder) = LLVM.define_function c "gc_malloc" Type.gc_malloc m in
     let size = LLVM.param f 0 in
     let ptr = LLVM.build_load gc_minor_heap_cursor "" builder in
     let cursor = LLVM.build_gep ptr [|size|] "" builder in
@@ -165,12 +170,10 @@ module Runtime (Conf : CONFIG) = struct
     f
 *)
   let gc_finalize =
-    let (f, builder) = LLVM.define_function c "gc_finalize" Type.unit_function m in
+    let (f, builder) = LLVM.define_function c "gc_finalize" Type.gc_finalize m in
     let minor_heap = LLVM.build_load gc_minor_heap "" builder in
-    let major_heap = LLVM.build_load gc_major_heap "" builder in
     let exn_args = LLVM.build_load exn_args_var "" builder in
     LLVM.build_free minor_heap builder;
-    LLVM.build_free major_heap builder;
     LLVM.build_free exn_args builder;
     LLVM.build_ret_void builder;
     f
@@ -197,7 +200,7 @@ module Runtime (Conf : CONFIG) = struct
   end
 
   let make ~main_module modul =
-    let (_, builder) = LLVM.define_function c "main" Type.main_function m in
+    let (_, builder) = LLVM.define_function c "main" Type.main m in
     LLVM.build_call_void gc_init [||] builder;
     init_import m builder main_module;
     LLVM.build_call_void gc_finalize [||] builder;
@@ -214,10 +217,10 @@ module Module (I : sig val name : Ident.Module.t end) = struct
 
   let m = LLVM.create_module c (Ident.Module.to_module_name I.name)
 
-  let malloc = LLVM.declare_function "malloc" Type.malloc_function m
+  let malloc = LLVM.declare_function "malloc" Type.malloc m
 
   let gc_roots = LLVM.declare_global Type.i8_ptr "gc_roots" m
-  let gc_malloc = LLVM.declare_function "gc_malloc" Type.malloc_function m
+  let gc_malloc = LLVM.declare_function "gc_malloc" Type.gc_malloc m
 
   let fill ty values builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
@@ -251,12 +254,12 @@ module Module (I : sig val name : Ident.Module.t end) = struct
         init allocated ty values builder;
         ptr
 
-  let debug_trap = LLVM.declare_function "llvm.debugtrap" Type.unit_function m
+  let debug_trap = LLVM.declare_function "llvm.debugtrap" Type.debugtrap m
 
-  let longjmp = LLVM.declare_function "llvm.eh.sjlj.longjmp" Type.longjmp_function m
-  let setjmp = LLVM.declare_function "llvm.eh.sjlj.setjmp" Type.setjmp_function m
-  let frameaddress = LLVM.declare_function "llvm.frameaddress" Type.frameaddress_function m
-  let stacksave = LLVM.declare_function "llvm.stacksave" Type.stacksave_function m
+  let longjmp = LLVM.declare_function "llvm.eh.sjlj.longjmp" Type.longjmp m
+  let setjmp = LLVM.declare_function "llvm.eh.sjlj.setjmp" Type.setjmp m
+  let frameaddress = LLVM.declare_function "llvm.frameaddress" Type.frameaddress m
+  let stacksave = LLVM.declare_function "llvm.stacksave" Type.stacksave m
 
   let exn_tag_var = LLVM.declare_global Type.i8_ptr "exn_tag" m
   let exn_args_var = LLVM.declare_global Type.i8_ptr "exn_args" m
@@ -616,7 +619,7 @@ module Module (I : sig val name : Ident.Module.t end) = struct
           top (Const g :: init_list) xs
       | [] ->
           let (f, builder) =
-            LLVM.define_function c (init_name I.name) Type.unit_function m
+            LLVM.define_function c (init_name I.name) Type.init m
           in
           List.iter (init_import m builder) imports;
           let builder = init f builder (List.rev init_list) in
