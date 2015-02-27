@@ -44,7 +44,7 @@ module Type = struct
   let lambda =
     LLVM.function_type i8_ptr [|i8_ptr; i8_ptr; jmp_buf_ptr|]
   let lambda_ptr = LLVM.pointer_type lambda
-  let init = LLVM.function_type void [||]
+  let init = LLVM.function_type void [|jmp_buf_ptr|]
   let main = LLVM.function_type i32 [||]
   let malloc = LLVM.function_type i8_ptr [|i32|]
   let debugtrap = LLVM.function_type void [||]
@@ -67,10 +67,21 @@ let string = LLVM.const_string c
 
 let init_name name = fmt "__%s_init" (Ident.Module.to_module_name name)
 
-let init_import m builder import =
+let init_import ~jmp_buf m builder import =
   let import = ModulePath.to_module import in
   let f = LLVM.declare_global Type.init (init_name import) m in
-  LLVM.build_call_void f [||] builder
+  LLVM.build_call_void f [|jmp_buf|] builder
+
+let init_jmp_buf m =
+  let frameaddress = LLVM.declare_function "llvm.frameaddress" Type.frameaddress m in
+  let stacksave = LLVM.declare_function "llvm.stacksave" Type.stacksave m in
+  fun jmp_buf builder ->
+    let v = LLVM.undef Type.jmp_buf in
+    let fp = LLVM.build_call frameaddress [|i32 0|] "" builder in
+    let v = LLVM.build_insertvalue v fp 0 "" builder in
+    let sp = LLVM.build_call stacksave [||] "" builder in
+    let v = LLVM.build_insertvalue v sp 2 "" builder in
+    LLVM.build_store v jmp_buf builder
 
 module type CONFIG = sig
   val initial_heap_size : int
@@ -78,6 +89,8 @@ end
 
 module Runtime (Conf : CONFIG) = struct
   let m = LLVM.create_module c "runtime"
+
+  let init_jmp_buf = init_jmp_buf m
 
   let malloc = LLVM.declare_function "malloc" Type.malloc m
 
@@ -199,7 +212,9 @@ module Runtime (Conf : CONFIG) = struct
   let make ~main_module modul =
     let (_, builder) = LLVM.define_function c "main" Type.main m in
     LLVM.build_call_void gc_init [||] builder;
-    init_import m builder main_module;
+    let jmp_buf = LLVM.build_alloca Type.jmp_buf "" builder in
+    init_jmp_buf jmp_buf builder;
+    init_import ~jmp_buf m builder main_module;
     LLVM.build_call_void gc_finalize [||] builder;
     LLVM.build_ret (i32 0) builder;
     Llvm_linker.link_modules m modul Llvm_linker.Mode.DestroySource;
@@ -255,8 +270,6 @@ module Module (I : sig val name : Ident.Module.t end) = struct
 
   let longjmp = LLVM.declare_function "llvm.eh.sjlj.longjmp" Type.longjmp m
   let setjmp = LLVM.declare_function "llvm.eh.sjlj.setjmp" Type.setjmp m
-  let frameaddress = LLVM.declare_function "llvm.frameaddress" Type.frameaddress m
-  let stacksave = LLVM.declare_function "llvm.stacksave" Type.stacksave m
 
   let exn_tag_var = LLVM.declare_global Type.i8_ptr "exn_tag" m
   let exn_args_var = LLVM.declare_global Type.i8_ptr "exn_args" m
@@ -268,13 +281,7 @@ module Module (I : sig val name : Ident.Module.t end) = struct
     LLVM.build_unreachable builder;
     block
 
-  let init_jmp_buf jmp_buf builder =
-    let v = LLVM.undef Type.jmp_buf in
-    let fp = LLVM.build_call frameaddress [|i32 0|] "" builder in
-    let v = LLVM.build_insertvalue v fp 0 "" builder in
-    let sp = LLVM.build_call stacksave [||] "" builder in
-    let v = LLVM.build_insertvalue v sp 2 "" builder in
-    LLVM.build_store v jmp_buf builder
+  let init_jmp_buf = init_jmp_buf m
 
   let fold_env ~env gamma builder =
     let aux name value (i, values, gamma) =
@@ -610,7 +617,8 @@ module Module (I : sig val name : Ident.Module.t end) = struct
           let (f, builder) =
             LLVM.define_function c (init_name I.name) Type.init m
           in
-          List.iter (init_import m builder) imports;
+          let jmp_buf = LLVM.param f 0 in
+          List.iter (init_import ~jmp_buf m builder) imports;
           let builder = init f builder (List.rev init_list) in
           LLVM.build_ret_void builder;
           m

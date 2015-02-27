@@ -19,6 +19,11 @@
 
 == Short/Medium term ==
 
+* Handle dynamic exceptions (allocation failures, …)
+    let main try with
+      | CannotAllocate -> ()
+    end =
+      dosomething ()
 * Records
 * Improve FFI
 * Dynamically create a wrapper when partially apply a function instead of creating a lambda for each arguments (needs an analysis)
