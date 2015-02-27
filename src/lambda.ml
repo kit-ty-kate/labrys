@@ -57,15 +57,15 @@ and of_branches mapn branches =
   (List.rev a, b)
 
 and of_typed_term mapn = function
-  | TypedTree.Abs (name, with_exn, t) ->
+  | TypedTree.Abs (name, t) ->
       let mapn = GammaMap.Value.remove name mapn in
       let (t, used_vars) = of_typed_term mapn t in
       let used_vars = Set.remove name used_vars in
-      (Abs (name, with_exn, used_vars, t), used_vars)
-  | TypedTree.App (f, with_exn, x) ->
+      (Abs (name, used_vars, t), used_vars)
+  | TypedTree.App (f, x) ->
       let (f, used_vars1) = of_typed_term mapn f in
       let (x, used_vars2) = of_typed_term mapn x in
-      (App (f, with_exn, x), Set.union used_vars1 used_vars2)
+      (App (f, x), Set.union used_vars1 used_vars2)
   | TypedTree.Val name ->
       let name = match GammaMap.Value.find name mapn with
         | Some x -> x
@@ -77,10 +77,10 @@ and of_typed_term mapn = function
       let (results, used_vars2) = of_results mapn results in
       let patterns = of_patterns patterns in
       (PatternMatching (t, results, patterns), Set.union used_vars1 used_vars2)
-  | TypedTree.Try (t, with_exn, branches) ->
+  | TypedTree.Try (t, branches) ->
       let (t, used_vars1) = of_typed_term mapn t in
       let (branches, used_vars2) = of_branches mapn branches in
-      (Try (t, with_exn, branches), Set.union used_vars1 used_vars2)
+      (Try (t, branches), Set.union used_vars1 used_vars2)
   | TypedTree.Let (name, t, xs) ->
       let (t, used_vars1) = of_typed_term mapn t in
       let mapn = GammaMap.Value.remove name mapn in
@@ -127,7 +127,7 @@ let of_typed_variant (acc, names, mapn) i (TypedTree.Variant (name, ty_size)) =
           let params = name :: params in
           let (t, used_vars) = aux params (pred n) in
           let used_vars = Set.remove name used_vars in
-          (Abs (name, false, used_vars, t), used_vars)
+          (Abs (name, used_vars, t), used_vars)
     in
     match ty_size with
     | 0 -> ConstVariant (name, i, linkage)
@@ -138,19 +138,19 @@ let of_typed_variant (acc, names, mapn) i (TypedTree.Variant (name, ty_size)) =
         let used_vars = Set.remove name_param used_vars in
         if Int.(Set.cardinal used_vars <> 0) then
           assert false;
-        Function (name, (name_param, false, t), linkage)
+        Function (name, (name_param, t), linkage)
   in
   (variant :: acc, names, mapn)
 
 let of_typed_tree (acc, names, mapn) = function
-  | TypedTree.RecValue (name, TypedTree.Abs (name', with_exn, t)) ->
+  | TypedTree.RecValue (name, TypedTree.Abs (name', t)) ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let (t, _) = of_typed_term mapn t in
-      (Function (name, (name', with_exn, t), linkage) :: acc, names, mapn)
-  | TypedTree.Value (name, TypedTree.Abs (name', with_exn, t)) ->
+      (Function (name, (name', t), linkage) :: acc, names, mapn)
+  | TypedTree.Value (name, TypedTree.Abs (name', t)) ->
       let (t, _) = of_typed_term mapn t in
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      (Function (name, (name', with_exn, t), linkage) :: acc, names, mapn)
+      (Function (name, (name', t), linkage) :: acc, names, mapn)
   | TypedTree.RecValue (name, t) ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let (t, _) = of_typed_term mapn t in

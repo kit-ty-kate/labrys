@@ -41,12 +41,9 @@ module Type = struct
   (** Note: jmp_buf is a five word buffer (see the LLVM doc). *)
   let jmp_buf = LLVM.array_type i8_ptr 5
   let jmp_buf_ptr = LLVM.pointer_type jmp_buf
-  let lambda ~with_exn = match with_exn with
-    | true ->
-        LLVM.function_type i8_ptr [|i8_ptr; i8_ptr; jmp_buf_ptr|]
-    | false ->
-        LLVM.function_type i8_ptr [|i8_ptr; i8_ptr|]
-  let lambda_ptr ~with_exn = LLVM.pointer_type (lambda ~with_exn)
+  let lambda =
+    LLVM.function_type i8_ptr [|i8_ptr; i8_ptr; jmp_buf_ptr|]
+  let lambda_ptr = LLVM.pointer_type lambda
   let init = LLVM.function_type void [||]
   let main = LLVM.function_type i32 [||]
   let malloc = LLVM.function_type i8_ptr [|i32|]
@@ -296,7 +293,7 @@ module Module (I : sig val name : Ident.Module.t end) = struct
     let (_, b, c) = GammaMap.Value.fold aux gamma (1, [], GammaMap.Value.empty) in
     (List.rev b, c)
 
-  let create_closure ~isrec ~with_exn ~used_vars ~env gamma builder =
+  let create_closure ~isrec ~used_vars ~env gamma builder =
     let gamma = GammaMap.Value.filter (fun x _ -> Set.mem x used_vars) gamma in
     let (values, gamma) = fold_env ~env gamma builder in
     let env_size = List.length values in
@@ -307,7 +304,7 @@ module Module (I : sig val name : Ident.Module.t end) = struct
           gamma
     in
     let env_size = succ env_size in
-    let (f, builder') = LLVM.define_function c "__lambda" (Type.lambda ~with_exn) m in
+    let (f, builder') = LLVM.define_function c "__lambda" Type.lambda m in
     LLVM.set_linkage LLVM.Linkage.Private f;
     let f' = LLVM.build_bitcast f Type.i8_ptr "" builder in
     let closure = malloc_and_init f' values builder in
@@ -402,7 +399,7 @@ module Module (I : sig val name : Ident.Module.t end) = struct
     LLVM.build_br next_block builder;
     block
 
-  and create_exn_branches func ~env ~jmp_buf ~res ~next_block ~with_exn gamma builder branches =
+  and create_exn_branches func ~env ~jmp_buf ~res ~next_block gamma builder branches =
     let exn_tag = LLVM.build_load exn_tag_var "" builder in
     let exn_args = LLVM.build_load exn_args_var "" builder in
     let aux builder ((name, args), t) =
@@ -414,49 +411,38 @@ module Module (I : sig val name : Ident.Module.t end) = struct
       LLVM.builder_at_end c next_block
     in
     let builder = List.fold_left aux builder branches in
-    if with_exn then begin
-      let jmp_buf = Lazy.force jmp_buf in
-      let jmp_buf = LLVM.build_bitcast jmp_buf Type.i8_ptr "" builder in
-      LLVM.build_call_void longjmp [|jmp_buf|] builder;
-    end else begin
-      LLVM.build_call_void debug_trap [||] builder;
-    end;
+    let jmp_buf = LLVM.build_bitcast jmp_buf Type.i8_ptr "" builder in
+    LLVM.build_call_void longjmp [|jmp_buf|] builder;
     LLVM.build_unreachable builder;
 
   and abs ~f ~env_size ~name t gamma builder =
     let param = LLVM.param f 0 in
     let env = LLVM.param f 1 in
+    let jmp_buf = LLVM.param f 2 in
     let env = LLVM.build_bitcast env (Type.value_ptr env_size) "" builder in
     let env = LLVM.build_load env "" builder in
     let env = LLVM.build_extractvalue env 3 "" builder in
     let env = lazy env in
-    let jmp_buf = lazy (LLVM.param f 2) in
     let gamma = GammaMap.Value.add name (Value param) gamma in
     let (v, builder) = lambda f ~env ~jmp_buf gamma builder t in
     LLVM.build_ret v builder
 
   and lambda func ?isrec ~env ~jmp_buf gamma builder = function
-    | UntypedTree.Abs (name, with_exn, used_vars, t) ->
+    | UntypedTree.Abs (name, used_vars, t) ->
         let (f, env_size, builder', closure, gamma) =
-          create_closure ~isrec ~with_exn ~used_vars ~env gamma builder
+          create_closure ~isrec ~used_vars ~env gamma builder
         in
         abs ~f ~env_size ~name t gamma builder';
         (closure, builder)
-    | UntypedTree.App (f, with_exn, x) ->
+    | UntypedTree.App (f, x) ->
         let (closure, builder) = lambda func ~env ~jmp_buf gamma builder f in
         let (x, builder) = lambda func ~env ~jmp_buf gamma builder x in
         let f = LLVM.build_bitcast closure (Type.value_ptr 1) "" builder in
         let f = LLVM.build_load f "" builder in
         let f = LLVM.build_extractvalue f 3 "" builder in
         let f = LLVM.build_extractvalue f 0 "" builder in
-        let f = LLVM.build_bitcast f (Type.lambda_ptr ~with_exn) "" builder in
-        begin match with_exn with
-        | true ->
-            let jmp_buf = Lazy.force jmp_buf in
-            (LLVM.build_call f [|x; closure; jmp_buf|] "" builder, builder)
-        | false ->
-            (LLVM.build_call f [|x; closure|] "" builder, builder)
-        end
+        let f = LLVM.build_bitcast f Type.lambda_ptr "" builder in
+        (LLVM.build_call f [|x; closure; jmp_buf|] "" builder, builder)
     | UntypedTree.PatternMatching (t, results, tree) ->
         let (t, builder) = lambda func ~env ~jmp_buf gamma builder t in
         let res = LLVM.build_alloca Type.i8_ptr "" builder in
@@ -514,12 +500,11 @@ module Module (I : sig val name : Ident.Module.t end) = struct
         LLVM.build_free old_exn_args builder;
         LLVM.build_store args exn_args_var builder;
         LLVM.build_store tag exn_tag_var builder;
-        let jmp_buf = Lazy.force jmp_buf in
         let jmp_buf = LLVM.build_bitcast jmp_buf Type.i8_ptr "" builder in
         LLVM.build_call_void longjmp [|jmp_buf|] builder;
         LLVM.build_unreachable builder;
         (undef, LLVM.builder_at_end c (LLVM.append_block c "" func))
-    | UntypedTree.Try (t, with_exn, branches) ->
+    | UntypedTree.Try (t, branches) ->
         let jmp_buf' = LLVM.build_alloca Type.jmp_buf "" builder in
         init_jmp_buf jmp_buf' builder;
         let res = LLVM.build_alloca Type.i8_ptr "" builder in
@@ -527,7 +512,7 @@ module Module (I : sig val name : Ident.Module.t end) = struct
         let try_block =
           let block = LLVM.append_block c "" func in
           let builder = LLVM.builder_at_end c block in
-          let (t, builder) = lambda func ~env ~jmp_buf:(lazy jmp_buf') gamma builder t in
+          let (t, builder) = lambda func ~env ~jmp_buf:jmp_buf' gamma builder t in
           LLVM.build_store t res builder;
           LLVM.build_br next_block builder;
           block
@@ -535,7 +520,7 @@ module Module (I : sig val name : Ident.Module.t end) = struct
         let catch_block =
           let block = LLVM.append_block c "" func in
           let builder = LLVM.builder_at_end c block in
-          create_exn_branches func ~env ~jmp_buf ~res ~next_block ~with_exn gamma builder branches;
+          create_exn_branches func ~env ~jmp_buf ~res ~next_block gamma builder branches;
           block
         in
         let jmp_buf' = LLVM.build_bitcast jmp_buf' Type.i8_ptr "" builder in
@@ -545,9 +530,8 @@ module Module (I : sig val name : Ident.Module.t end) = struct
         let builder = LLVM.builder_at_end c next_block in
         (LLVM.build_load res "" builder, builder)
 
-  let lambda func gamma builder t =
+  let lambda func ~jmp_buf gamma builder t =
     let env = lazy (assert false) in
-    let jmp_buf = lazy (assert false) in
     lambda func ~env ~jmp_buf gamma builder t
 
   let set_linkage v = function
@@ -569,16 +553,21 @@ module Module (I : sig val name : Ident.Module.t end) = struct
     | Val of (LLVM.llvalue * UntypedTree.t)
     | Const of (unit -> unit)
 
-  let rec init func builder = function
+  let rec init func ~jmp_buf builder = function
     | Val (global, t) :: xs ->
-        let (value, builder) = lambda func GammaMap.Value.empty builder t in
+        let (value, builder) = lambda func ~jmp_buf GammaMap.Value.empty builder t in
         LLVM.build_store value global builder;
-        init func builder xs
+        init func ~jmp_buf builder xs
     | Const g :: xs ->
         g ();
-        init func builder xs
+        init func ~jmp_buf builder xs
     | [] ->
         builder
+
+  let init func builder =
+    let jmp_buf = LLVM.build_alloca Type.jmp_buf "" builder in
+    init_jmp_buf jmp_buf builder;
+    init func ~jmp_buf builder
 
   let const_value v =
     let value = LLVM.const_array Type.i8_ptr [|v|] in
@@ -610,9 +599,9 @@ module Module (I : sig val name : Ident.Module.t end) = struct
           let index = LLVM.const_inttoptr (i32 index) Type.i8_ptr in
           define_global ~name ~linkage (const_value index);
           top init_list xs
-      | UntypedTree.Function (name, (name', with_exn, t), linkage) :: xs ->
+      | UntypedTree.Function (name, (name', t), linkage) :: xs ->
           let name = Ident.Name.prepend I.name name in
-          let (f, builder) = LLVM.define_function c "__lambda" (Type.lambda ~with_exn) m in
+          let (f, builder) = LLVM.define_function c "__lambda" Type.lambda m in
           LLVM.set_linkage LLVM.Linkage.Private f;
           define_global ~name ~linkage (const_value (LLVM.const_bitcast f Type.i8_ptr));
           let g () = abs ~env_size:1 ~f ~name:name' t GammaMap.Value.empty builder in
