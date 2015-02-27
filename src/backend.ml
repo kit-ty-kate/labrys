@@ -45,6 +45,7 @@ module Type = struct
     LLVM.function_type star [|star; closure_ptr env_size; jmp_buf_ptr|]
   let lambda_ptr ~env_size =
     LLVM.pointer_type (lambda ~env_size)
+  let init = LLVM.function_type void [|jmp_buf_ptr|]
   let unit_function = LLVM.function_type void [||]
   let main_function = LLVM.function_type i32 [||]
 end
@@ -419,11 +420,11 @@ module Make (I : sig val name : Ident.Module.t end) = struct
 
   let init_name name = fmt "__%s_init" (Ident.Module.to_module_name name)
 
-  let init_imports imports builder =
+  let init_imports ~jmp_buf imports builder =
     let aux import =
       let import = ModulePath.to_module import in
-      let f = LLVM.declare_global Type.unit_function (init_name import) m in
-      LLVM.build_call_void f [||] builder
+      let f = LLVM.declare_global Type.init (init_name import) m in
+      LLVM.build_call_void f [|jmp_buf|] builder
     in
     List.iter aux imports
 
@@ -462,15 +463,18 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           top (`Const g :: init_list) xs
       | [] ->
           let (f, builder) =
-            LLVM.define_function c (init_name I.name) Type.unit_function m
+            LLVM.define_function c (init_name I.name) Type.init m
           in
-          init_imports imports builder;
+          let jmp_buf = LLVM.param f 0 in
+          init_imports ~jmp_buf imports builder;
           let builder = init f builder (List.rev init_list) in
           LLVM.build_ret_void builder;
           if with_main then begin
             let (_, builder) = LLVM.define_function c "main" Type.main_function m in
             init_gc builder;
-            LLVM.build_call_void f [||] builder;
+            let jmp_buf = LLVM.build_alloca Type.jmp_buf "" builder in
+            init_jmp_buf jmp_buf builder;
+            LLVM.build_call_void f [|jmp_buf|] builder;
             LLVM.build_ret (i32 0) builder;
           end;
           m
