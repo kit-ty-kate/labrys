@@ -22,17 +22,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type name = Ident.Name.t
 type ty_size = int
 type used_vars = (Pattern.var * name) list
-type with_exn = bool
 
 type t =
-  | Abs of (name * with_exn * t)
-  | App of (t * with_exn * t)
+  | Abs of (name * t)
+  | App of (t * t)
   | Val of name
   | PatternMatching of (t * (used_vars * t) list * Pattern.t)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
   | Fail of (name * t list)
-  | Try of (t * with_exn * ((name * name list) * t) list)
+  | Try of (t * ((name * name list) * t) list)
 
 type variant =
   | Variant of (name * ty_size)
