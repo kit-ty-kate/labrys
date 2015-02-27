@@ -25,41 +25,41 @@ open Monomorphic.None
 type t = Llvm.llmodule
 
 let fmt = Printf.sprintf
+let c = LLVM.global_context ()
+
+module Type = struct
+  let void = LLVM.void_type c
+  let i8 = LLVM.i8_type c
+  let i32 = LLVM.i32_type c
+  let star = LLVM.pointer_type i8
+  let array = LLVM.array_type star
+  let array_ptr size = LLVM.pointer_type (array size)
+  let variant = array
+  let variant_ptr = array_ptr
+  let closure = array
+  let closure_ptr = array_ptr
+  (** Note: jmp_buf is a five word buffer (see the LLVM doc). *)
+  let jmp_buf = LLVM.array_type star 5
+  let jmp_buf_ptr = LLVM.pointer_type jmp_buf
+  let lambda ~env_size =
+    LLVM.function_type star [|star; closure_ptr env_size; jmp_buf_ptr|]
+  let lambda_ptr ~env_size =
+    LLVM.pointer_type (lambda ~env_size)
+  let unit_function = LLVM.function_type void [||]
+  let main_function = LLVM.function_type i32 [||]
+end
+
+let i32 = LLVM.const_int Type.i32
+let null = LLVM.const_null Type.star
+let undef = LLVM.undef Type.star
+let string = LLVM.const_string c
 
 module Make (I : sig val name : Ident.Module.t end) = struct
   type gamma =
     | Value of LLVM.llvalue
     | Env of int
 
-  let c = LLVM.create_context ()
   let m = LLVM.create_module c (Ident.Module.to_module_name I.name)
-
-  module Type = struct
-    let void = LLVM.void_type c
-    let i8 = LLVM.i8_type c
-    let i32 = LLVM.i32_type c
-    let star = LLVM.pointer_type i8
-    let array = LLVM.array_type star
-    let array_ptr size = LLVM.pointer_type (array size)
-    let variant = array
-    let variant_ptr = array_ptr
-    let closure = array
-    let closure_ptr = array_ptr
-    (** Note: jmp_buf is a five word buffer (see the LLVM doc). *)
-    let jmp_buf = LLVM.array_type star 5
-    let jmp_buf_ptr = LLVM.pointer_type jmp_buf
-    let lambda ~env_size =
-      LLVM.function_type star [|star; closure_ptr env_size; jmp_buf_ptr|]
-    let lambda_ptr ~env_size =
-      LLVM.pointer_type (lambda ~env_size)
-    let unit_function = LLVM.function_type void [||]
-    let main_function = LLVM.function_type i32 [||]
-  end
-
-  let i32 = LLVM.const_int Type.i32
-  let null = LLVM.const_null Type.star
-  let undef = LLVM.undef Type.star
-  let string = LLVM.const_string c
 
   let init ptr ty values builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
