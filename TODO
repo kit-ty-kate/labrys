@@ -8,11 +8,10 @@
   * Add functions in backend (like access_env …)
   * Add more explicit type names (like « type name = string » instead of just use a string)
 
-* Replace the current implementation of exceptions (monades) by LLVM exceptions (resume, invoke, landingpad)
 * Cleaning (parser, typechecker, backend, …)
 * Unit-tests
-* Recursive type aliases
 * Pure exceptions
+  * Separate effect Exn of the other effects (IO, (…?))
 * Finish the module system
 
 
@@ -25,9 +24,13 @@
       dosomething ()
 * Records
 * Improve FFI
+  * Verify that the function given has the same arity
+  * The function should have an effect IO « String -> String -[IO]-> Unit »
+  * Dynamically create wrappers for arity > 1
 * Dynamically create a wrapper when partially apply a function instead of creating a lambda for each arguments (needs an analysis)
 
 
 == Long term ==
 
+* Recursive type aliases
 * Compile libraries
