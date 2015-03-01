@@ -50,7 +50,7 @@ module Constr : sig
 end
 
 module Exn : sig
-  include BatMap.S with type key = Ident.Name.t
+  include BatMap.S with type key = Ident.Eff.t
   include module type of Exceptionless
 
   val add : loc:Location.t -> key -> 'a -> 'a t -> 'a t

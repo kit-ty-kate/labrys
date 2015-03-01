@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Name.t
+type eff_name = Ident.Eff.t
 type used_vars = name BatSet.t
 type index = int
 type constr = int
@@ -36,14 +37,14 @@ and t =
   | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
-  | Fail of (name * t list)
-  | Try of (t * ((name * name list) * t) list)
+  | Fail of (eff_name * t list)
+  | Try of (t * ((eff_name * name list) * t) list)
 
 type linkage = Public | Private
 
 type top =
   | Value of (name * t * linkage)
   | Binding of (name * string * linkage)
-  | Exception of name
+  | Exception of eff_name
   | ConstVariant of (name * index * linkage)
   | Function of (name * (name * t) * linkage)

@@ -139,7 +139,7 @@ let rec aux gamma = function
           Error.fail
             ~loc
             "The exception '%s' is not defined in Γ"
-            (Ident.Name.to_string exn)
+            (Ident.Eff.to_string exn)
       end
   | (loc, ParseTree.Try (e, branches)) ->
       let (e, ty, effect) = aux gamma e in

@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Name.t
+type eff_name = Ident.Eff.t
 type t_name = Ident.Type.t
 type module_name = Ident.Module.t
 type loc = Location.t
@@ -31,7 +32,7 @@ type is_rec =
   | NonRec
 
 type ty' =
-  | Fun of (ty * name list * ty)
+  | Fun of (ty * eff_name list * ty)
   | Ty of t_name
   | Forall of (t_value * ty)
   | AbsOnTy of (t_value * ty)
@@ -57,8 +58,8 @@ type t' =
   | Val of name
   | PatternMatching of (t * (pattern * t) list)
   | Let of ((name * is_rec * (ty option * t)) * t)
-  | Fail of (ty * (name * t list))
-  | Try of (t * ((name * name list) * t) list)
+  | Fail of (ty * (eff_name * t list))
+  | Try of (t * ((eff_name * name list) * t) list)
 
 and t = (loc * t')
 
@@ -69,7 +70,7 @@ type top' =
   | Type of (t_name * ty)
   | Binding of (name * ty * string)
   | Datatype of (t_name * Kinds.t * variant list)
-  | Exception of (name * ty list)
+  | Exception of (eff_name * ty list)
 
 and top = (loc * top')
 

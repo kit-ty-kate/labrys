@@ -83,7 +83,7 @@ body:
   | datatype = datatype
       { ParseTree.Datatype datatype }
   | Exception name = UpperName args = exceptionArgs
-      { ParseTree.Exception (Ident.Name.of_list [name], args) }
+      { ParseTree.Exception (Ident.Eff.of_list [name], args) }
 
 exceptionArgs:
   | x = typeExprProtected xs = exceptionArgs
@@ -193,13 +193,13 @@ kind:
 
 effectName:
   | name = upperName
-      { Ident.Name.of_list name }
+      { Ident.Eff.of_list name }
 
 effectValue:
   | LParen name = upperName args = effectValueArgs RParen
-      { (Ident.Name.of_list name, args) }
+      { (Ident.Eff.of_list name, args) }
   | name = upperName
-      { (Ident.Name.of_list name, []) }
+      { (Ident.Eff.of_list name, []) }
 
 effectValueArgs:
   | x = termProtected xs = effectValueArgs
@@ -209,7 +209,7 @@ effectValueArgs:
 
 exn_pattern:
   | exn = upperName args = list(exn_pattern_arg) Arrow t = term
-      { ((Ident.Name.of_list exn, args), t) }
+      { ((Ident.Eff.of_list exn, args), t) }
 
 exn_pattern_arg:
   | name = LowerName { Ident.Name.of_list [name] }
@@ -269,7 +269,7 @@ bodyInterface:
   | typeAlias = typeAlias
       { Interface.TypeAlias typeAlias }
   | Exception name = UpperName args = exceptionArgs
-      { Interface.Exception (Ident.Name.of_list [name], args) }
+      { Interface.Exception (Ident.Eff.of_list [name], args) }
 
 
 

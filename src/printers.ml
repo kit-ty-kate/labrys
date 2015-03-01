@@ -26,6 +26,7 @@ let fmt = Printf.sprintf
 let (^^) = PPrint.(^^)
 
 let dump_name = Ident.Name.to_string
+let dump_eff_name = Ident.Eff.to_string
 let dump_t_name = Ident.Type.to_string
 let dump_k = Kinds.to_string
 
@@ -42,7 +43,7 @@ let string_of_doc doc =
 module ParseTree = struct
   open ParseTree
 
-  let dump_eff x = String.concat " | " (List.map dump_name x)
+  let dump_eff x = String.concat " | " (List.map dump_eff_name x)
 
   let rec dump_ty = function
     | (_, Fun (param, eff, res)) ->
@@ -140,7 +141,7 @@ module ParseTree = struct
            ^^ PPrint.blank 1
            ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
            ^^ PPrint.blank 1
-           ^^ PPrint.string (dump_name name)
+           ^^ PPrint.string (dump_eff_name name)
            ^^ dump_exn_args args
            ^^ PPrint.rparen
           )
@@ -175,7 +176,7 @@ module ParseTree = struct
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %s %s ->" (dump_name name) (dump_args args))
+           (PPrint.string (fmt "| %s %s ->" (dump_eff_name name) (dump_args args))
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
            )
     in
@@ -212,7 +213,7 @@ module ParseTree = struct
         PPrint.string (fmt "type %s : %s =" (dump_t_name name) (dump_k k))
         ^^ PPrint.nest 2 (dump_variants variants)
     | (_, Exception (name, args)) ->
-        PPrint.string (fmt "exception %s %s" (dump_name name) (String.concat " " (List.map dump_ty args)))
+        PPrint.string (fmt "exception %s %s" (dump_eff_name name) (String.concat " " (List.map dump_ty args)))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
@@ -311,7 +312,7 @@ module TypedTree = struct
           (PPrint.lparen
            ^^ PPrint.string "fail"
            ^^ PPrint.blank 1
-           ^^ PPrint.string (dump_name name)
+           ^^ PPrint.string (dump_eff_name name)
            ^^ dump_exn_args args
            ^^ PPrint.rparen
           )
@@ -346,7 +347,7 @@ module TypedTree = struct
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %s %s ->" (dump_name name) (dump_args args))
+           (PPrint.string (fmt "| %s %s ->" (dump_eff_name name) (dump_args args))
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
            )
     in
@@ -384,7 +385,7 @@ module TypedTree = struct
         PPrint.string "type ?? ="
         ^^ PPrint.nest 2 (dump_variants variants)
     | Exception name ->
-        PPrint.string (fmt "exception %s" (dump_name name))
+        PPrint.string (fmt "exception %s" (dump_eff_name name))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
@@ -494,7 +495,7 @@ module UntypedTree = struct
           (PPrint.lparen
            ^^ PPrint.string "fail"
            ^^ PPrint.blank 1
-           ^^ PPrint.string (dump_name name)
+           ^^ PPrint.string (dump_eff_name name)
            ^^ dump_exn_args args
            ^^ PPrint.rparen
           )
@@ -529,7 +530,7 @@ module UntypedTree = struct
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %s %s ->" (dump_name name) (dump_args args))
+           (PPrint.string (fmt "| %s %s ->" (dump_eff_name name) (dump_args args))
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
            )
     in
@@ -561,7 +562,7 @@ module UntypedTree = struct
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
     | Exception name ->
-        PPrint.string (fmt "exception %s" (dump_name name))
+        PPrint.string (fmt "exception %s" (dump_eff_name name))
     | ConstVariant (name, index, linkage) ->
         PPrint.string (fmt "ConstVariant %s %d : %s" (dump_name name) index (dump_linkage linkage))
 

@@ -24,7 +24,7 @@ type t' =
   | AbstractType of ParseTree.t_value
   | Datatype of (ParseTree.t_name * Kinds.t * ParseTree.variant list)
   | TypeAlias of (ParseTree.t_name * ParseTree.ty)
-  | Exception of (Ident.Name.t * ParseTree.ty list)
+  | Exception of (Ident.Eff.t * ParseTree.ty list)
 
 type t = (ParseTree.loc * t')
 

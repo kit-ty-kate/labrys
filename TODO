@@ -7,7 +7,6 @@
   * Remove names in backend (« %comment = call donothing » or metadata instead) ?
   * Add functions in backend (like access_env …)
   * Add more explicit type names (like « type name = string » instead of just use a string)
-  * Create Ident.Exn to replace Ident.Name
 
 * Replace the current implementation of exceptions (monades) by LLVM exceptions (resume, invoke, landingpad)
 * Cleaning (parser, typechecker, backend, …)

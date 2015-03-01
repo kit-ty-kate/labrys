@@ -31,7 +31,7 @@ val empty : t
 val add_value : Ident.Name.t -> Types.t -> t -> t
 val add_type : loc:Location.t -> Ident.Type.t -> Types.visibility -> t -> t
 val add_constr : Ident.Type.t -> Ident.Name.t -> (Types.t * int) -> t -> t
-val add_exception : loc:Location.t -> Ident.Name.t -> Types.t list -> t -> t
+val add_exception : loc:Location.t -> Ident.Eff.t -> Types.t list -> t -> t
 
 val union : (Ident.Module.t * t) -> t -> t
 

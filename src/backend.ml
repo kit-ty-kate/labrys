@@ -157,8 +157,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     (f, builder', closure, gamma)
 
   let get_exn name =
-    let name = Ident.Name.prepend I.name name in
-    let name = Ident.Name.to_string name in
+    let name = Ident.Eff.prepend I.name name in
+    let name = Ident.Eff.to_string name in
     LLVM.declare_global Type.i8 name m
 
   let rec llvalue_of_pattern_var vars value builder var =
@@ -445,8 +445,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           LLVM.set_global_constant true v;
           top init_list xs
       | UntypedTree.Exception name :: xs ->
-          let name = Ident.Name.prepend I.name name in
-          let name = Ident.Name.to_string name in
+          let name = Ident.Eff.prepend I.name name in
+          let name = Ident.Eff.to_string name in
           let v = LLVM.define_global name (string name) m in
           LLVM.set_global_constant true v;
           top init_list xs
