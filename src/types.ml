@@ -79,7 +79,7 @@ let rec of_parse_tree_kind gammaT = function
   | (loc, ParseTree.Fun (x, eff, y)) ->
       let (x, k1) = of_parse_tree_kind gammaT x in
       let eff =
-        let aux acc ty = Effects.add ty acc in
+        let aux acc ty = Effects.add_exn ty acc in
         List.fold_left aux Effects.empty eff
       in
       let (y, k2) = of_parse_tree_kind gammaT y in

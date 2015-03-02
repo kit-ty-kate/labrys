@@ -134,18 +134,18 @@ let rec aux gamma = function
                   "Cannot fail with an exception applied partially"
           in
           let args = List.rev args in
-          (Fail (exn, args), ty, Effects.add exn effects)
+          (Fail (exn, args), ty, Effects.add_exn exn effects)
       | None ->
           Error.fail
             ~loc
             "The exception '%s' is not defined in Γ"
-            (Ident.Eff.to_string exn)
+            (Ident.Exn.to_string exn)
       end
   | (loc, ParseTree.Try (e, branches)) ->
       let (e, ty, effect) = aux gamma e in
       let effect =
         List.fold_left
-          (fun effect ((name, _), _) -> Effects.remove name effect)
+          (fun effect ((name, _), _) -> Effects.remove_exn name effect)
           effect
           branches
       in

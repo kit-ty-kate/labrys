@@ -20,7 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Name.t
-type eff_name = Ident.Eff.t
+type eff_name = Ident.Exn.t
 type t_name = Ident.Type.t
 type module_name = Ident.Module.t
 type loc = Location.t

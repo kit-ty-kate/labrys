@@ -24,9 +24,46 @@ open Monomorphic.None
 
 let fmt = Printf.sprintf
 
-include Set.Make(Ident.Eff)
+module Exn_set = Set.Make(Ident.Exn)
 
-let union3 x y z = union (union x y) z
+type t =
+  { exn : Exn_set.t
+  }
+
+let empty =
+  { exn = Exn_set.empty
+  }
+
+let is_empty {exn} =
+  Exn_set.is_empty exn
+
+let equal x y =
+  Exn_set.equal x.exn y.exn
+
+let add_exn exn self =
+  let exn = Exn_set.add exn self.exn in
+  {self with exn}
+
+let union x y =
+  let exn = Exn_set.union x.exn y.exn in
+  {exn}
+
+let union3 x y z =
+  let exn = Exn_set.union x.exn y.exn in
+  let exn = Exn_set.union exn z.exn in
+  {exn}
+
+let remove_exn x self =
+  let exn = Exn_set.remove x self.exn in
+  {self with exn}
+
+let to_string {exn} =
+  let exn = List.map Ident.Exn.to_string (Exn_set.to_list exn) in
+  let exn = fmt "Exn [%s]" (String.concat " | " exn) in
+  fmt "[%s]" exn
 
 let to_string x =
-  fmt "[%s]" (String.concat " | " (List.map Ident.Eff.to_string (to_list x)))
+  if is_empty x then
+    ""
+  else
+    to_string x

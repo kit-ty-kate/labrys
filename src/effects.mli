@@ -19,7 +19,20 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-include BatSet.S with type elt = Ident.Eff.t
+type t
+
+val empty : t
+
+val is_empty : t -> bool
+
+val equal : t -> t -> bool
+
+val add_exn : Ident.Exn.t -> t -> t
+
+val union : t -> t -> t
 
 val union3 : t -> t -> t -> t
+
+val remove_exn : Ident.Exn.t -> t -> t
+
 val to_string : t -> string

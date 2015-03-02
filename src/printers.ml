@@ -26,7 +26,7 @@ let fmt = Printf.sprintf
 let (^^) = PPrint.(^^)
 
 let dump_name = Ident.Name.to_string
-let dump_eff_name = Ident.Eff.to_string
+let dump_eff_name = Ident.Exn.to_string
 let dump_t_name = Ident.Type.to_string
 let dump_k = Kinds.to_string
 
