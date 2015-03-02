@@ -1,7 +1,7 @@
 PKG cmdliner
+PKG pprint
 PKG llvm
 PKG batteries
 PKG monomorphic
-PKG pprint
 S src
 B _build/src

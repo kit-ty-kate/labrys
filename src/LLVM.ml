@@ -48,16 +48,18 @@ let size_of c ty = const_trunc (size_of ty) (i32_type c)
 let bind c ~name s m =
   let membuffer = MemoryBuffer.of_string s in
   let m' = Llvm_irreader.parse_ir c membuffer in
+  let name = "." ^ Ident.Name.to_string name in
   let set_link_priv v =
-    if not (is_declaration v) then set_linkage Linkage.Private v
+    if not (is_declaration v || String.equal (value_name v) name) then
+      set_linkage Linkage.Private v
   in
   iter_globals set_link_priv m';
   iter_functions set_link_priv m';
   Llvm_linker.link_modules m m' Llvm_linker.Mode.DestroySource;
   dispose_module m';
-  let name = "." ^ Ident.Name.to_string name in
   match lookup_global name m with
   | Some v ->
+      set_linkage Linkage.Private v;
       v
   | None ->
       raise (BackendFailure (fmt "Cannot found the LLVM binding '%s'" name))

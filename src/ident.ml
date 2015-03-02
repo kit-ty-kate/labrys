@@ -55,3 +55,5 @@ module Name = struct
 end
 
 module Type = Name
+
+module Eff = Name

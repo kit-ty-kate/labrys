@@ -91,18 +91,18 @@ end
 
 module Exn = struct
   module Self = struct
-    include Map.Make(Ident.Name)
+    include Map.Make(Ident.Eff)
     include Exceptionless
   end
 
   include Self
-  include Utils(Self)(Ident.Name)
+  include Utils(Self)(Ident.Eff)
 
   let add ~loc k x map =
     if mem k map then
       Error.fail
         ~loc
         "A module cannot contain several times the type '%s'"
-        (Ident.Name.to_string k);
+        (Ident.Eff.to_string k);
     add k x map
 end

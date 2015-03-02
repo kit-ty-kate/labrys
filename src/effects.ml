@@ -24,13 +24,9 @@ open Monomorphic.None
 
 let fmt = Printf.sprintf
 
-include Set.Make(struct
-  type t = Ident.Name.t
-
-  let compare = Ident.Name.compare
-end)
+include Set.Make(Ident.Eff)
 
 let union3 x y z = union (union x y) z
 
 let to_string x =
-  fmt "[%s]" (String.concat " | " (List.map Ident.Name.to_string (to_list x)))
+  fmt "[%s]" (String.concat " | " (List.map Ident.Eff.to_string (to_list x)))

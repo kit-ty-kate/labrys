@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Name.t
+type eff_name = Ident.Eff.t
 type ty_size = int
 type used_vars = (Pattern.var * name) list
 
@@ -30,8 +31,8 @@ type t =
   | PatternMatching of (t * (used_vars * t) list * Pattern.t)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
-  | Fail of (name * t list)
-  | Try of (t * ((name * name list) * t) list)
+  | Fail of (eff_name * t list)
+  | Try of (t * ((eff_name * name list) * t) list)
 
 type variant =
   | Variant of (name * ty_size)
@@ -41,4 +42,4 @@ type top =
   | RecValue of (name * t)
   | Binding of (name * string)
   | Datatype of variant list
-  | Exception of name
+  | Exception of eff_name
