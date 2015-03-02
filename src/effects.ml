@@ -44,6 +44,8 @@ let equal x y =
   Exn_set.equal x.exn y.exn
   && Bool.equal x.io y.io
 
+let has_io x = x.io
+
 let add ~loc (name, args) self =
   match Ident.Eff.to_string name with
   | "IO" ->

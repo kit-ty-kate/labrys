@@ -66,6 +66,10 @@ let rec aux gamma = function
   | (loc, ParseTree.TAbs ((name, k), t)) ->
       let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
       let (expr, ty_expr, effect) = aux gamma t in
+      (* TODO: Do I need only that to ensure type soundness with side effects ?
+         Do I also need to check for exceptions ? *)
+      if Effects.has_io effect then
+        Error.fail ~loc "Cannot have IO effects under a forall";
       let abs_ty = Types.forall ~param:name ~kind:k ~res:ty_expr in
       (expr, abs_ty, effect)
   | (loc, ParseTree.App (f, x)) ->
