@@ -2,6 +2,16 @@
 
 == Short term ==
 
+* Improve FFI
+  * Verify that the function given has the same arity
+  * The function should have an effect IO « String -> String -[IO]-> Unit »
+  * Dynamically create wrappers for arity > 1
+* Define a proper operational semantics
+* Typeclasses
+
+
+== Medium term ==
+
 * Clean:
   * Fix TODO
   * Remove names in backend (« %comment = call donothing » or metadata instead) ?
@@ -10,23 +20,15 @@
 
 * Cleaning (parser, typechecker, backend, …)
 * Unit-tests
-* Pure exceptions
-  * Separate effect Exn of the other effects (IO, (…?))
 * Finish the module system
-
-
-== Short/Medium term ==
-
+* Records
 * Handle dynamic exceptions (allocation failures, …)
     let main try with
       | CannotAllocate -> ()
     end =
       dosomething ()
-* Records
-* Improve FFI
-  * Verify that the function given has the same arity
-  * The function should have an effect IO « String -> String -[IO]-> Unit »
-  * Dynamically create wrappers for arity > 1
+* Exceptions
+  * Check if the exception is actually raised
 * Dynamically create a wrapper when partially apply a function instead of creating a lambda for each arguments (needs an analysis)
 
 
