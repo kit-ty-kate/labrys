@@ -28,17 +28,21 @@ module Exn_set = Set.Make(Ident.Exn)
 
 type t =
   { exn : Exn_set.t
+  ; io : bool
   }
 
 let empty =
   { exn = Exn_set.empty
+  ; io = false
   }
 
-let is_empty {exn} =
+let is_empty {exn; io} =
   Exn_set.is_empty exn
+  && not io
 
 let equal x y =
   Exn_set.equal x.exn y.exn
+  && Bool.equal x.io y.io
 
 let add_exn exn self =
   let exn = Exn_set.add exn self.exn in
@@ -46,24 +50,30 @@ let add_exn exn self =
 
 let union x y =
   let exn = Exn_set.union x.exn y.exn in
-  {exn}
+  let io = x.io || y.io in
+  {exn; io}
 
 let union3 x y z =
   let exn = Exn_set.union x.exn y.exn in
   let exn = Exn_set.union exn z.exn in
-  {exn}
+  let io = x.io || y.io || z.io in
+  {exn; io}
 
 let remove_exn x self =
   let exn = Exn_set.remove x self.exn in
   {self with exn}
 
-let to_string {exn} =
+let to_string {exn; io} =
   let exn = List.map Ident.Exn.to_string (Exn_set.to_list exn) in
   let exn = fmt "Exn [%s]" (String.concat " | " exn) in
-  fmt "[%s]" exn
+  let io = if io then "IO, " else "" in
+  fmt "[%s%s]" io exn
 
 let to_string x =
-  if is_empty x then
-    ""
+  if Exn_set.is_empty x.exn then
+    if x.io then
+      "[IO]"
+    else
+      ""
   else
     to_string x
