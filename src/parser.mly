@@ -156,7 +156,7 @@ upperName:
 typeExprUnclosed:
   | param = typeExprProtected Arrow ret = typeExpr
       { ParseTree.Fun (param, [], ret) }
-  | param = typeExprProtected LArrowEff eff = separated_list(Pipe, effectName) RArrowEff ret = typeExpr
+  | param = typeExprProtected LArrowEff eff = separated_list(Comma, effectName) RArrowEff ret = typeExpr
       { ParseTree.Fun (param, eff, ret) }
   | Forall x = forall_ty_sugar
       { x }
@@ -192,8 +192,16 @@ kind:
   | x = kindClosed { x }
 
 effectName:
+  | name = UpperName
+      { (Ident.Eff.of_list [name], []) }
+  | name = UpperName LBracket args = eff_exn RBracket
+      { (Ident.Eff.of_list [name], args) }
+
+eff_exn:
   | name = upperName
-      { Ident.Exn.of_list name }
+      { [Ident.Exn.of_list name] }
+  | name = upperName Pipe xs = eff_exn
+      { Ident.Exn.of_list name :: xs }
 
 effectValue:
   | LParen name = upperName args = effectValueArgs RParen

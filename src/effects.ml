@@ -44,8 +44,19 @@ let equal x y =
   Exn_set.equal x.exn y.exn
   && Bool.equal x.io y.io
 
-let add_exn exn self =
-  let exn = Exn_set.add exn self.exn in
+let add ~loc (name, args) self =
+  match Ident.Eff.to_string name with
+  | "IO" ->
+      {self with io = true}
+  | "Exn" ->
+      let args = Exn_set.of_list args in
+      let exn = Exn_set.union args self.exn in
+      {self with exn}
+  | name ->
+      Error.fail ~loc "Unknown effect \"%s\"" name
+
+let add_exn x self =
+  let exn = Exn_set.add x self.exn in
   {self with exn}
 
 let union x y =

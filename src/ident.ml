@@ -56,4 +56,6 @@ end
 
 module Type = Name
 
+module Eff = Name
+
 module Exn = Name
