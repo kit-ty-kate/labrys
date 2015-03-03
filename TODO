@@ -2,6 +2,9 @@
 
 == Short term ==
 
+* Effect system
+  * Polymorphism
+  * Forbid the pure arrows (->) for higher-order functions or types (enforce the use of -[]-> if pure function is actually wanted)
 * Improve FFI
   * Verify that the function given has the same arity
   * The function should have an effect IO « String -> String -[IO]-> Unit »
