@@ -1,0 +1,11 @@
+exception A
+exception B
+
+let test (_ : Unit) = try fail [Unit] A with B -> Unit end
+
+let lol (_ : Unit -[Exn [A]]-> Unit) = Unit
+let lolp = lol test
+
+let test = test Unit
+
+let main = Unit

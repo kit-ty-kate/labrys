@@ -1,0 +1,4 @@
+let rec test (x : Unit) (y : Unit) (z : Unit) : Unit =
+  test z z z
+
+let main = Unit

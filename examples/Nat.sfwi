@@ -1,0 +1,7 @@
+type T =
+  | O : T
+  | S : T -> T
+
+type Unit = Unit : Unit
+
+let print : T -> Unit
