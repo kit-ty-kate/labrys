@@ -8,7 +8,6 @@
 * Improve FFI
   * Verify that the function given has the same arity
   * The function should have an effect IO « String -> String -[IO]-> Unit »
-  * Dynamically create wrappers for arity > 1
 * Define a proper operational semantics
 * Typeclasses
 

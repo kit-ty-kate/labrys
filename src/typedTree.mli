@@ -23,6 +23,7 @@ type name = Ident.Name.t
 type eff_name = Ident.Exn.t
 type ty_size = int
 type used_vars = (Pattern.var * name) list
+type arity = int
 
 type t =
   | Abs of (name * t)
@@ -40,6 +41,6 @@ type variant =
 type top =
   | Value of (name * t)
   | RecValue of (name * t)
-  | Binding of (name * string)
+  | Binding of (name * arity * string)
   | Datatype of variant list
   | Exception of eff_name

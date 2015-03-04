@@ -59,6 +59,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
   type gamma =
     | Value of LLVM.llvalue
     | Env of int
+    | Global of LLVM.llvalue
 
   let m = LLVM.create_module c (Ident.Module.to_module_name I.name)
 
@@ -135,6 +136,9 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           let values = value :: values in
           let gamma = GammaMap.Value.add name (Env i) gamma in
           (succ i, values, gamma)
+      | Global value ->
+          let gamma = GammaMap.Value.add name (Global value) gamma in
+          (i, values, gamma)
     in
     let (_, b, c) = GammaMap.Value.fold aux gamma (1, [], GammaMap.Value.empty) in
     (List.rev b, c)
@@ -296,6 +300,9 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         (LLVM.build_load res "" builder', builder')
     | UntypedTree.Val name ->
         begin match GammaMap.Value.find name gamma with
+        | Some (Global _) ->
+            (* Unused for the moment *)
+            assert false
         | Some (Value value) ->
             (value, builder)
         | Some (Env i) ->
@@ -314,6 +321,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           | Some (Env i) ->
               let env = Lazy.force env in
               LLVM.build_extractvalue env i "" builder
+          | Some (Global _)
           | None ->
               assert false
         in
@@ -323,6 +331,17 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let value = malloc_and_init (Type.variant (succ size)) (i :: values) builder in
         let value = LLVM.build_bitcast value Type.star "" builder in
         (value, builder)
+    | UntypedTree.Call (name, args) ->
+        let f =
+          match GammaMap.Value.find name gamma with
+          | Some (Global value) -> value
+          | Some (Value _) | Some (Env _) | None -> assert false
+        in
+        let (args, builder) = fold_args func ~env ~jmp_buf gamma builder args in
+        let args = Array.of_list args in
+        let ty = LLVM.function_type Type.star (Array.map (fun _ -> Type.star) args) in
+        let f = LLVM.build_bitcast f (LLVM.pointer_type ty) "" builder in
+        (LLVM.build_call f args "" builder, builder)
     | UntypedTree.Let (name, t, xs) ->
         let (t, builder) = lambda func ~env ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
@@ -332,12 +351,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let gamma = GammaMap.Value.add name (Value t) gamma in
         lambda func ~env ~jmp_buf gamma builder xs
     | UntypedTree.Fail (name, args) ->
-        let aux (acc, builder) x =
-          let (x, builder) = lambda func ~env ~jmp_buf gamma builder x in
-          (x :: acc, builder)
-        in
-        let (args, builder) = List.fold_left aux ([], builder) args in
-        let args = List.rev args in
+        let (args, builder) = fold_args func ~env ~jmp_buf gamma builder args in
         let args = malloc_and_init_array (List.length args) args builder in
         let tag = get_exn name in
         LLVM.build_store args exn_args_var builder;
@@ -372,6 +386,14 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         let builder = LLVM.builder_at_end c next_block in
         (LLVM.build_load res "" builder, builder)
 
+  and fold_args func ~env ~jmp_buf gamma builder args =
+    let aux (acc, builder) x =
+      let (x, builder) = lambda func ~env ~jmp_buf gamma builder x in
+      (x :: acc, builder)
+    in
+    let (args, builder) = List.fold_left aux ([], builder) args in
+    (List.rev args, builder)
+
   let lambda func ~jmp_buf gamma builder t =
     let env = lazy (assert false) in
     lambda func ~env ~jmp_buf gamma builder t
@@ -391,21 +413,24 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     set_linkage v linkage;
     LLVM.set_global_constant true v
 
-  let rec init func ~jmp_buf builder = function
+  let rec init func ~jmp_buf bindings builder = function
     | `Val (global, t) :: xs ->
-        let (value, builder) = lambda func ~jmp_buf GammaMap.Value.empty builder t in
+        let (value, builder) = lambda func ~jmp_buf bindings builder t in
         LLVM.build_store value global builder;
-        init func ~jmp_buf builder xs
+        init func ~jmp_buf bindings builder xs
     | `Const g :: xs ->
-        g ();
-        init func ~jmp_buf builder xs
+        g bindings;
+        init func ~jmp_buf bindings builder xs
+    | `Binding (name, v) :: xs ->
+        let bindings = GammaMap.Value.add name (Global v) bindings in
+        init func ~jmp_buf bindings builder xs
     | [] ->
         builder
 
   let init func builder =
     let jmp_buf = LLVM.build_alloca Type.jmp_buf "" builder in
     init_jmp_buf jmp_buf builder;
-    init func ~jmp_buf builder
+    init func ~jmp_buf GammaMap.Value.empty builder
 
   let () =
     let malloc_type = (LLVM.function_type Type.star [|Type.i32|]) in
@@ -436,14 +461,17 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           let global = LLVM.define_global name null m in
           set_linkage global linkage;
           top (`Val (global, t) :: init_list) xs
-      | UntypedTree.Binding (name, binding, linkage) :: xs ->
-          let v = LLVM.bind c ~name binding m in
+      | UntypedTree.ValueBinding (name, name', binding, linkage) :: xs ->
+          let v = LLVM.bind c ~name:name' `Global binding m in
           let name = Ident.Name.prepend I.name name in
           let name = Ident.Name.to_string name in
           let v = LLVM.define_global name (LLVM.const_bitcast v Type.star) m in
           set_linkage v linkage;
           LLVM.set_global_constant true v;
           top init_list xs
+      | UntypedTree.FunctionBinding (name, binding) :: xs ->
+          let v = LLVM.bind c ~name `Function binding m in
+          top (`Binding (name, v) :: init_list) xs
       | UntypedTree.Exception name :: xs ->
           let name = Ident.Exn.prepend I.name name in
           let name = Ident.Exn.to_string name in
@@ -459,7 +487,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           let (f, builder) = LLVM.define_function c "__lambda" (Type.lambda ~env_size:0) m in
           LLVM.set_linkage LLVM.Linkage.Private f;
           define_global ~name ~linkage (LLVM.const_array Type.star [|LLVM.const_bitcast f Type.star|]);
-          let g () = abs ~f ~name:name' t GammaMap.Value.empty builder in
+          let g bindings = abs ~f ~name:name' t bindings builder in
           top (`Const g :: init_list) xs
       | [] ->
           let (f, builder) =

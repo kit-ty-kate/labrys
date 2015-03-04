@@ -25,13 +25,11 @@ let printInt : Nat -> Unit = begin
     ret i32 0
   }
 
-  define i8* @__print(i8*, i8**) {
+  define i8* @.printInt(i8*) {
     %i = call i32 @__int_of_nat(i8* %0)
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %i)
     ret i8* null
   }
-
-  @.printInt = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__print to i8*)]
 end
 
 let rec plus (n : Nat) (m : Nat) : Nat =

@@ -10,12 +10,11 @@ let printZero : Unit -> Unit = begin
 
   declare i32 @printf(i8*, ...)
 
-  define i8* @__print(i8*, i8**) {
+  define i8* @.printZero(i8*) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
   }
-  @.printZero = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__print to i8*)]
 end
 
 let printOne : Unit -> Unit = begin
@@ -23,12 +22,11 @@ let printOne : Unit -> Unit = begin
 
   declare i32 @printf(i8*, ...)
 
-  define i8* @__print(i8*, i8**) {
+  define i8* @.printOne(i8*) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
   }
-  @.printOne = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__print to i8*)]
 end
 
 let printTwo : Unit -> Unit = begin
@@ -36,12 +34,11 @@ let printTwo : Unit -> Unit = begin
 
   declare i32 @printf(i8*, ...)
 
-  define i8* @__print(i8*, i8**) {
+  define i8* @.printTwo(i8*) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
   }
-  @.printTwo = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__print to i8*)]
 end
 
 let printOther : Unit -> Unit = begin
@@ -49,12 +46,11 @@ let printOther : Unit -> Unit = begin
 
   declare i32 @printf(i8*, ...)
 
-  define i8* @__print(i8*, i8**) {
+  define i8* @.printOther(i8*) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([7 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
   }
-  @.printOther = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__print to i8*)]
 end
 
 let rec f (x : Nat) : Nat =

@@ -210,7 +210,7 @@ let rec from_parse_tree gamma = function
       let ty = Types.of_parse_tree gamma.Gamma.types ty in
       let gamma = Gamma.add_value name ty gamma in
       let (xs, gamma) = from_parse_tree gamma xs in
-      (Binding (name, binding) :: xs, gamma)
+      (Binding (name, Types.size ty, binding) :: xs, gamma)
   | (loc, ParseTree.Datatype (name, kind, variants)) :: xs ->
       let gamma = Gamma.add_type ~loc name (Types.Abstract kind) gamma in
       let (variants, gamma) = transform_variants ~datatype:name gamma variants in

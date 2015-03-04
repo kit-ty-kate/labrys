@@ -116,29 +116,37 @@ let get_name_and_linkage name' names mapn =
       let mapn = GammaMap.Value.add name' name mapn in
       (name, names, mapn, Private)
 
+let create_dyn_functions zero_case n_case term_case (n, name, linkage) =
+  let rec aux params = function
+    | 0 ->
+        term_case params
+    | n ->
+        let name = Ident.Name.of_list [string_of_int n] in
+        let params = name :: params in
+        let (t, used_vars) = aux params (pred n) in
+        let used_vars = Set.remove name used_vars in
+        (Abs (name, used_vars, t), used_vars)
+  in
+  match n with
+  | 0 ->
+      zero_case ()
+  | n ->
+      let name_param = Ident.Name.of_list [string_of_int n] in
+      let params = [name_param] in
+      let (t, used_vars) = aux params (pred n) in
+      let used_vars = Set.remove name_param used_vars in
+      if Int.(Set.cardinal used_vars <> 0) then
+        assert false;
+      n_case (Function (name, (name_param, t), linkage))
+
 let of_typed_variant (acc, names, mapn) i (TypedTree.Variant (name, ty_size)) =
   let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
   let variant =
-    let rec aux params = function
-      | 0 ->
-          (Variant (i, List.rev params), Set.of_list params)
-      | n ->
-          let name = Ident.Name.of_list [string_of_int n] in
-          let params = name :: params in
-          let (t, used_vars) = aux params (pred n) in
-          let used_vars = Set.remove name used_vars in
-          (Abs (name, used_vars, t), used_vars)
-    in
-    match ty_size with
-    | 0 -> ConstVariant (name, i, linkage)
-    | n ->
-        let name_param = Ident.Name.of_list [string_of_int n] in
-        let params = [name_param] in
-        let (t, used_vars) = aux params (pred n) in
-        let used_vars = Set.remove name_param used_vars in
-        if Int.(Set.cardinal used_vars <> 0) then
-          assert false;
-        Function (name, (name_param, t), linkage)
+    create_dyn_functions
+      (fun () -> ConstVariant (name, i, linkage))
+      identity
+      (fun params -> (Variant (i, List.rev params), Set.of_list params))
+      (ty_size, name, linkage)
   in
   (variant :: acc, names, mapn)
 
@@ -159,9 +167,17 @@ let of_typed_tree (acc, names, mapn) = function
       let (t, _) = of_typed_term mapn t in
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       (Value (name, t, linkage) :: acc, names, mapn)
-  | TypedTree.Binding (name, value) ->
+  | TypedTree.Binding (name, arity, value) ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      (Binding (name, value, linkage) :: acc, names, mapn)
+      let name' = Ident.Name.prepend (Ident.Module.of_list [""]) name in
+      let wrappers =
+        create_dyn_functions
+          (fun () -> ValueBinding (name, name', value, linkage) :: acc)
+          (fun x -> x :: FunctionBinding (name', value) :: acc)
+          (fun params -> (Call (name', List.rev_map (fun x -> Val x) params), Set.of_list params))
+          (arity, name, linkage)
+      in
+      (wrappers, names, mapn)
   | TypedTree.Datatype variants ->
       let (variants, names, mapn) =
         List.fold_lefti of_typed_variant ([], names, mapn) variants
@@ -176,7 +192,7 @@ let of_typed_tree top =
   let aux names = function
     | TypedTree.RecValue (name, _) -> add name names
     | TypedTree.Value (name, _) -> add name names
-    | TypedTree.Binding (name, _) -> add name names
+    | TypedTree.Binding (name, _, _) -> add name names
     | TypedTree.Datatype variants ->
         let aux names (TypedTree.Variant (name, _)) = add name names in
         List.fold_left aux names variants

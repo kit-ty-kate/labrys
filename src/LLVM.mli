@@ -33,7 +33,7 @@ val build_call_void : llvalue -> llvalue array -> llbuilder -> unit
 
 val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * llbuilder)
 
-val bind : llcontext -> name:Ident.Name.t -> string -> llmodule -> llvalue
+val bind : llcontext -> name:Ident.Name.t -> [`Global | `Function] -> string -> llmodule -> llvalue
 
 val optimize :
   lto:bool ->

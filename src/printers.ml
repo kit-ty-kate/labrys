@@ -381,8 +381,8 @@ module TypedTree = struct
           (PPrint.string (fmt "let rec %s =" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
-    | Binding (name, content) ->
-        PPrint.string (fmt "let %s = begin" (dump_name name))
+    | Binding (name, arity, content) ->
+        PPrint.string (fmt "let %s %d = begin" (dump_name name) arity)
         ^^ PPrint.break 1
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1
@@ -468,6 +468,12 @@ module UntypedTree = struct
     | Variant (index, params) ->
         let params = String.concat " " (List.map dump_name params) in
         PPrint.string (fmt "[%d | %s]" index params)
+    | Call (name, params) ->
+        let params = List.fold_left (fun acc x -> acc ^^ PPrint.comma ^^ PPrint.space ^^ dump_t x) PPrint.empty params in
+        PPrint.string (dump_name name)
+        ^^ PPrint.lparen
+        ^^ params
+        ^^ PPrint.rparen
     | PatternMatching (t, results, patterns) ->
         dump_pattern_matching
           (dump_t t)
@@ -561,8 +567,14 @@ module UntypedTree = struct
           (PPrint.string (fmt "function %s %s : %s =" (dump_name name) (dump_name name') (dump_linkage linkage))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
-    | Binding (name, content, linkage) ->
-        PPrint.string (fmt "let %s : %s = begin" (dump_name name) (dump_linkage linkage))
+    | ValueBinding (name, name', content, linkage) ->
+        PPrint.string (fmt "ValueBinding %s %s : %s = begin" (dump_name name) (dump_name name') (dump_linkage linkage))
+        ^^ PPrint.break 1
+        ^^ PPrint.group (PPrint.string content)
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
+    | FunctionBinding (name, content) ->
+        PPrint.string (fmt "ValueBinding %s = begin" (dump_name name))
         ^^ PPrint.break 1
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1

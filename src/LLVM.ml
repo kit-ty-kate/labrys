@@ -42,10 +42,10 @@ let define_function c s ty m =
   let f = define_function s ty m in
   f, builder_at_end c (entry_block f)
 
-let bind c ~name s m =
+let bind c ~name lookup_type s m =
   let membuffer = MemoryBuffer.of_string s in
   let m' = Llvm_irreader.parse_ir c membuffer in
-  let name = "." ^ Ident.Name.to_string name in
+  let name = Ident.Name.to_string name in
   let set_link_priv v =
     if not (is_declaration v || String.equal (value_name v) name) then
       set_linkage Linkage.Private v
@@ -54,7 +54,11 @@ let bind c ~name s m =
   iter_functions set_link_priv m';
   Llvm_linker.link_modules m m' Llvm_linker.Mode.DestroySource;
   dispose_module m';
-  match lookup_global name m with
+  let lookup = match lookup_type with
+    | `Global -> lookup_global
+    | `Function -> lookup_function
+  in
+  match lookup name m with
   | Some v ->
       set_linkage Linkage.Private v;
       v

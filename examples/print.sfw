@@ -5,14 +5,13 @@ type Int =
 let printInt : forall X, X -> Int = begin
   @msg = constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
-  define i8* @__printInt(i8* %i, i8**) {
+  define i8* @.printInt(i8* %i) {
     %access_prim = load i8* %i
     %access = zext i8 %access_prim to i32
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
   }
-  @.printInt = constant [1 x i8*] [i8* bitcast (i8* (i8*, i8**)* @__printInt to i8*)]
 end
 
 let zero : Int = begin
