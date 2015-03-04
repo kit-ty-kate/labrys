@@ -140,6 +140,10 @@ app:
 arg:
   | LParen name = lowerName Colon ty = typeExpr RParen
       { (Ident.Name.of_list [name], ty) }
+  | LParen RParen
+      { let loc = get_loc $startpos $endpos in
+        (Ident.Name.of_list ["_"] , (loc, ParseTree.Ty (Ident.Type.of_list ["Unit"])))
+      }
 
 name:
   | name = LowerName
