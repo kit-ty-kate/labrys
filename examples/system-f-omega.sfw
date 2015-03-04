@@ -37,4 +37,4 @@ let rec recursiveFun (x : Int) (y : Int) : [IO] Int =
 let main =
   let testdeux = testdeux O in
   let testa = recursiveFun O (S O) in
-  O
+  Unit

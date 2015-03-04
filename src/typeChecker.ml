@@ -199,8 +199,12 @@ let check_effects ~loc ~with_main ~has_main ~name (t, ty, effects) =
   let is_main = with_main && is_main ~loc ~has_main name in
   if not (is_main || Effects.is_empty effects) then
     Error.fail ~loc "Effects are not allowed on toplevel";
-  if is_main && Int.(Types.size ty > 0) then
-    Error.fail ~loc "The main must be a value. It cannot be a function";
+  if is_main && not (Types.is_unit ty) then
+    Error.fail
+      ~loc
+      "The main must have type '%s' but has type '%s'"
+      (Ident.Type.to_string Builtins.t_unit)
+      (Types.to_string ty);
   (is_main, t, ty)
 
 let rec from_parse_tree ~with_main ~has_main gamma = function

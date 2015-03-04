@@ -24,4 +24,4 @@ let test = id [Int]
 
 let main =
   let testdeux = printInt (test zero zero) in
-  O
+  Unit

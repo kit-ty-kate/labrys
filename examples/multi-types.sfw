@@ -10,4 +10,4 @@ let val = id (λ(x:Int) -> x)
 
 let idprime = id
 
-let main = O
+let main = Unit

@@ -2,4 +2,4 @@ import Multi
 
 let test = Multi.id Multi.S Multi.O
 
-let main = Multi.O
+let main = Unit

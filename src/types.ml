@@ -259,3 +259,7 @@ let rec has_io = function
   | Fun (_, _, ret) -> has_io ret
   | Ty _
   | AbsOnTy _ -> true
+
+let is_unit = function
+  | Ty name when Ident.Type.equal name Builtins.t_unit -> true
+  | Ty _ | Fun _ | Forall _ | AppOnTy _ | AbsOnTy _ -> false

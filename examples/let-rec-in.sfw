@@ -24,4 +24,4 @@ let f =
 
 let main =
   let test = f O (S O) (λ(x:Unit) -> Unit) in
-  O
+  Unit

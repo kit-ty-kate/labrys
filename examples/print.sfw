@@ -20,7 +20,7 @@ end
 
 let main =
   let unit = printInt [Int] zero in
-  O
+  Unit
 
 type Nat =
   | O : Nat

@@ -29,4 +29,4 @@ let test = curry const
 
 let main =
   let segfault = printInt (test zero zero) in
-  O
+  Unit

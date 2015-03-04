@@ -21,4 +21,4 @@ let rec f (x : Int) (y : Int) (k : Unit -[IO]-> Unit) : Unit =
 
 let main =
   let test = f O (S O) (λ(x:Unit) -> Unit) in
-  O
+  Unit
