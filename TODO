@@ -8,8 +8,8 @@
 * Have a builtin Unit type
   * type Unit = Unit : Unit
   * Have a syntactic sugar « () » which stands for « (_ : Unit) »
+  * Have a syntactic sugar « expr; expr » which stands for « let () = expr in expr »
   * Enforce the main to have type Unit
-* Have a wildcard « _ » to discard unwanted names
 * Define a proper operational semantics
 * Typeclasses
 

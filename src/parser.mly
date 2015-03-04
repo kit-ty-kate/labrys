@@ -49,6 +49,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Fail
 %token Try
 %token Exception
+%token Underscore
 %token <string> LowerName
 %token <string> UpperName
 %token <string> Binding
@@ -91,9 +92,9 @@ exceptionArgs:
   | { [] }
 
 let_case:
-  | Let Rec name = LowerName t = let_sugar
+  | Let Rec name = lowerName t = let_sugar
       { (Ident.Name.of_list [name], ParseTree.Rec, t) }
-  | Let name = LowerName t = let_sugar
+  | Let name = lowerName t = let_sugar
       { (Ident.Name.of_list [name], ParseTree.NonRec, t) }
 
 datatype:
@@ -137,7 +138,7 @@ app:
       { ParseTree.App ((get_loc $startpos(f) $endpos(f), f), x) }
 
 arg:
-  | LParen name = LowerName Colon ty = typeExpr RParen
+  | LParen name = lowerName Colon ty = typeExpr RParen
       { (Ident.Name.of_list [name], ty) }
 
 name:
@@ -152,6 +153,12 @@ upperName:
       { [name] }
   | m = UpperName Dot xs = upperName
       { m :: xs }
+
+%inline lowerName:
+  | name = LowerName
+      { name }
+  | Underscore
+      { "_" }
 
 typeExprUnclosed:
   | param = typeExprProtected Arrow ret = typeExpr
@@ -222,7 +229,7 @@ exn_pattern:
       { ((Ident.Exn.of_list exn, args), t) }
 
 exn_pattern_arg:
-  | name = LowerName { Ident.Name.of_list [name] }
+  | name = lowerName { Ident.Name.of_list [name] }
 
 variant:
   | name = UpperName Colon ty = typeExpr
@@ -245,7 +252,7 @@ pattern:
       { (p, t) }
 
 pat:
-  | name = LowerName
+  | name = lowerName
       { ParseTree.Any (Ident.Name.of_list [name]) }
   | name = upperName args = list(pat_arg)
       { ParseTree.TyConstr
@@ -253,7 +260,7 @@ pat:
       }
 
 pat_arg:
-  | name = LowerName
+  | name = lowerName
       { ParseTree.PVal (ParseTree.Any (Ident.Name.of_list [name])) }
   | name = upperName
       { ParseTree.PVal

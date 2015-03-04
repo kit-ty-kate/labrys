@@ -24,9 +24,9 @@ let test = id [Int] zero
 
 exception A
 
-let test (x : Int) = try fail [Int] A with A -> O end
+let test (_ : Int) = try fail [Int] A with A -> O end
 
-let test (x : Int) = fail [Int] A
+let test (_ : Int) = fail [Int] A
 
 let test = try test O with A -> O end
 

@@ -31,6 +31,7 @@ rule main = parse
   | '\n' { Lexing.new_line lexbuf; main lexbuf }
   | '=' { Parser.Equal }
   | '.' { Parser.Dot }
+  | '_' { Parser.Underscore }
   | ',' { Parser.Comma }
   | ':' { Parser.Colon }
   | '(' { Parser.LParen }
