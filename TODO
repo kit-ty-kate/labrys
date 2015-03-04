@@ -5,8 +5,11 @@
 * Effect system
   * Polymorphism
   * Forbid the pure arrows (->) for higher-order functions or types (enforce the use of -[]-> if pure function is actually wanted)
-* Improve FFI
-  * The function should have an effect IO « String -> String -[IO]-> Unit »
+* Have a builtin Unit type
+  * type Unit = Unit : Unit
+  * Have a syntactic sugar « () » which stands for « (_ : Unit) »
+  * Enforce the main to have type Unit
+* Have a wildcard « _ » to discard unwanted names
 * Define a proper operational semantics
 * Typeclasses
 
