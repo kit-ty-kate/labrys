@@ -6,7 +6,6 @@
   * Polymorphism
   * Forbid the pure arrows (->) for higher-order functions or types (enforce the use of -[]-> if pure function is actually wanted)
 * Have a builtin Unit type
-  * type Unit = Unit : Unit
   * Have a syntactic sugar « () » which stands for « (_ : Unit) »
   * Have a syntactic sugar « expr; expr » which stands for « let () = expr in expr »
   * Enforce the main to have type Unit

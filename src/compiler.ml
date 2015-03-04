@@ -80,6 +80,15 @@ let parse filename parser =
   in
   File.with_file_in filename aux
 
+let prepend_builtins tree =
+  let t_name = Ident.Type.of_list ["Unit"] in
+  let name = Ident.Name.of_list ["Unit"] in
+  let pos = Location.{pos_lnum = -1; pos_cnum = -1} in
+  let loc = Location.{loc_start = pos; loc_end = pos} in
+  let ty = (loc, ParseTree.Ty t_name) in
+  let variants = [ParseTree.Variant (loc, name, ty)] in
+  (loc, ParseTree.Datatype (t_name, Kinds.Star, variants)) :: tree
+
 let rec build_intf parent_module =
   let (imports, tree) = parse (ModulePath.intf parent_module) Parser.mainInterface in
   let aux acc x =
@@ -115,6 +124,7 @@ let rec build_impl =
 
 and compile ?(with_main = false) ~interface modul =
   let (imports, parse_tree) = parse (ModulePath.impl modul) Parser.main in
+  let parse_tree = prepend_builtins parse_tree in (* TODO: Do better *)
   let (imports, gamma, code) = build_impl modul imports in
   let typed_tree =
     lazy begin

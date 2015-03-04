@@ -14,8 +14,6 @@ let printInt : Int -[IO]-> Int = begin
   }
 end
 
-type Unit = Unit : Unit
-
 let id (f:Unit -> Unit) = f Unit
 
 let f =

@@ -3,8 +3,6 @@ type Nat =
   | S : Nat -> Nat
   | D : Nat -> Nat -> Nat
 
-type Unit = Unit : Unit
-
 let printZero : Unit -[IO]-> Unit = begin
   @msg = constant [3 x i8] c"0\0a\00"
 

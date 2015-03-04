@@ -2,8 +2,6 @@ type Nat =
   | O : Nat
   | S : Nat -> Nat
 
-type Unit = Unit : Unit
-
 let printInt : Nat -[IO]-> Unit = begin
   @msg = constant [4 x i8] c"%d\0a\00"
 
