@@ -42,7 +42,7 @@ let define_function c s ty m =
   let f = define_function s ty m in
   f, builder_at_end c (entry_block f)
 
-let bind c ~name lookup_type s m =
+let bind c ~name ~arity s m =
   let membuffer = MemoryBuffer.of_string s in
   let m' = Llvm_irreader.parse_ir c membuffer in
   let name = Ident.Name.to_string name in
@@ -54,13 +54,15 @@ let bind c ~name lookup_type s m =
   iter_functions set_link_priv m';
   Llvm_linker.link_modules m m' Llvm_linker.Mode.DestroySource;
   dispose_module m';
-  let lookup = match lookup_type with
-    | `Global -> lookup_global
-    | `Function -> lookup_function
-  in
+  let lookup = if Int.(arity = 0) then lookup_global else lookup_function in
   match lookup name m with
   | Some v ->
       set_linkage Linkage.Private v;
+      if Int.(arity > 0) then begin
+        let len = Array.length (params v) in
+        if Int.(len <> arity) then
+          raise (BackendFailure (fmt "Arity doesn't match for the LLVM binding '%s'. Expected %d, got %d" name arity len));
+      end;
       v
   | None ->
       raise (BackendFailure (fmt "Cannot found the LLVM binding '%s'" name))

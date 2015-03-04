@@ -173,7 +173,7 @@ let of_typed_tree (acc, names, mapn) = function
       let wrappers =
         create_dyn_functions
           (fun () -> ValueBinding (name, name', value, linkage) :: acc)
-          (fun x -> x :: FunctionBinding (name', value) :: acc)
+          (fun x -> x :: FunctionBinding (name', arity, value) :: acc)
           (fun params -> (Call (name', List.rev_map (fun x -> Val x) params), Set.of_list params))
           (arity, name, linkage)
       in

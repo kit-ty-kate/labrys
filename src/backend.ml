@@ -462,15 +462,15 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           set_linkage global linkage;
           top (`Val (global, t) :: init_list) xs
       | UntypedTree.ValueBinding (name, name', binding, linkage) :: xs ->
-          let v = LLVM.bind c ~name:name' `Global binding m in
+          let v = LLVM.bind c ~name:name' ~arity:0 binding m in
           let name = Ident.Name.prepend I.name name in
           let name = Ident.Name.to_string name in
           let v = LLVM.define_global name (LLVM.const_bitcast v Type.star) m in
           set_linkage v linkage;
           LLVM.set_global_constant true v;
           top init_list xs
-      | UntypedTree.FunctionBinding (name, binding) :: xs ->
-          let v = LLVM.bind c ~name `Function binding m in
+      | UntypedTree.FunctionBinding (name, arity, binding) :: xs ->
+          let v = LLVM.bind c ~name ~arity binding m in
           top (`Binding (name, v) :: init_list) xs
       | UntypedTree.Exception name :: xs ->
           let name = Ident.Exn.prepend I.name name in

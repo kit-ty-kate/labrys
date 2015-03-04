@@ -573,8 +573,8 @@ module UntypedTree = struct
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | FunctionBinding (name, content) ->
-        PPrint.string (fmt "ValueBinding %s = begin" (dump_name name))
+    | FunctionBinding (name, arity, content) ->
+        PPrint.string (fmt "let %s : %d = begin" (dump_name name) arity)
         ^^ PPrint.break 1
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1

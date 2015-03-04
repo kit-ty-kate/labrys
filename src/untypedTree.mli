@@ -47,7 +47,7 @@ type linkage = Public | Private
 type top =
   | Value of (name * t * linkage)
   | ValueBinding of (name * name * string * linkage)
-  | FunctionBinding of (name * string)
+  | FunctionBinding of (name * arity * string)
   | Exception of eff_name
   | ConstVariant of (name * index * linkage)
   | Function of (name * (name * t) * linkage)
