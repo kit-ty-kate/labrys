@@ -27,6 +27,8 @@ val is_empty : t -> bool
 
 val equal : t -> t -> bool
 
+val is_subset_of : t -> t -> bool
+
 val has_io : t -> bool
 
 val add : loc:Location.t -> (Ident.Eff.t * Ident.Exn.t list) -> t -> t

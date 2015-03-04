@@ -2,7 +2,7 @@ type Int =
   | O : Int
   | S : Int -> Int
 
-let printInt : Int -> Int = begin
+let printInt : Int -[IO]-> Int = begin
   @msg = constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
   define i8* @.printInt(i8* %i) {
@@ -19,9 +19,11 @@ type Unit = Unit : Unit
 let id (f:Unit -> Unit) = f Unit
 
 let f =
-  let rec g (x : Int) (y : Int) (k : Unit -> Unit) : Unit =
+  let rec g (x : Int) (y : Int) (k : Unit -[IO]-> Unit) : Unit =
     g y x (λ(u : Unit) -> let unused = printInt x in k Unit)
   in
   g
 
-let test = f O (S O) (λ(x:Unit) -> Unit)
+let main =
+  let test = f O (S O) (λ(x:Unit) -> Unit) in
+  O

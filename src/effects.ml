@@ -44,6 +44,10 @@ let equal x y =
   Exn_set.equal x.exn y.exn
   && Bool.equal x.io y.io
 
+let is_subset_of x y =
+  Exn_set.subset x.exn y.exn
+  && ((x.io && y.io) || not x.io)
+
 let has_io x = x.io
 
 let add ~loc (name, args) self =
@@ -55,7 +59,7 @@ let add ~loc (name, args) self =
       let exn = Exn_set.union args self.exn in
       {self with exn}
   | name ->
-      Error.fail ~loc "Unknown effect \"%s\"" name
+      Error.fail ~loc "Unknown effect '%s'" name
 
 let add_exn x self =
   let exn = Exn_set.add x self.exn in
@@ -80,13 +84,13 @@ let to_string {exn; io} =
   let exn = List.map Ident.Exn.to_string (Exn_set.to_list exn) in
   let exn = fmt "Exn [%s]" (String.concat " | " exn) in
   let io = if io then "IO, " else "" in
-  fmt "[%s%s]" io exn
+  fmt "-[%s%s]->" io exn
 
 let to_string x =
   if Exn_set.is_empty x.exn then
     if x.io then
-      "[IO]"
+      "-[IO]->"
     else
-      ""
+      "->"
   else
     to_string x

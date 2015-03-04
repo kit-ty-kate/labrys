@@ -9,3 +9,5 @@ let id (x:Id) = x
 let val = id (λ(x:Int) -> x)
 
 let idprime = id
+
+let main = O

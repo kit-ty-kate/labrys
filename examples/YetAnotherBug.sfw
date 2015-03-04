@@ -3,3 +3,5 @@ type Unit = Unit : Unit
 let f (X : * -> * -> *) (x : X Unit Unit) = x
 
 let test = f [λX Y, Y] Unit
+
+let main = Unit

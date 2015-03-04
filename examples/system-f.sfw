@@ -2,7 +2,7 @@ type Int =
   | O : Int
   | S : Int -> Int
 
-let printInt : Int -> Int = begin
+let printInt : Int -[IO]-> Int = begin
   @msg = constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
   define i8* @.printInt(i8* %i) {
@@ -22,4 +22,6 @@ let id X (x:X) (x:X) = x
 
 let test = id [Int]
 
-let testdeux = printInt (test zero zero)
+let main =
+  let testdeux = printInt (test zero zero) in
+  O

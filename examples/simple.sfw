@@ -1,3 +1,5 @@
 type Unit = Unit : Unit
 
 let id (f:Unit -> Unit) = f Unit
+
+let main = Unit

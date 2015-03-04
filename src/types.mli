@@ -44,6 +44,8 @@ val to_string : t -> string
 
 val equal : t -> t -> bool
 
+val is_subset_of : t -> t -> bool
+
 val replace : from:name -> ty:t -> t -> t
 
 val size : t -> int
@@ -69,3 +71,5 @@ val apply_ty :
   (name * t)
 
 val check_if_returns_type : datatype:name -> t -> bool
+
+val has_io : t -> bool

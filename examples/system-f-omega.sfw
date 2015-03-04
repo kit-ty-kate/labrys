@@ -2,7 +2,7 @@ type Int =
   | O : Int
   | S : Int -> Int
 
-let printInt : Int -> Int = begin
+let printInt : Int -[IO]-> Int = begin
   @msg = constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
   define i8* @.printInt(i8* %i) {
@@ -17,7 +17,7 @@ let id X (x:X) (x:X) = x
 
 let test = id [Int]
 
-let testdeux = printInt (test O O)
+let testdeux (x : Int) = printInt (test O O)
 
 type alias Id = λX, X
 
@@ -31,7 +31,10 @@ type Pair : * -> * -> * = Pair : forall X Y, X -> Y -> Pair X Y
 
 let test = Pair [Int] [Int] O O
 
-let rec recursiveFun (x : Int) (y : Int) : Int =
+let rec recursiveFun (x : Int) (y : Int) : [IO] Int =
   recursiveFun y (printInt x)
 
-let testa = recursiveFun O (S O)
+let main =
+  let testdeux = testdeux O in
+  let testa = recursiveFun O (S O) in
+  O

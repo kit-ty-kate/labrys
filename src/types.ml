@@ -137,9 +137,9 @@ let forall ~param ~kind ~res = Forall (param, kind, res)
 let rec to_string = function
   | Ty x -> Ident.Type.to_string x
   | Fun (Ty x, eff, ret) ->
-      fmt "%s -%s-> %s" (Ident.Type.to_string x) (Effects.to_string eff) (to_string ret)
+      fmt "%s %s %s" (Ident.Type.to_string x) (Effects.to_string eff) (to_string ret)
   | Fun (x, eff, ret) ->
-      fmt "(%s) -%s-> %s" (to_string x) (Effects.to_string eff) (to_string ret)
+      fmt "(%s) %s %s" (to_string x) (Effects.to_string eff) (to_string ret)
   | Forall (x, k, t) ->
       fmt "forall %s : %s. %s" (Ident.Type.to_string x) (Kinds.to_string k) (to_string t)
   | AbsOnTy (name, k, t) ->
@@ -149,7 +149,7 @@ let rec to_string = function
   | AppOnTy (f, Ty x) -> fmt "(%s) %s" (to_string f) (Ident.Type.to_string x)
   | AppOnTy (f, x) -> fmt "(%s) (%s)" (to_string f) (to_string x)
 
-let equal x y =
+let equal eff_eq x y =
   let rec aux eq_list = function
     | Ty x, Ty x' ->
         let eq = Ident.Type.equal in
@@ -157,7 +157,7 @@ let equal x y =
         || (eq x x' && List.for_all (fun (y, y') -> eq x y || eq x' y') eq_list)
     | Fun (param, eff1, res), Fun (param', eff2, res') ->
         aux eq_list (param, param')
-        && Effects.equal eff1 eff2
+        && eff_eq eff1 eff2
         && aux eq_list (res, res')
     | AppOnTy (f, x), AppOnTy (f', x') ->
         aux eq_list (f, f') && aux eq_list (x, x')
@@ -171,6 +171,10 @@ let equal x y =
     | Fun _, _ -> false
   in
   aux [] (x, y)
+
+let is_subset_of = equal Effects.is_subset_of
+
+let equal = equal Effects.equal
 
 let rec size = function
   | Fun (_, _, t) -> succ (size t)
@@ -246,3 +250,12 @@ let rec check_if_returns_type ~datatype = function
   | AppOnTy (ret, _)
   | Fun (_, _, ret) -> check_if_returns_type ~datatype ret
   | AbsOnTy _ -> false
+
+let rec has_io = function
+  | Fun (_, eff, Forall _)
+  | Fun (_, eff, Ty _) -> Effects.has_io eff
+  | Forall (_, _, ret)
+  | AppOnTy (ret, _)
+  | Fun (_, _, ret) -> has_io ret
+  | Ty _
+  | AbsOnTy _ -> true

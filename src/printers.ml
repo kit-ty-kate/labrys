@@ -35,6 +35,14 @@ let rec dump_top f doc = function
   | [x] -> doc ^^ f x
   | x::xs -> dump_top f (doc ^^ f x ^^ PPrint.hardline ^^ PPrint.hardline) xs
 
+let dump_exn x = String.concat " | " (List.map dump_exn_name x)
+
+let dump_eff x =
+  let aux (name, args) =
+    fmt "%s [%s]" (Ident.Eff.to_string name) (dump_exn args)
+  in
+  String.concat ", " (List.map aux x)
+
 let string_of_doc doc =
   let buf = Buffer.create 1024 in
   PPrint.ToBuffer.pretty 0.9 80 buf doc;
@@ -42,14 +50,6 @@ let string_of_doc doc =
 
 module ParseTree = struct
   open ParseTree
-
-  let dump_exn x = String.concat " | " (List.map dump_exn_name x)
-
-  let dump_eff x =
-    let aux (name, args) =
-      fmt "%s [%s]" (Ident.Eff.to_string name) (dump_exn args)
-    in
-    String.concat ", " (List.map aux x)
 
   let rec dump_ty = function
     | (_, Fun (param, eff, res)) ->
@@ -63,7 +63,8 @@ module ParseTree = struct
         fmt "(%s [%s])" (dump_ty f) (dump_ty x)
 
   let dump_ty_opt ty = match ty with
-    | Some ty -> dump_ty ty
+    | Some (ty, []) -> dump_ty ty
+    | Some (ty, eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
     | None -> "???"
 
   let dump_rec is_rec = match is_rec with

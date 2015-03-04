@@ -59,7 +59,7 @@ type t' =
   | TApp of (t * ty)
   | Val of name
   | PatternMatching of (t * (pattern * t) list)
-  | Let of ((name * is_rec * (ty option * t)) * t)
+  | Let of ((name * is_rec * ((ty * eff list) option * t)) * t)
   | Fail of (ty * (exn_name * t list))
   | Try of (t * ((exn_name * name list) * t) list)
 
@@ -68,7 +68,7 @@ and t = (loc * t')
 type variant = Variant of (loc * name * ty)
 
 type top' =
-  | Value of (name * is_rec * (ty option * t))
+  | Value of (name * is_rec * ((ty * eff list) option * t))
   | Type of (t_name * ty)
   | Binding of (name * ty * string)
   | Datatype of (t_name * Kinds.t * variant list)

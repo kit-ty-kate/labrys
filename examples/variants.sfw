@@ -5,7 +5,7 @@ type Nat =
 
 type Unit = Unit : Unit
 
-let printZero : Unit -> Unit = begin
+let printZero : Unit -[IO]-> Unit = begin
   @msg = constant [3 x i8] c"0\0a\00"
 
   declare i32 @printf(i8*, ...)
@@ -17,7 +17,7 @@ let printZero : Unit -> Unit = begin
   }
 end
 
-let printOne : Unit -> Unit = begin
+let printOne : Unit -[IO]-> Unit = begin
   @msg = constant [3 x i8] c"1\0a\00"
 
   declare i32 @printf(i8*, ...)
@@ -29,7 +29,7 @@ let printOne : Unit -> Unit = begin
   }
 end
 
-let printTwo : Unit -> Unit = begin
+let printTwo : Unit -[IO]-> Unit = begin
   @msg = constant [3 x i8] c"2\0a\00"
 
   declare i32 @printf(i8*, ...)
@@ -41,7 +41,7 @@ let printTwo : Unit -> Unit = begin
   }
 end
 
-let printOther : Unit -> Unit = begin
+let printOther : Unit -[IO]-> Unit = begin
   @msg = constant [7 x i8] c"other\0a\00"
 
   declare i32 @printf(i8*, ...)
@@ -53,7 +53,7 @@ let printOther : Unit -> Unit = begin
   }
 end
 
-let rec f (x : Nat) : Nat =
+let rec f (x : Nat) : [IO] Nat =
   match x with
   | O -> let lol = printZero Unit in O
   | S O -> let lol = printOne Unit in O
@@ -64,12 +64,14 @@ let rec f (x : Nat) : Nat =
   | a -> a
   end
 
-let test = f O
-let test = f (S O)
-let test = f (S (S O))
-let test = f (S (S (S O)))
-let test = f (S (S (S (S O))))
-let test = f (S (S (S (S (S O)))))
-let test = f (S (S (S (S (S (S O))))))
-let test = f (D (S O) O)
-let test = f (D O (S O))
+let main =
+  let test = f O in
+  let test = f (S O) in
+  let test = f (S (S O)) in
+  let test = f (S (S (S O))) in
+  let test = f (S (S (S (S O)))) in
+  let test = f (S (S (S (S (S O))))) in
+  let test = f (S (S (S (S (S (S O)))))) in
+  let test = f (D (S O) O) in
+  let test = f (D O (S O)) in
+  Unit

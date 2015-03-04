@@ -4,7 +4,7 @@ type Nat =
 
 type Unit = Unit : Unit
 
-let printInt : Nat -> Unit = begin
+let printInt : Nat -[IO]-> Unit = begin
   @msg = constant [4 x i8] c"%d\0a\00"
 
   declare i32 @printf(i8*, ...)
@@ -50,10 +50,12 @@ let rec fact (n : Nat) : Nat =
   | S x -> mult (S x) (fact x)
   end
 
-let test = printInt (fact O) -- 1
-let test = printInt (fact (S O)) -- 1
-let test = printInt (fact (S (S O))) -- 2
-let test = printInt (fact (S (S (S O)))) -- 6
-let test = printInt (fact (S (S (S (S O))))) -- 24
-let test = printInt (fact (S (S (S (S (S O)))))) -- 120
-let test = printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))) -- 362880
+let main =
+  let test = printInt (fact O) in -- 1
+  let test = printInt (fact (S O)) in -- 1
+  let test = printInt (fact (S (S O))) in -- 2
+  let test = printInt (fact (S (S (S O)))) in -- 6
+  let test = printInt (fact (S (S (S (S O))))) in -- 24
+  let test = printInt (fact (S (S (S (S (S O)))))) in -- 120
+  let test = printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))) in -- 362880
+  Unit

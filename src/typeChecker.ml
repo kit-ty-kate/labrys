@@ -42,17 +42,26 @@ let rec well_formed_rec = function
       false
 
 let get_rec_ty ~loc = function
-  | Some ty ->
+  | Some (ty, []) ->
       ty
+  | Some _ ->
+      assert false
   | None ->
       Error.fail ~loc "Recursive values must have explicit return type"
 
-let check_type_opt ~loc ~ty ~ty_t gamma =
+let check_type_opt ~loc ~ty ~ty_t ~effects gamma =
   match ty with
-  | Some ty ->
+  | Some (ty, eff) ->
       let ty = Types.of_parse_tree gamma.Gamma.types ty in
       if not (Types.equal ty ty_t) then
         Types.Error.fail ~loc ~has:ty_t ~expected:ty;
+      let eff = List.fold_right (Effects.add ~loc) eff Effects.empty in
+      if not (Effects.equal eff effects) then
+        Error.fail
+          ~loc
+          "This expression has the effect %s but expected the effect %s"
+          (Effects.to_string effects)
+          (Effects.to_string eff);
   | None ->
       ()
 
@@ -76,7 +85,7 @@ let rec aux gamma = function
       let (f, ty_f, effect1) = aux gamma f in
       let (x, ty_x, effect2) = aux gamma x in
       let (param, effect3, res) = Types.apply ~loc ty_f in
-      if Types.equal param ty_x then
+      if Types.is_subset_of ty_x param then
         (App (f, x), res, Effects.union3 effect1 effect2 effect3)
       else
         Types.Error.fail ~loc ~has:ty_x ~expected:param
@@ -105,7 +114,7 @@ let rec aux gamma = function
       (PatternMatching (t, results, patterns), initial_ty, effect)
   | (loc, ParseTree.Let ((name, ParseTree.NonRec, (ty, t)), xs)) ->
       let (t, ty_t, effect1) = aux gamma t in
-      check_type_opt ~loc ~ty ~ty_t gamma;
+      check_type_opt ~loc ~ty ~ty_t ~effects:effect1 gamma;
       let gamma = Gamma.add_value name ty_t gamma in
       let (xs, ty_xs, effect2) = aux gamma xs in
       (Let (name, t, xs), ty_xs, Effects.union effect1 effect2)
@@ -179,53 +188,73 @@ let transform_variants ~datatype gamma =
   in
   aux 0
 
-let check_effects ~loc (t, ty, effects) =
-  if not (Effects.is_empty effects) then
-    Error.fail ~loc "Effects are not allowed on toplevel";
-  (t, ty)
+let is_main ~loc ~has_main x =
+  let main = Ident.Name.of_list ["main"] in
+  let b = Ident.Name.equal x main in
+  if has_main && b then
+    Error.fail ~loc "There must be only one main";
+  b
 
-let rec from_parse_tree gamma = function
+let check_effects ~loc ~with_main ~has_main ~name (t, ty, effects) =
+  let is_main = with_main && is_main ~loc ~has_main name in
+  if not (is_main || Effects.is_empty effects) then
+    Error.fail ~loc "Effects are not allowed on toplevel";
+  if is_main && Int.(Types.size ty > 0) then
+    Error.fail ~loc "The main must be a value. It cannot be a function";
+  (is_main, t, ty)
+
+let rec from_parse_tree ~with_main ~has_main gamma = function
   | (loc, ParseTree.Value (name, ParseTree.NonRec, (ty, term))) :: xs ->
-      let (x, ty_t) = check_effects ~loc (aux gamma term) in
-      check_type_opt ~loc ~ty ~ty_t gamma;
+      let (has_main, x, ty_t) = check_effects ~loc ~with_main ~has_main ~name (aux gamma term) in
+      check_type_opt ~loc ~ty ~ty_t ~effects:Effects.empty gamma;
       let gamma = Gamma.add_value name ty_t gamma in
-      let (xs, gamma) = from_parse_tree gamma xs in
-      (Value (name, x) :: xs, gamma)
+      let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
+      (Value (name, x) :: xs, has_main, gamma)
   | (loc, ParseTree.Value (name, ParseTree.Rec, (ty, term))) :: xs when well_formed_rec term ->
       let ty = get_rec_ty ~loc ty in
       let ty = Types.of_parse_tree gamma.Gamma.types ty in
       let gamma = Gamma.add_value name ty gamma in
-      let (x, ty_x) = check_effects ~loc (aux gamma term) in
+      let (has_main, x, ty_x) = check_effects ~loc ~with_main ~has_main ~name (aux gamma term) in
       if not (Types.equal ty ty_x) then
         Types.Error.fail ~loc ~has:ty_x ~expected:ty;
-      let (xs, gamma) = from_parse_tree gamma xs in
-      (RecValue (name, x) :: xs, gamma)
+      let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
+      (RecValue (name, x) :: xs, has_main, gamma)
   | (loc, ParseTree.Value (_, ParseTree.Rec, _)) :: _ ->
       fail_rec_val ~loc
   | (loc, ParseTree.Type (name, ty)) :: xs ->
       let ty = Types.of_parse_tree_kind gamma.Gamma.types ty in
       let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
-      from_parse_tree gamma xs
-  | (_loc, ParseTree.Binding (name, ty, binding)) :: xs ->
+      from_parse_tree ~with_main ~has_main gamma xs
+  | (loc, ParseTree.Binding (name, ty, binding)) :: xs ->
       let ty = Types.of_parse_tree gamma.Gamma.types ty in
+      if not (Types.has_io ty) then
+        Error.fail
+          ~loc
+          "The binding '%s' cannot be pure. \
+           All bindings have to use the IO effect"
+          (Ident.Name.to_string name);
       let gamma = Gamma.add_value name ty gamma in
-      let (xs, gamma) = from_parse_tree gamma xs in
-      (Binding (name, Types.size ty, binding) :: xs, gamma)
+      let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
+      (Binding (name, Types.size ty, binding) :: xs, has_main, gamma)
   | (loc, ParseTree.Datatype (name, kind, variants)) :: xs ->
       let gamma = Gamma.add_type ~loc name (Types.Abstract kind) gamma in
       let (variants, gamma) = transform_variants ~datatype:name gamma variants in
-      let (xs, gamma) = from_parse_tree gamma xs in
-      (Datatype variants :: xs, gamma)
+      let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
+      (Datatype variants :: xs, has_main, gamma)
   | (loc, ParseTree.Exception (name, args)) :: xs ->
       let args = List.map (Types.of_parse_tree gamma.Gamma.types) args in
       let gamma = Gamma.add_exception ~loc name args gamma in
-      let (xs, gamma) = from_parse_tree gamma xs in
-      (Exception name :: xs, gamma)
+      let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
+      (Exception name :: xs, has_main, gamma)
   | [] ->
-      ([], gamma)
+      ([], has_main, gamma)
 
-let from_parse_tree ~interface gamma x =
-  let (res, gamma) = from_parse_tree gamma x in
+let from_parse_tree ~interface ~with_main gamma x =
+  let (res, has_main, gamma) = from_parse_tree ~with_main ~has_main:false gamma x in
+  if with_main && not has_main then
+    (* TODO: Improve *)
+    failwith
+      (Printf.sprintf "The 'main' hasn't been found in the main module");
   begin match Gamma.is_subset_of interface gamma with
   | [] ->
       ()

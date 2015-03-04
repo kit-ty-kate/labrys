@@ -156,7 +156,7 @@ upperName:
 typeExprUnclosed:
   | param = typeExprProtected Arrow ret = typeExpr
       { ParseTree.Fun (param, [], ret) }
-  | param = typeExprProtected LArrowEff eff = separated_list(Comma, effectName) RArrowEff ret = typeExpr
+  | param = typeExprProtected LArrowEff eff = eff RArrowEff ret = typeExpr
       { ParseTree.Fun (param, eff, ret) }
   | Forall x = forall_ty_sugar
       { x }
@@ -190,6 +190,8 @@ kindClosed:
 kind:
   | x = kindUnclosed { x }
   | x = kindClosed { x }
+
+eff: eff = separated_list(Comma, effectName) { eff }
 
 effectName:
   | name = UpperName
@@ -296,16 +298,18 @@ forall_ty_sugar:
       { ParseTree.Forall (v, (get_loc $startpos(xs) $endpos(xs), xs)) }
 
 let_sugar:
+  | Colon LBracket eff = eff RBracket ty = typeExpr Equal t = term
+      { (Some (ty, eff), t) }
   | Colon ty = typeExpr Equal t = term
-      { (Some ty, t) }
+      { (Some (ty, []), t) }
   | Equal t = term
       { (None, t) }
   | arg = arg xs = let_sugar
       { let (ty_xs, xs) = xs in
         let ty_xs =
-          let aux ty_xs =
-            let ty_xs = ParseTree.Fun (snd arg, [], ty_xs) in
-            (get_loc $startpos(arg) $endpos(arg), ty_xs)
+          let aux (ty_xs, eff) =
+            let ty_xs = ParseTree.Fun (snd arg, eff, ty_xs) in
+            ((get_loc $startpos(arg) $endpos(arg), ty_xs), [])
           in
           BatOption.map aux ty_xs
         in
@@ -314,9 +318,9 @@ let_sugar:
   | ty = kind_and_name xs = let_sugar
       { let (ty_xs, xs) = xs in
         let ty_xs =
-          let aux ty_xs =
+          let aux (ty_xs, eff) =
             let ty_xs = ParseTree.Forall (ty, ty_xs) in
-            (get_loc $startpos(ty) $endpos(ty), ty_xs)
+            ((get_loc $startpos(ty) $endpos(ty), ty_xs), eff)
           in
           BatOption.map aux ty_xs
         in

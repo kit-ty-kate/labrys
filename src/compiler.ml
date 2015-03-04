@@ -118,7 +118,7 @@ and compile ?(with_main = false) ~interface modul =
   let (imports, gamma, code) = build_impl modul imports in
   let typed_tree =
     lazy begin
-      TypeChecker.from_parse_tree ~interface gamma parse_tree
+      TypeChecker.from_parse_tree ~interface ~with_main gamma parse_tree
     end
   in
   let untyped_tree = lazy (Lambda.of_typed_tree (Lazy.force typed_tree)) in
