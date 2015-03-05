@@ -22,14 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type t' =
-  | Val of (ParseTree.name * ParseTree.ty)
-  | AbstractType of ParseTree.t_value
-  | Datatype of (ParseTree.t_name * Kinds.t * ParseTree.variant list)
-  | TypeAlias of (ParseTree.t_name * ParseTree.ty)
-  | Exception of (Ident.Exn.t * ParseTree.ty list)
-
-type t = (ParseTree.loc * t')
+open InterfaceTree
 
 let compile gamma =
   let rec compile gammaT gamma = function
@@ -45,7 +38,7 @@ let compile gamma =
         let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
         let gammaT = GammaMap.Types.add ~loc name (Types.Abstract k) gammaT in
         let gamma =
-          let aux ~datatype gamma i (ParseTree.Variant (loc, name, ty)) =
+          let aux ~datatype gamma i (UnsugaredTree.Variant (loc, name, ty)) =
             let ty = Types.of_parse_tree gammaT ty in
             if Types.check_if_returns_type ~datatype ty then
               let gamma = Gamma.add_value name ty gamma in

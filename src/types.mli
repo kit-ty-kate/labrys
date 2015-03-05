@@ -29,12 +29,12 @@ type visibility =
 
 val of_parse_tree_kind :
   visibility GammaMap.Types.t ->
-  ParseTree.ty ->
+  UnsugaredTree.ty ->
   (t * Kinds.t)
 
 val of_parse_tree :
   visibility GammaMap.Types.t ->
-  ParseTree.ty ->
+  UnsugaredTree.ty ->
   t
 
 val func : param:t -> eff:Effects.t -> res:t -> t

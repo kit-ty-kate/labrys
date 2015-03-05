@@ -40,7 +40,7 @@ type matrix = (pattern list * code_index) list
 val create :
   Gamma.t ->
   Types.t ->
-  ParseTree.pattern ->
+  UnsugaredTree.pattern ->
   (mconstr * Gamma.t)
 
 val split : 'a t -> (matrix * ((var * name) list * 'a) list)

@@ -43,13 +43,206 @@ let dump_eff x =
   in
   String.concat ", " (List.map aux x)
 
-let string_of_doc doc =
+let dump_t_name_ty_opt = function
+  | (name, Some ty) ->
+      fmt "(%s : %s)" (dump_t_name name) (dump_k ty)
+  | (name, None) ->
+      dump_t_name name
+
+let dump_t_name_ty_list l = String.concat " " (List.map dump_t_name_ty_opt l)
+
+ let string_of_doc doc =
   let buf = Buffer.create 1024 in
   PPrint.ToBuffer.pretty 0.9 80 buf doc;
   Buffer.contents buf
 
 module ParseTree = struct
   open ParseTree
+
+  let rec dump_ty = function
+    | (_, Fun (param, eff, res)) ->
+        fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
+    | (_, Ty name) -> dump_t_name name
+    | (_, Forall (names, res)) ->
+        fmt "(forall %s, %s)" (dump_t_name_ty_list names) (dump_ty res)
+    | (_, AbsOnTy (names, res)) ->
+        fmt "(λ %s -> %s)" (dump_t_name_ty_list names) (dump_ty res)
+    | (_, AppOnTy (f, x)) ->
+        fmt "(%s [%s])" (dump_ty f) (dump_ty x)
+
+  let dump_ty_opt ty = match ty with
+    | Some (ty, []) -> dump_ty ty
+    | Some (ty, eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
+    | None -> "???"
+
+  let dump_arg = function
+    | (_, VArg (name, ty)) ->
+        fmt "(%s : %s)" (dump_name name) (dump_ty ty)
+    | (_, TArg v) ->
+        dump_t_name_ty_opt v
+    | (_, Unit) ->
+        "()"
+
+  let dump_args l = String.concat " " (List.map dump_arg l)
+
+  let dump_rec is_rec = match is_rec with
+    | Rec -> " rec"
+    | NonRec -> ""
+
+  let rec dump_pattern = function
+    | TyConstr (_, name, []) ->
+        dump_name name
+    | TyConstr (_, name, args) ->
+        fmt
+          "(%s %s)"
+          (dump_name name)
+          (String.concat " " (List.map dump_pattern_arg args))
+    | Any name ->
+        dump_name name
+
+  and dump_pattern_arg = function
+    | PVal p -> dump_pattern p
+    | PTy ty -> fmt "[%s]" (dump_ty ty)
+
+  let rec dump_t = function
+    | (_, Abs (args, t)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "λ %s ->" (dump_args args))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | (_, App (f, x)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ dump_t f
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t x)
+           ^^ PPrint.rparen
+          )
+    | (_, TApp (f, ty)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ dump_t f
+           ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
+           ^^ PPrint.rparen
+          )
+    | (_, Val name) ->
+        PPrint.string (dump_name name)
+    | (_, PatternMatching (t, cases)) ->
+        PPrint.group
+          (PPrint.string "match"
+           ^^ PPrint.break 1
+           ^^ dump_t t
+           ^^ PPrint.break 1
+           ^^ PPrint.string "with"
+          )
+        ^^ dump_cases cases
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
+    | (_, Let ((name, is_rec, (args, (ty, t))), xs)) ->
+        let ty = dump_ty_opt ty in
+        let is_rec = dump_rec is_rec in
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "let%s %s %s : %s =" is_rec (dump_name name) (dump_args args) ty)
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.break 1
+           ^^ PPrint.string "in"
+           ^^ PPrint.break 1
+           ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+    | (_, Fail (ty, (name, args))) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string "fail"
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (dump_exn_name name)
+           ^^ dump_exn_args args
+           ^^ PPrint.rparen
+          )
+    | (_, Try (t, branches)) ->
+        PPrint.group
+          (PPrint.string "try"
+           ^^ PPrint.break 1
+           ^^ dump_t t
+           ^^ PPrint.break 1
+           ^^ PPrint.string "with"
+          )
+        ^^ dump_exn_branches branches
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
+
+  and dump_cases cases =
+    let aux doc (pattern, t) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %s ->" (dump_pattern pattern))
+            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
+           )
+    in
+    List.fold_left aux PPrint.empty cases
+
+  and dump_exn_branches branches =
+    let dump_args args =
+      String.concat " " (List.map Ident.Name.to_string args)
+    in
+    let aux doc ((name, args), t) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %s %s ->" (dump_exn_name name) (dump_args args))
+            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
+           )
+    in
+    List.fold_left aux PPrint.empty branches
+
+  and dump_exn_args args =
+    let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
+    List.fold_left aux PPrint.empty args
+
+  let dump_variants (Variant (_, name, ty)) =
+    PPrint.string (fmt "| %s : %s" (dump_name name) (dump_ty ty))
+
+  let dump_variants variants =
+    let aux doc x = doc ^^ PPrint.break 1 ^^ dump_variants x in
+    List.fold_left aux PPrint.empty variants
+
+  let dump = function
+    | (_, Value (name, is_rec, (args, (ty, t)))) ->
+        let ty = dump_ty_opt ty in
+        let is_rec = dump_rec is_rec in
+        PPrint.group
+          (PPrint.string (fmt "let%s %s %s : %s =" is_rec (dump_name name) (dump_args args) ty)
+           ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
+          )
+    | (_, Type (name, ty)) ->
+        PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
+    | (_, Binding (name, ty, content)) ->
+        PPrint.string (fmt "let %s : %s = begin" (dump_name name) (dump_ty ty))
+        ^^ PPrint.break 1
+        ^^ PPrint.group (PPrint.string content)
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
+    | (_, Datatype (name, None, variants)) ->
+        PPrint.string (fmt "type %s =" (dump_t_name name))
+        ^^ PPrint.nest 2 (dump_variants variants)
+    | (_, Datatype (name, Some k, variants)) ->
+        PPrint.string (fmt "type %s : %s =" (dump_t_name name) (dump_k k))
+        ^^ PPrint.nest 2 (dump_variants variants)
+    | (_, Exception (name, args)) ->
+        PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))
+
+  let dump top =
+    let doc = dump_top dump PPrint.empty top in
+    string_of_doc doc
+end
+
+module UnsugaredTree = struct
+  open UnsugaredTree
 
   let rec dump_ty = function
     | (_, Fun (param, eff, res)) ->

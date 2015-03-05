@@ -19,9 +19,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val from_parse_tree :
+val check :
   interface:Gamma.t ->
   with_main:bool ->
   Gamma.t ->
-  ParseTree.top list ->
+  UnsugaredTree.top list ->
   TypedTree.top list

@@ -25,19 +25,19 @@ type t_name = Ident.Type.t
 type module_name = Ident.Module.t
 type loc = Location.t
 
-type t_value = (t_name * Kinds.t option)
+type t_value = (t_name * Kinds.t)
 
 type eff = (Ident.Eff.t * Ident.Exn.t list)
 
-type is_rec =
+type is_rec = ParseTree.is_rec =
   | Rec
   | NonRec
 
 type ty' =
   | Fun of (ty * eff list * ty)
   | Ty of t_name
-  | Forall of (t_value list * ty)
-  | AbsOnTy of (t_value list * ty)
+  | Forall of (t_value * ty)
+  | AbsOnTy of (t_value * ty)
   | AppOnTy of (ty * ty)
 
 and ty = (loc * ty')
@@ -53,20 +53,14 @@ and pattern_arg =
   | PVal of pattern
   | PTy of ty
 
-type arg' =
-  | VArg of value
-  | TArg of t_value
-  | Unit
-
-and arg = (loc * arg')
-
 type t' =
-  | Abs of (arg list * t)
+  | Abs of (value * t)
+  | TAbs of (t_value * t)
   | App of (t * t)
   | TApp of (t * ty)
   | Val of name
   | PatternMatching of (t * (pattern * t) list)
-  | Let of ((name * is_rec * (arg list * (ty_annot * t))) * t)
+  | Let of ((name * is_rec * (ty_annot * t)) * t)
   | Fail of (ty * (exn_name * t list))
   | Try of (t * ((exn_name * name list) * t) list)
 
@@ -75,21 +69,12 @@ and t = (loc * t')
 type variant = Variant of (loc * name * ty)
 
 type top' =
-  | Value of (name * is_rec * (arg list * (ty_annot * t)))
+  | Value of (name * is_rec * (ty_annot * t))
   | Type of (t_name * ty)
   | Binding of (name * ty * string)
-  | Datatype of (t_name * Kinds.t option * variant list)
+  | Datatype of (t_name * Kinds.t * variant list)
   | Exception of (exn_name * ty list)
 
 and top = (loc * top')
 
 type imports = module_name list
-
-type interface' =
-  | IVal of (name * ty)
-  | IAbstractType of (t_name * Kinds.t option)
-  | IDatatype of (t_name * Kinds.t option * variant list)
-  | ITypeAlias of (t_name * ty)
-  | IException of (exn_name * ty list)
-
-type interface = (loc * interface')

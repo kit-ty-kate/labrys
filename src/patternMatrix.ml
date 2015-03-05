@@ -44,10 +44,10 @@ type matrix = (pattern list * code_index) list
 
 let create =
   let rec aux gamma ty' = function
-    | ParseTree.Any name ->
+    | UnsugaredTree.Any name ->
         let gamma = Gamma.add_value name ty' gamma in
         (MAny (name, Types.head ty'), gamma)
-    | ParseTree.TyConstr (loc, name, args) ->
+    | UnsugaredTree.TyConstr (loc, name, args) ->
         let head_ty = Types.head ty' in
         let constructors =
           GammaMap.Constr.find head_ty gamma.Gamma.constructors
@@ -64,13 +64,13 @@ let create =
               (Ident.Type.to_string head_ty)
         | Some (ty, _) ->
             let aux (args, ty, gamma) = function
-              | ParseTree.PVal p ->
+              | UnsugaredTree.PVal p ->
                   let (param_ty, effect, res_ty) = Types.apply ~loc ty in
                   if not (Effects.is_empty effect) then
                     assert false;
                   let (arg, gamma) = aux gamma param_ty p in
                   (arg :: args, res_ty, gamma)
-              | ParseTree.PTy pty ->
+              | UnsugaredTree.PTy pty ->
                   let (pty, kx) =
                     Types.of_parse_tree_kind gamma.Gamma.types pty
                   in

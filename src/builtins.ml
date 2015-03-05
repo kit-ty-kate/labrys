@@ -24,3 +24,9 @@ open Monomorphic.None
 
 let unit = Ident.Name.of_list ["Unit"]
 let t_unit = Ident.Type.of_list ["Unit"]
+
+let underscore = Ident.Name.of_list ["_"]
+
+let unknown_loc =
+  let pos = Location.{pos_lnum = -1; pos_cnum = -1} in
+  Location.{loc_start = pos; loc_end = pos}

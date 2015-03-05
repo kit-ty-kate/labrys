@@ -25,6 +25,7 @@ type output_file = string option
 type printer =
   | NoPrinter
   | ParseTree
+  | UnsugaredTree
   | TypedTree
   | UntypedTree
   | LLVM

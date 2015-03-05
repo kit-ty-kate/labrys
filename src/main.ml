@@ -41,6 +41,7 @@ let cmd =
   let ($) = Cmdliner.Term.($) in
   let printers =
     [ (Compiler.ParseTree, Arg.info ["print-parse-tree"])
+    ; (Compiler.UnsugaredTree, Arg.info ["print-unsugared-tree"])
     ; (Compiler.TypedTree, Arg.info ["print-typed-tree"])
     ; (Compiler.UntypedTree, Arg.info ["print-untyped-tree"])
     ; (Compiler.LLVM, Arg.info ["print-early-llvm"])

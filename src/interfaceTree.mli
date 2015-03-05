@@ -19,4 +19,18 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val compile : Gamma.t -> InterfaceTree.t list -> Gamma.t
+type name = Ident.Name.t
+type t_name = Ident.Type.t
+type exn_name = Ident.Exn.t
+type ty = UnsugaredTree.ty
+type loc = Location.t
+type variant = UnsugaredTree.variant
+
+type t' =
+  | Val of (name * ty)
+  | AbstractType of (t_name * Kinds.t)
+  | Datatype of (t_name * Kinds.t * variant list)
+  | TypeAlias of (t_name * ty)
+  | Exception of (exn_name * ty list)
+
+type t = (loc * t')
