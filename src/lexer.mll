@@ -34,6 +34,7 @@ rule main = parse
   | '_' { Parser.Underscore }
   | ',' { Parser.Comma }
   | ':' { Parser.Colon }
+  | ';' { Parser.Semicolon }
   | '(' { Parser.LParen }
   | ')' { Parser.RParen }
   | '[' { Parser.LBracket }

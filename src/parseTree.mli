@@ -42,7 +42,7 @@ type ty' =
 
 and ty = (loc * ty')
 
-type ty_annot = (ty * eff list) option
+type ty_annot = (ty * eff list option) option
 type value = (name * ty)
 
 type pattern =
@@ -69,6 +69,7 @@ type t' =
   | Let of ((name * is_rec * (arg list * (ty_annot * t))) * t)
   | Fail of (ty * (exn_name * t list))
   | Try of (t * ((exn_name * name list) * t) list)
+  | Seq of (t * t)
 
 and t = (loc * t')
 

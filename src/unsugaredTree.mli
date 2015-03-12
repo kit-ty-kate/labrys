@@ -42,7 +42,7 @@ type ty' =
 
 and ty = (loc * ty')
 
-type ty_annot = (ty * eff list) option
+type ty_annot = (ty * eff list option) option
 type value = (name * ty)
 
 type pattern =

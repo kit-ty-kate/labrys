@@ -50,6 +50,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Try
 %token Exception
 %token Underscore
+%token Semicolon
 %token <string> LowerName
 %token <string> UpperName
 %token <string> Binding
@@ -106,9 +107,9 @@ let_aux:
 %inline ty_opt:
   | { None }
   | Colon LBracket eff = eff RBracket ty = typeExpr
-      { Some (ty, eff) }
+      { Some (ty, Some eff) }
   | Colon ty = typeExpr
-      { Some (ty, []) }
+      { Some (ty, None) }
 
 datatype:
   | Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
@@ -122,15 +123,23 @@ lambda_aux:
   | Arrow t = term
       { t }
 
-termUnclosed:
+termStrictlyUnclosed:
   | Lambda args = nonempty_args(lambda_aux)
       { ParseTree.Abs args }
-  | x = app
-      { x }
   | x = let_case In xs = term
       { ParseTree.Let (x, xs) }
+  | x = termProtectedPermissive Semicolon y = term
+      { ParseTree.Seq (x, y) }
+
+termNonStrictlyUnclosed:
+  | x = app
+      { x }
   | Fail LBracket ty = typeExpr RBracket exn = effectValue
       { ParseTree.Fail (ty, exn) }
+
+%inline termUnclosed:
+  | x = termStrictlyUnclosed { x }
+  | x = termNonStrictlyUnclosed { x }
 
 termClosed:
   | name = name
@@ -142,6 +151,11 @@ termClosed:
 
 term:
   | x = termUnclosed { (get_loc $startpos $endpos, x) }
+  | x = termClosed { (get_loc $startpos $endpos, x) }
+
+termProtectedPermissive:
+  | LParen x = termStrictlyUnclosed RParen { (get_loc $startpos $endpos, x) }
+  | x = termNonStrictlyUnclosed { (get_loc $startpos $endpos, x) }
   | x = termClosed { (get_loc $startpos $endpos, x) }
 
 app:

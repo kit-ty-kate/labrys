@@ -49,11 +49,10 @@ let rec fact (n : Nat) : Nat =
   end
 
 let main =
-  let test = printInt (fact O) in -- 1
-  let test = printInt (fact (S O)) in -- 1
-  let test = printInt (fact (S (S O))) in -- 2
-  let test = printInt (fact (S (S (S O)))) in -- 6
-  let test = printInt (fact (S (S (S (S O))))) in -- 24
-  let test = printInt (fact (S (S (S (S (S O)))))) in -- 120
-  let test = printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))) in -- 362880
-  Unit
+  printInt (fact O); -- 1
+  printInt (fact (S O)); -- 1
+  printInt (fact (S (S O))); -- 2
+  printInt (fact (S (S (S O)))); -- 6
+  printInt (fact (S (S (S (S O))))); -- 24
+  printInt (fact (S (S (S (S (S O)))))); -- 120
+  printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))) -- 362880

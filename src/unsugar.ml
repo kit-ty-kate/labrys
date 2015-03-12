@@ -88,6 +88,10 @@ and unsugar_t = function
       (loc, Fail (unsugar_ty ty, (exn, List.map unsugar_t args)))
   | (loc, ParseTree.Try (t, patterns)) ->
       (loc, Try (unsugar_t t, List.map unsugar_try_pattern patterns))
+  | (loc, ParseTree.Seq (x, y)) ->
+      let name = Builtins.underscore in
+      let ty = ((loc, Ty Builtins.t_unit), None) in
+      (loc, Let ((name, NonRec, (Some ty, unsugar_t x)), unsugar_t y))
 
 and unsugar_args args annot t =
   let rec aux = function
@@ -96,8 +100,8 @@ and unsugar_args args annot t =
         let (ty_xs, xs) = aux xs in
         let ty_xs =
           let aux (ty_xs, eff) =
-            let ty_xs = Fun (ty, eff, ty_xs) in
-            ((loc, ty_xs), [])
+            let ty_xs = Fun (ty, Option.default [] eff, ty_xs) in
+            ((loc, ty_xs), None)
           in
           Option.map aux ty_xs
         in

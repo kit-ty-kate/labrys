@@ -42,10 +42,15 @@ let rec well_formed_rec = function
       false
 
 let get_rec_ty ~loc = function
-  | Some (ty, []) ->
+  | Some (ty, None) ->
       ty
+  | Some (_, Some []) ->
+      Error.fail
+        ~loc
+        "This empty effect annotation is useless as functions cannot have \
+         effects"
   | Some _ ->
-      assert false
+      Error.fail ~loc "Functions doesn't have effects"
   | None ->
       Error.fail ~loc "Recursive values must have explicit return type"
 
@@ -55,13 +60,18 @@ let check_type_opt ~loc ~ty ~ty_t ~effects gamma =
       let ty = Types.of_parse_tree gamma.Gamma.types ty in
       if not (Types.equal ty ty_t) then
         Types.Error.fail ~loc ~has:ty_t ~expected:ty;
-      let eff = List.fold_right (Effects.add ~loc) eff Effects.empty in
-      if not (Effects.equal eff effects) then
-        Error.fail
-          ~loc
-          "This expression has the effect %s but expected the effect %s"
-          (Effects.to_string effects)
-          (Effects.to_string eff);
+      begin match eff with
+      | Some eff ->
+          let eff = List.fold_right (Effects.add ~loc) eff Effects.empty in
+          if not (Effects.equal eff effects) then
+            Error.fail
+              ~loc
+              "This expression has the effect %s but expected the effect %s"
+              (Effects.to_string effects)
+              (Effects.to_string eff);
+      | None ->
+          ()
+      end
   | None ->
       ()
 

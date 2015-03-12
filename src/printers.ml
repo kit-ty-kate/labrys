@@ -71,8 +71,8 @@ module ParseTree = struct
         fmt "(%s [%s])" (dump_ty f) (dump_ty x)
 
   let dump_ty_opt ty = match ty with
-    | Some (ty, []) -> dump_ty ty
-    | Some (ty, eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
+    | Some (ty, None) -> dump_ty ty
+    | Some (ty, Some eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
     | None -> "???"
 
   let dump_arg = function
@@ -174,6 +174,14 @@ module ParseTree = struct
         ^^ dump_exn_branches branches
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
+    | (_, Seq (x, y)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ dump_t x
+           ^^ PPrint.semi
+           ^^ dump_t y
+           ^^ PPrint.rparen
+          )
 
   and dump_cases cases =
     let aux doc (pattern, t) =
@@ -256,8 +264,8 @@ module UnsugaredTree = struct
         fmt "(%s [%s])" (dump_ty f) (dump_ty x)
 
   let dump_ty_opt ty = match ty with
-    | Some (ty, []) -> dump_ty ty
-    | Some (ty, eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
+    | Some (ty, None) -> dump_ty ty
+    | Some (ty, Some eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
     | None -> "???"
 
   let dump_rec is_rec = match is_rec with
