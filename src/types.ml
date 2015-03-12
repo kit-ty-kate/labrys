@@ -136,8 +136,10 @@ let forall ~param ~kind ~res = Forall (param, kind, res)
 
 let rec to_string = function
   | Ty x -> Ident.Type.to_string x
+  | Fun (Ty x, eff, ret) when Effects.is_empty eff ->
+      fmt "%s -> %s" (Ident.Type.to_string x) (to_string ret)
   | Fun (Ty x, eff, ret) ->
-      fmt "%s %s %s" (Ident.Type.to_string x) (Effects.to_string eff) (to_string ret)
+      fmt "%s -%s-> %s" (Ident.Type.to_string x) (Effects.to_string eff) (to_string ret)
   | Fun (x, eff, ret) ->
       fmt "(%s) %s %s" (to_string x) (Effects.to_string eff) (to_string ret)
   | Forall (x, k, t) ->

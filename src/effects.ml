@@ -81,16 +81,8 @@ let remove_exn x self =
   {self with exn}
 
 let to_string {exn; io} =
-  let exn = List.map Ident.Exn.to_string (Exn_set.to_list exn) in
-  let exn = fmt "Exn [%s]" (String.concat " | " exn) in
-  let io = if io then "IO, " else "" in
-  fmt "-[%s%s]->" io exn
-
-let to_string x =
-  if Exn_set.is_empty x.exn then
-    if x.io then
-      "-[IO]->"
-    else
-      "->"
-  else
-    to_string x
+  let exn' = List.map Ident.Exn.to_string (Exn_set.to_list exn) in
+  let exn' = fmt "Exn [%s]" (String.concat " | " exn') in
+  let l = if Exn_set.is_empty exn then [] else [exn'] in
+  let l = if io then "IO" :: l else l in
+  fmt "[%s]" (String.concat ", " l)
