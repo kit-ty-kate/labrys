@@ -24,5 +24,6 @@ type t
 exception Exn of t
 
 val fail : loc:Location.t -> ('a, unit, string, 'b) format4 -> 'a
+val fail_module : ('a, unit, string, 'b) format4 -> 'a
 
 val dump : file:string -> t -> string

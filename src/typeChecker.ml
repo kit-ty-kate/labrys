@@ -266,15 +266,13 @@ let rec from_parse_tree ~with_main ~has_main gamma = function
 let check ~interface ~with_main gamma x =
   let (res, has_main, gamma) = from_parse_tree ~with_main ~has_main:false gamma x in
   if with_main && not has_main then
-    (* TODO: Improve *)
-    failwith
-      (Printf.sprintf "The 'main' hasn't been found in the main module");
+    Error.fail_module "The 'main' hasn't been found in the main module";
   begin match Gamma.is_subset_of interface gamma with
   | [] ->
       ()
   | diff ->
-      (* TODO: Improve *)
-      failwith
-        (Printf.sprintf "Interface and implementation not compatible (%s)" (String.concat ", " diff))
+      Error.fail_module
+        "Interface and implementation not compatible (%s)"
+        (String.concat ", " diff);
   end;
   res

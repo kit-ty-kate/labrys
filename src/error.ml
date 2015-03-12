@@ -22,20 +22,29 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type t = (Location.t * string)
+let fmt = Printf.sprintf
+
+type t =
+  | Located of (Location.t * string)
+  | Module of string
 
 exception Exn of t
 
-let fail ~loc x = Printf.ksprintf (fun x -> raise (Exn (loc, x))) x
+let fail ~loc x = Printf.ksprintf (fun x -> raise (Exn (Located (loc, x)))) x
 
-let dump ~file (loc, x) =
-  let string_of_location {Location.loc_start; loc_end} =
-    Printf.sprintf
-      "Error in '%s' from line %d column %d to line %d column %d:\n"
-      file
-      loc_start.Location.pos_lnum
-      loc_start.Location.pos_cnum
-      loc_end.Location.pos_lnum
-      loc_end.Location.pos_cnum
-  in
-  string_of_location loc ^ "    " ^ x
+let fail_module x = Printf.ksprintf (fun x -> raise (Exn (Module  x))) x
+
+let dump ~file = function
+  | Located (loc, x) ->
+      let string_of_location {Location.loc_start; loc_end} =
+        fmt
+          "Error in '%s' from line %d column %d to line %d column %d:\n"
+          file
+          loc_start.Location.pos_lnum
+          loc_start.Location.pos_cnum
+          loc_end.Location.pos_lnum
+          loc_end.Location.pos_cnum
+      in
+      string_of_location loc ^ "    " ^ x
+  | Module x ->
+      fmt "Error in '%s':\n%s" file x
