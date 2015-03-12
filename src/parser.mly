@@ -148,13 +148,14 @@ termClosed:
       { ParseTree.PatternMatching (t, p) }
   | Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
       { ParseTree.Try (t, p) }
+  | LParen x = term RParen
+      { snd x }
 
 term:
   | x = termUnclosed { (get_loc $startpos $endpos, x) }
   | x = termClosed { (get_loc $startpos $endpos, x) }
 
 termProtectedPermissive:
-  | LParen x = termStrictlyUnclosed RParen { (get_loc $startpos $endpos, x) }
   | x = termNonStrictlyUnclosed { (get_loc $startpos $endpos, x) }
   | x = termClosed { (get_loc $startpos $endpos, x) }
 
@@ -232,6 +233,8 @@ typeExprUnclosed:
 typeExprClosed:
   | name = upperName
       { ParseTree.Ty (Ident.Type.of_list name) }
+  | LParen x = typeExpr RParen
+      { snd x }
 
 typeExpr:
   | x = typeExprUnclosed { (get_loc $startpos $endpos, x) }
@@ -244,12 +247,14 @@ tyApp:
       { ParseTree.AppOnTy ((get_loc $startpos(f) $endpos(f), f), x) }
 
 kindUnclosed:
-  | k1 = kindProtected Arrow k2 = kind
+  | k1 = kindClosed Arrow k2 = kind
       { Kinds.KFun (k1, k2) }
 
 kindClosed:
   | Star
       { Kinds.Star }
+  | LParen x = kind RParen
+      { x }
 
 kind:
   | x = kindUnclosed { x }
@@ -346,7 +351,6 @@ bodyInterface:
       { ParseTree.IException (Ident.Exn.of_list [name], args) }
 
 
-
 (********* Module utils *********)
 
 import:
@@ -360,18 +364,12 @@ module_name:
 
 (********* Protected rules ***********)
 
-termProtected: protect(termUnclosed, termClosed) { $1 }
+termProtected: x = termClosed { (get_loc $startpos $endpos, x) }
 
-typeExprProtected: protect(typeExprUnclosed, typeExprClosed) { $1 }
-
-kindProtected: protect(kindUnclosed, kindClosed) { snd $1 }
+%inline typeExprProtected: x = typeExprClosed { (get_loc $startpos $endpos, x) }
 
 
 (********* Functions ***********)
-
-protect(Unclosed, Closed):
-  | LParen x = Unclosed RParen { (get_loc $startpos $endpos, x) }
-  | x = Closed { (get_loc $startpos $endpos, x) }
 
 entry(body):
   | imports = list(import) body = body_list(body)
