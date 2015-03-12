@@ -137,7 +137,7 @@ termNonStrictlyUnclosed:
   | Fail LBracket ty = typeExpr RBracket exn = effectValue
       { ParseTree.Fail (ty, exn) }
 
-%inline termUnclosed:
+termUnclosed:
   | x = termStrictlyUnclosed { x }
   | x = termNonStrictlyUnclosed { x }
 
@@ -185,7 +185,7 @@ args_aux(rest):
         ((get_loc $startpos $endpos, x) :: xs, rest)
       }
 
-%inline args(rest):
+args(rest):
   | rest = rest
       { ([], rest) }
   | x = arg xs = args_aux(rest)
@@ -366,7 +366,7 @@ module_name:
 
 termProtected: x = termClosed { (get_loc $startpos $endpos, x) }
 
-%inline typeExprProtected: x = typeExprClosed { (get_loc $startpos $endpos, x) }
+typeExprProtected: x = typeExprClosed { (get_loc $startpos $endpos, x) }
 
 
 (********* Functions ***********)
