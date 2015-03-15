@@ -22,13 +22,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type name = Ident.Name.t
 type exn_name = Ident.Exn.t
 type t_name = Ident.Type.t
+type eff_name = Ident.Eff.t
 type module_name = Ident.Module.t
 type loc = Location.t
 
 type t_value = (t_name * Kinds.t option)
-type t_value_eff = (t_name * Kinds.t_eff option)
 
-type eff = (Ident.Type.t * Ident.Exn.t list)
+type forall_arg =
+  | Eff of eff_name
+  | Typ of t_value
+
+type eff = (eff_name * exn_name list)
 
 type is_rec =
   | Rec
@@ -37,7 +41,7 @@ type is_rec =
 type ty' =
   | Fun of (ty * eff list * ty)
   | Ty of t_name
-  | Forall of (t_value_eff list * ty)
+  | Forall of (forall_arg list * ty)
   | AbsOnTy of (t_value list * ty)
   | AppOnTy of (ty * ty)
 
@@ -56,7 +60,8 @@ and pattern_arg =
 
 type arg' =
   | VArg of value
-  | TArg of t_value_eff
+  | TArg of t_value
+  | EArg of eff_name
   | Unit
 
 and arg = (loc * arg')

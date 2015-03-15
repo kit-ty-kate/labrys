@@ -25,7 +25,7 @@ open Monomorphic.None
 let fmt = Printf.sprintf
 
 module Exn_set = Set.Make(Ident.Exn)
-module Variables = Map.Make(Ident.Type)
+module Variables = Map.Make(Ident.Eff)
 
 type t = Exn_set.t Variables.t
 
@@ -39,7 +39,7 @@ let var_eq exn_eq list_eq x y =
       | Some exns' -> exn_eq exns exns'
       | None -> false
     in
-    match List.find (fun (k', _) -> Ident.Type.equal k k') list_eq with
+    match List.find (fun (k', _) -> Ident.Eff.equal k k') list_eq with
     | Some (_, k) -> mem k
     | None -> mem k
   in
@@ -56,25 +56,23 @@ let has_io x =
   let x = Variables.remove Builtins.exn x in
   not (Variables.is_empty x)
 
-let add ~loc gammaT (name, args) self =
-  match GammaMap.Types.find name gammaT with
-  | Some (`Eff has_args) ->
+let add ~loc gammaE (name, args) self =
+  match GammaMap.Eff.find name gammaE with
+  | Some has_args ->
       if has_args && List.is_empty args then
         Error.fail
           ~loc
           "The '%s' effect must have at least one argument"
-          (Ident.Type.to_string name);
+          (Ident.Eff.to_string name);
       if not has_args && not (List.is_empty args) then
         Error.fail
           ~loc
           "The '%s' effect doesn't have any arguments"
-          (Ident.Type.to_string name);
+          (Ident.Eff.to_string name);
       let args = Exn_set.of_list args in
       Variables.modify_def args name (Exn_set.union args) self
-  | Some (`Abstract _)
-  | Some (`Alias _)
   | None ->
-      Error.fail ~loc "Unknown effect '%s'" (Ident.Type.to_string name)
+      Error.fail ~loc "Unknown effect '%s'" (Ident.Eff.to_string name)
 
 let add_exn x self =
   let def = Exn_set.singleton x in
@@ -82,7 +80,7 @@ let add_exn x self =
 
 let union x y =
   let aux name args self =
-    if Ident.Type.equal name Builtins.exn then
+    if Ident.Eff.equal name Builtins.exn then
       Variables.modify_def args name (Exn_set.union args) self
     else if not (Exn_set.is_empty args) then
       assert false
@@ -118,17 +116,17 @@ let to_string self =
   let aux name args acc =
     let aux name acc = acc @ [Ident.Exn.to_string name] in
     let args = String.concat " | " (Exn_set.fold aux args []) in
-    acc @ [Ident.Type.to_string name ^ args]
+    acc @ [Ident.Eff.to_string name ^ args]
   in
   fmt "[%s]" (String.concat ", " (Variables.fold aux self []))
 
-let of_list ~loc gammaT l =
-  let aux acc ty = add ~loc gammaT ty acc in
+let of_list ~loc gammaE l =
+  let aux acc ty = add ~loc gammaE ty acc in
   List.fold_left aux empty l
 
 let replace ~from ~eff self =
   let aux name x self =
-    if Ident.Type.equal name from then begin
+    if Ident.Eff.equal name from then begin
       if not (Exn_set.is_empty x) then
         assert false;
       union self eff

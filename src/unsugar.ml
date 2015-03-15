@@ -25,12 +25,21 @@ open Monomorphic.None
 open UnsugaredTree
 
 let unsugar_kind = Option.default Kinds.Star
-let unsugar_kind_eff = Option.default (Kinds.Kind Kinds.Star)
 
 let rec unsugar_ty =
-  let aux unsugar_k f ty args =
+  let unsugar_forall ~loc ty args =
     let rec aux = function
-      | (name, k) :: xs -> f ((name, unsugar_k k), aux xs)
+      | ParseTree.Eff name :: xs -> (loc, ForallEff (name, aux xs))
+      | ParseTree.Typ (name, k) :: xs -> (loc, Forall ((name, unsugar_kind k), aux xs))
+      | [] -> unsugar_ty ty
+    in
+    if List.is_empty args then
+      assert false;
+    aux args
+  in
+  let unsugar_absOnTy ~loc ty args =
+    let rec aux = function
+      | (name, k) :: xs -> (loc, AbsOnTy ((name, unsugar_kind k), aux xs))
       | [] -> unsugar_ty ty
     in
     if List.is_empty args then
@@ -43,9 +52,9 @@ let rec unsugar_ty =
   | (loc, ParseTree.Ty name) ->
       (loc, Ty name)
   | (loc, ParseTree.Forall (args, ty)) ->
-      aux unsugar_kind_eff (fun x -> (loc, Forall x)) ty args
+      unsugar_forall ~loc ty args
   | (loc, ParseTree.AbsOnTy (args, ty)) ->
-      aux unsugar_kind (fun x -> (loc, AbsOnTy x)) ty args
+      unsugar_absOnTy ~loc ty args
   | (loc, ParseTree.AppOnTy (x, y)) ->
       (loc, AppOnTy (unsugar_ty x, unsugar_ty y))
 
@@ -110,7 +119,7 @@ and unsugar_args args annot t =
         in
         (ty_xs, (loc, Abs ((name, ty), xs)))
     | (loc, ParseTree.TArg (name, k)) :: xs ->
-        let ty = (name, unsugar_kind_eff k) in
+        let ty = (name, unsugar_kind k) in
         let (ty_xs, xs) = aux xs in
         let ty_xs =
           let aux (ty_xs, eff) =
@@ -120,6 +129,16 @@ and unsugar_args args annot t =
           Option.map aux ty_xs
         in
         (ty_xs, (loc, TAbs (ty, xs)))
+    | (loc, ParseTree.EArg name) :: xs ->
+        let (ty_xs, xs) = aux xs in
+        let ty_xs =
+          let aux (ty_xs, eff) =
+            let ty_xs = ForallEff (name, ty_xs) in
+            ((loc, ty_xs), eff)
+          in
+          Option.map aux ty_xs
+        in
+        (ty_xs, (loc, EAbs (name, xs)))
     | (loc, ParseTree.Unit) :: xs ->
         let x =
           ParseTree.VArg

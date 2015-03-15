@@ -20,27 +20,29 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Type.t
+type eff_name = Ident.Eff.t
 
 type t
 
 type visibility =
-  [ `Abstract of Kinds.t
-  | `Alias of (t * Kinds.t)
-  | `Eff of bool
-  ]
+  | Abstract of Kinds.t
+  | Alias of (t * Kinds.t)
 
 val of_parse_tree_kind :
   visibility GammaMap.Types.t ->
+  bool GammaMap.Eff.t ->
   UnsugaredTree.ty ->
   (t * Kinds.t)
 
 val of_parse_tree :
   visibility GammaMap.Types.t ->
+  bool GammaMap.Eff.t ->
   UnsugaredTree.ty ->
   t
 
 val func : param:t -> eff:Effects.t -> res:t -> t
-val forall : param:name -> kind:Kinds.t_eff -> res:t -> t
+val forall : param:name -> kind:Kinds.t -> res:t -> t
+val foralleff : param:eff_name -> res:t -> t
 
 val to_string : t -> string
 
@@ -50,7 +52,7 @@ val is_subset_of : t -> t -> bool
 
 val replace : from:name -> ty:t -> t -> t
 
-val replace_eff : from:name -> eff:Effects.t -> t -> t
+val replace_eff : from:eff_name -> eff:Effects.t -> t -> t
 
 val size : t -> int
 
@@ -74,7 +76,7 @@ val apply_ty :
   t ->
   (name * t)
 
-val apply_eff : loc:Location.t -> eff:Effects.t -> t -> (name * t)
+val apply_eff : loc:Location.t -> eff:Effects.t -> t -> (eff_name * t)
 
 val check_if_returns_type : datatype:name -> t -> bool
 

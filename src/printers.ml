@@ -28,8 +28,8 @@ let (^^) = PPrint.(^^)
 let dump_name = Ident.Name.to_string
 let dump_exn_name = Ident.Exn.to_string
 let dump_t_name = Ident.Type.to_string
+let dump_eff_name = Ident.Eff.to_string
 let dump_k = Kinds.to_string
-let dump_k_eff = Kinds.to_string_eff
 
 let rec dump_top f doc = function
   | [] -> doc
@@ -40,9 +40,12 @@ let dump_exn x = String.concat " | " (List.map dump_exn_name x)
 
 let dump_eff x =
   let aux (name, args) =
-    fmt "%s [%s]" (Ident.Type.to_string name) (dump_exn args)
+    fmt "%s [%s]" (dump_eff_name name) (dump_exn args)
   in
   String.concat ", " (List.map aux x)
+
+let dump_eff_arg name =
+  fmt "(%s : φ)" (dump_eff_name name)
 
 let dump_t_name_ty_opt = function
   | (name, Some ty) ->
@@ -50,14 +53,7 @@ let dump_t_name_ty_opt = function
   | (name, None) ->
       dump_t_name name
 
-let dump_t_name_ty_eff_opt = function
-  | (name, Some ty) ->
-      fmt "(%s : %s)" (dump_t_name name) (dump_k_eff ty)
-  | (name, None) ->
-      dump_t_name name
-
 let dump_t_name_ty_list l = String.concat " " (List.map dump_t_name_ty_opt l)
-let dump_t_name_ty_list_eff l = String.concat " " (List.map dump_t_name_ty_eff_opt l)
 
  let string_of_doc doc =
   let buf = Buffer.create 1024 in
@@ -67,12 +63,18 @@ let dump_t_name_ty_list_eff l = String.concat " " (List.map dump_t_name_ty_eff_o
 module ParseTree = struct
   open ParseTree
 
+  let dump_forall_arg = function
+    | Eff name -> dump_eff_arg name
+    | Typ ty -> dump_t_name_ty_opt ty
+
+  let dump_forall_arg_list l = String.concat " " (List.map dump_forall_arg l)
+
   let rec dump_ty = function
     | (_, Fun (param, eff, res)) ->
         fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
     | (_, Ty name) -> dump_t_name name
     | (_, Forall (names, res)) ->
-        fmt "(forall %s, %s)" (dump_t_name_ty_list_eff names) (dump_ty res)
+        fmt "(forall %s, %s)" (dump_forall_arg_list names) (dump_ty res)
     | (_, AbsOnTy (names, res)) ->
         fmt "(λ %s -> %s)" (dump_t_name_ty_list names) (dump_ty res)
     | (_, AppOnTy (f, x)) ->
@@ -87,7 +89,9 @@ module ParseTree = struct
     | (_, VArg (name, ty)) ->
         fmt "(%s : %s)" (dump_name name) (dump_ty ty)
     | (_, TArg v) ->
-        dump_t_name_ty_eff_opt v
+        dump_t_name_ty_opt v
+    | (_, EArg name) ->
+        dump_eff_arg name
     | (_, Unit) ->
         "()"
 
@@ -272,7 +276,9 @@ module UnsugaredTree = struct
         fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
     | (_, Ty name) -> dump_t_name name
     | (_, Forall ((name, k), res)) ->
-        fmt "(forall %s : %s, %s)" (dump_t_name name) (dump_k_eff k) (dump_ty res)
+        fmt "(forall %s : %s, %s)" (dump_t_name name) (dump_k k) (dump_ty res)
+    | (_, ForallEff (name, res)) ->
+        fmt "(forall %s : φ, %s)" (dump_eff_name name) (dump_ty res)
     | (_, AbsOnTy ((name, k), res)) ->
         fmt "(λ (%s : %s) -> %s)" (dump_t_name name) (dump_k k) (dump_ty res)
     | (_, AppOnTy (f, x)) ->
@@ -313,7 +319,14 @@ module UnsugaredTree = struct
     | (_, TAbs ((name, k), t)) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "λ (%s : %s) ->" (dump_t_name name) (dump_k_eff k))
+           ^^ PPrint.string (fmt "λ (%s : %s) ->" (dump_t_name name) (dump_k k))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | (_, EAbs (name, t)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "λ %s ->" (dump_eff_arg name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )

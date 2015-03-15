@@ -23,24 +23,24 @@ type t
 
 val of_list :
   loc:Location.t ->
-  [`Eff of bool | `Abstract of _ | `Alias of _] GammaMap.Types.t ->
-  (Ident.Type.t * Ident.Exn.t list) list ->
+  bool GammaMap.Eff.t ->
+  (Ident.Eff.t * Ident.Exn.t list) list ->
   t
 
 val empty : t
 
 val is_empty : t -> bool
 
-val equal : (Ident.Type.t * Ident.Type.t) list -> t -> t -> bool
+val equal : (Ident.Eff.t * Ident.Eff.t) list -> t -> t -> bool
 
-val is_subset_of : (Ident.Type.t * Ident.Type.t) list -> t -> t -> bool
+val is_subset_of : (Ident.Eff.t * Ident.Eff.t) list -> t -> t -> bool
 
 val has_io : t -> bool
 
 val add :
   loc:Location.t ->
-  [`Eff of bool | `Abstract of _ | `Alias of _] GammaMap.Types.t ->
-  (Ident.Type.t * Ident.Exn.t list) ->
+  bool GammaMap.Eff.t ->
+  (Ident.Eff.t * Ident.Exn.t list) ->
   t ->
   t
 
@@ -54,4 +54,4 @@ val remove_exn : loc:Location.t -> Ident.Exn.t -> t -> t
 
 val to_string : t -> string
 
-val replace : from:Ident.Type.t -> eff:t -> t -> t
+val replace : from:Ident.Eff.t -> eff:t -> t -> t

@@ -176,8 +176,10 @@ app:
 arg:
   | LParen name = lowerName Colon ty = typeExpr RParen
       { ParseTree.VArg (Ident.Name.of_list [name], ty) }
-  | ty = kind_and_name_eff
+  | ty = kind_and_name
       { ParseTree.TArg ty }
+  | LParen name = UpperName Colon Phi RParen
+      { ParseTree.EArg (Ident.Eff.of_list [name]) }
   | LParen RParen
       { ParseTree.Unit }
 
@@ -268,9 +270,9 @@ eff: eff = separated_list(Comma, effectName) { eff }
 
 effectName:
   | name = UpperName
-      { (Ident.Type.of_list [name], []) }
+      { (Ident.Eff.of_list [name], []) }
   | name = UpperName LBracket args = eff_exn RBracket
-      { (Ident.Type.of_list [name], args) }
+      { (Ident.Eff.of_list [name], args) }
 
 eff_exn:
   | name = upperName
@@ -315,9 +317,9 @@ kind_and_name:
 
 kind_and_name_eff:
   | k = kind_and_name
-      { (fst k, BatOption.map (fun x -> Kinds.Kind x) (snd k)) }
+      { ParseTree.Typ k }
   | LParen name = UpperName Colon Phi RParen
-      { (Ident.Type.of_list [name], Some Kinds.Eff) }
+      { ParseTree.Eff (Ident.Eff.of_list [name]) }
 
 pattern:
   | p = pat Arrow t = term

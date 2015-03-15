@@ -44,3 +44,5 @@ end
 module Type : module type of Name
 
 module Exn : module type of Name
+
+module Eff : module type of Name

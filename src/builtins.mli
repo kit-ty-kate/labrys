@@ -26,7 +26,7 @@ val underscore : Ident.Name.t
 
 val unknown_loc : Location.t
 
-val exn : Ident.Type.t
-val io : Ident.Type.t
+val exn : Ident.Eff.t
+val io : Ident.Eff.t
 
-val types : (Ident.Type.t * [> `Eff of bool]) list
+val effects : (Ident.Eff.t * bool) list

@@ -23,16 +23,8 @@ type t =
   | Star
   | KFun of (t * t)
 
-type t_eff =
-  | Eff
-  | Kind of t
-
 val to_string : t -> string
 
-val to_string_eff : t_eff -> string
-
 val equal : t -> t -> bool
-
-val equal_eff : t_eff -> t_eff -> bool
 
 val not_star : t -> bool

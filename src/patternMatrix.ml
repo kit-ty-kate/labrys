@@ -72,7 +72,10 @@ let create =
                   (arg :: args, res_ty, gamma)
               | UnsugaredTree.PTy pty ->
                   let (pty, kx) =
-                    Types.of_parse_tree_kind gamma.Gamma.types pty
+                    Types.of_parse_tree_kind
+                      gamma.Gamma.types
+                      gamma.Gamma.effects
+                      pty
                   in
                   let (_, res) =
                     Types.apply_ty ~loc ~ty_x:pty ~kind_x:kx ty

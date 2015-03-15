@@ -26,29 +26,15 @@ type t =
   | Star
   | KFun of (t * t)
 
-type t_eff =
-  | Eff
-  | Kind of t
-
 let rec to_string = function
   | Star -> "*"
   | KFun (p, r) -> to_string p ^ " -> " ^ to_string r
-
-let to_string_eff = function
-  | Eff -> "φ"
-  | Kind k -> to_string k
 
 let rec equal x y = match x, y with
   | Star, Star -> true
   | KFun (p1, r1), KFun (p2, r2) -> equal p1 p2 && equal r1 r2
   | Star, KFun _
   | KFun _, Star -> false
-
-let equal_eff x y = match x, y with
-  | Eff, Eff -> true
-  | Kind k1, Kind k2 -> equal k1 k2
-  | Eff, _
-  | Kind _, _ -> false
 
 let not_star = function
   | Star -> false

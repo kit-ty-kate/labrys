@@ -27,38 +27,37 @@ type t =
   ; types : Types.visibility GammaMap.Types.t
   ; constructors : ((Types.t * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : Types.t list GammaMap.Exn.t
+  ; effects : bool GammaMap.Eff.t
   }
 
 let empty =
   { values = GammaMap.Value.empty
-  ; types = GammaMap.Types.of_list Builtins.types
+  ; types = GammaMap.Types.empty
   ; constructors = GammaMap.Constr.empty
   ; exceptions = GammaMap.Exn.empty
+  ; effects = GammaMap.Eff.of_list Builtins.effects
   }
 
 let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
 let add_type ~loc k x self = {self with types = GammaMap.Types.add ~loc k x self.types}
 let add_constr k k2 x self = {self with constructors = GammaMap.Constr.add k k2 x self.constructors}
 let add_exception ~loc k x self = {self with exceptions = GammaMap.Exn.add ~loc k x self.exceptions}
+let add_effect ~loc k x self = {self with effects = GammaMap.Eff.add ~loc k x self.effects}
 
 let union (modul, a) b =
   { values = GammaMap.Value.union (modul, a.values) b.values
   ; types = GammaMap.Types.union (modul, a.types) b.types
   ; constructors = GammaMap.Constr.union (modul, a.constructors) b.constructors
   ; exceptions = GammaMap.Exn.union (modul, a.exceptions) b.exceptions
+  ; effects = GammaMap.Eff.union (modul, a.effects) b.effects
   }
 
 let ty_equal x y = match x, y with
-  | (`Abstract k1 | `Alias (_, k1)), `Abstract k2
-  | `Abstract k1, `Alias (_, k2) ->
+  | (Types.Abstract k1 | Types.Alias (_, k1)), Types.Abstract k2
+  | Types.Abstract k1, Types.Alias (_, k2) ->
       Kinds.equal k1 k2
-  | `Alias (ty1, k1), `Alias (ty2, k2) ->
+  | Types.Alias (ty1, k1), Types.Alias (ty2, k2) ->
       Types.equal ty1 ty2 && Kinds.equal k1 k2
-  | `Eff _, `Eff _ ->
-      true
-  | _, `Eff _
-  | `Eff _, _ ->
-      false
 
 let constr_equal (x, y) (x', y') = Types.equal x x' && Int.equal y y'
 
@@ -67,3 +66,4 @@ let is_subset_of a b =
   @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
   @ GammaMap.Constr.diff ~eq:(GammaMap.Index.equal constr_equal) a.constructors b.constructors
   @ GammaMap.Exn.diff ~eq:(List.eq Types.equal) a.exceptions b.exceptions
+  @ GammaMap.Eff.diff ~eq:Bool.equal a.effects b.effects

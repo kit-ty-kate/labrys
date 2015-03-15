@@ -31,7 +31,7 @@ let unknown_loc =
   let pos = Location.{pos_lnum = -1; pos_cnum = -1} in
   Location.{loc_start = pos; loc_end = pos}
 
-let exn = Ident.Type.of_list ["Exn"]
-let io = Ident.Type.of_list ["IO"]
+let exn = Ident.Eff.of_list ["Exn"]
+let io = Ident.Eff.of_list ["IO"]
 
-let types = [(exn, `Eff true); (io, `Eff false)]
+let effects = [(exn, true); (io, false)]

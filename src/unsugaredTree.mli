@@ -22,13 +22,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type name = Ident.Name.t
 type exn_name = Ident.Exn.t
 type t_name = Ident.Type.t
+type eff_name = Ident.Eff.t
 type module_name = Ident.Module.t
 type loc = Location.t
 
 type t_value = (t_name * Kinds.t)
-type t_value_eff = (t_name * Kinds.t_eff)
 
-type eff = (Ident.Type.t * Ident.Exn.t list)
+type eff = (Ident.Eff.t * Ident.Exn.t list)
 
 type is_rec = ParseTree.is_rec =
   | Rec
@@ -37,7 +37,8 @@ type is_rec = ParseTree.is_rec =
 type ty' =
   | Fun of (ty * eff list * ty)
   | Ty of t_name
-  | Forall of (t_value_eff * ty)
+  | Forall of (t_value * ty)
+  | ForallEff of (eff_name * ty)
   | AbsOnTy of (t_value * ty)
   | AppOnTy of (ty * ty)
 
@@ -56,7 +57,8 @@ and pattern_arg =
 
 type t' =
   | Abs of (value * t)
-  | TAbs of (t_value_eff * t)
+  | TAbs of (t_value * t)
+  | EAbs of (eff_name * t)
   | App of (t * t)
   | TApp of (t * ty)
   | EApp of (t * eff list)
