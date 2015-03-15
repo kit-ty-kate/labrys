@@ -63,6 +63,14 @@ module Types = struct
   include Self
   include Utils(Self)(Ident.Type)
 
+  let of_list l =
+    let aux acc (name, x) =
+      if mem name acc then
+        assert false;
+      add name x acc
+    in
+    List.fold_left aux empty l
+
   let add ~loc k x map =
     if mem k map then
       Error.fail
@@ -102,7 +110,7 @@ module Exn = struct
     if mem k map then
       Error.fail
         ~loc
-        "A module cannot contain several times the type '%s'"
+        "A module cannot contain several times the exception '%s'"
         (Ident.Exn.to_string k);
     add k x map
 end

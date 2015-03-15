@@ -26,8 +26,9 @@ type module_name = Ident.Module.t
 type loc = Location.t
 
 type t_value = (t_name * Kinds.t option)
+type t_value_eff = (t_name * Kinds.t_eff option)
 
-type eff = (Ident.Eff.t * Ident.Exn.t list)
+type eff = (Ident.Type.t * Ident.Exn.t list)
 
 type is_rec =
   | Rec
@@ -36,7 +37,7 @@ type is_rec =
 type ty' =
   | Fun of (ty * eff list * ty)
   | Ty of t_name
-  | Forall of (t_value list * ty)
+  | Forall of (t_value_eff list * ty)
   | AbsOnTy of (t_value list * ty)
   | AppOnTy of (ty * ty)
 
@@ -55,7 +56,7 @@ and pattern_arg =
 
 type arg' =
   | VArg of value
-  | TArg of t_value
+  | TArg of t_value_eff
   | Unit
 
 and arg = (loc * arg')
@@ -64,6 +65,7 @@ type t' =
   | Abs of (arg list * t)
   | App of (t * t)
   | TApp of (t * ty)
+  | EApp of (t * eff list)
   | Val of name
   | PatternMatching of (t * (pattern * t) list)
   | Let of ((name * is_rec * (arg list * (ty_annot * t))) * t)

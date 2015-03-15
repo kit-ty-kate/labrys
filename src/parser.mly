@@ -45,7 +45,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Alias
 %token Pipe
 %token Colon
-%token Star
+%token Star Phi
 %token Fail
 %token Try
 %token Exception
@@ -164,6 +164,10 @@ app:
       { ParseTree.TApp (f, ty) }
   | f = app LBracket ty = typeExpr RBracket
       { ParseTree.TApp ((get_loc $startpos(f) $endpos(f), f), ty) }
+  | f = termProtected LBracket LBracket eff = eff RBracket RBracket
+      { ParseTree.EApp (f, eff) }
+  | f = app LBracket LBracket eff = eff RBracket RBracket
+      { ParseTree.EApp ((get_loc $startpos(f) $endpos(f), f), eff) }
   | f = termProtected x = termProtected
       { ParseTree.App (f, x) }
   | f = app x = termProtected
@@ -172,7 +176,7 @@ app:
 arg:
   | LParen name = lowerName Colon ty = typeExpr RParen
       { ParseTree.VArg (Ident.Name.of_list [name], ty) }
-  | ty = kind_and_name
+  | ty = kind_and_name_eff
       { ParseTree.TArg ty }
   | LParen RParen
       { ParseTree.Unit }
@@ -223,7 +227,7 @@ typeExprUnclosed:
       { ParseTree.Fun (param, [], ret) }
   | param = typeExprProtected LArrowEff eff = eff RArrowEff ret = typeExpr
       { ParseTree.Fun (param, eff, ret) }
-  | Forall x = nonempty_list(kind_and_name) Comma ret = typeExpr
+  | Forall x = nonempty_list(kind_and_name_eff) Comma ret = typeExpr
       { ParseTree.Forall (x, ret) }
   | Lambda x = nonempty_list(kind_and_name) Comma ret = typeExpr
       { ParseTree.AbsOnTy (x, ret) }
@@ -264,9 +268,9 @@ eff: eff = separated_list(Comma, effectName) { eff }
 
 effectName:
   | name = UpperName
-      { (Ident.Eff.of_list [name], []) }
+      { (Ident.Type.of_list [name], []) }
   | name = UpperName LBracket args = eff_exn RBracket
-      { (Ident.Eff.of_list [name], args) }
+      { (Ident.Type.of_list [name], args) }
 
 eff_exn:
   | name = upperName
@@ -308,6 +312,12 @@ kind_and_name:
       { (Ident.Type.of_list [name], None) }
   | LParen name = UpperName Colon k = kind RParen
       { (Ident.Type.of_list [name], Some k) }
+
+kind_and_name_eff:
+  | k = kind_and_name
+      { (fst k, BatOption.map (fun x -> Kinds.Kind x) (snd k)) }
+  | LParen name = UpperName Colon Phi RParen
+      { (Ident.Type.of_list [name], Some Kinds.Eff) }
 
 pattern:
   | p = pat Arrow t = term

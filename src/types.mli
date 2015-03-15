@@ -24,8 +24,10 @@ type name = Ident.Type.t
 type t
 
 type visibility =
-  | Abstract of Kinds.t
-  | Alias of (t * Kinds.t)
+  [ `Abstract of Kinds.t
+  | `Alias of (t * Kinds.t)
+  | `Eff of bool
+  ]
 
 val of_parse_tree_kind :
   visibility GammaMap.Types.t ->
@@ -38,7 +40,7 @@ val of_parse_tree :
   t
 
 val func : param:t -> eff:Effects.t -> res:t -> t
-val forall : param:name -> kind:Kinds.t -> res:t -> t
+val forall : param:name -> kind:Kinds.t_eff -> res:t -> t
 
 val to_string : t -> string
 
@@ -47,6 +49,8 @@ val equal : t -> t -> bool
 val is_subset_of : t -> t -> bool
 
 val replace : from:name -> ty:t -> t -> t
+
+val replace_eff : from:name -> eff:Effects.t -> t -> t
 
 val size : t -> int
 
@@ -69,6 +73,8 @@ val apply_ty :
   kind_x:Kinds.t ->
   t ->
   (name * t)
+
+val apply_eff : loc:Location.t -> eff:Effects.t -> t -> (name * t)
 
 val check_if_returns_type : datatype:name -> t -> bool
 

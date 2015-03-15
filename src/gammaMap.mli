@@ -31,6 +31,8 @@ module Types : sig
   include BatMap.S with type key = Ident.Type.t
   include module type of Exceptionless
 
+  val of_list : (key * 'a) list -> 'a t
+
   val add : loc:Location.t -> key -> 'a -> 'a t -> 'a t
 
   val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t

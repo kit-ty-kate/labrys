@@ -29,13 +29,15 @@ type name = Ident.Type.t
 type t =
   | Ty of name
   | Fun of (t * Effects.t * t)
-  | Forall of (name * Kinds.t * t)
+  | Forall of (name * Kinds.t_eff * t)
   | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
 
 type visibility =
-  | Abstract of Kinds.t
-  | Alias of (t * Kinds.t)
+  [ `Abstract of Kinds.t
+  | `Alias of (t * Kinds.t)
+  | `Eff of bool
+  ]
 
 let fmt = Printf.sprintf
 
@@ -53,6 +55,13 @@ let kind_missmatch ~loc ~has ~on =
     (Kinds.to_string has)
     (Kinds.to_string on)
 
+let kind_eff_missmatch ~loc ~has ~on =
+  Error.fail
+    ~loc
+    "Cannot apply something with kind '%s' on '%s'"
+    (Kinds.to_string_eff has)
+    (Kinds.to_string_eff on)
+
 let rec replace ~from ~ty =
   let rec aux = function
     | Ty x when Ident.Type.equal x from -> ty
@@ -61,7 +70,6 @@ let rec replace ~from ~ty =
     | (AbsOnTy (x, _, _) as t)
     | (Forall (x, _, _) as t) when Ident.Type.equal x from -> t
     | Forall (x, k, t) -> Forall (x, k, aux t)
-    | (AbsOnTy (x, _, _) as t) when Ident.Type.equal x from -> t
     | AbsOnTy (x, k, t) -> AbsOnTy (x, k, aux t)
     | AppOnTy (f, x) ->
         let x = aux x in
@@ -75,21 +83,32 @@ let rec replace ~from ~ty =
   in
   aux
 
+let replace_eff ~from ~eff =
+  let rec aux = function
+    | Ty _ as t -> t
+    | Fun (param, e, ret) -> Fun (aux param, Effects.replace ~from ~eff e, aux ret)
+    | (AbsOnTy (x, _, _) as t)
+    | (Forall (x, _, _) as t) when Ident.Type.equal x from -> t
+    | Forall (x, k, t) -> Forall (x, k, aux t)
+    | AbsOnTy (x, k, t) -> AbsOnTy (x, k, aux t)
+    | AppOnTy (x, y) -> AppOnTy (aux x, aux y)
+  in
+  aux
+
 let rec of_parse_tree_kind gammaT = function
   | (loc, UnsugaredTree.Fun (x, eff, y)) ->
       let (x, k1) = of_parse_tree_kind gammaT x in
-      let eff =
-        let aux acc ty = Effects.add ~loc ty acc in
-        List.fold_left aux Effects.empty eff
-      in
+      let eff = Effects.of_list ~loc gammaT eff in
       let (y, k2) = of_parse_tree_kind gammaT y in
       if Kinds.not_star k1 || Kinds.not_star k2 then
         fail_not_star ~loc "->";
       (Fun (x, eff, y), Kinds.Star)
   | (loc, UnsugaredTree.Ty name) ->
       begin match GammaMap.Types.find name gammaT with
-      | Some (Alias (ty, k)) -> (ty, k)
-      | Some (Abstract k) -> (Ty name, k)
+      | Some (`Alias (ty, k)) -> (ty, k)
+      | Some (`Abstract k) -> (Ty name, k)
+      | Some (`Eff _) ->
+          Error.fail ~loc "Effects in types are forbidden"
       | None ->
           Error.fail
             ~loc
@@ -97,20 +116,23 @@ let rec of_parse_tree_kind gammaT = function
             (Ident.Type.to_string name)
       end
   | (loc, UnsugaredTree.Forall ((name, k), ret)) ->
-      let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
+      let gammaT = match k with
+        | Kinds.Eff -> GammaMap.Types.add ~loc name (`Eff false) gammaT
+        | Kinds.Kind k -> GammaMap.Types.add ~loc name (`Abstract k) gammaT
+      in
       let (ret, kx) = of_parse_tree_kind gammaT ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
   | (loc, UnsugaredTree.AbsOnTy ((name, k), ret)) ->
-      let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
+      let gammaT = GammaMap.Types.add ~loc name (`Abstract k) gammaT in
       let (ret, kret) = of_parse_tree_kind gammaT ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
   | (loc, UnsugaredTree.AppOnTy ((_, UnsugaredTree.AbsOnTy ((name, k), t)), x)) ->
       let (x, kx) = of_parse_tree_kind gammaT x in
       if not (Kinds.equal k kx) then
         kind_missmatch ~loc ~has:kx ~on:k;
-      let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
+      let gammaT = GammaMap.Types.add ~loc name (`Abstract k) gammaT in
       let (t, kt) = of_parse_tree_kind gammaT t in
       (replace ~from:name ~ty:x t, kt)
   | (loc, UnsugaredTree.AppOnTy (f, x)) ->
@@ -143,7 +165,7 @@ let rec to_string = function
   | Fun (x, eff, ret) ->
       fmt "(%s) %s %s" (to_string x) (Effects.to_string eff) (to_string ret)
   | Forall (x, k, t) ->
-      fmt "forall %s : %s. %s" (Ident.Type.to_string x) (Kinds.to_string k) (to_string t)
+      fmt "forall %s : %s. %s" (Ident.Type.to_string x) (Kinds.to_string_eff k) (to_string t)
   | AbsOnTy (name, k, t) ->
       fmt "λ%s : %s. %s" (Ident.Type.to_string name) (Kinds.to_string k) (to_string t)
   | AppOnTy (Ty f, Ty x) -> fmt "%s %s" (Ident.Type.to_string f) (Ident.Type.to_string x)
@@ -159,12 +181,13 @@ let equal eff_eq x y =
         || (eq x x' && List.for_all (fun (y, y') -> eq x y || eq x' y') eq_list)
     | Fun (param, eff1, res), Fun (param', eff2, res') ->
         aux eq_list (param, param')
-        && eff_eq eff1 eff2
+        && eff_eq eq_list eff1 eff2
         && aux eq_list (res, res')
     | AppOnTy (f, x), AppOnTy (f', x') ->
         aux eq_list (f, f') && aux eq_list (x, x')
-    | AbsOnTy (name1, k1, t), AbsOnTy (name2, k2, t')
-    | Forall (name1, k1, t), Forall (name2, k2, t') when Kinds.equal k1 k2 ->
+    | AbsOnTy (name1, k1, t), AbsOnTy (name2, k2, t') when Kinds.equal k1 k2 ->
+        aux ((name1, name2) :: eq_list) (t, t')
+    | Forall (name1, k1, t), Forall (name2, k2, t') when Kinds.equal_eff k1 k2 ->
         aux ((name1, name2) :: eq_list) (t, t')
     | AppOnTy _, _
     | AbsOnTy _, _
@@ -233,18 +256,32 @@ let apply ~loc = function
   | AbsOnTy _ ->
       assert false
 
-let apply_ty ~loc ~ty_x ~kind_x = function
-  | Forall (ty, k, res) when Kinds.equal k kind_x ->
-      let res = replace ~from:ty ~ty:ty_x res in
+let apply_ty ~loc ~kind_x replace = function
+  | Forall (ty, k, res) when Kinds.equal_eff k kind_x ->
+      let res = replace ty res in
       (ty, res)
   | Forall (_, k, _) ->
-      kind_missmatch ~loc ~has:kind_x ~on:k
+      kind_eff_missmatch ~loc ~has:kind_x ~on:k
   | (Fun _ as ty)
   | (AppOnTy _ as ty)
   | (Ty _ as ty) ->
       Error.forall_type ~loc ty
   | AbsOnTy _ ->
       assert false
+
+let apply_eff ~loc ~eff ty =
+  apply_ty
+    ~loc
+    ~kind_x:Kinds.Eff
+    (fun ty res -> replace_eff ~from:ty ~eff res)
+    ty
+
+let apply_ty ~loc ~ty_x ~kind_x ty =
+  apply_ty
+    ~loc
+    ~kind_x:(Kinds.Kind kind_x)
+    (fun ty res -> replace ~from:ty ~ty:ty_x res)
+    ty
 
 let rec check_if_returns_type ~datatype = function
   | Ty x -> Ident.Type.equal x datatype

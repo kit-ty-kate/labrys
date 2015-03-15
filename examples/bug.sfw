@@ -30,4 +30,9 @@ let test (_ : Unit) = fail [Int] A
 
 let test = try test Unit with A -> O end
 
+let apply X Y (E : φ) (f : X -[E]-> Y) (x : X) = f x
+
+let test () : Int = apply [Int] [Int] [[]] (λ(x : Int) -> x) O
+let test () : [IO] Int = apply [Int] [Int] [[IO]] (λ(x : Int) -> printInt x; x) O
+
 let main = Unit

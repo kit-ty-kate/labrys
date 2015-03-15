@@ -25,11 +25,12 @@ open Monomorphic.None
 open UnsugaredTree
 
 let unsugar_kind = Option.default Kinds.Star
+let unsugar_kind_eff = Option.default (Kinds.Kind Kinds.Star)
 
 let rec unsugar_ty =
-  let aux f ty args =
+  let aux unsugar_k f ty args =
     let rec aux = function
-      | (name, k) :: xs -> f ((name, unsugar_kind k), aux xs)
+      | (name, k) :: xs -> f ((name, unsugar_k k), aux xs)
       | [] -> unsugar_ty ty
     in
     if List.is_empty args then
@@ -42,9 +43,9 @@ let rec unsugar_ty =
   | (loc, ParseTree.Ty name) ->
       (loc, Ty name)
   | (loc, ParseTree.Forall (args, ty)) ->
-      aux (fun x -> (loc, Forall x)) ty args
+      aux unsugar_kind_eff (fun x -> (loc, Forall x)) ty args
   | (loc, ParseTree.AbsOnTy (args, ty)) ->
-      aux (fun x -> (loc, AbsOnTy x)) ty args
+      aux unsugar_kind (fun x -> (loc, AbsOnTy x)) ty args
   | (loc, ParseTree.AppOnTy (x, y)) ->
       (loc, AppOnTy (unsugar_ty x, unsugar_ty y))
 
@@ -78,6 +79,8 @@ and unsugar_t = function
       (loc, App (unsugar_t f, unsugar_t x))
   | (loc, ParseTree.TApp (t, ty)) ->
       (loc, TApp (unsugar_t t, unsugar_ty ty))
+  | (loc, ParseTree.EApp (t, eff)) ->
+      (loc, EApp (unsugar_t t, eff))
   | (loc, ParseTree.Val name) ->
       (loc, Val name)
   | (loc, ParseTree.PatternMatching (t, patterns)) ->
@@ -107,7 +110,7 @@ and unsugar_args args annot t =
         in
         (ty_xs, (loc, Abs ((name, ty), xs)))
     | (loc, ParseTree.TArg (name, k)) :: xs ->
-        let ty = (name, unsugar_kind k) in
+        let ty = (name, unsugar_kind_eff k) in
         let (ty_xs, xs) = aux xs in
         let ty_xs =
           let aux (ty_xs, eff) =

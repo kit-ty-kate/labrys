@@ -34,6 +34,7 @@ let rec well_formed_rec = function
       well_formed_rec t
   | (_, UnsugaredTree.App _)
   | (_, UnsugaredTree.TApp _)
+  | (_, UnsugaredTree.EApp _)
   | (_, UnsugaredTree.Val _)
   | (_, UnsugaredTree.PatternMatching _)
   | (_, UnsugaredTree.Let _)
@@ -62,8 +63,8 @@ let check_type_opt ~loc ~ty ~ty_t ~effects gamma =
         Types.Error.fail ~loc ~has:ty_t ~expected:ty;
       begin match eff with
       | Some eff ->
-          let eff = List.fold_right (Effects.add ~loc) eff Effects.empty in
-          if not (Effects.equal eff effects) then
+          let eff = List.fold_right (Effects.add ~loc gamma.Gamma.types) eff Effects.empty in
+          if not (Effects.equal [] eff effects) then
             Error.fail
               ~loc
               "This expression has the effect %s but expected the effect %s"
@@ -83,7 +84,10 @@ let rec aux gamma = function
       let abs_ty = Types.func ~param:ty ~eff:effect ~res:ty_expr in
       (Abs (name, expr), abs_ty, Effects.empty)
   | (loc, UnsugaredTree.TAbs ((name, k), t)) ->
-      let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
+      let gamma = match k with
+        | Kinds.Eff -> Gamma.add_type ~loc name (`Eff false) gamma
+        | Kinds.Kind k -> Gamma.add_type ~loc name (`Abstract k) gamma
+      in
       let (expr, ty_expr, effect) = aux gamma t in
       (* TODO: Do I need only that to ensure type soundness with side effects ?
          Do I also need to check for exceptions ? *)
@@ -104,6 +108,12 @@ let rec aux gamma = function
       let (ty_x, kx) = Types.of_parse_tree_kind gamma.Gamma.types ty_x in
       let (param, res) = Types.apply_ty ~loc ~ty_x ~kind_x:kx ty_f in
       let res = Types.replace ~from:param ~ty:ty_x res in
+      (f, res, effect)
+  | (loc, UnsugaredTree.EApp (f, eff)) ->
+      let (f, ty_f, effect) = aux gamma f in
+      let eff = Effects.of_list ~loc gamma.Gamma.types eff in
+      let (param, res) = Types.apply_eff ~loc ~eff ty_f in
+      let res = Types.replace_eff ~from:param ~eff res in
       (f, res, effect)
   | (loc, UnsugaredTree.Val name) ->
       begin match GammaMap.Value.find name gamma.Gamma.values with
@@ -168,7 +178,7 @@ let rec aux gamma = function
       let (e, ty, effect) = aux gamma e in
       let effect =
         List.fold_left
-          (fun effect ((name, _), _) -> Effects.remove_exn name effect)
+          (fun effect ((name, _), _) -> Effects.remove_exn ~loc name effect)
           effect
           branches
       in
@@ -237,7 +247,7 @@ let rec from_parse_tree ~with_main ~has_main gamma = function
       fail_rec_val ~loc
   | (loc, UnsugaredTree.Type (name, ty)) :: xs ->
       let ty = Types.of_parse_tree_kind gamma.Gamma.types ty in
-      let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
+      let gamma = Gamma.add_type ~loc name (`Alias ty) gamma in
       from_parse_tree ~with_main ~has_main gamma xs
   | (loc, UnsugaredTree.Binding (name, ty, binding)) :: xs ->
       let ty = Types.of_parse_tree gamma.Gamma.types ty in
@@ -251,7 +261,7 @@ let rec from_parse_tree ~with_main ~has_main gamma = function
       let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
       (Binding (name, Types.size ty, binding) :: xs, has_main, gamma)
   | (loc, UnsugaredTree.Datatype (name, kind, variants)) :: xs ->
-      let gamma = Gamma.add_type ~loc name (Types.Abstract kind) gamma in
+      let gamma = Gamma.add_type ~loc name (`Abstract kind) gamma in
       let (variants, gamma) = transform_variants ~datatype:name gamma variants in
       let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
       (Datatype variants :: xs, has_main, gamma)

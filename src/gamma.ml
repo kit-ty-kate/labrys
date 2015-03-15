@@ -31,7 +31,7 @@ type t =
 
 let empty =
   { values = GammaMap.Value.empty
-  ; types = GammaMap.Types.empty
+  ; types = GammaMap.Types.of_list Builtins.types
   ; constructors = GammaMap.Constr.empty
   ; exceptions = GammaMap.Exn.empty
   }
@@ -49,11 +49,16 @@ let union (modul, a) b =
   }
 
 let ty_equal x y = match x, y with
-  | (Types.Abstract k1 | Types.Alias (_, k1)), Types.Abstract k2
-  | Types.Abstract k1, Types.Alias (_, k2) ->
+  | (`Abstract k1 | `Alias (_, k1)), `Abstract k2
+  | `Abstract k1, `Alias (_, k2) ->
       Kinds.equal k1 k2
-  | Types.Alias (ty1, k1), Types.Alias (ty2, k2) ->
+  | `Alias (ty1, k1), `Alias (ty2, k2) ->
       Types.equal ty1 ty2 && Kinds.equal k1 k2
+  | `Eff _, `Eff _ ->
+      true
+  | _, `Eff _
+  | `Eff _, _ ->
+      false
 
 let constr_equal (x, y) (x', y') = Types.equal x x' && Int.equal y y'
 

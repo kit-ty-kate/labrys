@@ -21,17 +21,28 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type t
 
+val of_list :
+  loc:Location.t ->
+  [`Eff of bool | `Abstract of _ | `Alias of _] GammaMap.Types.t ->
+  (Ident.Type.t * Ident.Exn.t list) list ->
+  t
+
 val empty : t
 
 val is_empty : t -> bool
 
-val equal : t -> t -> bool
+val equal : (Ident.Type.t * Ident.Type.t) list -> t -> t -> bool
 
-val is_subset_of : t -> t -> bool
+val is_subset_of : (Ident.Type.t * Ident.Type.t) list -> t -> t -> bool
 
 val has_io : t -> bool
 
-val add : loc:Location.t -> (Ident.Eff.t * Ident.Exn.t list) -> t -> t
+val add :
+  loc:Location.t ->
+  [`Eff of bool | `Abstract of _ | `Alias of _] GammaMap.Types.t ->
+  (Ident.Type.t * Ident.Exn.t list) ->
+  t ->
+  t
 
 val add_exn : Ident.Exn.t -> t -> t
 
@@ -39,6 +50,8 @@ val union : t -> t -> t
 
 val union3 : t -> t -> t -> t
 
-val remove_exn : Ident.Exn.t -> t -> t
+val remove_exn : loc:Location.t -> Ident.Exn.t -> t -> t
 
 val to_string : t -> string
+
+val replace : from:Ident.Type.t -> eff:t -> t -> t

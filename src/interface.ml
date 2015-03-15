@@ -31,12 +31,12 @@ let compile gamma =
         let gamma = Gamma.add_value name ty gamma in
         compile gammaT gamma xs
     | (loc, AbstractType (name, k)) :: xs ->
-        let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
-        let gammaT = GammaMap.Types.add ~loc name (Types.Abstract k) gammaT in
+        let gamma = Gamma.add_type ~loc name (`Abstract k) gamma in
+        let gammaT = GammaMap.Types.add ~loc name (`Abstract k) gammaT in
         compile gammaT gamma xs
     | (loc, Datatype (name, k, variants)) :: xs ->
-        let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
-        let gammaT = GammaMap.Types.add ~loc name (Types.Abstract k) gammaT in
+        let gamma = Gamma.add_type ~loc name (`Abstract k) gamma in
+        let gammaT = GammaMap.Types.add ~loc name (`Abstract k) gammaT in
         let gamma =
           let aux ~datatype gamma i (UnsugaredTree.Variant (loc, name, ty)) =
             let ty = Types.of_parse_tree gammaT ty in
@@ -51,9 +51,8 @@ let compile gamma =
         compile gammaT gamma xs
     | (loc, TypeAlias (name, ty)) :: xs ->
         let ty = Types.of_parse_tree_kind gammaT ty in
-        let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
-        let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
-        let gammaT = GammaMap.Types.add ~loc name (Types.Alias ty) gammaT in
+        let gamma = Gamma.add_type ~loc name (`Alias ty) gamma in
+        let gammaT = GammaMap.Types.add ~loc name (`Alias ty) gammaT in
         compile gammaT gamma xs
     | (loc, Exception (name, args)) :: xs ->
         let args = List.map (Types.of_parse_tree gammaT) args in
