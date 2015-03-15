@@ -60,13 +60,8 @@ module Exn : sig
 end
 
 module Eff : sig
-  include BatMap.S with type key = Ident.Eff.t
+  include BatSet.S with type elt = Ident.Eff.t
   include module type of Exceptionless
 
-  val of_list : (key * 'a) list -> 'a t
-
-  val add : loc:Location.t -> key -> 'a -> 'a t -> 'a t
-
-  val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
-  val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
+  val add : loc:Location.t -> elt -> t -> t
 end

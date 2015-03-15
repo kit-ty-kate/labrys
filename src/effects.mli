@@ -23,7 +23,7 @@ type t
 
 val of_list :
   loc:Location.t ->
-  bool GammaMap.Eff.t ->
+  GammaMap.Eff.t ->
   (Ident.Eff.t * Ident.Exn.t list) list ->
   t
 
@@ -39,7 +39,7 @@ val has_io : t -> bool
 
 val add :
   loc:Location.t ->
-  bool GammaMap.Eff.t ->
+  GammaMap.Eff.t ->
   (Ident.Eff.t * Ident.Exn.t list) ->
   t ->
   t

@@ -30,13 +30,13 @@ type visibility =
 
 val of_parse_tree_kind :
   visibility GammaMap.Types.t ->
-  bool GammaMap.Eff.t ->
+  GammaMap.Eff.t ->
   UnsugaredTree.ty ->
   (t * Kinds.t)
 
 val of_parse_tree :
   visibility GammaMap.Types.t ->
-  bool GammaMap.Eff.t ->
+  GammaMap.Eff.t ->
   UnsugaredTree.ty ->
   t
 

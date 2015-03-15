@@ -94,7 +94,7 @@ let rec aux gamma = function
       let abs_ty = Types.forall ~param:name ~kind:k ~res:ty_expr in
       (expr, abs_ty, effect)
   | (loc, UnsugaredTree.EAbs (name, t)) ->
-      let gamma = Gamma.add_effect ~loc name false gamma in
+      let gamma = Gamma.add_effect ~loc name gamma in
       let (expr, ty_expr, effect) = aux gamma t in
       (* TODO: Do I need only that to ensure type soundness with side effects ?
          Do I also need to check for exceptions ? *)

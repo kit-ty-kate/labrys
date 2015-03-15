@@ -108,27 +108,14 @@ module Exn = struct
 end
 
 module Eff = struct
-  module Self = struct
-    include Map.Make(Ident.Eff)
-    include Exceptionless
-  end
+  include Set.Make(Ident.Eff)
+  include Exceptionless
 
-  include Self
-  include Utils(Self)(Ident.Eff)
-
-  let of_list l =
-    let aux acc (name, x) =
-      if mem name acc then
-        assert false;
-      add name x acc
-    in
-    List.fold_left aux empty l
-
-  let add ~loc k x map =
+  let add ~loc k map =
     if mem k map then
       Error.fail
         ~loc
         "A module cannot contain several times the effect '%s'"
         (Ident.Eff.to_string k);
-    add k x map
+    add k map
 end

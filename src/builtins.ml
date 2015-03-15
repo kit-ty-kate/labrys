@@ -34,4 +34,4 @@ let unknown_loc =
 let exn = Ident.Eff.of_list ["Exn"]
 let io = Ident.Eff.of_list ["IO"]
 
-let effects = [(exn, true); (io, false)]
+let effects = [io; exn]

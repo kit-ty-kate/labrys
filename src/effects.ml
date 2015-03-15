@@ -25,20 +25,25 @@ open Monomorphic.None
 let fmt = Printf.sprintf
 
 module Exn_set = Set.Make(Ident.Exn)
-module Variables = Map.Make(Ident.Eff)
+module Variables = Set.Make(Ident.Eff)
 
-type t = Exn_set.t Variables.t
+type t =
+  { variables : Variables.t
+  ; exns : Exn_set.t
+  }
 
-let empty = Variables.empty
-let is_empty = Variables.is_empty
+let empty =
+  { variables = Variables.empty
+  ; exns = Exn_set.empty
+  }
 
-let var_eq exn_eq list_eq x y =
-  let aux k exns =
-    let mem k =
-      match Variables.Exceptionless.find k y with
-      | Some exns' -> exn_eq exns exns'
-      | None -> false
-    in
+let is_empty {variables; exns} =
+  Variables.is_empty variables
+  && Exn_set.is_empty exns
+
+let var_eq list_eq x y =
+  let aux k =
+    let mem k = Variables.mem k y in
     match List.find (fun (k', _) -> Ident.Eff.equal k k') list_eq with
     | Some (_, k) -> mem k
     | None -> mem k
@@ -46,91 +51,83 @@ let var_eq exn_eq list_eq x y =
   Variables.for_all aux x
 
 let equal list_eq x y =
-  Int.(Variables.cardinal x = Variables.cardinal y)
-  && var_eq Exn_set.equal list_eq x y
+  Int.(Variables.cardinal x.variables = Variables.cardinal y.variables)
+  && var_eq list_eq x.variables y.variables
+  && Exn_set.equal x.exns y.exns
 
 let is_subset_of list_eq x y =
-  var_eq Exn_set.subset list_eq x y
+  var_eq list_eq x.variables y.variables
+  && Exn_set.subset x.exns y.exns
 
-let has_io x =
-  let x = Variables.remove Builtins.exn x in
-  not (Variables.is_empty x)
+let has_io {variables; exns = _} =
+  not (Variables.is_empty variables)
 
-let add ~loc gammaE (name, args) self =
-  match GammaMap.Eff.find name gammaE with
-  | Some has_args ->
-      if has_args && List.is_empty args then
-        Error.fail
-          ~loc
-          "The '%s' effect must have at least one argument"
-          (Ident.Eff.to_string name);
-      if not has_args && not (List.is_empty args) then
-        Error.fail
-          ~loc
-          "The '%s' effect doesn't have any arguments"
-          (Ident.Eff.to_string name);
-      let args = Exn_set.of_list args in
-      Variables.modify_def args name (Exn_set.union args) self
-  | None ->
-      Error.fail ~loc "Unknown effect '%s'" (Ident.Eff.to_string name)
+let add ~loc gammaE (name, exns) self =
+  if GammaMap.Eff.mem name gammaE then begin
+    let has_args = Ident.Eff.equal name Builtins.exn in
+    if has_args && List.is_empty exns then
+      Error.fail
+        ~loc
+        "The '%s' effect must have at least one argument"
+        (Ident.Eff.to_string name);
+    if not has_args && not (List.is_empty exns) then
+      Error.fail
+        ~loc
+        "The '%s' effect doesn't have any arguments"
+        (Ident.Eff.to_string name);
+    let exns = Exn_set.of_list exns in
+    let exns = Exn_set.union exns self.exns in
+    let variables =
+      if has_args then
+        self.variables
+      else
+        Variables.add name self.variables
+    in
+    {variables; exns}
+  end else
+    Error.fail ~loc "Unknown effect '%s'" (Ident.Eff.to_string name)
 
 let add_exn x self =
-  let def = Exn_set.singleton x in
-  Variables.modify_def def Builtins.exn (Exn_set.add x) self
+  {self with exns = Exn_set.add x self.exns}
 
 let union x y =
-  let aux name args self =
-    if Ident.Eff.equal name Builtins.exn then
-      Variables.modify_def args name (Exn_set.union args) self
-    else if not (Exn_set.is_empty args) then
-      assert false
-    else
-      Variables.add name args self
-  in
-  Variables.fold aux y x
+  let variables = Variables.union x.variables y.variables in
+  let exns = Exn_set.union x.exns y.exns in
+  {variables; exns}
 
 let union3 x y z =
   union (union x y) z
 
 let remove_exn ~loc x self =
-  let fail () =
+  if not (Exn_set.mem x self.exns) then
     Error.fail
       ~loc
       "Useless case. The exception '%s' is not included in the handled \
        expression"
-      (Ident.Exn.to_string x)
-  in
-  match Variables.Exceptionless.find Builtins.exn self with
-  | Some exns ->
-      if not (Exn_set.mem x exns) then
-        fail ();
-      let exns = Exn_set.remove x exns in
-      if Exn_set.is_empty exns then
-        Variables.remove Builtins.exn self
-      else
-        Variables.add Builtins.exn exns self
-  | None ->
-      fail ()
+      (Ident.Exn.to_string x);
+  let exns = Exn_set.remove x self.exns in
+  {self with exns}
 
 let to_string self =
-  let aux name args acc =
-    let aux name acc = acc @ [Ident.Exn.to_string name] in
-    let args = String.concat " | " (Exn_set.fold aux args []) in
-    acc @ [Ident.Eff.to_string name ^ args]
+  let aux name acc = Ident.Eff.to_string name :: acc in
+  let exns =
+    if Exn_set.is_empty self.exns then
+      []
+    else
+      let aux name acc = Ident.Exn.to_string name :: acc in
+      [fmt "Exn [%s]" (String.concat " | " (Exn_set.fold aux self.exns []))]
   in
-  fmt "[%s]" (String.concat ", " (Variables.fold aux self []))
+  fmt "[%s]" (String.concat ", " (exns @ Variables.fold aux self.variables []))
 
 let of_list ~loc gammaE l =
   let aux acc ty = add ~loc gammaE ty acc in
   List.fold_left aux empty l
 
 let replace ~from ~eff self =
-  let aux name x self =
+  let aux name self =
     if Ident.Eff.equal name from then begin
-      if not (Exn_set.is_empty x) then
-        assert false;
       union self eff
     end else
-      Variables.add name x self
+      {self with variables = Variables.add name self.variables}
   in
-  Variables.fold aux self empty
+  Variables.fold aux self.variables empty
