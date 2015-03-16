@@ -29,12 +29,14 @@ type visibility =
   | Alias of (t * Kinds.t)
 
 val of_parse_tree_kind :
+  pure_arrow:[< `Allow | `Partial | `Forbid] ->
   visibility GammaMap.Types.t ->
   GammaMap.Eff.t ->
   UnsugaredTree.ty ->
   (t * Kinds.t)
 
 val of_parse_tree :
+  pure_arrow:[< `Allow | `Partial | `Forbid] ->
   visibility GammaMap.Types.t ->
   GammaMap.Eff.t ->
   UnsugaredTree.ty ->

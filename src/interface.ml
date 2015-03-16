@@ -27,7 +27,7 @@ open InterfaceTree
 let compile gamma =
   let rec compile gammaT gammaE gamma = function
     | (_loc, Val (name, ty)) :: xs ->
-        let ty = Types.of_parse_tree gammaT gammaE ty in
+        let ty = Types.of_parse_tree ~pure_arrow:`Partial gammaT gammaE ty in
         let gamma = Gamma.add_value name ty gamma in
         compile gammaT gammaE gamma xs
     | (loc, AbstractType (name, k)) :: xs ->
@@ -39,7 +39,7 @@ let compile gamma =
         let gammaT = GammaMap.Types.add ~loc name (Types.Abstract k) gammaT in
         let gamma =
           let aux ~datatype gamma i (UnsugaredTree.Variant (loc, name, ty)) =
-            let ty = Types.of_parse_tree gammaT gammaE ty in
+            let ty = Types.of_parse_tree ~pure_arrow:`Partial gammaT gammaE ty in
             if Types.check_if_returns_type ~datatype ty then
               let gamma = Gamma.add_value name ty gamma in
               Gamma.add_constr datatype name (ty, i) gamma
@@ -50,12 +50,16 @@ let compile gamma =
         in
         compile gammaT gammaE gamma xs
     | (loc, TypeAlias (name, ty)) :: xs ->
-        let ty = Types.of_parse_tree_kind gammaT gammaE ty in
+        let ty =
+          Types.of_parse_tree_kind ~pure_arrow:`Forbid gammaT gammaE ty
+        in
         let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
         let gammaT = GammaMap.Types.add ~loc name (Types.Alias ty) gammaT in
         compile gammaT gammaE gamma xs
     | (loc, Exception (name, args)) :: xs ->
-        let args = List.map (Types.of_parse_tree gammaT gammaE) args in
+        let args =
+          List.map (Types.of_parse_tree ~pure_arrow:`Forbid gammaT gammaE) args
+        in
         let gamma = Gamma.add_exception ~loc name args gamma in
         compile gammaT gammaE gamma xs
     | [] ->

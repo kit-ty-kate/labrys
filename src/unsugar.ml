@@ -112,7 +112,7 @@ and unsugar_args args annot t =
         let (ty_xs, xs) = aux xs in
         let ty_xs =
           let aux (ty_xs, eff) =
-            let ty_xs = Fun (ty, Option.default [] eff, ty_xs) in
+            let ty_xs = Fun (ty, eff, ty_xs) in
             ((loc, ty_xs), None)
           in
           Option.map aux ty_xs

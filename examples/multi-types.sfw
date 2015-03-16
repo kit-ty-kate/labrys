@@ -2,7 +2,7 @@ type Int =
   | O : Int
   | S : Int -> Int
 
-type alias Id = Int -> Int
+type alias Id = Int -[]-> Int
 
 let id (x:Id) = x
 

@@ -98,11 +98,26 @@ let replace_eff ~from ~eff =
   in
   aux
 
-let rec of_parse_tree_kind gammaT gammaE = function
+let switch_pure_arrow (_, pure_arrow) = match pure_arrow with
+  | `Allow -> (true, pure_arrow)
+  | `Partial | `Forbid -> (false, pure_arrow)
+
+let check_pure_arrow ~loc (b, _) = function
+  | Some eff -> eff
+  | None when b -> []
+  | None ->
+      Error.fail
+        ~loc
+        "Pure arrows are forbidden here. If you really want one use the \
+         explicit syntax '-[]->' instead"
+
+let rec of_parse_tree_kind ~pure_arrow gammaT gammaE = function
   | (loc, UnsugaredTree.Fun (x, eff, y)) ->
-      let (x, k1) = of_parse_tree_kind gammaT gammaE x in
+      let pa = switch_pure_arrow pure_arrow in
+      let (x, k1) = of_parse_tree_kind ~pure_arrow:pa gammaT gammaE x in
+      let eff = check_pure_arrow ~loc pure_arrow eff in
       let eff = Effects.of_list ~loc gammaE eff in
-      let (y, k2) = of_parse_tree_kind gammaT gammaE y in
+      let (y, k2) = of_parse_tree_kind ~pure_arrow gammaT gammaE y in
       if Kinds.not_star k1 || Kinds.not_star k2 then
         fail_not_star ~loc "->";
       (Fun (x, eff, y), Kinds.Star)
@@ -118,30 +133,32 @@ let rec of_parse_tree_kind gammaT gammaE = function
       end
   | (loc, UnsugaredTree.Forall ((name, k), ret)) ->
       let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
-      let (ret, kx) = of_parse_tree_kind gammaT gammaE ret in
+      let (ret, kx) = of_parse_tree_kind ~pure_arrow gammaT gammaE ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
   | (loc, UnsugaredTree.ForallEff (name, ret)) ->
       let gammaE = GammaMap.Eff.add ~loc name gammaE in
-      let (ret, kx) = of_parse_tree_kind gammaT gammaE ret in
+      let (ret, kx) = of_parse_tree_kind ~pure_arrow gammaT gammaE ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (ForallEff (name, ret), Kinds.Star)
   | (loc, UnsugaredTree.AbsOnTy ((name, k), ret)) ->
       let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
-      let (ret, kret) = of_parse_tree_kind gammaT gammaE ret in
+      let (ret, kret) = of_parse_tree_kind ~pure_arrow gammaT gammaE ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
   | (loc, UnsugaredTree.AppOnTy ((_, UnsugaredTree.AbsOnTy ((name, k), t)), x)) ->
-      let (x, kx) = of_parse_tree_kind gammaT gammaE x in
+      let pa = switch_pure_arrow pure_arrow in
+      let (x, kx) = of_parse_tree_kind ~pure_arrow:pa gammaT gammaE x in
       if not (Kinds.equal k kx) then
         kind_missmatch ~loc ~has:kx ~on:k;
       let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
-      let (t, kt) = of_parse_tree_kind gammaT gammaE t in
+      let (t, kt) = of_parse_tree_kind ~pure_arrow gammaT gammaE t in
       (replace ~from:name ~ty:x t, kt)
   | (loc, UnsugaredTree.AppOnTy (f, x)) ->
-      let (f, kf) = of_parse_tree_kind gammaT gammaE f in
-      let (x, kx) = of_parse_tree_kind gammaT gammaE x in
+      let (f, kf) = of_parse_tree_kind ~pure_arrow gammaT gammaE f in
+      let pa = switch_pure_arrow pure_arrow in
+      let (x, kx) = of_parse_tree_kind ~pure_arrow:pa gammaT gammaE x in
       let k =
         match kf with
         | Kinds.KFun (p, r) when Kinds.equal p kx -> r
@@ -150,9 +167,17 @@ let rec of_parse_tree_kind gammaT gammaE = function
       in
       (AppOnTy (f, x), k)
 
-let of_parse_tree gammaT gammaE ty =
+let of_parse_tree_kind ~pure_arrow gammaT gammaE ty =
+  let pure_arrow = match pure_arrow with
+    | `Allow -> (true, pure_arrow)
+    | `Partial -> (true, pure_arrow)
+    | `Forbid -> (false, pure_arrow)
+  in
+  of_parse_tree_kind ~pure_arrow gammaT gammaE ty
+
+let of_parse_tree ~pure_arrow gammaT gammaE ty =
   let (loc, _) = ty in
-  let (ty, k) = of_parse_tree_kind gammaT gammaE ty in
+  let (ty, k) = of_parse_tree_kind ~pure_arrow gammaT gammaE ty in
   if Kinds.not_star k then
     Error.fail ~loc "Values cannot be of kind /= '*'";
   ty

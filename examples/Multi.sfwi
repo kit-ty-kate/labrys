@@ -2,4 +2,4 @@ type Int =
   | O : Int
   | S : Int -> Int
 
-let id : (Int -> Int) -> Int -> Int
+let id : (Int -[]-> Int) -> Int -> Int

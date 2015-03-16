@@ -226,9 +226,9 @@ upperName:
 
 typeExprUnclosed:
   | param = typeExprProtected Arrow ret = typeExpr
-      { ParseTree.Fun (param, [], ret) }
+      { ParseTree.Fun (param, None, ret) }
   | param = typeExprProtected LArrowEff eff = eff RArrowEff ret = typeExpr
-      { ParseTree.Fun (param, eff, ret) }
+      { ParseTree.Fun (param, Some eff, ret) }
   | Forall x = nonempty_list(kind_and_name_eff) Comma ret = typeExpr
       { ParseTree.Forall (x, ret) }
   | Lambda x = nonempty_list(kind_and_name) Comma ret = typeExpr

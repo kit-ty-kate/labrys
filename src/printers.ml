@@ -70,7 +70,9 @@ module ParseTree = struct
   let dump_forall_arg_list l = String.concat " " (List.map dump_forall_arg l)
 
   let rec dump_ty = function
-    | (_, Fun (param, eff, res)) ->
+    | (_, Fun (param, None, res)) ->
+        fmt "(%s -> %s)" (dump_ty param) (dump_ty res)
+    | (_, Fun (param, Some eff, res)) ->
         fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
     | (_, Ty name) -> dump_t_name name
     | (_, Forall (names, res)) ->
@@ -272,7 +274,9 @@ module UnsugaredTree = struct
   open UnsugaredTree
 
   let rec dump_ty = function
-    | (_, Fun (param, eff, res)) ->
+    | (_, Fun (param, None, res)) ->
+        fmt "(%s -> %s)" (dump_ty param) (dump_ty res)
+    | (_, Fun (param, Some eff, res)) ->
         fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
     | (_, Ty name) -> dump_t_name name
     | (_, Forall ((name, k), res)) ->

@@ -73,6 +73,7 @@ let create =
               | UnsugaredTree.PTy pty ->
                   let (pty, kx) =
                     Types.of_parse_tree_kind
+                      ~pure_arrow:`Allow
                       gamma.Gamma.types
                       gamma.Gamma.effects
                       pty

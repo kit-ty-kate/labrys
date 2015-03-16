@@ -2,9 +2,6 @@
 
 == Short term ==
 
-* Effect system
-  * Polymorphism
-  * Forbid the pure arrows (->) for higher-order functions or types (enforce the use of -[]-> if pure function is actually wanted)
 * Define a proper operational semantics
 * Typeclasses
 

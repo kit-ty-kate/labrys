@@ -39,7 +39,7 @@ type is_rec =
   | NonRec
 
 type ty' =
-  | Fun of (ty * eff list * ty)
+  | Fun of (ty * eff list option * ty)
   | Ty of t_name
   | Forall of (forall_arg list * ty)
   | AbsOnTy of (t_value list * ty)
