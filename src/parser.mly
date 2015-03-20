@@ -134,7 +134,7 @@ termStrictlyUnclosed:
 termNonStrictlyUnclosed:
   | x = app
       { x }
-  | Fail LBracket ty = typeExpr RBracket exn = effectValue
+  | Fail LBracket ty = typeExpr RBracket exn = exceptionValue
       { ParseTree.Fail (ty, exn) }
 
 termUnclosed:
@@ -280,14 +280,14 @@ eff_exn:
   | name = upperName Pipe xs = eff_exn
       { Ident.Exn.of_list name :: xs }
 
-effectValue:
-  | LParen name = upperName args = effectValueArgs RParen
+exceptionValue:
+  | LParen name = upperName args = exceptionValueArgs RParen
       { (Ident.Exn.of_list name, args) }
   | name = upperName
       { (Ident.Exn.of_list name, []) }
 
-effectValueArgs:
-  | x = termProtected xs = effectValueArgs
+exceptionValueArgs:
+  | x = termProtected xs = exceptionValueArgs
       { x :: xs }
   | x = termProtected
       { [x] }
