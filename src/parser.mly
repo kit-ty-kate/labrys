@@ -125,17 +125,17 @@ lambda_aux:
 
 termStrictlyUnclosed:
   | Lambda args = nonempty_args(lambda_aux)
-      { ParseTree.Abs args }
+      { (get_loc $startpos $endpos, ParseTree.Abs args) }
   | x = let_case In xs = term
-      { ParseTree.Let (x, xs) }
+      { (get_loc $startpos $endpos, ParseTree.Let (x, xs)) }
   | x = termProtectedPermissive Semicolon y = term
-      { ParseTree.Seq (x, y) }
+      { (get_loc $startpos $endpos, ParseTree.Seq (x, y)) }
 
 termNonStrictlyUnclosed:
   | x = app
       { x }
   | Fail LBracket ty = typeExpr RBracket exn = exceptionValue
-      { ParseTree.Fail (ty, exn) }
+      { (get_loc $startpos $endpos, ParseTree.Fail (ty, exn)) }
 
 termUnclosed:
   | x = termStrictlyUnclosed { x }
@@ -143,35 +143,35 @@ termUnclosed:
 
 termClosed:
   | name = name
-      { ParseTree.Val (Ident.Name.of_list name) }
+      { (get_loc $startpos $endpos, ParseTree.Val (Ident.Name.of_list name)) }
   | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
-      { ParseTree.PatternMatching (t, p) }
+      { (get_loc $startpos $endpos, ParseTree.PatternMatching (t, p)) }
   | Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
-      { ParseTree.Try (t, p) }
+      { (get_loc $startpos $endpos, ParseTree.Try (t, p)) }
   | LParen x = term RParen
-      { snd x }
+      { x }
 
 term:
-  | x = termUnclosed { (get_loc $startpos $endpos, x) }
-  | x = termClosed { (get_loc $startpos $endpos, x) }
+  | x = termUnclosed { x }
+  | x = termClosed { x }
 
 termProtectedPermissive:
-  | x = termNonStrictlyUnclosed { (get_loc $startpos $endpos, x) }
-  | x = termClosed { (get_loc $startpos $endpos, x) }
+  | x = termNonStrictlyUnclosed { x }
+  | x = termClosed { x }
 
 app:
-  | f = termProtected LBracket ty = typeExpr RBracket
-      { ParseTree.TApp (f, ty) }
+  | f = termClosed LBracket ty = typeExpr RBracket
+      { (get_loc $startpos $endpos, ParseTree.TApp (f, ty)) }
   | f = app LBracket ty = typeExpr RBracket
-      { ParseTree.TApp ((get_loc $startpos(f) $endpos(f), f), ty) }
-  | f = termProtected LBracket LBracket eff = eff RBracket RBracket
-      { ParseTree.EApp (f, eff) }
+      { (get_loc $startpos $endpos, ParseTree.TApp (f, ty)) }
+  | f = termClosed LBracket LBracket eff = eff RBracket RBracket
+      { (get_loc $startpos $endpos, ParseTree.EApp (f, eff)) }
   | f = app LBracket LBracket eff = eff RBracket RBracket
-      { ParseTree.EApp ((get_loc $startpos(f) $endpos(f), f), eff) }
-  | f = termProtected x = termProtected
-      { ParseTree.App (f, x) }
-  | f = app x = termProtected
-      { ParseTree.App ((get_loc $startpos(f) $endpos(f), f), x) }
+      { (get_loc $startpos $endpos, ParseTree.EApp (f, eff)) }
+  | f = termClosed x = termClosed
+      { (get_loc $startpos $endpos, ParseTree.App (f, x)) }
+  | f = app x = termClosed
+      { (get_loc $startpos $endpos, ParseTree.App (f, x)) }
 
 arg:
   | LParen name = lowerName Colon ty = typeExpr RParen
@@ -287,9 +287,9 @@ exceptionValue:
       { (Ident.Exn.of_list name, []) }
 
 exceptionValueArgs:
-  | x = termProtected xs = exceptionValueArgs
+  | x = termClosed xs = exceptionValueArgs
       { x :: xs }
-  | x = termProtected
+  | x = termClosed
       { [x] }
 
 exn_pattern:
@@ -375,8 +375,6 @@ module_name:
 
 
 (********* Protected rules ***********)
-
-termProtected: x = termClosed { (get_loc $startpos $endpos, x) }
 
 typeExprProtected: x = typeExprClosed { (get_loc $startpos $endpos, x) }
 
