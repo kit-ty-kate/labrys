@@ -104,12 +104,16 @@ let_aux:
   | { ParseTree.NonRec }
   | Rec { ParseTree.Rec }
 
+%inline ty_annot:
+  | Colon LBracket eff = eff RBracket ty = typeExpr
+      { (ty, Some eff) }
+  | Colon ty = typeExpr
+      { (ty, None) }
+
 %inline ty_opt:
   | { None }
-  | Colon LBracket eff = eff RBracket ty = typeExpr
-      { Some (ty, Some eff) }
-  | Colon ty = typeExpr
-      { Some (ty, None) }
+  | ty = ty_annot
+      { Some ty }
 
 datatype:
   | Type name = UpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
@@ -150,6 +154,8 @@ termClosed:
       { (get_loc $startpos $endpos, ParseTree.Try (t, p)) }
   | LParen x = term RParen
       { x }
+  | LParen t = term ty = ty_annot RParen
+      { (get_loc $startpos $endpos, ParseTree.Annot (t, ty)) }
 
 term:
   | x = termUnclosed { x }

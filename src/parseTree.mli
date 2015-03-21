@@ -47,7 +47,7 @@ type ty' =
 
 and ty = (loc * ty')
 
-type ty_annot = (ty * eff list option) option
+type ty_annot = (ty * eff list option)
 type value = (name * ty)
 
 type pattern =
@@ -73,17 +73,18 @@ type t' =
   | EApp of (t * eff list)
   | Val of name
   | PatternMatching of (t * (pattern * t) list)
-  | Let of ((name * is_rec * (arg list * (ty_annot * t))) * t)
+  | Let of ((name * is_rec * (arg list * (ty_annot option * t))) * t)
   | Fail of (ty * (exn_name * t list))
   | Try of (t * ((exn_name * name list) * t) list)
   | Seq of (t * t)
+  | Annot of (t * ty_annot)
 
 and t = (loc * t')
 
 type variant = Variant of (loc * name * ty)
 
 type top' =
-  | Value of (name * is_rec * (arg list * (ty_annot * t)))
+  | Value of (name * is_rec * (arg list * (ty_annot option * t)))
   | Type of (t_name * ty)
   | Binding of (name * ty * string)
   | Datatype of (t_name * Kinds.t option * variant list)

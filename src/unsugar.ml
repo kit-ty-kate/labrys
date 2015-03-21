@@ -58,6 +58,9 @@ let rec unsugar_ty =
   | (loc, ParseTree.AppOnTy (x, y)) ->
       (loc, AppOnTy (unsugar_ty x, unsugar_ty y))
 
+let unsugar_annot (annot, eff) =
+  (unsugar_ty annot, eff)
+
 let rec unsugar_pattern_arg = function
   | ParseTree.PVal pattern -> PVal (unsugar_pattern pattern)
   | ParseTree.PTy ty -> PTy (unsugar_ty ty)
@@ -83,7 +86,7 @@ and unsugar_t = function
   | (_, ParseTree.Abs (args, t)) ->
       if List.is_empty args then
         assert false;
-      snd (unsugar_args args None t)
+      unsugar_args args None t
   | (loc, ParseTree.App (f, x)) ->
       (loc, App (unsugar_t f, unsugar_t x))
   | (loc, ParseTree.TApp (t, ty)) ->
@@ -103,7 +106,9 @@ and unsugar_t = function
   | (loc, ParseTree.Seq (x, y)) ->
       let name = Builtins.underscore in
       let ty = ((loc, Ty Builtins.t_unit), None) in
-      (loc, Let ((name, NonRec, (Some ty, unsugar_t x)), unsugar_t y))
+      (loc, Let ((name, NonRec, (fst x, Annot (unsugar_t x, ty))), unsugar_t y))
+  | (loc, ParseTree.Annot (t, ty)) ->
+      (loc, Annot (unsugar_t t, unsugar_annot ty))
 
 and unsugar_args args annot t =
   let rec aux = function
@@ -146,10 +151,17 @@ and unsugar_args args annot t =
         in
         aux ((loc, x) :: xs)
     | [] ->
-        let aux (annot, eff) = (unsugar_ty annot, eff) in
-        (Option.map aux annot, unsugar_t t)
+        begin match annot with
+        | Some annot ->
+            let annot = unsugar_annot annot in
+            (Some annot, (fst t, Annot (unsugar_t t, annot)))
+        | None ->
+            (None, unsugar_t t)
+        end
   in
-  aux args
+  match aux args with
+  | (Some ty, t) -> (fst t, Annot (t, ty))
+  | (None, t) -> t
 
 let unsugar_variant (ParseTree.Variant (loc, name, ty)) =
   Variant (loc, name, unsugar_ty ty)

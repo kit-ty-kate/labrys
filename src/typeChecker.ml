@@ -31,6 +31,7 @@ let rec well_formed_rec = function
   | (_, UnsugaredTree.Abs _) ->
       true
   | (_, UnsugaredTree.TAbs (_, t))
+  | (_, UnsugaredTree.Annot (t, _))
   | (_, UnsugaredTree.EAbs (_, t)) ->
       well_formed_rec t
   | (_, UnsugaredTree.App _)
@@ -42,6 +43,22 @@ let rec well_formed_rec = function
   | (_, UnsugaredTree.Fail _)
   | (_, UnsugaredTree.Try _) ->
       false
+
+let get_ty_from_let = function
+  | (_, UnsugaredTree.Annot (_, ty)) ->
+      Some ty
+  | (_, UnsugaredTree.Abs _)
+  | (_, UnsugaredTree.TAbs _)
+  | (_, UnsugaredTree.EAbs _)
+  | (_, UnsugaredTree.App _)
+  | (_, UnsugaredTree.TApp _)
+  | (_, UnsugaredTree.EApp _)
+  | (_, UnsugaredTree.Val _)
+  | (_, UnsugaredTree.PatternMatching _)
+  | (_, UnsugaredTree.Let _)
+  | (_, UnsugaredTree.Fail _)
+  | (_, UnsugaredTree.Try _) ->
+      None
 
 let get_rec_ty ~loc = function
   | Some (ty, None) ->
@@ -56,27 +73,29 @@ let get_rec_ty ~loc = function
   | None ->
       Error.fail ~loc "Recursive values must have explicit return type"
 
-let check_type_opt ~loc ~ty ~ty_t ~effects gamma =
-  match ty with
-  | Some (ty, eff) ->
-      let ty =
-        Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
-      if not (Types.equal ty ty_t) then
-        Types.Error.fail ~loc ~has:ty_t ~expected:ty;
-      begin match eff with
-      | Some eff ->
-          let eff = List.fold_right (Effects.add ~loc gamma.Gamma.effects) eff Effects.empty in
-          if not (Effects.equal [] eff effects) then
-            Error.fail
-              ~loc
-              "This expression has the effect %s but expected the effect %s"
-              (Effects.to_string effects)
-              (Effects.to_string eff);
-      | None ->
-          ()
-      end
+let get_ty_from_let_rec ~loc ty =
+  get_rec_ty ~loc (get_ty_from_let ty)
+
+let check_type ~loc ~ty:(ty, eff) ~ty_t ~effects gamma =
+  let ty =
+    Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
+  if not (Types.equal ty ty_t) then
+    Types.Error.fail ~loc ~has:ty_t ~expected:ty;
+  begin match eff with
+  | Some eff ->
+      let eff = List.fold_right (Effects.add ~loc gamma.Gamma.effects) eff Effects.empty in
+      if not (Effects.equal [] eff effects) then
+        Error.fail
+          ~loc
+          "This expression has the effect %s but expected the effect %s"
+          (Effects.to_string effects)
+          (Effects.to_string eff);
   | None ->
       ()
+  end
+
+let check_type_opt ~loc ~ty ~ty_t ~effects gamma =
+  Option.may (fun ty -> check_type ~loc ~ty ~ty_t ~effects gamma) ty
 
 let rec aux gamma = function
   | (_loc, UnsugaredTree.Abs ((name, ty), t)) ->
@@ -140,14 +159,15 @@ let rec aux gamma = function
       in
       let effect = Effects.union effect1 effect2 in
       (PatternMatching (t, results, patterns), initial_ty, effect)
-  | (loc, UnsugaredTree.Let ((name, UnsugaredTree.NonRec, (ty, t)), xs)) ->
+  | (loc, UnsugaredTree.Let ((name, UnsugaredTree.NonRec, t), xs)) ->
+      let ty = get_ty_from_let t in
       let (t, ty_t, effect1) = aux gamma t in
       check_type_opt ~loc ~ty ~ty_t ~effects:effect1 gamma;
       let gamma = Gamma.add_value name ty_t gamma in
       let (xs, ty_xs, effect2) = aux gamma xs in
       (Let (name, t, xs), ty_xs, Effects.union effect1 effect2)
-  | (loc, UnsugaredTree.Let ((name, UnsugaredTree.Rec, (ty, t)), xs)) when well_formed_rec t ->
-      let ty = get_rec_ty ~loc ty in
+  | (loc, UnsugaredTree.Let ((name, UnsugaredTree.Rec, t), xs)) when well_formed_rec t ->
+      let ty = get_ty_from_let_rec ~loc t in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
       let gamma = Gamma.add_value name ty gamma in
       let (t, ty_t, effect1) = aux gamma t in
@@ -199,6 +219,10 @@ let rec aux gamma = function
       let (branches, effect) = List.fold_left aux ([], effect) branches in
       let branches = List.rev branches in
       (Try (e, branches), ty, effect)
+  | (loc, UnsugaredTree.Annot (t, ty)) ->
+      let (_, ty_t, effects) as res = aux gamma t in
+      check_type ~loc ~ty ~ty_t ~effects gamma;
+      res
 
 let transform_variants ~datatype gamma =
   let rec aux index = function
@@ -236,14 +260,15 @@ let check_effects ~loc ~with_main ~has_main ~name (t, ty, effects) =
   (is_main, t, ty)
 
 let rec from_parse_tree ~with_main ~has_main gamma = function
-  | (loc, UnsugaredTree.Value (name, UnsugaredTree.NonRec, (ty, term))) :: xs ->
+  | (loc, UnsugaredTree.Value (name, UnsugaredTree.NonRec, term)) :: xs ->
+      let ty = get_ty_from_let term in
       let (has_main, x, ty_t) = check_effects ~loc ~with_main ~has_main ~name (aux gamma term) in
       check_type_opt ~loc ~ty ~ty_t ~effects:Effects.empty gamma;
       let gamma = Gamma.add_value name ty_t gamma in
       let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
       (Value (name, x) :: xs, has_main, gamma)
-  | (loc, UnsugaredTree.Value (name, UnsugaredTree.Rec, (ty, term))) :: xs when well_formed_rec term ->
-      let ty = get_rec_ty ~loc ty in
+  | (loc, UnsugaredTree.Value (name, UnsugaredTree.Rec, term)) :: xs when well_formed_rec term ->
+      let ty = get_ty_from_let_rec ~loc term in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
       let gamma = Gamma.add_value name ty gamma in
       let (has_main, x, ty_x) = check_effects ~loc ~with_main ~has_main ~name (aux gamma term) in

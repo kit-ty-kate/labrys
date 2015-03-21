@@ -82,9 +82,12 @@ module ParseTree = struct
     | (_, AppOnTy (f, x)) ->
         fmt "(%s [%s])" (dump_ty f) (dump_ty x)
 
-  let dump_ty_opt ty = match ty with
-    | Some (ty, None) -> dump_ty ty
-    | Some (ty, Some eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
+  let dump_annot = function
+    | (ty, None) -> dump_ty ty
+    | (ty, Some eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
+
+  let dump_ty_opt = function
+    | Some x -> dump_annot x
     | None -> "???"
 
   let dump_arg = function
@@ -203,6 +206,19 @@ module ParseTree = struct
            ^^ dump_t y
            ^^ PPrint.rparen
           )
+    | (_, Annot (t, ty)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ (PPrint.lparen
+               ^^ dump_t t
+               ^^ PPrint.rparen
+              )
+           ^^ PPrint.break 1
+           ^^ PPrint.colon
+           ^^ PPrint.break 1
+           ^^ PPrint.string (dump_annot ty)
+           ^^ PPrint.rparen
+          )
 
   and dump_cases cases =
     let aux doc (pattern, t) =
@@ -288,10 +304,9 @@ module UnsugaredTree = struct
     | (_, AppOnTy (f, x)) ->
         fmt "(%s [%s])" (dump_ty f) (dump_ty x)
 
-  let dump_ty_opt ty = match ty with
-    | Some (ty, None) -> dump_ty ty
-    | Some (ty, Some eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
-    | None -> "???"
+  let dump_annot = function
+    | (ty, None) -> dump_ty ty
+    | (ty, Some eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
 
   let dump_rec is_rec = match is_rec with
     | Rec -> " rec"
@@ -368,12 +383,11 @@ module UnsugaredTree = struct
         ^^ dump_cases cases
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | (_, Let ((name, is_rec, (ty, t)), xs)) ->
-        let ty = dump_ty_opt ty in
+    | (_, Let ((name, is_rec, t), xs)) ->
         let is_rec = dump_rec is_rec in
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "let%s %s : %s =" is_rec (dump_name name) ty)
+           ^^ PPrint.string (fmt "let%s %s =" is_rec (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
@@ -403,6 +417,19 @@ module UnsugaredTree = struct
         ^^ dump_exn_branches branches
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
+    | (_, Annot (t, ty)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ (PPrint.lparen
+               ^^ dump_t t
+               ^^ PPrint.rparen
+              )
+           ^^ PPrint.break 1
+           ^^ PPrint.colon
+           ^^ PPrint.break 1
+           ^^ PPrint.string (dump_annot ty)
+           ^^ PPrint.rparen
+          )
 
   and dump_cases cases =
     let aux doc (pattern, t) =
@@ -441,11 +468,10 @@ module UnsugaredTree = struct
     List.fold_left aux PPrint.empty variants
 
   let dump = function
-    | (_, Value (name, is_rec, (ty, t))) ->
-        let ty = dump_ty_opt ty in
+    | (_, Value (name, is_rec, t)) ->
         let is_rec = dump_rec is_rec in
         PPrint.group
-          (PPrint.string (fmt "let%s %s : %s =" is_rec (dump_name name) ty)
+          (PPrint.string (fmt "let%s %s =" is_rec (dump_name name))
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
     | (_, Type (name, ty)) ->
