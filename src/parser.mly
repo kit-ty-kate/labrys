@@ -230,8 +230,8 @@ upperName:
   | Underscore
       { "_" }
 
-typeExprUnclosed:
-  | param = typeExprProtected Arrow ret = typeExpr
+typeExprStrictlyUnclosed:
+  | param = typeExprProtectedPermissive Arrow ret = typeExpr
       { ParseTree.Fun (param, None, ret) }
   | param = typeExprProtected LArrowEff eff = eff RArrowEff ret = typeExpr
       { ParseTree.Fun (param, Some eff, ret) }
@@ -239,8 +239,14 @@ typeExprUnclosed:
       { ParseTree.Forall (x, ret) }
   | Lambda x = nonempty_list(kind_and_name) Comma ret = typeExpr
       { ParseTree.AbsOnTy (x, ret) }
+
+typeExprNonStrictlyUnclosed:
   | x = tyApp
       { x }
+
+typeExprUnclosed:
+  | x = typeExprStrictlyUnclosed { x }
+  | x = typeExprNonStrictlyUnclosed { x }
 
 typeExprClosed:
   | name = upperName
@@ -250,6 +256,10 @@ typeExprClosed:
 
 typeExpr:
   | x = typeExprUnclosed { (get_loc $startpos $endpos, x) }
+  | x = typeExprClosed { (get_loc $startpos $endpos, x) }
+
+typeExprProtectedPermissive:
+  | x = typeExprNonStrictlyUnclosed { (get_loc $startpos $endpos, x) }
   | x = typeExprClosed { (get_loc $startpos $endpos, x) }
 
 tyApp:
