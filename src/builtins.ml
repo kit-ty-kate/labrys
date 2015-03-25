@@ -24,6 +24,7 @@ open Monomorphic.None
 
 let unit = Ident.Name.of_list ["Unit"]
 let t_unit = Ident.Type.of_list ["Unit"]
+let t_unit_name = `UpperName ["Unit"]
 
 let underscore = Ident.Name.of_list ["_"]
 

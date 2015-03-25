@@ -22,3 +22,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 val create : ParseTree.top list -> UnsugaredTree.top list
 
 val create_interface : ParseTree.interface list -> InterfaceTree.t list
+
+val create_imports : ParseTree.imports -> UnsugaredTree.imports

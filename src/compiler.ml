@@ -90,6 +90,7 @@ let prepend_builtins tree =
 
 let rec build_intf parent_module =
   let (imports, tree) = parse (ModulePath.intf parent_module) Parser.mainInterface in
+  let imports = Unsugar.create_imports imports in
   let tree = Unsugar.create_interface tree in
   let aux acc x =
     let x = ModulePath.of_module ~parent_module x in
@@ -124,8 +125,12 @@ let rec build_impl =
 
 and compile ?(with_main = false) ~interface modul =
   let (imports, parse_tree) = parse (ModulePath.impl modul) Parser.main in
+  let imports = Unsugar.create_imports imports in
+  (* TODO: Print with and without builtins *)
   let unsugared_tree = lazy (Unsugar.create parse_tree) in
-  let unsugared_tree = lazy (prepend_builtins (Lazy.force unsugared_tree)) in
+  let unsugared_tree =
+    lazy (prepend_builtins (Lazy.force unsugared_tree))
+  in
   let (imports, gamma, code) = build_impl modul imports in
   let typed_tree =
     lazy begin

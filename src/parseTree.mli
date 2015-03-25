@@ -19,20 +19,21 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Ident.Name.t
-type exn_name = Ident.Exn.t
-type t_name = Ident.Type.t
-type eff_name = Ident.Eff.t
-type module_name = Ident.Module.t
+type new_lower_name = [`NewLowerName of string | `Underscore]
+type new_upper_name = [`NewUpperName of string]
+
+type lower_name = [`LowerName of string list]
+type upper_name = [`UpperName of string list]
+
 type loc = Location.t
 
-type t_value = (t_name * Kinds.t option)
+type ty_arg = (new_upper_name * Kinds.t option)
 
 type forall_arg =
-  | Eff of eff_name
-  | Typ of t_value
+  | Eff of new_upper_name
+  | Typ of ty_arg
 
-type eff = (eff_name * exn_name list)
+type eff = (new_upper_name * new_upper_name list)
 
 type is_rec =
   | Rec
@@ -40,28 +41,28 @@ type is_rec =
 
 type ty' =
   | Fun of (ty * eff list option * ty)
-  | Ty of t_name
+  | Ty of upper_name
   | Forall of (forall_arg list * ty)
-  | AbsOnTy of (t_value list * ty)
+  | AbsOnTy of (ty_arg list * ty)
   | AppOnTy of (ty * ty)
 
 and ty = (loc * ty')
 
 type ty_annot = (ty * eff list option)
-type value = (name * ty)
+type v_arg = (new_lower_name * ty)
 
 type pattern =
-  | TyConstr of (loc * name * pattern_arg list)
-  | Any of name
+  | TyConstr of (loc * upper_name * pattern_arg list)
+  | Any of new_lower_name
 
 and pattern_arg =
   | PVal of pattern
   | PTy of ty
 
 type arg' =
-  | VArg of value
-  | TArg of t_value
-  | EArg of eff_name
+  | VArg of v_arg
+  | TArg of ty_arg
+  | EArg of new_upper_name
   | Unit
 
 and arg = (loc * arg')
@@ -71,34 +72,34 @@ type t' =
   | App of (t * t)
   | TApp of (t * ty)
   | EApp of (t * eff list)
-  | Val of name
+  | Val of [lower_name | upper_name]
   | PatternMatching of (t * (pattern * t) list)
-  | Let of ((name * is_rec * (arg list * (ty_annot option * t))) * t)
-  | Fail of (ty * (exn_name * t list))
-  | Try of (t * ((exn_name * name list) * t) list)
+  | Let of ((new_lower_name * is_rec * (arg list * (ty_annot option * t))) * t)
+  | Fail of (ty * (upper_name * t list))
+  | Try of (t * ((upper_name * new_lower_name list) * t) list)
   | Seq of (t * t)
   | Annot of (t * ty_annot)
 
 and t = (loc * t')
 
-type variant = Variant of (loc * name * ty)
+type variant = Variant of (loc * new_upper_name * ty)
 
 type top' =
-  | Value of (name * is_rec * (arg list * (ty_annot option * t)))
-  | Type of (t_name * ty)
-  | Binding of (name * ty * string)
-  | Datatype of (t_name * Kinds.t option * variant list)
-  | Exception of (exn_name * ty list)
+  | Value of (new_lower_name * is_rec * (arg list * (ty_annot option * t)))
+  | Type of (new_upper_name * ty)
+  | Binding of (new_lower_name* ty * string)
+  | Datatype of (new_upper_name * Kinds.t option * variant list)
+  | Exception of (new_upper_name * ty list)
 
 and top = (loc * top')
 
-type imports = module_name list
+type imports = upper_name list
 
 type interface' =
-  | IVal of (name * ty)
-  | IAbstractType of (t_name * Kinds.t option)
-  | IDatatype of (t_name * Kinds.t option * variant list)
-  | ITypeAlias of (t_name * ty)
-  | IException of (exn_name * ty list)
+  | IVal of (new_lower_name * ty)
+  | IAbstractType of (new_upper_name * Kinds.t option)
+  | IDatatype of (new_upper_name * Kinds.t option * variant list)
+  | ITypeAlias of (new_upper_name * ty)
+  | IException of (new_upper_name * ty list)
 
 type interface = (loc * interface')

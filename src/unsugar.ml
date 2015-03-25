@@ -24,14 +24,44 @@ open Monomorphic.None
 
 open UnsugaredTree
 
+let new_upper_name_to_value (`NewUpperName name) = Ident.Name.of_list [name]
+let new_upper_name_to_type (`NewUpperName name) = Ident.Type.of_list [name]
+let new_upper_name_to_exn (`NewUpperName name) = Ident.Exn.of_list [name]
+let new_upper_name_to_eff (`NewUpperName name) = Ident.Eff.of_list [name]
+
+let upper_name_to_value (`UpperName name) = Ident.Name.of_list name
+let upper_name_to_type (`UpperName name) = Ident.Type.of_list name
+let upper_name_to_exn (`UpperName name) = Ident.Exn.of_list name
+
+let new_lower_name_to_value ~allow_underscore = function
+  | `NewLowerName name -> Ident.Name.of_list [name]
+  | `Underscore when allow_underscore -> Builtins.underscore
+  | `Underscore -> assert false (* TODO: Get location *)
+
+let name_to_value = function
+  | `LowerName name | `UpperName name -> Ident.Name.of_list name
+
 let unsugar_kind = Option.default Kinds.Star
+
+let unsugar_eff =
+  let aux (name, args) =
+    let name = new_upper_name_to_eff name in
+    let args = List.map new_upper_name_to_exn args in
+    (name, args)
+  in
+  List.map aux
 
 let rec unsugar_ty =
   let unsugar_forall ~loc ty args =
     let rec aux = function
-      | ParseTree.Eff name :: xs -> (loc, ForallEff (name, aux xs))
-      | ParseTree.Typ (name, k) :: xs -> (loc, Forall ((name, unsugar_kind k), aux xs))
-      | [] -> unsugar_ty ty
+      | ParseTree.Eff name :: xs ->
+          let name = new_upper_name_to_eff name in
+          (loc, ForallEff (name, aux xs))
+      | ParseTree.Typ (name, k) :: xs ->
+          let name = new_upper_name_to_type name in
+          (loc, Forall ((name, unsugar_kind k), aux xs))
+      | [] ->
+          unsugar_ty ty
     in
     if List.is_empty args then
       assert false;
@@ -39,8 +69,11 @@ let rec unsugar_ty =
   in
   let unsugar_absOnTy ~loc ty args =
     let rec aux = function
-      | (name, k) :: xs -> (loc, AbsOnTy ((name, unsugar_kind k), aux xs))
-      | [] -> unsugar_ty ty
+      | (name, k) :: xs ->
+          let name = new_upper_name_to_type name in
+          (loc, AbsOnTy ((name, unsugar_kind k), aux xs))
+      | [] ->
+          unsugar_ty ty
     in
     if List.is_empty args then
       assert false;
@@ -48,8 +81,10 @@ let rec unsugar_ty =
   in
   function
   | (loc, ParseTree.Fun (x, eff, y)) ->
+      let eff = Option.map unsugar_eff eff in
       (loc, Fun (unsugar_ty x, eff, unsugar_ty y))
   | (loc, ParseTree.Ty name) ->
+      let name = upper_name_to_type name in
       (loc, Ty name)
   | (loc, ParseTree.Forall (args, ty)) ->
       unsugar_forall ~loc ty args
@@ -59,6 +94,7 @@ let rec unsugar_ty =
       (loc, AppOnTy (unsugar_ty x, unsugar_ty y))
 
 let unsugar_annot (annot, eff) =
+  let eff = Option.map unsugar_eff eff in
   (unsugar_ty annot, eff)
 
 let rec unsugar_pattern_arg = function
@@ -67,20 +103,22 @@ let rec unsugar_pattern_arg = function
 
 and unsugar_pattern = function
   | ParseTree.TyConstr (loc, name, args) ->
+      let name = upper_name_to_value name in
       TyConstr (loc, name, List.map unsugar_pattern_arg args)
   | ParseTree.Any name ->
+      let name = new_lower_name_to_value ~allow_underscore:true name in
       Any name
 
-let rec unsugar_pat (pattern, t) =
-  let pattern = match pattern with
-    | ParseTree.TyConstr (loc, name, args) ->
-        TyConstr (loc, name, List.map unsugar_pattern_arg args)
-    | ParseTree.Any name ->
-        Any name
+let rec unsugar_pat (pattern, t) = (unsugar_pattern pattern, unsugar_t t)
+
+(* TODO: Allow full patterns but restrict here *)
+and unsugar_try_pattern (pattern, t) =
+  let pattern =
+    (upper_name_to_exn (fst pattern),
+     List.map (new_lower_name_to_value ~allow_underscore:true) (snd pattern)
+    )
   in
   (pattern, unsugar_t t)
-
-and unsugar_try_pattern (pattern, t) = (pattern, unsugar_t t)
 
 and unsugar_t = function
   | (_, ParseTree.Abs (args, t)) ->
@@ -92,14 +130,18 @@ and unsugar_t = function
   | (loc, ParseTree.TApp (t, ty)) ->
       (loc, TApp (unsugar_t t, unsugar_ty ty))
   | (loc, ParseTree.EApp (t, eff)) ->
+      let eff = unsugar_eff eff in
       (loc, EApp (unsugar_t t, eff))
   | (loc, ParseTree.Val name) ->
+      let name = name_to_value name in
       (loc, Val name)
   | (loc, ParseTree.PatternMatching (t, patterns)) ->
       (loc, PatternMatching (unsugar_t t, List.map unsugar_pat patterns))
   | (loc, ParseTree.Let ((name, is_rec, (args, (annot, x))), t)) ->
+      let name = new_lower_name_to_value ~allow_underscore:true name in
       (loc, Let ((name, is_rec, unsugar_args args annot x), unsugar_t t))
   | (loc, ParseTree.Fail (ty, (exn, args))) ->
+      let exn = upper_name_to_exn exn in
       (loc, Fail (unsugar_ty ty, (exn, List.map unsugar_t args)))
   | (loc, ParseTree.Try (t, patterns)) ->
       (loc, Try (unsugar_t t, List.map unsugar_try_pattern patterns))
@@ -113,6 +155,7 @@ and unsugar_t = function
 and unsugar_args args annot t =
   let rec aux = function
     | (loc, ParseTree.VArg (name, ty)) :: xs ->
+        let name = new_lower_name_to_value ~allow_underscore:true name in
         let ty = unsugar_ty ty in
         let (ty_xs, xs) = aux xs in
         let ty_xs =
@@ -124,6 +167,7 @@ and unsugar_args args annot t =
         in
         (ty_xs, (loc, Abs ((name, ty), xs)))
     | (loc, ParseTree.TArg (name, k)) :: xs ->
+        let name = new_upper_name_to_type name in
         let ty = (name, unsugar_kind k) in
         let (ty_xs, xs) = aux xs in
         let ty_xs =
@@ -135,6 +179,7 @@ and unsugar_args args annot t =
         in
         (ty_xs, (loc, TAbs (ty, xs)))
     | (loc, ParseTree.EArg name) :: xs ->
+        let name = new_upper_name_to_eff name in
         let (ty_xs, xs) = aux xs in
         let ty_xs =
           let aux (ty_xs, eff) =
@@ -147,7 +192,7 @@ and unsugar_args args annot t =
     | (loc, ParseTree.Unit) :: xs ->
         let x =
           ParseTree.VArg
-            (Builtins.underscore, (loc, ParseTree.Ty Builtins.t_unit))
+            (`Underscore, (loc, ParseTree.Ty Builtins.t_unit_name))
         in
         aux ((loc, x) :: xs)
     | [] ->
@@ -164,34 +209,49 @@ and unsugar_args args annot t =
   | (None, t) -> t
 
 let unsugar_variant (ParseTree.Variant (loc, name, ty)) =
+  let name = new_upper_name_to_value name in
   Variant (loc, name, unsugar_ty ty)
 
 let unsugar_variants = List.map unsugar_variant
 
 let create = function
   | (loc, ParseTree.Value (name, is_rec, (args, (ty, t)))) ->
+      let name = new_lower_name_to_value ~allow_underscore:false name in
       (loc, Value (name, is_rec, unsugar_args args ty t))
   | (loc, ParseTree.Type (name, ty)) ->
+      let name = new_upper_name_to_type name in
       (loc, Type (name, unsugar_ty ty))
   | (loc, ParseTree.Binding (name, ty, content)) ->
+      let name = new_lower_name_to_value ~allow_underscore:false name in
       (loc, Binding (name, unsugar_ty ty, content))
   | (loc, ParseTree.Datatype (name, k, variants)) ->
+      let name = new_upper_name_to_type name in
       (loc, Datatype (name, unsugar_kind k, unsugar_variants variants))
   | (loc, ParseTree.Exception (name, tys)) ->
+      let name = new_upper_name_to_exn name in
       (loc, Exception (name, List.map unsugar_ty tys))
 
 let create = List.map create
 
 let create_interface = function
   | (loc, ParseTree.IVal (name, ty)) ->
+      let name = new_lower_name_to_value ~allow_underscore:false name in
       (loc, InterfaceTree.Val (name, unsugar_ty ty))
   | (loc, ParseTree.IAbstractType (name, k)) ->
+      let name = new_upper_name_to_type name in
       (loc, InterfaceTree.AbstractType (name, unsugar_kind k))
   | (loc, ParseTree.IDatatype (name, k, variants)) ->
+      let name = new_upper_name_to_type name in
       (loc, InterfaceTree.Datatype (name, unsugar_kind k, unsugar_variants variants))
   | (loc, ParseTree.ITypeAlias (name, ty)) ->
+      let name = new_upper_name_to_type name in
       (loc, InterfaceTree.TypeAlias (name, unsugar_ty ty))
   | (loc, ParseTree.IException (name, tys)) ->
+      let name = new_upper_name_to_exn name in
       (loc, InterfaceTree.Exception (name, List.map unsugar_ty tys))
 
 let create_interface = List.map create_interface
+
+let create_imports =
+  let aux (`UpperName name) = Ident.Module.of_list name in
+  List.map aux

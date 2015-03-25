@@ -47,21 +47,41 @@ let dump_eff x =
 let dump_eff_arg name =
   fmt "(%s : φ)" (dump_eff_name name)
 
-let dump_t_name_ty_opt = function
-  | (name, Some ty) ->
-      fmt "(%s : %s)" (dump_t_name name) (dump_k ty)
-  | (name, None) ->
-      dump_t_name name
-
-let dump_t_name_ty_list l = String.concat " " (List.map dump_t_name_ty_opt l)
-
- let string_of_doc doc =
+let string_of_doc doc =
   let buf = Buffer.create 1024 in
   PPrint.ToBuffer.pretty 0.9 80 buf doc;
   Buffer.contents buf
 
 module ParseTree = struct
   open ParseTree
+
+  let dump_name = function
+    | `Underscore -> "_"
+    | `NewLowerName name | `NewUpperName name -> name
+    | `LowerName name | `UpperName name -> String.concat "." name
+
+  let dump_exn_name = dump_name
+  let dump_t_name = dump_name
+  let dump_eff_name = dump_name
+
+  let dump_exn x = String.concat " | " (List.map dump_exn_name x)
+
+  let dump_eff x =
+    let aux (name, args) =
+      fmt "%s [%s]" (dump_eff_name name) (dump_exn args)
+    in
+    String.concat ", " (List.map aux x)
+
+  let dump_eff_arg name =
+    fmt "(%s : φ)" (dump_eff_name name)
+
+  let dump_t_name_ty_opt = function
+    | (name, Some ty) ->
+        fmt "(%s : %s)" (dump_t_name name) (dump_k ty)
+    | (name, None) ->
+        dump_t_name name
+
+  let dump_t_name_ty_list l = String.concat " " (List.map dump_t_name_ty_opt l)
 
   let dump_forall_arg = function
     | Eff name -> dump_eff_arg name
@@ -233,7 +253,7 @@ module ParseTree = struct
 
   and dump_exn_branches branches =
     let dump_args args =
-      String.concat " " (List.map Ident.Name.to_string args)
+      String.concat " " (List.map dump_name args)
     in
     let aux doc ((name, args), t) =
       doc
