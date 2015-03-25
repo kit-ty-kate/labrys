@@ -20,7 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 %{
-  let get_loc startpos endpos =
+  let loc startpos endpos =
     let get_pos pos =
       { Location.pos_lnum = pos.Lexing.pos_lnum
       ; pos_cnum = pos.Lexing.pos_cnum - pos.Lexing.pos_bol
@@ -129,17 +129,17 @@ lambda_aux:
 
 termStrictlyUnclosed:
   | Lambda args = nonempty_args(lambda_aux)
-      { (get_loc $startpos $endpos, ParseTree.Abs args) }
+      { (loc $startpos $endpos, ParseTree.Abs args) }
   | x = let_case In xs = term
-      { (get_loc $startpos $endpos, ParseTree.Let (x, xs)) }
+      { (loc $startpos $endpos, ParseTree.Let (x, xs)) }
   | x = termProtectedPermissive Semicolon y = term
-      { (get_loc $startpos $endpos, ParseTree.Seq (x, y)) }
+      { (loc $startpos $endpos, ParseTree.Seq (x, y)) }
 
 termNonStrictlyUnclosed:
   | x = app
       { x }
   | Fail LBracket ty = typeExpr RBracket exn = exceptionValue
-      { (get_loc $startpos $endpos, ParseTree.Fail (ty, exn)) }
+      { (loc $startpos $endpos, ParseTree.Fail (ty, exn)) }
 
 termUnclosed:
   | x = termStrictlyUnclosed { x }
@@ -149,16 +149,16 @@ termClosed:
   | name = lowerName
   | name = upperName
       { let name = (name :> [ParseTree.upper_name | ParseTree.lower_name]) in
-        (get_loc $startpos $endpos, ParseTree.Val name)
+        (loc $startpos $endpos, ParseTree.Val name)
       }
   | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
-      { (get_loc $startpos $endpos, ParseTree.PatternMatching (t, p)) }
+      { (loc $startpos $endpos, ParseTree.PatternMatching (t, p)) }
   | Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
-      { (get_loc $startpos $endpos, ParseTree.Try (t, p)) }
+      { (loc $startpos $endpos, ParseTree.Try (t, p)) }
   | LParen x = term RParen
       { x }
   | LParen t = term ty = ty_annot RParen
-      { (get_loc $startpos $endpos, ParseTree.Annot (t, ty)) }
+      { (loc $startpos $endpos, ParseTree.Annot (t, ty)) }
 
 term:
   | x = termUnclosed { x }
@@ -170,17 +170,17 @@ termProtectedPermissive:
 
 app:
   | f = termClosed LBracket ty = typeExpr RBracket
-      { (get_loc $startpos $endpos, ParseTree.TApp (f, ty)) }
+      { (loc $startpos $endpos, ParseTree.TApp (f, ty)) }
   | f = app LBracket ty = typeExpr RBracket
-      { (get_loc $startpos $endpos, ParseTree.TApp (f, ty)) }
+      { (loc $startpos $endpos, ParseTree.TApp (f, ty)) }
   | f = termClosed LBracket LBracket eff = eff RBracket RBracket
-      { (get_loc $startpos $endpos, ParseTree.EApp (f, eff)) }
+      { (loc $startpos $endpos, ParseTree.EApp (f, eff)) }
   | f = app LBracket LBracket eff = eff RBracket RBracket
-      { (get_loc $startpos $endpos, ParseTree.EApp (f, eff)) }
+      { (loc $startpos $endpos, ParseTree.EApp (f, eff)) }
   | f = termClosed x = termClosed
-      { (get_loc $startpos $endpos, ParseTree.App (f, x)) }
+      { (loc $startpos $endpos, ParseTree.App (f, x)) }
   | f = app x = termClosed
-      { (get_loc $startpos $endpos, ParseTree.App (f, x)) }
+      { (loc $startpos $endpos, ParseTree.App (f, x)) }
 
 arg:
   | LParen name = newLowerName Colon ty = typeExpr RParen
@@ -197,7 +197,7 @@ args_aux(rest):
       { ([], rest) }
   | x = arg xs = args_aux(rest)
       { let (xs, rest) = xs in
-        ((get_loc $startpos $endpos, x) :: xs, rest)
+        ((loc $startpos $endpos, x) :: xs, rest)
       }
 
 args(rest):
@@ -205,13 +205,13 @@ args(rest):
       { ([], rest) }
   | x = arg xs = args_aux(rest)
       { let (xs, rest) = xs in
-        ((get_loc $startpos $endpos, x) :: xs, rest)
+        ((loc $startpos $endpos, x) :: xs, rest)
       }
 
 nonempty_args(rest):
   | x = arg xs = args_aux(rest)
       { let (xs, rest) = xs in
-        ((get_loc $startpos $endpos, x) :: xs, rest)
+        ((loc $startpos $endpos, x) :: xs, rest)
       }
 
 typeExprStrictlyUnclosed:
@@ -239,18 +239,18 @@ typeExprClosed:
       { snd x }
 
 typeExpr:
-  | x = typeExprUnclosed { (get_loc $startpos $endpos, x) }
-  | x = typeExprClosed { (get_loc $startpos $endpos, x) }
+  | x = typeExprUnclosed { (loc $startpos $endpos, x) }
+  | x = typeExprClosed { (loc $startpos $endpos, x) }
 
 typeExprProtectedPermissive:
-  | x = typeExprNonStrictlyUnclosed { (get_loc $startpos $endpos, x) }
-  | x = typeExprClosed { (get_loc $startpos $endpos, x) }
+  | x = typeExprNonStrictlyUnclosed { (loc $startpos $endpos, x) }
+  | x = typeExprClosed { (loc $startpos $endpos, x) }
 
 tyApp:
   | f = typeExprProtected x = typeExprProtected
       { ParseTree.AppOnTy (f, x) }
   | f = tyApp x = typeExprProtected
-      { ParseTree.AppOnTy ((get_loc $startpos(f) $endpos(f), f), x) }
+      { ParseTree.AppOnTy ((loc $startpos(f) $endpos(f), f), x) }
 
 kindUnclosed:
   | k1 = kindClosed Arrow k2 = kind
@@ -298,7 +298,7 @@ exn_pattern:
 
 variant:
   | name = newUpperName Colon ty = typeExpr
-      { ParseTree.Variant (get_loc $startpos $endpos, name, ty) }
+      { ParseTree.Variant (loc $startpos $endpos, name, ty) }
 
 kindopt:
   | { None }
@@ -324,13 +324,13 @@ pat:
   | name = newLowerName
       { ParseTree.Any name }
   | name = upperName args = list(pat_arg)
-      { ParseTree.TyConstr (get_loc $startpos $endpos, name, args) }
+      { ParseTree.TyConstr (loc $startpos $endpos, name, args) }
 
 pat_arg:
   | name = newLowerName
       { ParseTree.PVal (ParseTree.Any name) }
   | name = upperName
-      { ParseTree.(PVal (TyConstr (get_loc $startpos $endpos, name, []))) }
+      { ParseTree.(PVal (TyConstr (loc $startpos $endpos, name, []))) }
   | LParen p = pat RParen
       { ParseTree.PVal p }
   | LBracket ty = typeExpr RBracket
@@ -390,7 +390,7 @@ import:
 
 (********* Protected rules ***********)
 
-typeExprProtected: x = typeExprClosed { (get_loc $startpos $endpos, x) }
+typeExprProtected: x = typeExprClosed { (loc $startpos $endpos, x) }
 
 
 (********* Functions ***********)
@@ -403,4 +403,4 @@ body_list(body):
   | EOF
       { [] }
   | x = body xs = body_list(body)
-      { (get_loc $startpos $endpos(x), x) :: xs }
+      { (loc $startpos $endpos(x), x) :: xs }
