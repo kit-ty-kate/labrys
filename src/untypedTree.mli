@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = Ident.Name.t
 type eff_name = Ident.Exn.t
-type used_vars = name BatSet.t
+type used_vars = GammaMap.ValueSet.t
 type index = int
 type constr = int
 type arity = int

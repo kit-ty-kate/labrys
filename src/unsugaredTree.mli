@@ -73,13 +73,11 @@ and t = (loc * t')
 
 type variant = Variant of (loc * name * ty)
 
-type top' =
+type top =
   | Value of (name * is_rec * t)
   | Type of (t_name * ty)
   | Binding of (name * ty * string)
   | Datatype of (t_name * Kinds.t * variant list)
   | Exception of (exn_name * ty list)
-
-and top = (loc * top')
 
 type imports = module_name list

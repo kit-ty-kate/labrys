@@ -24,6 +24,7 @@ val t_unit : Ident.Type.t
 val t_unit_name : [`UpperName of string list]
 
 val underscore : Ident.Name.t
+val underscore_loc : Location.t -> Ident.Name.t
 
 val unknown_loc : Location.t
 
@@ -31,3 +32,5 @@ val exn : Ident.Eff.t
 val io : Ident.Eff.t
 
 val effects : Ident.Eff.t list
+
+val main : Ident.Name.t

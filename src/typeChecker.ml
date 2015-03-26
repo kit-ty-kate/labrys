@@ -73,12 +73,13 @@ let get_rec_ty ~loc = function
   | None ->
       Error.fail ~loc "Recursive values must have explicit return type"
 
-let get_ty_from_let_rec ~loc ty =
-  get_rec_ty ~loc (get_ty_from_let ty)
+let get_ty_from_let_rec ty =
+  get_rec_ty ~loc:(fst ty) (get_ty_from_let ty)
 
 let check_type ~loc ~ty:(ty, eff) ~ty_t ~effects gamma =
   let ty =
-    Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
+    Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty
+  in
   if not (Types.equal ty ty_t) then
     Types.Error.fail ~loc ~has:ty_t ~expected:ty;
   begin match eff with
@@ -105,7 +106,7 @@ let rec aux gamma = function
       let abs_ty = Types.func ~param:ty ~eff:effect ~res:ty_expr in
       (Abs (name, expr), abs_ty, Effects.empty)
   | (loc, UnsugaredTree.TAbs ((name, k), t)) ->
-      let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
+      let gamma = Gamma.add_type name (Types.Abstract k) gamma in
       let (expr, ty_expr, effect) = aux gamma t in
       (* TODO: Do I need only that to ensure type soundness with side effects ?
          Do I also need to check for exceptions ? *)
@@ -114,7 +115,7 @@ let rec aux gamma = function
       let abs_ty = Types.forall ~param:name ~kind:k ~res:ty_expr in
       (expr, abs_ty, effect)
   | (loc, UnsugaredTree.EAbs (name, t)) ->
-      let gamma = Gamma.add_effect ~loc name gamma in
+      let gamma = Gamma.add_effect name gamma in
       let (expr, ty_expr, effect) = aux gamma t in
       (* TODO: Do I need only that to ensure type soundness with side effects ?
          Do I also need to check for exceptions ? *)
@@ -166,13 +167,11 @@ let rec aux gamma = function
       let gamma = Gamma.add_value name ty_t gamma in
       let (xs, ty_xs, effect2) = aux gamma xs in
       (Let (name, t, xs), ty_xs, Effects.union effect1 effect2)
-  | (loc, UnsugaredTree.Let ((name, UnsugaredTree.Rec, t), xs)) when well_formed_rec t ->
-      let ty = get_ty_from_let_rec ~loc t in
+  | (_, UnsugaredTree.Let ((name, UnsugaredTree.Rec, t), xs)) when well_formed_rec t ->
+      let ty = get_ty_from_let_rec t in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
       let gamma = Gamma.add_value name ty gamma in
-      let (t, ty_t, effect1) = aux gamma t in
-      if not (Types.equal ty ty_t) then
-        Types.Error.fail ~loc ~has:ty_t ~expected:ty;
+      let (t, _, effect1) = aux gamma t in
       let (xs, ty_xs, effect2) = aux gamma xs in
       (LetRec (name, t, xs), ty_xs, Effects.union effect1 effect2)
   | (loc, UnsugaredTree.Let ((_, UnsugaredTree.Rec, _), _)) ->
@@ -240,67 +239,64 @@ let transform_variants ~datatype gamma =
   in
   aux 0
 
-let is_main ~loc ~has_main x =
-  let main = Ident.Name.of_list ["main"] in
-  let b = Ident.Name.equal x main in
+let is_main ~has_main x =
+  let b = Ident.Name.equal x Builtins.main in
   if has_main && b then
-    Error.fail ~loc "There must be only one main";
+    Error.fail ~loc:(Ident.Name.loc x) "There must be only one main";
   b
 
-let check_effects ~loc ~with_main ~has_main ~name (t, ty, effects) =
-  let is_main = with_main && is_main ~loc ~has_main name in
+let check_effects ~with_main ~has_main ~name (t, ty, effects) =
+  let is_main = with_main && is_main ~has_main name in
   if not (is_main || Effects.is_empty effects) then
-    Error.fail ~loc "Effects are not allowed on toplevel";
+    Error.fail ~loc:(Ident.Name.loc name) "Effects are not allowed on toplevel";
   if is_main && not (Types.is_unit ty) then
     Error.fail
-      ~loc
+      ~loc:(Ident.Name.loc name)
       "The main must have type '%s' but has type '%s'"
       (Ident.Type.to_string Builtins.t_unit)
       (Types.to_string ty);
   (is_main, t, ty)
 
 let rec from_parse_tree ~with_main ~has_main gamma = function
-  | (loc, UnsugaredTree.Value (name, UnsugaredTree.NonRec, term)) :: xs ->
+  | UnsugaredTree.Value (name, UnsugaredTree.NonRec, term) :: xs ->
       let ty = get_ty_from_let term in
-      let (has_main, x, ty_t) = check_effects ~loc ~with_main ~has_main ~name (aux gamma term) in
-      check_type_opt ~loc ~ty ~ty_t ~effects:Effects.empty gamma;
+      let (has_main, x, ty_t) = check_effects ~with_main ~has_main ~name (aux gamma term) in
+      check_type_opt ~loc:(fst term) ~ty ~ty_t ~effects:Effects.empty gamma;
       let gamma = Gamma.add_value name ty_t gamma in
       let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
       (Value (name, x) :: xs, has_main, gamma)
-  | (loc, UnsugaredTree.Value (name, UnsugaredTree.Rec, term)) :: xs when well_formed_rec term ->
-      let ty = get_ty_from_let_rec ~loc term in
+  | UnsugaredTree.Value (name, UnsugaredTree.Rec, term) :: xs when well_formed_rec term ->
+      let ty = get_ty_from_let_rec term in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
       let gamma = Gamma.add_value name ty gamma in
-      let (has_main, x, ty_x) = check_effects ~loc ~with_main ~has_main ~name (aux gamma term) in
-      if not (Types.equal ty ty_x) then
-        Types.Error.fail ~loc ~has:ty_x ~expected:ty;
+      let (has_main, x, _) = check_effects ~with_main ~has_main ~name (aux gamma term) in
       let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
       (RecValue (name, x) :: xs, has_main, gamma)
-  | (loc, UnsugaredTree.Value (_, UnsugaredTree.Rec, _)) :: _ ->
-      fail_rec_val ~loc
-  | (loc, UnsugaredTree.Type (name, ty)) :: xs ->
+  | UnsugaredTree.Value (name, UnsugaredTree.Rec, _) :: _ ->
+      fail_rec_val ~loc:(Ident.Name.loc name)
+  | UnsugaredTree.Type (name, ty) :: xs ->
       let ty = Types.of_parse_tree_kind ~pure_arrow:`Forbid gamma.Gamma.types gamma.Gamma.effects ty in
-      let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
+      let gamma = Gamma.add_type name (Types.Alias ty) gamma in
       from_parse_tree ~with_main ~has_main gamma xs
-  | (loc, UnsugaredTree.Binding (name, ty, binding)) :: xs ->
+  | UnsugaredTree.Binding (name, ty, binding) :: xs ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
       if not (Types.has_io ty) then
         Error.fail
-          ~loc
+          ~loc:(Ident.Name.loc name)
           "The binding '%s' cannot be pure. \
            All bindings have to use the IO effect"
           (Ident.Name.to_string name);
       let gamma = Gamma.add_value name ty gamma in
       let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
       (Binding (name, Types.size ty, binding) :: xs, has_main, gamma)
-  | (loc, UnsugaredTree.Datatype (name, kind, variants)) :: xs ->
-      let gamma = Gamma.add_type ~loc name (Types.Abstract kind) gamma in
+  | UnsugaredTree.Datatype (name, kind, variants) :: xs ->
+      let gamma = Gamma.add_type name (Types.Abstract kind) gamma in
       let (variants, gamma) = transform_variants ~datatype:name gamma variants in
       let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
       (Datatype variants :: xs, has_main, gamma)
-  | (loc, UnsugaredTree.Exception (name, args)) :: xs ->
+  | UnsugaredTree.Exception (name, args) :: xs ->
       let args = List.map (Types.of_parse_tree ~pure_arrow:`Forbid gamma.Gamma.types gamma.Gamma.effects) args in
-      let gamma = Gamma.add_exception ~loc name args gamma in
+      let gamma = Gamma.add_exception name args gamma in
       let (xs, has_main, gamma) = from_parse_tree ~with_main ~has_main gamma xs in
       (Exception name :: xs, has_main, gamma)
   | [] ->

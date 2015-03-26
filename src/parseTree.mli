@@ -19,13 +19,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type new_lower_name = [`NewLowerName of string | `Underscore]
-type new_upper_name = [`NewUpperName of string]
-
-type lower_name = [`LowerName of string list]
-type upper_name = [`UpperName of string list]
-
 type loc = Location.t
+
+type new_lower_name = (loc * [`NewLowerName of string | `Underscore])
+type new_upper_name = (loc * [`NewUpperName of string])
+
+type lower_name = (loc * [`LowerName of string list])
+type upper_name = (loc * [`UpperName of string list])
 
 type ty_arg = (new_upper_name * Kinds.t option)
 
@@ -72,7 +72,8 @@ type t' =
   | App of (t * t)
   | TApp of (t * ty)
   | EApp of (t * eff list)
-  | Val of [lower_name | upper_name]
+  | LowerVal of lower_name
+  | UpperVal of upper_name
   | PatternMatching of (t * (pattern * t) list)
   | Let of ((new_lower_name * is_rec * (arg list * (ty_annot option * t))) * t)
   | Fail of (ty * (upper_name * t list))
@@ -84,22 +85,18 @@ and t = (loc * t')
 
 type variant = Variant of (loc * new_upper_name * ty)
 
-type top' =
+type top =
   | Value of (new_lower_name * is_rec * (arg list * (ty_annot option * t)))
   | Type of (new_upper_name * ty)
   | Binding of (new_lower_name* ty * string)
   | Datatype of (new_upper_name * Kinds.t option * variant list)
   | Exception of (new_upper_name * ty list)
 
-and top = (loc * top')
-
 type imports = upper_name list
 
-type interface' =
+type interface =
   | IVal of (new_lower_name * ty)
   | IAbstractType of (new_upper_name * Kinds.t option)
   | IDatatype of (new_upper_name * Kinds.t option * variant list)
   | ITypeAlias of (new_upper_name * ty)
   | IException of (new_upper_name * ty list)
-
-type interface = (loc * interface')

@@ -54,6 +54,11 @@ module Value = struct
   include Utils(Self)(Ident.Name)
 end
 
+module ValueSet = struct
+  include Set.Make(Ident.Name)
+  include Exceptionless
+end
+
 module Types = struct
   module Self = struct
     include Map.Make(Ident.Type)
@@ -63,10 +68,10 @@ module Types = struct
   include Self
   include Utils(Self)(Ident.Type)
 
-  let add ~loc k x map =
+  let add k x map =
     if mem k map then
       Error.fail
-        ~loc
+        ~loc:(Ident.Type.loc k)
         "A module cannot contain several times the type '%s'"
         (Ident.Type.to_string k);
     add k x map
@@ -98,10 +103,10 @@ module Exn = struct
   include Self
   include Utils(Self)(Ident.Exn)
 
-  let add ~loc k x map =
+  let add k x map =
     if mem k map then
       Error.fail
-        ~loc
+        ~loc:(Ident.Exn.loc k)
         "A module cannot contain several times the exception '%s'"
         (Ident.Exn.to_string k);
     add k x map
@@ -111,10 +116,10 @@ module Eff = struct
   include Set.Make(Ident.Eff)
   include Exceptionless
 
-  let add ~loc k map =
+  let add k map =
     if mem k map then
       Error.fail
-        ~loc
+        ~loc:(Ident.Eff.loc k)
         "A module cannot contain several times the effect '%s'"
         (Ident.Eff.to_string k);
     add k map

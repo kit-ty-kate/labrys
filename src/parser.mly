@@ -147,10 +147,9 @@ termUnclosed:
 
 termClosed:
   | name = lowerName
+      { (loc $startpos $endpos, ParseTree.LowerVal name) }
   | name = upperName
-      { let name = (name :> [ParseTree.upper_name | ParseTree.lower_name]) in
-        (loc $startpos $endpos, ParseTree.Val name)
-      }
+      { (loc $startpos $endpos, ParseTree.UpperVal name) }
   | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
       { (loc $startpos $endpos, ParseTree.PatternMatching (t, p)) }
   | Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
@@ -345,7 +344,7 @@ lowerName_aux:
   | m = UpperName Dot xs = lowerName_aux
       { m :: xs }
 
-lowerName: x = lowerName_aux { `LowerName x }
+lowerName: x = lowerName_aux { (loc $startpos $endpos, `LowerName x) }
 
 upperName_aux:
   | name = UpperName
@@ -353,17 +352,17 @@ upperName_aux:
   | m = UpperName Dot xs = upperName_aux
       { m :: xs }
 
-upperName: x = upperName_aux { `UpperName x }
+upperName: x = upperName_aux { (loc $startpos $endpos, `UpperName x) }
 
 %inline newLowerName:
   | name = LowerName
-      { `NewLowerName name }
+      { (loc $startpos $endpos, `NewLowerName name) }
   | Underscore
-      { `Underscore }
+      { (loc $startpos $endpos, `Underscore) }
 
 newUpperName:
   | name = UpperName
-      { `NewUpperName name }
+      { (loc $startpos $endpos, `NewUpperName name) }
 
 
 (********* Interface *********)
@@ -403,4 +402,4 @@ body_list(body):
   | EOF
       { [] }
   | x = body xs = body_list(body)
-      { (loc $startpos $endpos(x), x) :: xs }
+      { x :: xs }

@@ -39,10 +39,10 @@ let empty =
   }
 
 let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
-let add_type ~loc k x self = {self with types = GammaMap.Types.add ~loc k x self.types}
+let add_type k x self = {self with types = GammaMap.Types.add k x self.types}
 let add_constr k k2 x self = {self with constructors = GammaMap.Constr.add k k2 x self.constructors}
-let add_exception ~loc k x self = {self with exceptions = GammaMap.Exn.add ~loc k x self.exceptions}
-let add_effect ~loc k self = {self with effects = GammaMap.Eff.add ~loc k self.effects}
+let add_exception k x self = {self with exceptions = GammaMap.Exn.add k x self.exceptions}
+let add_effect k self = {self with effects = GammaMap.Eff.add k self.effects}
 
 let union (modul, a) b =
   { values = GammaMap.Value.union (modul, a.values) b.values

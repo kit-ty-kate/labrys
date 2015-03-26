@@ -27,11 +27,14 @@ module Value : sig
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
 end
 
+module ValueSet : sig
+  include BatSet.S with type elt = Ident.Name.t
+  include module type of Exceptionless
+end
+
 module Types : sig
   include BatMap.S with type key = Ident.Type.t
   include module type of Exceptionless
-
-  val add : loc:Location.t -> key -> 'a -> 'a t -> 'a t
 
   val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
@@ -53,8 +56,6 @@ module Exn : sig
   include BatMap.S with type key = Ident.Exn.t
   include module type of Exceptionless
 
-  val add : loc:Location.t -> key -> 'a -> 'a t -> 'a t
-
   val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
 end
@@ -62,6 +63,4 @@ end
 module Eff : sig
   include BatSet.S with type elt = Ident.Eff.t
   include module type of Exceptionless
-
-  val add : loc:Location.t -> elt -> t -> t
 end

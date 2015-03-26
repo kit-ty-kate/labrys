@@ -24,22 +24,30 @@ open Monomorphic.None
 
 open UnsugaredTree
 
-let new_upper_name_to_value (`NewUpperName name) = Ident.Name.of_list [name]
-let new_upper_name_to_type (`NewUpperName name) = Ident.Type.of_list [name]
-let new_upper_name_to_exn (`NewUpperName name) = Ident.Exn.of_list [name]
-let new_upper_name_to_eff (`NewUpperName name) = Ident.Eff.of_list [name]
+let new_upper_name_to_value (loc, `NewUpperName name) =
+  Ident.Name.of_list ~loc [name]
+let new_upper_name_to_type (loc, `NewUpperName name) =
+  Ident.Type.of_list ~loc [name]
+let new_upper_name_to_exn (loc, `NewUpperName name) =
+  Ident.Exn.of_list ~loc [name]
+let new_upper_name_to_eff (loc, `NewUpperName name) =
+  Ident.Eff.of_list ~loc [name]
 
-let upper_name_to_value (`UpperName name) = Ident.Name.of_list name
-let upper_name_to_type (`UpperName name) = Ident.Type.of_list name
-let upper_name_to_exn (`UpperName name) = Ident.Exn.of_list name
+let upper_name_to_value (loc, `UpperName name) =
+  Ident.Name.of_list ~loc name
+let upper_name_to_type (loc, `UpperName name) =
+  Ident.Type.of_list ~loc name
+let upper_name_to_exn (loc, `UpperName name) =
+  Ident.Exn.of_list ~loc name
 
 let new_lower_name_to_value ~allow_underscore = function
-  | `NewLowerName name -> Ident.Name.of_list [name]
-  | `Underscore when allow_underscore -> Builtins.underscore
-  | `Underscore -> assert false (* TODO: Get location *)
+  | (loc, `NewLowerName name) -> Ident.Name.of_list ~loc [name]
+  | (loc, `Underscore) when allow_underscore -> Builtins.underscore_loc loc
+  | (loc, `Underscore) ->
+      Error.fail ~loc "Wildcards are not allowed here"
 
-let name_to_value = function
-  | `LowerName name | `UpperName name -> Ident.Name.of_list name
+let lower_name_to_value (loc, `LowerName name) =
+  Ident.Name.of_list ~loc name
 
 let unsugar_kind = Option.default Kinds.Star
 
@@ -132,8 +140,11 @@ and unsugar_t = function
   | (loc, ParseTree.EApp (t, eff)) ->
       let eff = unsugar_eff eff in
       (loc, EApp (unsugar_t t, eff))
-  | (loc, ParseTree.Val name) ->
-      let name = name_to_value name in
+  | (loc, ParseTree.LowerVal name) ->
+      let name = lower_name_to_value name in
+      (loc, Val name)
+  | (loc, ParseTree.UpperVal name) ->
+      let name = upper_name_to_value name in
       (loc, Val name)
   | (loc, ParseTree.PatternMatching (t, patterns)) ->
       (loc, PatternMatching (unsugar_t t, List.map unsugar_pat patterns))
@@ -192,7 +203,7 @@ and unsugar_args args annot t =
     | (loc, ParseTree.Unit) :: xs ->
         let x =
           ParseTree.VArg
-            (`Underscore, (loc, ParseTree.Ty Builtins.t_unit_name))
+            ((loc, `Underscore), (loc, ParseTree.Ty (loc, Builtins.t_unit_name)))
         in
         aux ((loc, x) :: xs)
     | [] ->
@@ -215,43 +226,43 @@ let unsugar_variant (ParseTree.Variant (loc, name, ty)) =
 let unsugar_variants = List.map unsugar_variant
 
 let create = function
-  | (loc, ParseTree.Value (name, is_rec, (args, (ty, t)))) ->
+  | ParseTree.Value (name, is_rec, (args, (ty, t))) ->
       let name = new_lower_name_to_value ~allow_underscore:false name in
-      (loc, Value (name, is_rec, unsugar_args args ty t))
-  | (loc, ParseTree.Type (name, ty)) ->
+      Value (name, is_rec, unsugar_args args ty t)
+  | ParseTree.Type (name, ty) ->
       let name = new_upper_name_to_type name in
-      (loc, Type (name, unsugar_ty ty))
-  | (loc, ParseTree.Binding (name, ty, content)) ->
+      Type (name, unsugar_ty ty)
+  | ParseTree.Binding (name, ty, content) ->
       let name = new_lower_name_to_value ~allow_underscore:false name in
-      (loc, Binding (name, unsugar_ty ty, content))
-  | (loc, ParseTree.Datatype (name, k, variants)) ->
+      Binding (name, unsugar_ty ty, content)
+  | ParseTree.Datatype (name, k, variants) ->
       let name = new_upper_name_to_type name in
-      (loc, Datatype (name, unsugar_kind k, unsugar_variants variants))
-  | (loc, ParseTree.Exception (name, tys)) ->
+      Datatype (name, unsugar_kind k, unsugar_variants variants)
+  | ParseTree.Exception (name, tys) ->
       let name = new_upper_name_to_exn name in
-      (loc, Exception (name, List.map unsugar_ty tys))
+      Exception (name, List.map unsugar_ty tys)
 
 let create = List.map create
 
 let create_interface = function
-  | (loc, ParseTree.IVal (name, ty)) ->
+  | ParseTree.IVal (name, ty) ->
       let name = new_lower_name_to_value ~allow_underscore:false name in
-      (loc, InterfaceTree.Val (name, unsugar_ty ty))
-  | (loc, ParseTree.IAbstractType (name, k)) ->
+      InterfaceTree.Val (name, unsugar_ty ty)
+  | ParseTree.IAbstractType (name, k) ->
       let name = new_upper_name_to_type name in
-      (loc, InterfaceTree.AbstractType (name, unsugar_kind k))
-  | (loc, ParseTree.IDatatype (name, k, variants)) ->
+      InterfaceTree.AbstractType (name, unsugar_kind k)
+  | ParseTree.IDatatype (name, k, variants) ->
       let name = new_upper_name_to_type name in
-      (loc, InterfaceTree.Datatype (name, unsugar_kind k, unsugar_variants variants))
-  | (loc, ParseTree.ITypeAlias (name, ty)) ->
+      InterfaceTree.Datatype (name, unsugar_kind k, unsugar_variants variants)
+  | ParseTree.ITypeAlias (name, ty) ->
       let name = new_upper_name_to_type name in
-      (loc, InterfaceTree.TypeAlias (name, unsugar_ty ty))
-  | (loc, ParseTree.IException (name, tys)) ->
+      InterfaceTree.TypeAlias (name, unsugar_ty ty)
+  | ParseTree.IException (name, tys) ->
       let name = new_upper_name_to_exn name in
-      (loc, InterfaceTree.Exception (name, List.map unsugar_ty tys))
+      InterfaceTree.Exception (name, List.map unsugar_ty tys)
 
 let create_interface = List.map create_interface
 
 let create_imports =
-  let aux (`UpperName name) = Ident.Module.of_list name in
+  let aux (_, `UpperName name) = Ident.Module.of_list name in
   List.map aux

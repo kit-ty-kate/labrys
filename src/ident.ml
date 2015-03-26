@@ -33,25 +33,27 @@ module Module = struct
 end
 
 module Name = struct
-  type t = string list
+  type t = (Location.t * string list)
 
-  let compare = List.compare String.compare
+  let compare (_, x) (_, y) = List.compare String.compare x y
 
-  let equal = List.eq String.equal
+  let equal (_, x) (_, y) = List.eq String.equal x y
 
   let prepend modul = function
-    | [] -> assert false
-    | [_] as x -> modul @ x
+    | (_, []) -> assert false
+    | (loc, ([_] as x)) -> (loc, modul @ x)
     | x -> x
 
-  let of_list x = x
-  let to_string = String.concat "."
+  let of_list ~loc x = (loc, x)
+  let to_string (_, name) = String.concat "." name
+
+  let loc = fst
 
   let unique self n = match self with
-    | [name] ->
-        [fmt "%s__%d" name n]
-    | _::_
-    | [] -> assert false
+    | (loc, [name]) ->
+        (loc, [fmt "%s__%d" name n])
+    | (_, _::_)
+    | (_, []) -> assert false
 end
 
 module Type = Name

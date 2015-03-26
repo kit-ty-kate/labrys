@@ -86,7 +86,7 @@ let prepend_builtins tree =
   let loc = Builtins.unknown_loc in
   let ty = (loc, UnsugaredTree.Ty Builtins.t_unit) in
   let variants = [UnsugaredTree.Variant (loc, Builtins.unit, ty)] in
-  (loc, UnsugaredTree.Datatype (Builtins.t_unit, Kinds.Star, variants)) :: tree
+  UnsugaredTree.Datatype (Builtins.t_unit, Kinds.Star, variants) :: tree
 
 let rec build_intf parent_module =
   let (imports, tree) = parse (ModulePath.intf parent_module) Parser.mainInterface in

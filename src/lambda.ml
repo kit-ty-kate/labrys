@@ -24,6 +24,8 @@ open Monomorphic.None
 
 open UntypedTree
 
+module Set = GammaMap.ValueSet
+
 let rec of_patterns = function
   | Pattern.Leaf label ->
       Leaf label
@@ -121,7 +123,9 @@ let create_dyn_functions zero_case n_case term_case (n, name, linkage) =
     | 0 ->
         term_case params
     | n ->
-        let name = Ident.Name.of_list [string_of_int n] in
+        let name =
+          Ident.Name.of_list ~loc:Builtins.unknown_loc [string_of_int n]
+        in
         let params = name :: params in
         let (t, used_vars) = aux params (pred n) in
         let used_vars = Set.remove name used_vars in
@@ -131,7 +135,9 @@ let create_dyn_functions zero_case n_case term_case (n, name, linkage) =
   | 0 ->
       zero_case ()
   | n ->
-      let name_param = Ident.Name.of_list [string_of_int n] in
+      let name_param =
+        Ident.Name.of_list ~loc:Builtins.unknown_loc [string_of_int n]
+      in
       let params = [name_param] in
       let (t, used_vars) = aux params (pred n) in
       let used_vars = Set.remove name_param used_vars in

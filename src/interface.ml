@@ -26,17 +26,17 @@ open InterfaceTree
 
 let compile gamma =
   let rec compile gammaT gammaE gamma = function
-    | (_loc, Val (name, ty)) :: xs ->
+    | Val (name, ty) :: xs ->
         let ty = Types.of_parse_tree ~pure_arrow:`Partial gammaT gammaE ty in
         let gamma = Gamma.add_value name ty gamma in
         compile gammaT gammaE gamma xs
-    | (loc, AbstractType (name, k)) :: xs ->
-        let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
-        let gammaT = GammaMap.Types.add ~loc name (Types.Abstract k) gammaT in
+    | AbstractType (name, k) :: xs ->
+        let gamma = Gamma.add_type name (Types.Abstract k) gamma in
+        let gammaT = GammaMap.Types.add name (Types.Abstract k) gammaT in
         compile gammaT gammaE gamma xs
-    | (loc, Datatype (name, k, variants)) :: xs ->
-        let gamma = Gamma.add_type ~loc name (Types.Abstract k) gamma in
-        let gammaT = GammaMap.Types.add ~loc name (Types.Abstract k) gammaT in
+    | Datatype (name, k, variants) :: xs ->
+        let gamma = Gamma.add_type name (Types.Abstract k) gamma in
+        let gammaT = GammaMap.Types.add name (Types.Abstract k) gammaT in
         let gamma =
           let aux ~datatype gamma i (UnsugaredTree.Variant (loc, name, ty)) =
             let ty = Types.of_parse_tree ~pure_arrow:`Partial gammaT gammaE ty in
@@ -49,18 +49,18 @@ let compile gamma =
           List.fold_lefti (aux ~datatype:name) gamma variants
         in
         compile gammaT gammaE gamma xs
-    | (loc, TypeAlias (name, ty)) :: xs ->
+    | TypeAlias (name, ty) :: xs ->
         let ty =
           Types.of_parse_tree_kind ~pure_arrow:`Forbid gammaT gammaE ty
         in
-        let gamma = Gamma.add_type ~loc name (Types.Alias ty) gamma in
-        let gammaT = GammaMap.Types.add ~loc name (Types.Alias ty) gammaT in
+        let gamma = Gamma.add_type name (Types.Alias ty) gamma in
+        let gammaT = GammaMap.Types.add name (Types.Alias ty) gammaT in
         compile gammaT gammaE gamma xs
-    | (loc, Exception (name, args)) :: xs ->
+    | Exception (name, args) :: xs ->
         let args =
           List.map (Types.of_parse_tree ~pure_arrow:`Forbid gammaT gammaE) args
         in
-        let gamma = Gamma.add_exception ~loc name args gamma in
+        let gamma = Gamma.add_exception name args gamma in
         compile gammaT gammaE gamma xs
     | [] ->
         gamma

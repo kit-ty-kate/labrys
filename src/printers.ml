@@ -56,9 +56,9 @@ module ParseTree = struct
   open ParseTree
 
   let dump_name = function
-    | `Underscore -> "_"
-    | `NewLowerName name | `NewUpperName name -> name
-    | `LowerName name | `UpperName name -> String.concat "." name
+    | (_, `Underscore) -> "_"
+    | (_, `NewLowerName name) | (_, `NewUpperName name) -> name
+    | (_, `LowerName name) | (_, `UpperName name) -> String.concat "." name
 
   let dump_exn_name = dump_name
   let dump_t_name = dump_name
@@ -170,7 +170,9 @@ module ParseTree = struct
            ^^ PPrint.string (fmt "[[%s]]" (dump_eff eff))
            ^^ PPrint.rparen
           )
-    | (_, Val name) ->
+    | (_, LowerVal name) ->
+        PPrint.string (dump_name name)
+    | (_, UpperVal name) ->
         PPrint.string (dump_name name)
     | (_, PatternMatching (t, cases)) ->
         PPrint.group
@@ -277,28 +279,28 @@ module ParseTree = struct
     List.fold_left aux PPrint.empty variants
 
   let dump = function
-    | (_, Value (name, is_rec, (args, (ty, t)))) ->
+    | Value (name, is_rec, (args, (ty, t))) ->
         let ty = dump_ty_opt ty in
         let is_rec = dump_rec is_rec in
         PPrint.group
           (PPrint.string (fmt "let%s %s %s : %s =" is_rec (dump_name name) (dump_args args) ty)
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
-    | (_, Type (name, ty)) ->
+    | Type (name, ty) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
-    | (_, Binding (name, ty, content)) ->
+    | Binding (name, ty, content) ->
         PPrint.string (fmt "let %s : %s = begin" (dump_name name) (dump_ty ty))
         ^^ PPrint.break 1
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | (_, Datatype (name, None, variants)) ->
+    | Datatype (name, None, variants) ->
         PPrint.string (fmt "type %s =" (dump_t_name name))
         ^^ PPrint.nest 2 (dump_variants variants)
-    | (_, Datatype (name, Some k, variants)) ->
+    | Datatype (name, Some k, variants) ->
         PPrint.string (fmt "type %s : %s =" (dump_t_name name) (dump_k k))
         ^^ PPrint.nest 2 (dump_variants variants)
-    | (_, Exception (name, args)) ->
+    | Exception (name, args) ->
         PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))
 
   let dump top =
@@ -488,24 +490,24 @@ module UnsugaredTree = struct
     List.fold_left aux PPrint.empty variants
 
   let dump = function
-    | (_, Value (name, is_rec, t)) ->
+    | Value (name, is_rec, t) ->
         let is_rec = dump_rec is_rec in
         PPrint.group
           (PPrint.string (fmt "let%s %s =" is_rec (dump_name name))
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
-    | (_, Type (name, ty)) ->
+    | Type (name, ty) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
-    | (_, Binding (name, ty, content)) ->
+    | Binding (name, ty, content) ->
         PPrint.string (fmt "let %s : %s = begin" (dump_name name) (dump_ty ty))
         ^^ PPrint.break 1
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | (_, Datatype (name, k, variants)) ->
+    | Datatype (name, k, variants) ->
         PPrint.string (fmt "type %s : %s =" (dump_t_name name) (dump_k k))
         ^^ PPrint.nest 2 (dump_variants variants)
-    | (_, Exception (name, args)) ->
+    | Exception (name, args) ->
         PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))
 
   let dump top =
@@ -731,7 +733,7 @@ module UntypedTree = struct
     let aux name acc =
       fmt "%s %s" acc (dump_name name)
     in
-    Set.fold aux used_vars "Ø"
+    GammaMap.ValueSet.fold aux used_vars "Ø"
 
   let rec dump_t = function
     | Abs (name, used_vars, t) ->

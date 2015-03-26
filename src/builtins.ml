@@ -22,17 +22,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let unit = Ident.Name.of_list ["Unit"]
-let t_unit = Ident.Type.of_list ["Unit"]
-let t_unit_name = `UpperName ["Unit"]
-
-let underscore = Ident.Name.of_list ["_"]
-
 let unknown_loc =
   let pos = Location.{pos_lnum = -1; pos_cnum = -1} in
   Location.{loc_start = pos; loc_end = pos}
 
-let exn = Ident.Eff.of_list ["Exn"]
-let io = Ident.Eff.of_list ["IO"]
+let unit = Ident.Name.of_list ~loc:unknown_loc ["Unit"]
+let t_unit = Ident.Type.of_list ~loc:unknown_loc ["Unit"]
+let t_unit_name = `UpperName ["Unit"]
+
+let underscore_loc loc = Ident.Name.of_list ~loc ["_"]
+let underscore = underscore_loc unknown_loc
+
+let exn = Ident.Eff.of_list ~loc:unknown_loc ["Exn"]
+let io = Ident.Eff.of_list ~loc:unknown_loc ["IO"]
 
 let effects = [io; exn]
+
+let main = Ident.Name.of_list ~loc:unknown_loc ["main"]

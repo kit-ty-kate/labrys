@@ -35,8 +35,10 @@ module Name : sig
 
   val prepend : Module.t -> t -> t
 
-  val of_list : string list -> t
+  val of_list : loc:Location.t -> string list -> t
   val to_string : t -> string
+
+  val loc : t -> Location.t
 
   val unique : t -> int -> t
 end

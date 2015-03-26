@@ -26,11 +26,9 @@ type ty = UnsugaredTree.ty
 type loc = Location.t
 type variant = UnsugaredTree.variant
 
-type t' =
+type t =
   | Val of (name * ty)
   | AbstractType of (t_name * Kinds.t)
   | Datatype of (t_name * Kinds.t * variant list)
   | TypeAlias of (t_name * ty)
   | Exception of (exn_name * ty list)
-
-type t = (loc * t')

@@ -22,6 +22,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
+module Set = GammaMap.ValueSet
+
 type t = Llvm.llmodule
 
 let fmt = Printf.sprintf

@@ -132,19 +132,19 @@ let rec of_parse_tree_kind ~pure_arrow gammaT gammaE = function
             (Ident.Type.to_string name)
       end
   | (loc, UnsugaredTree.Forall ((name, k), ret)) ->
-      let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
+      let gammaT = GammaMap.Types.add name (Abstract k) gammaT in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow gammaT gammaE ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (Forall (name, k, ret), Kinds.Star)
   | (loc, UnsugaredTree.ForallEff (name, ret)) ->
-      let gammaE = GammaMap.Eff.add ~loc name gammaE in
+      let gammaE = GammaMap.Eff.add name gammaE in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow gammaT gammaE ret in
       if Kinds.not_star kx then
         fail_not_star ~loc "forall";
       (ForallEff (name, ret), Kinds.Star)
-  | (loc, UnsugaredTree.AbsOnTy ((name, k), ret)) ->
-      let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
+  | (_, UnsugaredTree.AbsOnTy ((name, k), ret)) ->
+      let gammaT = GammaMap.Types.add name (Abstract k) gammaT in
       let (ret, kret) = of_parse_tree_kind ~pure_arrow gammaT gammaE ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
   | (loc, UnsugaredTree.AppOnTy ((_, UnsugaredTree.AbsOnTy ((name, k), t)), x)) ->
@@ -152,7 +152,7 @@ let rec of_parse_tree_kind ~pure_arrow gammaT gammaE = function
       let (x, kx) = of_parse_tree_kind ~pure_arrow:pa gammaT gammaE x in
       if not (Kinds.equal k kx) then
         kind_missmatch ~loc ~has:kx ~on:k;
-      let gammaT = GammaMap.Types.add ~loc name (Abstract k) gammaT in
+      let gammaT = GammaMap.Types.add name (Abstract k) gammaT in
       let (t, kt) = of_parse_tree_kind ~pure_arrow gammaT gammaE t in
       (replace ~from:name ~ty:x t, kt)
   | (loc, UnsugaredTree.AppOnTy (f, x)) ->
