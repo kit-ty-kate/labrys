@@ -18,7 +18,7 @@ let zero : Int = begin
   @.zero = constant i8 0
 end
 
-let id X (x:X) = x
+let id X (x:X) = (x : X)
 
 let test = id [Int] zero
 
