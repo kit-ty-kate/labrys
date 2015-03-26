@@ -37,13 +37,6 @@ val is_subset_of : (Ident.Eff.t * Ident.Eff.t) list -> t -> t -> bool
 
 val has_io : t -> bool
 
-val add :
-  loc:Location.t ->
-  GammaMap.Eff.t ->
-  (Ident.Eff.t * Ident.Exn.t list) ->
-  t ->
-  t
-
 val add_exn : Ident.Exn.t -> t -> t
 
 val union : t -> t -> t

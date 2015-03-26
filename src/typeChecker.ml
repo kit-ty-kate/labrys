@@ -84,7 +84,7 @@ let check_type ~loc ~ty:(ty, eff) ~ty_t ~effects gamma =
     Types.Error.fail ~loc ~has:ty_t ~expected:ty;
   begin match eff with
   | Some eff ->
-      let eff = List.fold_right (Effects.add ~loc gamma.Gamma.effects) eff Effects.empty in
+      let eff = Effects.of_list ~loc gamma.Gamma.effects eff in
       if not (Effects.equal [] eff effects) then
         Error.fail
           ~loc

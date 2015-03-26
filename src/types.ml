@@ -299,7 +299,7 @@ let apply_ty ~loc ~ty_x ~kind_x = function
       let res = replace ~from:ty ~ty:ty_x res in
       (ty, res)
   | Forall (_, k, _) ->
-      kind_eff_missmatch ~loc ~has:(`Kind kind_x) ~on:(`Kind k)
+      kind_missmatch ~loc ~has:kind_x ~on:k
   | ForallEff _ ->
       kind_eff_missmatch ~loc ~has:(`Kind kind_x) ~on:`Eff
   | (Fun _ as ty)
