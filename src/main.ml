@@ -58,6 +58,8 @@ let cmd =
 
 let () =
   match Cmdliner.Term.eval cmd with
+  | `Help
+  | `Version
   | `Ok None -> exit 0
   | `Ok (Some x) -> prerr_endline x; exit 1
-  | _ -> exit 1
+  | `Error _ -> exit 1
