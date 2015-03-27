@@ -61,26 +61,30 @@ val size : t -> int
 val head : t -> name
 
 module Error : sig
-  val fail : loc:Location.t -> has:t -> expected:t -> 'a
-
-  val fail_return_type : loc:Location.t -> Ident.Name.t -> 'a
+  val fail : loc_t:Location.t -> has:t -> expected:t -> 'a
 end
 
 val apply :
-  loc:Location.t ->
+  loc_f:Location.t ->
   t ->
   (t * Effects.t * t)
 
 val apply_ty :
-  loc:Location.t ->
+  loc_f:Location.t ->
+  loc_x:Location.t ->
   ty_x:t ->
   kind_x:Kinds.t ->
   t ->
   (name * t)
 
-val apply_eff : loc:Location.t -> eff:Effects.t -> t -> (eff_name * t)
+val apply_eff :
+  loc_f:Location.t ->
+  loc_x:Location.t ->
+  eff:Effects.t ->
+  t ->
+  (eff_name * t)
 
-val check_if_returns_type : datatype:name -> t -> bool
+val check_if_returns_type : name:Ident.Name.t -> datatype:name -> t -> unit
 
 val has_io : t -> bool
 

@@ -38,13 +38,11 @@ let compile gamma =
         let gamma = Gamma.add_type name (Types.Abstract k) gamma in
         let gammaT = GammaMap.Types.add name (Types.Abstract k) gammaT in
         let gamma =
-          let aux ~datatype gamma i (UnsugaredTree.Variant (loc, name, ty)) =
+          let aux ~datatype gamma i (UnsugaredTree.Variant (name, ty)) =
             let ty = Types.of_parse_tree ~pure_arrow:`Partial gammaT gammaE ty in
-            if Types.check_if_returns_type ~datatype ty then
-              let gamma = Gamma.add_value name ty gamma in
-              Gamma.add_constr datatype name (ty, i) gamma
-            else
-              Types.Error.fail_return_type ~loc name
+            Types.check_if_returns_type ~name ~datatype ty;
+            let gamma = Gamma.add_value name ty gamma in
+            Gamma.add_constr datatype name (ty, i) gamma
           in
           List.fold_lefti (aux ~datatype:name) gamma variants
         in

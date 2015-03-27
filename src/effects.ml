@@ -62,17 +62,17 @@ let is_subset_of list_eq x y =
 let has_io {variables; exns = _} =
   not (Variables.is_empty variables)
 
-let add ~loc gammaE (name, exns) self =
+let add gammaE (name, exns) self =
   if GammaMap.Eff.mem name gammaE then begin
     let has_args = Ident.Eff.equal name Builtins.exn in
     if has_args && List.is_empty exns then
       Error.fail
-        ~loc
+        ~loc:(Ident.Eff.loc name)
         "The '%s' effect must have at least one argument"
         (Ident.Eff.to_string name);
     if not has_args && not (List.is_empty exns) then
       Error.fail
-        ~loc
+        ~loc:(Ident.Eff.loc name)
         "The '%s' effect doesn't have any arguments"
         (Ident.Eff.to_string name);
     let exns = Exn_set.of_list exns in
@@ -85,7 +85,10 @@ let add ~loc gammaE (name, exns) self =
     in
     {variables; exns}
   end else
-    Error.fail ~loc "Unknown effect '%s'" (Ident.Eff.to_string name)
+    Error.fail
+      ~loc:(Ident.Eff.loc name)
+      "Unknown effect '%s'"
+      (Ident.Eff.to_string name)
 
 let add_exn x self =
   {self with exns = Exn_set.add x self.exns}
@@ -98,10 +101,10 @@ let union x y =
 let union3 x y z =
   union (union x y) z
 
-let remove_exn ~loc x self =
+let remove_exn x self =
   if not (Exn_set.mem x self.exns) then
     Error.fail
-      ~loc
+      ~loc:(Ident.Exn.loc x)
       "Useless case. The exception '%s' is not included in the handled \
        expression"
       (Ident.Exn.to_string x);
@@ -119,8 +122,8 @@ let to_string self =
   in
   fmt "[%s]" (String.concat ", " (exns @ Variables.fold aux self.variables []))
 
-let of_list ~loc gammaE l =
-  let aux acc ty = add ~loc gammaE ty acc in
+let of_list gammaE (_, l) =
+  let aux acc ty = add gammaE ty acc in
   List.fold_left aux empty l
 
 let replace ~from ~eff self =

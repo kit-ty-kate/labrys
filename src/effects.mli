@@ -21,11 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type t
 
-val of_list :
-  loc:Location.t ->
-  GammaMap.Eff.t ->
-  (Ident.Eff.t * Ident.Exn.t list) list ->
-  t
+val of_list : GammaMap.Eff.t -> UnsugaredTree.effects -> t
 
 val empty : t
 
@@ -43,7 +39,7 @@ val union : t -> t -> t
 
 val union3 : t -> t -> t -> t
 
-val remove_exn : loc:Location.t -> Ident.Exn.t -> t -> t
+val remove_exn : Ident.Exn.t -> t -> t
 
 val to_string : t -> string
 

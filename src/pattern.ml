@@ -90,6 +90,7 @@ let create ~loc gammaD =
               match specialize name m with
               | ([], code_index) :: _ -> Leaf code_index
               | [] ->
+                  (* TODO: Be more precise *)
                   Error.fail
                     ~loc
                     "Pattern non-exostive on constructor '%s'"
@@ -107,11 +108,11 @@ let create ~loc gammaD =
   in
   aux
 
-let rec get_unused_cases ~loc results = function
+let rec get_unused_cases results = function
   | Leaf i ->
       List.remove results i
   | Node (_, l) ->
-      List.fold_left (fun r (_, p) -> get_unused_cases ~loc r p) results l
+      List.fold_left (fun r (_, p) -> get_unused_cases r p) results l
 
 let create ~loc f gamma ty patterns =
   let (head, tail) = match patterns with
@@ -130,7 +131,7 @@ let create ~loc f gamma ty patterns =
       let (loc_t, _) = t in
       let (t, has, effect) = f gamma t in
       if not (Types.equal has initial_ty) then
-        Types.Error.fail ~loc:loc_t ~has ~expected:initial_ty;
+        Types.Error.fail ~loc_t ~has ~expected:initial_ty;
       ((pattern, t) :: patterns, Effects.union effect effects)
     in
     List.fold_left f (initial_pattern, effect) tail
@@ -139,12 +140,12 @@ let create ~loc f gamma ty patterns =
   let (patterns, results) = Matrix.split patterns in
   let patterns = create ~loc gamma.Gamma.constructors patterns in
   let unused_cases =
-    get_unused_cases ~loc (List.mapi (fun i _ -> i) results) patterns
+    get_unused_cases (List.mapi (fun i _ -> i) results) patterns
   in
   if not (List.is_empty unused_cases) then
+    (* TODO: Be more precise *)
     Error.fail
       ~loc
       "The pattern matching contains the following unused cases (%s)"
       (Utils.string_of_list (fun x -> string_of_int (succ x)) unused_cases);
-  List.
   (patterns, results, initial_ty, effect)

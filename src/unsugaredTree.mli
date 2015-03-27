@@ -28,14 +28,14 @@ type loc = Location.t
 
 type t_value = (t_name * Kinds.t)
 
-type eff = (Ident.Eff.t * Ident.Exn.t list)
+type effects = (loc * (Ident.Eff.t * Ident.Exn.t list) list)
 
 type is_rec = ParseTree.is_rec =
   | Rec
   | NonRec
 
 type ty' =
-  | Fun of (ty * eff list option * ty)
+  | Fun of (ty * effects option * ty)
   | Ty of t_name
   | Forall of (t_value * ty)
   | ForallEff of (eff_name * ty)
@@ -44,7 +44,7 @@ type ty' =
 
 and ty = (loc * ty')
 
-type ty_annot = (ty * eff list option)
+type ty_annot = (ty * effects option)
 type value = (name * ty)
 
 type pattern =
@@ -61,7 +61,7 @@ type t' =
   | EAbs of (eff_name * t)
   | App of (t * t)
   | TApp of (t * ty)
-  | EApp of (t * eff list)
+  | EApp of (t * effects)
   | Val of name
   | PatternMatching of (t * (pattern * t) list)
   | Let of ((name * is_rec * t) * t)
@@ -71,7 +71,7 @@ type t' =
 
 and t = (loc * t')
 
-type variant = Variant of (loc * name * ty)
+type variant = Variant of (name * ty)
 
 type top =
   | Value of (name * is_rec * t)

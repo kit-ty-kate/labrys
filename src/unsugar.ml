@@ -51,13 +51,13 @@ let lower_name_to_value (loc, `LowerName name) =
 
 let unsugar_kind = Option.default Kinds.Star
 
-let unsugar_eff =
+let unsugar_eff (loc, l) =
   let aux (name, args) =
     let name = new_upper_name_to_eff name in
     let args = List.map new_upper_name_to_exn args in
     (name, args)
   in
-  List.map aux
+  (loc, List.map aux l)
 
 let rec unsugar_ty =
   let unsugar_forall ~loc ty args =
@@ -219,9 +219,9 @@ and unsugar_args args annot t =
   | (Some ty, t) -> (fst t, Annot (t, ty))
   | (None, t) -> t
 
-let unsugar_variant (ParseTree.Variant (loc, name, ty)) =
+let unsugar_variant (ParseTree.Variant (name, ty)) =
   let name = new_upper_name_to_value name in
-  Variant (loc, name, unsugar_ty ty)
+  Variant (name, unsugar_ty ty)
 
 let unsugar_variants = List.map unsugar_variant
 

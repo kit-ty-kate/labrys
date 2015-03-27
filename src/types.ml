@@ -42,29 +42,27 @@ type visibility =
 let fmt = Printf.sprintf
 
 let fail_not_star ~loc x =
-  Error.fail ~loc "The type construct '%s' cannot be applied with kind /= '*'" x
+  Error.fail ~loc "The type construct '%s' cannot be used with kind /= '*'" x
 
-let fail_apply ~loc x f =
-  let conv = Kinds.to_string in
-  Error.fail ~loc "Kind '%s' can't be applied on '%s'" (conv x) (conv f)
-
-let kind_missmatch ~loc ~has ~on =
+let kind_missmatch ~loc_x ~has ~expected =
   Error.fail
-    ~loc
-    "Cannot apply something with kind '%s' on '%s'"
+    ~loc:loc_x
+    "Error: This type has kind '%s' but a \
+     type was expected of kind '%s'"
     (Kinds.to_string has)
-    (Kinds.to_string on)
+    (Kinds.to_string expected)
 
-let kind_eff_missmatch ~loc ~has ~on =
+let kind_eff_missmatch ~loc_x ~has ~expected =
   let to_string = function
     | `Eff -> "φ"
     | `Kind k -> Kinds.to_string k
   in
   Error.fail
-    ~loc
-    "Cannot apply something with kind '%s' on '%s'"
+    ~loc:loc_x
+    "Error: This type has kind '%s' but a \
+     type was expected of kind '%s'"
     (to_string has)
-    (to_string on)
+    (to_string expected)
 
 let rec replace ~from ~ty =
   let rec aux = function
@@ -102,10 +100,11 @@ let switch_pure_arrow (_, pure_arrow) = match pure_arrow with
   | `Allow -> (true, pure_arrow)
   | `Partial | `Forbid -> (false, pure_arrow)
 
-let check_pure_arrow ~loc (b, _) = function
-  | Some eff -> eff
-  | None when b -> []
+let handle_effects ~loc (b, _) gammaE = function
+  | Some eff -> Effects.of_list gammaE eff
+  | None when b -> Effects.empty
   | None ->
+      (* TODO: Be more precise *)
       Error.fail
         ~loc
         "Pure arrows are forbidden here. If you really want one use the \
@@ -113,13 +112,16 @@ let check_pure_arrow ~loc (b, _) = function
 
 let rec of_parse_tree_kind ~pure_arrow gammaT gammaE = function
   | (loc, UnsugaredTree.Fun (x, eff, y)) ->
+      let loc_x = fst x in
+      let loc_y = fst y in
       let pa = switch_pure_arrow pure_arrow in
       let (x, k1) = of_parse_tree_kind ~pure_arrow:pa gammaT gammaE x in
-      let eff = check_pure_arrow ~loc pure_arrow eff in
-      let eff = Effects.of_list ~loc gammaE eff in
+      let eff = handle_effects ~loc pure_arrow gammaE eff in
       let (y, k2) = of_parse_tree_kind ~pure_arrow gammaT gammaE y in
-      if Kinds.not_star k1 || Kinds.not_star k2 then
-        fail_not_star ~loc "->";
+      if Kinds.not_star k1 then
+        fail_not_star ~loc:loc_x "->";
+      if Kinds.not_star k2 then
+        fail_not_star ~loc:loc_y "->";
       (Fun (x, eff, y), Kinds.Star)
   | (loc, UnsugaredTree.Ty name) ->
       begin match GammaMap.Types.find name gammaT with
@@ -131,27 +133,30 @@ let rec of_parse_tree_kind ~pure_arrow gammaT gammaE = function
             "The type '%s' was not found in Γ"
             (Ident.Type.to_string name)
       end
-  | (loc, UnsugaredTree.Forall ((name, k), ret)) ->
+  | (_, UnsugaredTree.Forall ((name, k), ret)) ->
+      let loc_ret = fst ret in
       let gammaT = GammaMap.Types.add name (Abstract k) gammaT in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow gammaT gammaE ret in
       if Kinds.not_star kx then
-        fail_not_star ~loc "forall";
+        fail_not_star ~loc:loc_ret "forall";
       (Forall (name, k, ret), Kinds.Star)
-  | (loc, UnsugaredTree.ForallEff (name, ret)) ->
+  | (_, UnsugaredTree.ForallEff (name, ret)) ->
+      let loc_ret = fst ret in
       let gammaE = GammaMap.Eff.add name gammaE in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow gammaT gammaE ret in
       if Kinds.not_star kx then
-        fail_not_star ~loc "forall";
+        fail_not_star ~loc:loc_ret "forall";
       (ForallEff (name, ret), Kinds.Star)
   | (_, UnsugaredTree.AbsOnTy ((name, k), ret)) ->
       let gammaT = GammaMap.Types.add name (Abstract k) gammaT in
       let (ret, kret) = of_parse_tree_kind ~pure_arrow gammaT gammaE ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
-  | (loc, UnsugaredTree.AppOnTy ((_, UnsugaredTree.AbsOnTy ((name, k), t)), x)) ->
+  | (_, UnsugaredTree.AppOnTy ((_, UnsugaredTree.AbsOnTy ((name, k), t)), x)) ->
+      let loc_x = fst x in
       let pa = switch_pure_arrow pure_arrow in
       let (x, kx) = of_parse_tree_kind ~pure_arrow:pa gammaT gammaE x in
       if not (Kinds.equal k kx) then
-        kind_missmatch ~loc ~has:kx ~on:k;
+        kind_missmatch ~loc_x ~has:kx ~expected:k;
       let gammaT = GammaMap.Types.add name (Abstract k) gammaT in
       let (t, kt) = of_parse_tree_kind ~pure_arrow gammaT gammaE t in
       (replace ~from:name ~ty:x t, kt)
@@ -163,7 +168,12 @@ let rec of_parse_tree_kind ~pure_arrow gammaT gammaE = function
         match kf with
         | Kinds.KFun (p, r) when Kinds.equal p kx -> r
         | (Kinds.KFun _ as k)
-        | (Kinds.Star as k) -> fail_apply ~loc kx k
+        | (Kinds.Star as k) ->
+            Error.fail
+              ~loc
+              "Kind '%s' can't be applied on '%s'"
+              (Kinds.to_string kx)
+              (Kinds.to_string k)
       in
       (AppOnTy (f, x), k)
 
@@ -253,72 +263,71 @@ let rec head = function
   | AppOnTy (t, _) -> head t
 
 module Error = struct
-  let type_error_aux ~loc =
+  let fail ~loc_t ~has ~expected =
     Error.fail
-      ~loc
+      ~loc:loc_t
       "Error: This expression has type '%s' but an \
        expression was expected of type '%s'"
+      (to_string has)
+      (to_string expected)
 
-  let fail ~loc ~has ~expected =
-    type_error_aux ~loc (to_string has) (to_string expected)
-
-  let function_type ~loc ty =
+  let function_type ~loc_f ty =
     Error.fail
-      ~loc
+      ~loc:loc_f
       "Error: This expression has type '%s'. \
        This is not a function; it cannot be applied."
       (to_string ty)
 
-  let forall_type ~loc ty =
+  let forall_type ~loc_f ty =
     Error.fail
-      ~loc
+      ~loc:loc_f
       "Error: This expression has type '%s'. \
        This is not a type abstraction; it cannot be applied by a value."
       (to_string ty)
 
-  let fail_return_type ~loc name =
+  let fail_return_type name =
     Error.fail
-      ~loc
+      ~loc:(Ident.Name.loc name)
       "The variant '%s' doesn't return its type"
       (Ident.Name.to_string name)
 end
 
-let apply ~loc = function
+let apply ~loc_f = function
   | Fun x ->
       x
   | (Forall _ as ty)
   | (ForallEff _ as ty)
   | (AppOnTy _ as ty)
   | (Ty _ as ty) ->
-      Error.function_type ~loc ty
+      Error.function_type ~loc_f ty
   | AbsOnTy _ ->
       assert false
 
-let apply_ty ~loc ~ty_x ~kind_x = function
+let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x = function
   | Forall (ty, k, res) when Kinds.equal k kind_x ->
       let res = replace ~from:ty ~ty:ty_x res in
       (ty, res)
   | Forall (_, k, _) ->
-      kind_missmatch ~loc ~has:kind_x ~on:k
+      kind_missmatch ~loc_x ~has:kind_x ~expected:k
   | ForallEff _ ->
-      kind_eff_missmatch ~loc ~has:(`Kind kind_x) ~on:`Eff
+      kind_eff_missmatch ~loc_x ~has:(`Kind kind_x) ~expected:`Eff
   | (Fun _ as ty)
   | (AppOnTy _ as ty)
   | (Ty _ as ty) ->
-      Error.forall_type ~loc ty
+      Error.forall_type ~loc_f ty
   | AbsOnTy _ ->
       assert false
 
-let apply_eff ~loc ~eff = function
+let apply_eff ~loc_f ~loc_x ~eff = function
   | ForallEff (ty, res) ->
       let res = replace_eff ~from:ty ~eff res in
       (ty, res)
   | Forall (_, k, _) ->
-      kind_eff_missmatch ~loc ~has:`Eff ~on:(`Kind k)
+      kind_eff_missmatch ~loc_x ~has:`Eff ~expected:(`Kind k)
   | (Fun _ as ty)
   | (AppOnTy _ as ty)
   | (Ty _ as ty) ->
-      Error.forall_type ~loc ty
+      Error.forall_type ~loc_f ty
   | AbsOnTy _ ->
       assert false
 
@@ -329,6 +338,11 @@ let rec check_if_returns_type ~datatype = function
   | AppOnTy (ret, _)
   | Fun (_, _, ret) -> check_if_returns_type ~datatype ret
   | AbsOnTy _ -> false
+
+let check_if_returns_type ~name ~datatype ty =
+  if not (check_if_returns_type ~datatype ty) then begin
+    Error.fail_return_type name
+  end
 
 let rec has_io = function
   | Fun (_, eff, Forall _)

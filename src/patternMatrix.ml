@@ -58,19 +58,23 @@ let create =
         begin match GammaMap.Index.find name constructors with
         | None ->
             Error.fail
-              ~loc
+              ~loc:(Ident.Name.loc name)
               "Constructor '%s' not found in type '%s'"
               (Ident.Name.to_string name)
               (Ident.Type.to_string head_ty)
         | Some (ty, _) ->
+            let loc_f = Ident.Name.loc name in
             let aux (args, ty, gamma) = function
               | UnsugaredTree.PVal p ->
-                  let (param_ty, effect, res_ty) = Types.apply ~loc ty in
+                  let (param_ty, effect, res_ty) =
+                    Types.apply ~loc_f ty
+                  in
                   if not (Effects.is_empty effect) then
                     assert false;
                   let (arg, gamma) = aux gamma param_ty p in
                   (arg :: args, res_ty, gamma)
               | UnsugaredTree.PTy pty ->
+                  let loc_x = fst pty in
                   let (pty, kx) =
                     Types.of_parse_tree_kind
                       ~pure_arrow:`Allow
@@ -79,7 +83,7 @@ let create =
                       pty
                   in
                   let (_, res) =
-                    Types.apply_ty ~loc ~ty_x:pty ~kind_x:kx ty
+                    Types.apply_ty ~loc_f ~loc_x ~ty_x:pty ~kind_x:kx ty
                   in
                   (args, res, gamma)
             in

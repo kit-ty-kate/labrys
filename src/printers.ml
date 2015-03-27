@@ -38,7 +38,7 @@ let rec dump_top f doc = function
 
 let dump_exn x = String.concat " | " (List.map dump_exn_name x)
 
-let dump_eff x =
+let dump_eff (_, x) =
   let aux (name, args) =
     fmt "%s [%s]" (dump_eff_name name) (dump_exn args)
   in
@@ -66,7 +66,7 @@ module ParseTree = struct
 
   let dump_exn x = String.concat " | " (List.map dump_exn_name x)
 
-  let dump_eff x =
+  let dump_eff (_, x) =
     let aux (name, args) =
       fmt "%s [%s]" (dump_eff_name name) (dump_exn args)
     in
@@ -271,7 +271,7 @@ module ParseTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
     List.fold_left aux PPrint.empty args
 
-  let dump_variants (Variant (_, name, ty)) =
+  let dump_variants (Variant (name, ty)) =
     PPrint.string (fmt "| %s : %s" (dump_name name) (dump_ty ty))
 
   let dump_variants variants =
@@ -482,7 +482,7 @@ module UnsugaredTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
     List.fold_left aux PPrint.empty args
 
-  let dump_variants (Variant (_, name, ty)) =
+  let dump_variants (Variant (name, ty)) =
     PPrint.string (fmt "| %s : %s" (dump_name name) (dump_ty ty))
 
   let dump_variants variants =

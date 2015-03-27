@@ -265,7 +265,7 @@ kind:
   | x = kindUnclosed { x }
   | x = kindClosed { x }
 
-eff: eff = separated_list(Comma, effectName) { eff }
+eff: eff = separated_list(Comma, effectName) { (loc $startpos $endpos, eff) }
 
 effectName:
   | name = newUpperName
@@ -297,7 +297,7 @@ exn_pattern:
 
 variant:
   | name = newUpperName Colon ty = typeExpr
-      { ParseTree.Variant (loc $startpos $endpos, name, ty) }
+      { ParseTree.Variant (name, ty) }
 
 kindopt:
   | { None }

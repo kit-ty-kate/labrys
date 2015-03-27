@@ -85,7 +85,7 @@ let parse filename parser =
 let prepend_builtins tree =
   let loc = Builtins.unknown_loc in
   let ty = (loc, UnsugaredTree.Ty Builtins.t_unit) in
-  let variants = [UnsugaredTree.Variant (loc, Builtins.unit, ty)] in
+  let variants = [UnsugaredTree.Variant (Builtins.unit, ty)] in
   UnsugaredTree.Datatype (Builtins.t_unit, Kinds.Star, variants) :: tree
 
 let rec build_intf parent_module =

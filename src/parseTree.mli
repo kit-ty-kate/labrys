@@ -33,14 +33,14 @@ type forall_arg =
   | Eff of new_upper_name
   | Typ of ty_arg
 
-type eff = (new_upper_name * new_upper_name list)
+type effects = (loc * (new_upper_name * new_upper_name list) list)
 
 type is_rec =
   | Rec
   | NonRec
 
 type ty' =
-  | Fun of (ty * eff list option * ty)
+  | Fun of (ty * effects option * ty)
   | Ty of upper_name
   | Forall of (forall_arg list * ty)
   | AbsOnTy of (ty_arg list * ty)
@@ -48,7 +48,7 @@ type ty' =
 
 and ty = (loc * ty')
 
-type ty_annot = (ty * eff list option)
+type ty_annot = (ty * effects option)
 type v_arg = (new_lower_name * ty)
 
 type pattern =
@@ -71,7 +71,7 @@ type t' =
   | Abs of (arg list * t)
   | App of (t * t)
   | TApp of (t * ty)
-  | EApp of (t * eff list)
+  | EApp of (t * effects)
   | LowerVal of lower_name
   | UpperVal of upper_name
   | PatternMatching of (t * (pattern * t) list)
@@ -83,7 +83,7 @@ type t' =
 
 and t = (loc * t')
 
-type variant = Variant of (loc * new_upper_name * ty)
+type variant = Variant of (new_upper_name * ty)
 
 type top =
   | Value of (new_lower_name * is_rec * (arg list * (ty_annot option * t)))
