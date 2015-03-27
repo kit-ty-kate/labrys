@@ -22,10 +22,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let fmt = Printf.sprintf
-
-exception BackendFailure of string
-
 include Llvm
 
 let () = enable_pretty_stacktrace ()
@@ -43,6 +39,7 @@ let define_function c s ty m =
   f, builder_at_end c (entry_block f)
 
 let bind c ~name ~arity s m =
+  let loc_name = Ident.Name.loc name in
   let membuffer = MemoryBuffer.of_string s in
   let m' = Llvm_irreader.parse_ir c membuffer in
   let name = Ident.Name.to_string name in
@@ -61,11 +58,20 @@ let bind c ~name ~arity s m =
       if Int.(arity > 0) then begin
         let len = Array.length (params v) in
         if Int.(len <> arity) then
-          raise (BackendFailure (fmt "Arity doesn't match for the LLVM binding '%s'. Expected %d, got %d" name arity len));
+          Error.fail
+            ~loc:loc_name
+            "Arity doesn't match for the LLVM binding '%s'. \
+             Expected %d, got %d"
+            name
+            arity
+            len;
       end;
       v
   | None ->
-      raise (BackendFailure (fmt "Cannot found the LLVM binding '%s'" name))
+      Error.fail
+        ~loc:loc_name
+        "Cannot found the LLVM binding '%s'"
+        name
 
 let optimize ~lto ~opt layout m =
   let pm = PassManager.create () in

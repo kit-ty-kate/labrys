@@ -19,8 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-exception BackendFailure of string
-
 include module type of struct include Llvm end
 
 val build_store : llvalue -> llvalue -> llbuilder -> unit
