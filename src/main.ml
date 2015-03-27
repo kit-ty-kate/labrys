@@ -33,10 +33,7 @@ let start printer lto opt o file =
   | ParserHandler.ParseError x -> Some x
   | Sys_error x -> Some x
   | Llvm_irreader.Error x -> Some x
-(*
-  | Compiler.Exn x -> Some x
-  | Sys_error x -> Some ("System error:\n" ^ x)
-*)
+
 let cmd =
   let module Term = Cmdliner.Term in
   let module Arg = Cmdliner.Arg in

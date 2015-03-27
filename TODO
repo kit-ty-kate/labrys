@@ -14,6 +14,7 @@
   * Add functions in backend (like access_env …)
   * Add more explicit type names (like « type name = string » instead of just use a string)
 
+* Clean error the handling system: extend an error type (+= ..) for each module that can raise errors and print them in ErrorPrinter
 * Cleaning (parser, typechecker, backend, printer, …)
 * Unit-tests
 * Finish the module system
