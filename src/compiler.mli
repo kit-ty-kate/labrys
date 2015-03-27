@@ -31,8 +31,6 @@ type printer =
   | LLVM
   | OptimizedLLVM
 
-exception ParseError of string
-
 val compile :
   printer:printer ->
   lto:bool ->

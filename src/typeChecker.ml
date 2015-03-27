@@ -313,7 +313,7 @@ let rec from_parse_tree ~with_main ~has_main gamma = function
   | [] ->
       ([], has_main, gamma)
 
-let check ~interface ~with_main gamma x =
+let check ~modul ~interface ~with_main gamma x =
   let (res, has_main, gamma) = from_parse_tree ~with_main ~has_main:false gamma x in
   if with_main && not has_main then
     Error.fail_module "The 'main' hasn't been found in the main module";
@@ -322,7 +322,10 @@ let check ~interface ~with_main gamma x =
       ()
   | diff ->
       Error.fail_module
-        "Interface and implementation not compatible (%s)"
+        "The implementation '%s' does not match the interface '%s'.\n\
+         Differences: %s"
+        (ModulePath.impl modul)
+        (ModulePath.intf modul)
         (String.concat ", " diff);
   end;
   res

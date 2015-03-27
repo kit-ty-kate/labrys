@@ -19,10 +19,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val check :
-  modul:ModulePath.t ->
-  interface:Gamma.t ->
-  with_main:bool ->
-  Gamma.t ->
-  UnsugaredTree.top list ->
-  TypedTree.top list
+exception ParseError of string
+
+module Make (Filename : sig val get : string end) : sig
+  val parse_impl : unit -> ParseTree.imports * ParseTree.top list
+
+  val parse_intf : unit -> ParseTree.imports * ParseTree.interface list
+end

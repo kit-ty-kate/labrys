@@ -34,8 +34,6 @@ type printer =
   | LLVM
   | OptimizedLLVM
 
-exception ParseError of string
-
 let fmt = Printf.sprintf
 
 let print_error () =
@@ -62,25 +60,6 @@ let write ~o result =
   in
   with_tmp_file aux
 
-let parse filename parser =
-  let aux file =
-    let filebuf = Lexing.from_channel file in
-    let get_offset () =
-      let pos = Lexing.lexeme_start_p filebuf in
-      let open Lexing in
-      let column = pos.pos_cnum - pos.pos_bol in
-      string_of_int pos.pos_lnum ^ ":" ^ string_of_int column
-    in
-    try parser Lexer.main filebuf with
-    | Lexer.Error ->
-        raise
-          (ParseError (fmt "%s: Lexing error at: %s" filename (get_offset ())))
-    | Parser.Error ->
-        raise
-          (ParseError (fmt "%s: Parsing error at: %s" filename (get_offset ())))
-  in
-  File.with_file_in filename aux
-
 (* TODO: Do better *)
 let prepend_builtins tree =
   let loc = Builtins.unknown_loc in
@@ -89,7 +68,8 @@ let prepend_builtins tree =
   UnsugaredTree.Datatype (Builtins.t_unit, Kinds.Star, variants) :: tree
 
 let rec build_intf parent_module =
-  let (imports, tree) = parse (ModulePath.intf parent_module) Parser.mainInterface in
+  let module P = ParserHandler.Make(struct let get = ModulePath.intf parent_module end) in
+  let (imports, tree) = P.parse_intf () in
   let imports = Unsugar.create_imports imports in
   let tree = Unsugar.create_interface tree in
   let aux acc x =
@@ -124,7 +104,8 @@ let rec build_impl =
   List.fold_left aux ([], Gamma.empty, None) imports
 
 and compile ?(with_main = false) ~interface modul =
-  let (imports, parse_tree) = parse (ModulePath.impl modul) Parser.main in
+  let module P = ParserHandler.Make(struct let get = ModulePath.impl modul end) in
+  let (imports, parse_tree) = P.parse_impl () in
   let imports = Unsugar.create_imports imports in
   (* TODO: Print with and without builtins *)
   let unsugared_tree = lazy (Unsugar.create parse_tree) in
@@ -134,7 +115,7 @@ and compile ?(with_main = false) ~interface modul =
   let (imports, gamma, code) = build_impl modul imports in
   let typed_tree =
     lazy begin
-      TypeChecker.check ~interface ~with_main gamma (Lazy.force unsugared_tree)
+      TypeChecker.check ~modul ~interface ~with_main gamma (Lazy.force unsugared_tree)
     end
   in
   let untyped_tree = lazy (Lambda.of_typed_tree (Lazy.force typed_tree)) in

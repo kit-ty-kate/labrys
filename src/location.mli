@@ -21,4 +21,4 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type position = {pos_lnum : int; pos_cnum : int}
 
-type t = {loc_start : position; loc_end : position}
+type t = {loc_start : position; loc_end : position; filename : string}

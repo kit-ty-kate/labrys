@@ -24,7 +24,7 @@ open Monomorphic.None
 
 let unknown_loc =
   let pos = Location.{pos_lnum = -1; pos_cnum = -1} in
-  Location.{loc_start = pos; loc_end = pos}
+  Location.{loc_start = pos; loc_end = pos; filename = "unknown"}
 
 let unit = Ident.Name.of_list ~loc:unknown_loc ["Unit"]
 let t_unit = Ident.Type.of_list ~loc:unknown_loc ["Unit"]

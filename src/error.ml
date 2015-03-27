@@ -34,12 +34,12 @@ let fail ~loc x = Printf.ksprintf (fun x -> raise (Exn (Located (loc, x)))) x
 
 let fail_module x = Printf.ksprintf (fun x -> raise (Exn (Module  x))) x
 
-let dump ~file = function
+let dump = function
   | Located (loc, x) ->
-      let string_of_location {Location.loc_start; loc_end} =
+      let string_of_location {Location.loc_start; loc_end; filename} =
         fmt
           "Error in '%s' from line %d column %d to line %d column %d:\n"
-          file
+          filename
           loc_start.Location.pos_lnum
           loc_start.Location.pos_cnum
           loc_end.Location.pos_lnum
@@ -47,4 +47,4 @@ let dump ~file = function
       in
       string_of_location loc ^ "    " ^ x
   | Module x ->
-      fmt "Error in '%s':\n%s" file x
+      fmt "Error:\n%s" x

@@ -19,6 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+%parameter < Filename : sig val get : string end >
+
 %{
   let loc startpos endpos =
     let get_pos pos =
@@ -28,6 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     in
     { Location.loc_start = get_pos startpos
     ; loc_end = get_pos endpos
+    ; filename = Filename.get
     }
 %}
 

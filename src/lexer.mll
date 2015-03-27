@@ -19,7 +19,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-{ exception Error }
+{
+module Make (Filename : sig val get : string end) = struct
+  exception Error
+
+  module Parser = Parser.Make(Filename)
+}
 
 let alpha = ['a'-'z' 'A'-'Z']
 let term_name = (['a'-'z'] alpha*)
@@ -88,3 +93,5 @@ and simple_comment = parse
   | '\n' { Lexing.new_line lexbuf }
   | eof { () }
   | _ { simple_comment lexbuf }
+
+{ end }

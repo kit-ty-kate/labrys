@@ -29,11 +29,14 @@ let start printer lto opt o file =
        This is allowed only during linking"
 *)
   try Compiler.compile ~printer ~lto ~opt ~o file; None with
-  | Error.Exn x -> Some (Error.dump ~file x)
-  | Compiler.ParseError x -> Some x
+  | Error.Exn x -> Some (Error.dump x)
+  | ParserHandler.ParseError x -> Some x
   | Sys_error x -> Some x
   | Llvm_irreader.Error x -> Some x
-
+(*
+  | Compiler.Exn x -> Some x
+  | Sys_error x -> Some ("System error:\n" ^ x)
+*)
 let cmd =
   let module Term = Cmdliner.Term in
   let module Arg = Cmdliner.Arg in
