@@ -8,6 +8,7 @@ License: MIT
 BuildTools: ocamlbuild
 Plugins: DevFiles (0.3)
 AlphaFeatures: compiled_setup_ml
+FilesAB: src/config.ml.ab
 
 Executable cervoise
   Path: src

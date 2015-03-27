@@ -54,7 +54,7 @@ let cmd =
   let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
   let args = args $ Arg.(value & opt (some string) None & info ["o"]) in
   let args = args $ Arg.(required & pos 0 (some non_dir_file) None & info []) in
-  (args, Term.info "cervoise")
+  (args, Term.info ~version:Config.version "cervoise")
 
 let () =
   match Cmdliner.Term.eval cmd with
