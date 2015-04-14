@@ -191,6 +191,8 @@ arg:
       { ParseTree.TArg ty }
   | LParen name = newUpperName Colon Eff RParen
       { ParseTree.EArg name }
+  | LParen name = upperName args = nonempty_list(newUpperName) RParen
+      { ParseTree.CArg (name, args) }
   | LParen RParen
       { ParseTree.Unit }
 

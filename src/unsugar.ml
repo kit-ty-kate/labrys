@@ -200,6 +200,8 @@ and unsugar_args args annot t =
           Option.map aux ty_xs
         in
         (ty_xs, (loc, EAbs (name, xs)))
+    | (loc, ParseTree.CArg (name, args)) :: xs ->
+        assert false
     | (loc, ParseTree.Unit) :: xs ->
         let x =
           ParseTree.VArg

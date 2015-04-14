@@ -117,6 +117,9 @@ module ParseTree = struct
         dump_t_name_ty_opt v
     | (_, EArg name) ->
         dump_eff_arg name
+    | (_, CArg (name, args)) ->
+        let args = String.concat " " (List.map dump_name args) in
+        fmt "(%s %s)" (dump_name name) args
     | (_, Unit) ->
         "()"
 
