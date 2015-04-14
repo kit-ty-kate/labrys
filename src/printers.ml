@@ -83,9 +83,14 @@ module ParseTree = struct
 
   let dump_t_name_ty_list l = String.concat " " (List.map dump_t_name_ty_opt l)
 
+  let dump_tyclass (name, args) =
+    let args = String.concat " " (List.map dump_name args) in
+    fmt "(%s %s)" (dump_name name) args
+
   let dump_forall_arg = function
     | Eff name -> dump_eff_arg name
     | Typ ty -> dump_t_name_ty_opt ty
+    | TyClass x -> dump_tyclass x
 
   let dump_forall_arg_list l = String.concat " " (List.map dump_forall_arg l)
 
@@ -117,9 +122,8 @@ module ParseTree = struct
         dump_t_name_ty_opt v
     | (_, EArg name) ->
         dump_eff_arg name
-    | (_, CArg (name, args)) ->
-        let args = String.concat " " (List.map dump_name args) in
-        fmt "(%s %s)" (dump_name name) args
+    | (_, CArg x) ->
+        dump_tyclass x
     | (_, Unit) ->
         "()"
 

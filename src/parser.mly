@@ -223,7 +223,7 @@ typeExprStrictlyUnclosed:
       { ParseTree.Fun (param, None, ret) }
   | param = typeExprProtectedPermissive LArrowEff eff = eff RArrowEff ret = typeExpr
       { ParseTree.Fun (param, Some eff, ret) }
-  | Forall x = nonempty_list(kind_and_name_eff) Comma ret = typeExpr
+  | Forall x = nonempty_list(forallItems) Comma ret = typeExpr
       { ParseTree.Forall (x, ret) }
   | Lambda x = nonempty_list(kind_and_name) Comma ret = typeExpr
       { ParseTree.AbsOnTy (x, ret) }
@@ -314,11 +314,13 @@ kind_and_name:
   | LParen name = newUpperName Colon k = kind RParen
       { (name, Some k) }
 
-kind_and_name_eff:
+forallItems:
   | k = kind_and_name
       { ParseTree.Typ k }
   | LParen name = newUpperName Colon Eff RParen
       { ParseTree.Eff name }
+  | LParen name = upperName args = nonempty_list(newUpperName) RParen
+      { ParseTree.TyClass (name, args) }
 
 pattern:
   | p = pat Arrow t = term

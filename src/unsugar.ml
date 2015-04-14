@@ -68,6 +68,8 @@ let rec unsugar_ty =
       | ParseTree.Typ (name, k) :: xs ->
           let name = new_upper_name_to_type name in
           (loc, Forall ((name, unsugar_kind k), aux xs))
+      | ParseTree.TyClass (name, args) :: xs ->
+          assert false
       | [] ->
           unsugar_ty ty
     in

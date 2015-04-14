@@ -28,10 +28,12 @@ type lower_name = (loc * [`LowerName of string list])
 type upper_name = (loc * [`UpperName of string list])
 
 type ty_arg = (new_upper_name * Kinds.t option)
+type tyclass_arg = (upper_name * new_upper_name list)
 
 type forall_arg =
   | Eff of new_upper_name
   | Typ of ty_arg
+  | TyClass of tyclass_arg
 
 type effects = (loc * (new_upper_name * new_upper_name list) list)
 
@@ -63,7 +65,7 @@ type arg' =
   | VArg of v_arg
   | TArg of ty_arg
   | EArg of new_upper_name
-  | CArg of (upper_name * new_upper_name list)
+  | CArg of tyclass_arg
   | Unit
 
 and arg = (loc * arg')
