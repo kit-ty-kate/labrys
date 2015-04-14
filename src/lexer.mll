@@ -46,7 +46,8 @@ rule main = parse
   | ']' { Parser.RBracket }
   | '|' { Parser.Pipe }
   | '*' { Parser.Star }
-  | "φ" { Parser.Phi }
+  | '!'
+  | "φ" { Parser.Eff }
   | '\\'
   | "λ" { Parser.Lambda }
   | "->" { Parser.Arrow }

@@ -48,7 +48,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Alias
 %token Pipe
 %token Colon
-%token Star Phi
+%token Star Eff
 %token Fail
 %token Try
 %token Exception
@@ -189,7 +189,7 @@ arg:
       { ParseTree.VArg (name, ty) }
   | ty = kind_and_name
       { ParseTree.TArg ty }
-  | LParen name = newUpperName Colon Phi RParen
+  | LParen name = newUpperName Colon Eff RParen
       { ParseTree.EArg name }
   | LParen RParen
       { ParseTree.Unit }
@@ -315,7 +315,7 @@ kind_and_name:
 kind_and_name_eff:
   | k = kind_and_name
       { ParseTree.Typ k }
-  | LParen name = newUpperName Colon Phi RParen
+  | LParen name = newUpperName Colon Eff RParen
       { ParseTree.Eff name }
 
 pattern:
