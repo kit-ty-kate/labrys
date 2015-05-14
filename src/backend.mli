@@ -22,13 +22,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type t
 
 val make :
-  with_main:bool ->
   name:Ident.Module.t ->
   imports:ModulePath.t list ->
   UntypedTree.top list ->
   t
 
-val link : t -> t -> t
+val link : main_module_name:Ident.Module.t -> main_module:t -> t list -> t
 
 val optimize : opt:int -> lto:bool -> t -> t
 

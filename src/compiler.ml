@@ -91,19 +91,14 @@ let rec build_impl =
         acc
     | None ->
         let interface = build_intf modul in
-        let (_, _, _, _, impl) = compile ~interface modul in
-        let impl = Lazy.force impl in
-        let impl = match impl_acc with
-          | Some impl_acc -> Backend.link impl impl_acc
-          | None -> impl
-        in
+        let (_, _, _, _, impl, imports_impl) = compile ~interface modul in
         Hashtbl.add tbl modul ();
         let gamma = Gamma.union (ModulePath.to_module modul, interface) gamma_acc in
-        (imports_acc @ [modul], gamma, Some impl)
+        (imports_acc @ [modul], gamma, impl :: imports_impl @ impl_acc)
   in
-  List.fold_left aux ([], Gamma.empty, None) imports
+  List.fold_left aux ([], Gamma.empty, []) imports
 
-and compile ?(with_main = false) ~interface modul =
+and compile ?(with_main=false) ~interface modul =
   let module P = ParserHandler.Make(struct let get = ModulePath.impl modul end) in
   let (imports, parse_tree) = P.parse_impl () in
   let imports = Unsugar.create_imports imports in
@@ -112,7 +107,7 @@ and compile ?(with_main = false) ~interface modul =
   let unsugared_tree =
     lazy (prepend_builtins (Lazy.force unsugared_tree))
   in
-  let (imports, gamma, code) = build_impl modul imports in
+  let (imports, gamma, imports_code) = build_impl modul imports in
   let typed_tree =
     lazy begin
       TypeChecker.check ~modul ~interface ~with_main gamma (Lazy.force unsugared_tree)
@@ -120,29 +115,29 @@ and compile ?(with_main = false) ~interface modul =
   in
   let untyped_tree = lazy (Lambda.of_typed_tree (Lazy.force typed_tree)) in
   let name = ModulePath.to_module modul in
-  let dst =
+  let code =
     lazy begin
       let untyped_tree = Lazy.force untyped_tree in
-      Backend.make ~with_main ~name ~imports untyped_tree
-    end
-  in
-  let res =
-    lazy begin
-      let dst = Lazy.force dst in
-      match code with
-      | Some code -> Backend.link dst code
-      | None -> dst
+      Backend.make ~name ~imports untyped_tree
     end
   in
   prerr_endline (fmt "Compiling %s" (Ident.Module.to_module_name name));
-  (parse_tree, unsugared_tree, typed_tree, untyped_tree, res)
+  (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code)
 
 let compile ~printer ~lto ~opt ~o file =
   let modul = ModulePath.of_file file in
-  let (parse_tree, unsugared_tree, typed_tree, untyped_tree, res) =
+  let (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code) =
     compile ~with_main:true ~interface:Gamma.empty modul
   in
-  let optimized_res = lazy (Backend.optimize ~lto ~opt (Lazy.force res)) in
+  let code =
+    lazy begin
+      let code = Lazy.force code in
+      let imports_code = List.map Lazy.force imports_code in
+      let main_module_name = ModulePath.to_module modul in
+      Backend.link ~main_module_name ~main_module:code imports_code
+    end
+  in
+  let optimized_res = lazy (Backend.optimize ~lto ~opt (Lazy.force code)) in
   begin match printer with
   | ParseTree ->
       print_endline (Printers.ParseTree.dump parse_tree);
@@ -153,7 +148,7 @@ let compile ~printer ~lto ~opt ~o file =
   | UntypedTree ->
       print_endline (Printers.UntypedTree.dump (Lazy.force untyped_tree));
   | LLVM ->
-      print_endline (Backend.to_string (Lazy.force res));
+      print_endline (Backend.to_string (Lazy.force code));
   | OptimizedLLVM ->
       print_endline (Backend.to_string (Lazy.force optimized_res));
   | NoPrinter ->

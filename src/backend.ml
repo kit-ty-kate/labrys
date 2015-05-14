@@ -57,6 +57,51 @@ let null = LLVM.const_null Type.star
 let undef = LLVM.undef Type.star
 let string = LLVM.const_string c
 
+module Generic (I : sig val m : t end) = struct
+  open I
+
+  let init_name name = fmt "__%s_init" (Ident.Module.to_module_name name)
+
+  let frameaddress =
+    let ty = LLVM.function_type Type.star [|Type.i32|] in
+    LLVM.declare_function "llvm.frameaddress" ty m
+
+  let stacksave =
+    let ty = LLVM.function_type Type.star [||] in
+    LLVM.declare_function "llvm.stacksave" ty m
+
+  let init_jmp_buf jmp_buf builder =
+    let v = LLVM.undef Type.jmp_buf in
+    let fp = LLVM.build_call frameaddress [|i32 0|] "" builder in
+    let v = LLVM.build_insertvalue v fp 0 "" builder in
+    let sp = LLVM.build_call stacksave [||] "" builder in
+    let v = LLVM.build_insertvalue v sp 2 "" builder in
+    LLVM.build_store v jmp_buf builder
+end
+
+module Main (I : sig val main_module : Ident.Module.t end) = struct
+  let m = LLVM.create_module c "_main_"
+
+  module Generic = Generic (struct let m = m end)
+
+  let main_init =
+    let ty = LLVM.function_type Type.void [|Type.jmp_buf_ptr|] in
+    LLVM.declare_function (Generic.init_name I.main_module) ty m
+
+  let init_gc builder =
+    let gc_init = LLVM.declare_function "GC_init" Type.unit_function m in
+    LLVM.build_call_void gc_init [||] builder
+
+  let make () =
+    let (_, builder) = LLVM.define_function c "main" Type.main_function m in
+    init_gc builder;
+    let jmp_buf = LLVM.build_alloca Type.jmp_buf "" builder in
+    Generic.init_jmp_buf jmp_buf builder;
+    LLVM.build_call_void main_init [|jmp_buf|] builder;
+    LLVM.build_ret (i32 0) builder;
+    m
+end
+
 module Make (I : sig val name : Ident.Module.t end) = struct
   type gamma =
     | Value of LLVM.llvalue
@@ -64,6 +109,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     | Global of LLVM.llvalue
 
   let m = LLVM.create_module c (Ident.Module.to_module_name I.name)
+
+  module Generic = Generic (struct let m = m end)
 
   let init ptr ty values builder =
     let aux acc i x = LLVM.build_insertvalue acc x i "" builder in
@@ -90,14 +137,6 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let ty = LLVM.function_type Type.i32 [|Type.star|] in
     LLVM.declare_function "llvm.eh.sjlj.setjmp" ty m
 
-  let frameaddress =
-    let ty = LLVM.function_type Type.star [|Type.i32|] in
-    LLVM.declare_function "llvm.frameaddress" ty m
-
-  let stacksave =
-    let ty = LLVM.function_type Type.star [||] in
-    LLVM.declare_function "llvm.stacksave" ty m
-
   let exn_tag_var =
     let v = LLVM.define_global "exn_tag" null m in
     LLVM.set_thread_local true v;
@@ -116,14 +155,6 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     LLVM.build_call_void debug_trap [||] builder;
     LLVM.build_unreachable builder;
     block
-
-  let init_jmp_buf jmp_buf builder =
-    let v = LLVM.undef Type.jmp_buf in
-    let fp = LLVM.build_call frameaddress [|i32 0|] "" builder in
-    let v = LLVM.build_insertvalue v fp 0 "" builder in
-    let sp = LLVM.build_call stacksave [||] "" builder in
-    let v = LLVM.build_insertvalue v sp 2 "" builder in
-    LLVM.build_store v jmp_buf builder
 
   let fold_env ~env gamma builder =
     let aux name value (i, values, gamma) =
@@ -364,7 +395,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
         (undef, LLVM.builder_at_end c (LLVM.append_block c "" func))
     | UntypedTree.Try (t, branches) ->
         let jmp_buf' = LLVM.build_alloca Type.jmp_buf "" builder in
-        init_jmp_buf jmp_buf' builder;
+        Generic.init_jmp_buf jmp_buf' builder;
         let res = LLVM.build_alloca Type.star "" builder in
         let next_block = LLVM.append_block c "" func in
         let try_block =
@@ -431,7 +462,7 @@ module Make (I : sig val name : Ident.Module.t end) = struct
 
   let init func builder =
     let jmp_buf = LLVM.build_alloca Type.jmp_buf "" builder in
-    init_jmp_buf jmp_buf builder;
+    Generic.init_jmp_buf jmp_buf builder;
     init func ~jmp_buf GammaMap.Value.empty builder
 
   let () =
@@ -441,21 +472,15 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     let gc_malloc = LLVM.declare_function "GC_malloc" malloc_type m in
     LLVM.build_ret (LLVM.build_call gc_malloc (LLVM.params malloc) "" builder) builder
 
-  let init_gc builder =
-    let gc_init = LLVM.declare_function "GC_init" Type.unit_function m in
-    LLVM.build_call_void gc_init [||] builder
-
-  let init_name name = fmt "__%s_init" (Ident.Module.to_module_name name)
-
   let init_imports ~jmp_buf imports builder =
     let aux import =
       let import = ModulePath.to_module import in
-      let f = LLVM.declare_global Type.init (init_name import) m in
+      let f = LLVM.declare_global Type.init (Generic.init_name import) m in
       LLVM.build_call_void f [|jmp_buf|] builder
     in
     List.iter aux imports
 
-  let make ~with_main ~imports =
+  let make ~imports =
     let rec top init_list = function
       | UntypedTree.Value (name, t, linkage) :: xs ->
           let name = Ident.Name.prepend I.name name in
@@ -493,32 +518,34 @@ module Make (I : sig val name : Ident.Module.t end) = struct
           top (`Const g :: init_list) xs
       | [] ->
           let (f, builder) =
-            LLVM.define_function c (init_name I.name) Type.init m
+            LLVM.define_function c (Generic.init_name I.name) Type.init m
           in
           let jmp_buf = LLVM.param f 0 in
           init_imports ~jmp_buf imports builder;
           let builder = init f builder (List.rev init_list) in
           LLVM.build_ret_void builder;
-          if with_main then begin
-            let (_, builder) = LLVM.define_function c "main" Type.main_function m in
-            init_gc builder;
-            let jmp_buf = LLVM.build_alloca Type.jmp_buf "" builder in
-            init_jmp_buf jmp_buf builder;
-            LLVM.build_call_void f [|jmp_buf|] builder;
-            LLVM.build_ret (i32 0) builder;
-          end;
           m
     in
     top []
 end
 
-let make ~with_main ~name ~imports x =
+let make ~name ~imports x =
   let module Module = Make(struct let name = name end) in
-  Module.make ~with_main ~imports x
+  Module.make ~imports x
 
-let link dst src =
-  Llvm_linker.link_modules dst src Llvm_linker.Mode.DestroySource;
-  dst
+let main main_module =
+  let module Module = Main(struct let main_module = main_module end) in
+  Module.make ()
+
+let rec link ~main_module_name ~main_module = function
+  | [] ->
+      let dst = main main_module_name in
+      Llvm_linker.link_modules dst main_module Llvm_linker.Mode.DestroySource;
+      dst
+  | x::xs ->
+      let dst = link ~main_module_name ~main_module xs in
+      Llvm_linker.link_modules dst x Llvm_linker.Mode.DestroySource;
+      dst
 
 let init = lazy (Llvm_all_backends.initialize ())
 
