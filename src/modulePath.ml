@@ -36,16 +36,23 @@ let create_aux modul =
   let file = Filename.basename (base_filename ^ ".sfw") in
   {path; file}
 
-let create =
-  let regexp = Str.regexp "[A-Z][a-zA-Z]+" in
+let matches_module_name =
+  let open Re in
+  let lower = rg 'a' 'z' in
+  let upper = rg 'A' 'Z' in
+  let regexp = whole_string (seq [upper; rep (alt [lower; upper])]) in
+  let regexp = compile regexp in
   fun modul ->
-    let modul = String.nsplit modul ~by:"." in
-    let is_correct str =
-      if not (Str.string_match regexp str 0) then
-        raise (Error "The name of the module given is not correct.");
-    in
-    List.iter is_correct modul;
-    create_aux (Ident.Module.of_list modul)
+    test (exec regexp modul) 0
+
+let create modul =
+  let modul = String.nsplit modul ~by:"." in
+  let is_correct str =
+    if not (matches_module_name str) then
+      raise (Error "The name of the module given is not correct.");
+  in
+  List.iter is_correct modul;
+  create_aux (Ident.Module.of_list modul)
 
 let of_module ~parent_module modul =
   let {path; file} = create_aux modul in
