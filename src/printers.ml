@@ -740,7 +740,7 @@ module UntypedTree = struct
     let aux name acc =
       fmt "%s %s" acc (dump_name name)
     in
-    GammaMap.ValueSet.fold aux used_vars "Ø"
+    GammaSet.Value.fold aux used_vars "Ø"
 
   let rec dump_t = function
     | Abs (name, used_vars, t) ->

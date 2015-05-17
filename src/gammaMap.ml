@@ -27,6 +27,13 @@ module type BASE = sig
   include module type of Exceptionless
 end
 
+module type S = sig
+  include BASE
+
+  val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
+  val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
+end
+
 module Utils
          (M : BASE)
          (Ident : module type of Ident.Name with type t = M.key) = struct
@@ -44,29 +51,22 @@ module Utils
     M.fold aux a []
 end
 
-module Value = struct
-  module Self = struct
-    include Map.Make(Ident.Name)
-    include Exceptionless
-  end
-
-  include Self
-  include Utils(Self)(Ident.Name)
-end
-
-module ValueSet = struct
-  include Set.Make(Ident.Name)
+module MakeSelf (I : Map.OrderedType) = struct
+  include Map.Make(I)
   include Exceptionless
 end
 
-module Types = struct
-  module Self = struct
-    include Map.Make(Ident.Type)
-    include Exceptionless
-  end
+module Make (I : module type of Ident.Name) = struct
+  module Self = MakeSelf(I)
 
   include Self
-  include Utils(Self)(Ident.Type)
+  include Utils(Self)(I)
+end
+
+module Value = Make(Ident.Name)
+
+module Types = struct
+  include Make(Ident.Type)
 
   let add k x map =
     if mem k map then
@@ -80,13 +80,7 @@ end
 module Index = Value
 
 module Constr = struct
-  module Self = struct
-    include Map.Make(Ident.Type)
-    include Exceptionless
-  end
-
-  include Self
-  include Utils(Self)(Ident.Type)
+  include Make(Ident.Type)
 
   let add k k2 x map =
     match find k map with
@@ -95,13 +89,7 @@ module Constr = struct
 end
 
 module Exn = struct
-  module Self = struct
-    include Map.Make(Ident.Exn)
-    include Exceptionless
-  end
-
-  include Self
-  include Utils(Self)(Ident.Exn)
+  include Make(Ident.Exn)
 
   let add k x map =
     if mem k map then
@@ -110,17 +98,4 @@ module Exn = struct
         "A module cannot contain several times the exception '%s'"
         (Ident.Exn.to_string k);
     add k x map
-end
-
-module Eff = struct
-  include Set.Make(Ident.Eff)
-  include Exceptionless
-
-  let add k map =
-    if mem k map then
-      Error.fail
-        ~loc:(Ident.Eff.loc k)
-        "A module cannot contain several times the effect '%s'"
-        (Ident.Eff.to_string k);
-    add k map
 end

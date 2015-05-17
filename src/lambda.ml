@@ -24,7 +24,7 @@ open Monomorphic.None
 
 open UntypedTree
 
-module Set = GammaMap.ValueSet
+module Set = GammaSet.Value
 
 let rec of_patterns = function
   | Pattern.Leaf label ->

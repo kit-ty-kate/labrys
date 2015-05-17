@@ -19,48 +19,24 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-module Value : sig
-  include BatMap.S with type key = Ident.Name.t
+module type S = sig
+  include BatMap.S
   include module type of Exceptionless
 
   val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
 end
 
-module ValueSet : sig
-  include BatSet.S with type elt = Ident.Name.t
-  include module type of Exceptionless
-end
+module Value : S with type key = Ident.Name.t
 
-module Types : sig
-  include BatMap.S with type key = Ident.Type.t
-  include module type of Exceptionless
+module Types : S with type key = Ident.Type.t
 
-  val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
-  val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
-end
-
-module Index : module type of Value
+module Index : S with type key = Ident.Name.t
 
 module Constr : sig
-  include BatMap.S with type key = Ident.Type.t
-  include module type of Exceptionless
+  include S with type key = Ident.Type.t
 
   val add : key -> Index.key -> 'a -> 'a Index.t t -> 'a Index.t t
-
-  val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
-  val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
 end
 
-module Exn : sig
-  include BatMap.S with type key = Ident.Exn.t
-  include module type of Exceptionless
-
-  val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
-  val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
-end
-
-module Eff : sig
-  include BatSet.S with type elt = Ident.Eff.t
-  include module type of Exceptionless
-end
+module Exn : S with type key = Ident.Exn.t

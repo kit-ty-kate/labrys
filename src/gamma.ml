@@ -27,7 +27,7 @@ type t =
   ; types : Types.visibility GammaMap.Types.t
   ; constructors : ((Types.t * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : Types.t list GammaMap.Exn.t
-  ; effects : GammaMap.Eff.t
+  ; effects : GammaSet.Eff.t
   }
 
 let empty =
@@ -35,14 +35,14 @@ let empty =
   ; types = GammaMap.Types.empty
   ; constructors = GammaMap.Constr.empty
   ; exceptions = GammaMap.Exn.empty
-  ; effects = GammaMap.Eff.of_list Builtins.effects
+  ; effects = GammaSet.Eff.of_list Builtins.effects
   }
 
 let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
 let add_type k x self = {self with types = GammaMap.Types.add k x self.types}
 let add_constr k k2 x self = {self with constructors = GammaMap.Constr.add k k2 x self.constructors}
 let add_exception k x self = {self with exceptions = GammaMap.Exn.add k x self.exceptions}
-let add_effect k self = {self with effects = GammaMap.Eff.add k self.effects}
+let add_effect k self = {self with effects = GammaSet.Eff.add k self.effects}
 
 let union (modul, a) b =
   { values = GammaMap.Value.union (modul, a.values) b.values

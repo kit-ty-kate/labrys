@@ -22,13 +22,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let start printer lto opt o file =
+let start printer lto opt o modul =
 (*  if lto && c then
     Some
       "Error: Cannot enable the lto optimization while compiling.\n\
        This is allowed only during linking"
 *)
-  try Compiler.compile ~printer ~lto ~opt ~o file; None with
+  try Compiler.compile ~printer ~lto ~opt ~o modul; None with
   | Error.Exn x -> Some (Error.dump x)
   | ParserHandler.ParseError x -> Some x
   | Sys_error x -> Some x

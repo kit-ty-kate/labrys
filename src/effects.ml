@@ -63,7 +63,7 @@ let has_io {variables; exns = _} =
   not (Variables.is_empty variables)
 
 let add gammaE (name, exns) self =
-  if GammaMap.Eff.mem name gammaE then begin
+  if GammaSet.Eff.mem name gammaE then begin
     let has_args = Ident.Eff.equal name Builtins.exn in
     if has_args && List.is_empty exns then
       Error.fail

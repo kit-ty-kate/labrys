@@ -142,7 +142,7 @@ let rec of_parse_tree_kind ~pure_arrow gammaT gammaE = function
       (Forall (name, k, ret), Kinds.Star)
   | (_, UnsugaredTree.ForallEff (name, ret)) ->
       let loc_ret = fst ret in
-      let gammaE = GammaMap.Eff.add name gammaE in
+      let gammaE = GammaSet.Eff.add name gammaE in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow gammaT gammaE ret in
       if Kinds.not_star kx then
         fail_not_star ~loc:loc_ret "forall";

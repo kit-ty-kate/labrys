@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-module Set = GammaMap.ValueSet
+module Set = GammaSet.Value
 
 type t = Llvm.llmodule
 

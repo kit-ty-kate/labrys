@@ -19,22 +19,28 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t = private
-  { values : Types.t GammaMap.Value.t
-  ; types : Types.visibility GammaMap.Types.t
-  ; constructors : ((Types.t * int) GammaMap.Index.t) GammaMap.Constr.t
-  ; exceptions : Types.t list GammaMap.Exn.t
-  ; effects : GammaSet.Eff.t
-  }
+open BatteriesExceptionless
+open Monomorphic.None
 
-val empty : t
+module type S = sig
+  include Set.S
+  include module type of Exceptionless
+end
 
-val add_value : Ident.Name.t -> Types.t -> t -> t
-val add_type : Ident.Type.t -> Types.visibility -> t -> t
-val add_constr : Ident.Type.t -> Ident.Name.t -> (Types.t * int) -> t -> t
-val add_exception : Ident.Exn.t -> Types.t list -> t -> t
-val add_effect : Ident.Eff.t -> t -> t
+module Value = struct
+  include Set.Make(Ident.Name)
+  include Exceptionless
+end
 
-val union : (Ident.Module.t * t) -> t -> t
+module Eff = struct
+  include Set.Make(Ident.Eff)
+  include Exceptionless
 
-val is_subset_of : t -> t -> string list
+  let add k map =
+    if mem k map then
+      Error.fail
+        ~loc:(Ident.Eff.loc k)
+        "A module cannot contain several times the effect '%s'"
+        (Ident.Eff.to_string k);
+    add k map
+end
