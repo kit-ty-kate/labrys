@@ -22,20 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let replace_ext filename ext =
-  let filename =
-    try Filename.chop_extension filename with _ -> filename
-  in
-  filename ^ "." ^ ext
-
-let fold f acc l = List.rev (List.fold_left f acc l)
-
 let rec string_of_list f = function
   | [] -> ""
   | x::[] -> f x
   | x::xs -> f x ^ ", " ^ string_of_list f xs
-
-module StrMap = struct
-  include Map.Make(String)
-  include Exceptionless
-end

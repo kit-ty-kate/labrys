@@ -19,13 +19,4 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val replace_ext : string -> string -> string
-
-val fold : ('a list -> 'b -> 'a list) -> 'a list -> 'b list -> 'a list
-
 val string_of_list : ('a -> string) -> 'a list -> string
-
-module StrMap : sig
-  include BatteriesExceptionless.Map.S with type key = string
-  include module type of Exceptionless
-end
