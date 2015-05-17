@@ -2,7 +2,27 @@
 
 cd examples
 
-EXAMPLES=`ls *.sfw`
+EXAMPLES="\
+    Multi \
+    Nat \
+    TestImports \
+    YetAnotherBug \
+    Bug \
+    CombS \
+    Exn \
+    Fact \
+    LetRecIn \
+    MultiTypes \
+    Multi \
+    Print \
+    Rec \
+    Simple \
+    SystemFOmega \
+    SystemF \
+    Test \
+    UselessEnv \
+    Variants \
+"
 
 for x in $EXAMPLES; do
     ../main.native $x;

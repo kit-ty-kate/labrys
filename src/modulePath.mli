@@ -19,9 +19,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
+exception Error of string
+
 type t
 
-val of_file : string -> t
+val create : string -> t
 val of_module : parent_module:t -> Ident.Module.t -> t
 
 val impl : t -> string

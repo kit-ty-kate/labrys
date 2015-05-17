@@ -124,8 +124,8 @@ and compile ?(with_main=false) ~interface modul =
   prerr_endline (fmt "Compiling %s" (Ident.Module.to_module_name name));
   (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code)
 
-let compile ~printer ~lto ~opt ~o file =
-  let modul = ModulePath.of_file file in
+let compile ~printer ~lto ~opt ~o modul =
+  let modul = ModulePath.create modul in
   let (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code) =
     compile ~with_main:true ~interface:Gamma.empty modul
   in

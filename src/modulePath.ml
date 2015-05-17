@@ -22,23 +22,34 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
+exception Error of string
+
 type t =
   { path : string
   ; file : string
   }
 
-let of_file file =
-  let path = Filename.dirname file in
-  let path = if String.equal path "." then "" else path in
-  let file = Filename.basename file in
-  {path; file}
-
-let of_module ~parent_module modul =
+let create_aux modul =
   let base_filename = Ident.Module.to_file modul in
   let path = Filename.dirname base_filename in
   let path = if String.equal path "." then "" else path in
-  let path = Filename.concat parent_module.path path in
   let file = Filename.basename (base_filename ^ ".sfw") in
+  {path; file}
+
+let create =
+  let regexp = Str.regexp "[A-Z][a-zA-Z]+" in
+  fun modul ->
+    let modul = String.nsplit modul ~by:"." in
+    let is_correct str =
+      if not (Str.string_match regexp str 0) then
+        raise (Error "The name of the module given is not correct.");
+    in
+    List.iter is_correct modul;
+    create_aux (Ident.Module.of_list modul)
+
+let of_module ~parent_module modul =
+  let {path; file} = create_aux modul in
+  let path = Filename.concat parent_module.path path in
   {path; file}
 
 let impl {path; file} =

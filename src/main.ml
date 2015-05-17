@@ -33,6 +33,7 @@ let start printer lto opt o file =
   | ParserHandler.ParseError x -> Some x
   | Sys_error x -> Some x
   | Llvm_irreader.Error x -> Some x
+  | ModulePath.Error x -> Some x
 
 let cmd =
   let module Term = Cmdliner.Term in
@@ -52,7 +53,7 @@ let cmd =
   let args = args $ Arg.(value & flag & info ["lto"]) in
   let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
   let args = args $ Arg.(value & opt (some string) None & info ["o"]) in
-  let args = args $ Arg.(required & pos 0 (some non_dir_file) None & info []) in
+  let args = args $ Arg.(required & pos 0 (some string) None & info []) in
   (args, Term.info ~version:Config.version "cervoise")
 
 let () =
