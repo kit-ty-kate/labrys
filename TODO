@@ -27,6 +27,7 @@
 * Exceptions
   * Check if the exception is actually raised
 * Dynamically create a wrapper when partially apply a function instead of creating a lambda for each arguments (needs an analysis)
+* Add « type private T = … » to not have the getters (records) or the constructors (variants) into the environment
 
 
 == Long term ==
