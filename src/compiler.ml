@@ -119,15 +119,17 @@ and compile ~build_dir ?(with_main=false) ~interface modul =
   let code =
     lazy begin
       let cimpl = ModulePath.cimpl ~build_dir modul in
-      if Sys.file_exists cimpl then begin
+      try
+        BuildSystem.check_impl ~build_dir modul;
         Backend.read_bitcode cimpl
-      end else begin
-        let untyped_tree = Lazy.force untyped_tree in
-        let code = Backend.make ~name ~imports untyped_tree in
-        if not (Backend.write_bitcode ~o:cimpl code) then
-          Error.fail_module "Module '%s' cannot be written to a file" cimpl;
-        code
-      end
+      with
+      | BuildSystem.Failure ->
+          let untyped_tree = Lazy.force untyped_tree in
+          let code = Backend.make ~name ~imports untyped_tree in
+          if not (Backend.write_bitcode ~o:cimpl code) then
+            Error.fail_module "Module '%s' cannot be written to a file" cimpl;
+          BuildSystem.write_impl_infos ~build_dir modul;
+          code
     end
   in
   prerr_endline (fmt "Compiling %s" (Ident.Module.to_module_name name));

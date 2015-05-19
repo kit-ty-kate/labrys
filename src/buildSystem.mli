@@ -19,16 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-exception Error of string
+exception Failure
 
-type t
-
-val create : string -> t
-val of_module : parent_module:t -> Ident.Module.t -> t
-
-val impl : t -> string
-val cimpl : build_dir:string -> t -> string
-val impl_infos : build_dir:string -> t -> string
-val intf : t -> string
-
-val to_module : t -> Ident.Module.t
+val check_impl : build_dir:string -> ModulePath.t -> unit
+val write_impl_infos : build_dir:string -> ModulePath.t -> unit

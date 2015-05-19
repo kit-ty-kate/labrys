@@ -3,5 +3,7 @@ PKG pprint
 PKG llvm
 PKG batteries
 PKG monomorphic
+PKG re
+PKG msgpack
 S src
 B _build/src

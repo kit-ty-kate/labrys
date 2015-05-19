@@ -18,6 +18,7 @@ Executable cervoise
     cmdliner,
     pprint,
     re,
+    msgpack,
     llvm (>= 3.5),
     llvm.irreader,
     llvm.passmgr_builder,

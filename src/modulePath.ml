@@ -65,6 +65,9 @@ let impl {path; file} =
 let cimpl ~build_dir {path; file} =
   Filename.concat build_dir (Filename.concat path file ^ ".bc")
 
+let impl_infos ~build_dir {path; file} =
+  Filename.concat build_dir (Filename.concat path file ^ ".csfw")
+
 let intf {path; file} =
   Filename.concat path file ^ ".sfwi"
 
