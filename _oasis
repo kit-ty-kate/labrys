@@ -23,6 +23,7 @@ Executable cervoise
     llvm.passmgr_builder,
     llvm.target,
     llvm.bitwriter,
+    llvm.bitreader,
     llvm.all_backends,
     llvm.linker,
     llvm.scalar_opts,

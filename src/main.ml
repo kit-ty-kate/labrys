@@ -22,13 +22,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let start printer lto opt o modul =
+let start printer lto opt build_dir o modul =
 (*  if lto && c then
     Some
       "Error: Cannot enable the lto optimization while compiling.\n\
        This is allowed only during linking"
 *)
-  try Compiler.compile ~printer ~lto ~opt ~o modul; None with
+  try Compiler.compile ~printer ~lto ~opt ~build_dir ~o modul; None with
   | Error.Exn x -> Some (Error.dump x)
   | ParserHandler.ParseError x -> Some x
   | Sys_error x -> Some x
@@ -52,6 +52,7 @@ let cmd =
   let args = args $ Arg.(value & vflag Compiler.NoPrinter printers) in
   let args = args $ Arg.(value & flag & info ["lto"]) in
   let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
+  let args = args $ Arg.(value & opt dir "dest" & info ["build-dir"]) in
   let args = args $ Arg.(value & opt (some string) None & info ["o"]) in
   let args = args $ Arg.(required & pos 0 (some string) None & info []) in
   (args, Term.info ~version:Config.version "cervoise")

@@ -20,3 +20,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 val string_of_list : ('a -> string) -> 'a list -> string
+
+val mkdir : string -> int -> unit

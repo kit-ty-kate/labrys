@@ -26,3 +26,7 @@ let rec string_of_list f = function
   | [] -> ""
   | x::[] -> f x
   | x::xs -> f x ^ ", " ^ string_of_list f xs
+
+let mkdir name perm =
+  try Unix.mkdir name perm
+  with Unix.Unix_error (Unix.EEXIST, _, _) -> ()

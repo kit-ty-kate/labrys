@@ -27,6 +27,7 @@ val create : string -> t
 val of_module : parent_module:t -> Ident.Module.t -> t
 
 val impl : t -> string
+val cimpl : build_dir:string -> t -> string
 val intf : t -> string
 
 val to_module : t -> Ident.Module.t

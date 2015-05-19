@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type input_file = string
+type directory = string
 type output_file = string option
 
 type printer =
@@ -35,6 +36,7 @@ val compile :
   printer:printer ->
   lto:bool ->
   opt:int ->
+  build_dir:directory ->
   o:output_file ->
   input_file ->
   unit

@@ -574,6 +574,9 @@ let optimize ~opt ~lto m =
 let to_string = Llvm.string_of_llmodule
 
 let write_bitcode ~o m = Llvm_bitwriter.write_bitcode_file m o
+let read_bitcode file =
+  let buf = Llvm.MemoryBuffer.of_file file in
+  Llvm_bitreader.parse_bitcode c buf
 
 let emit_object_file ~tmp m =
   let triple = get_triple () in

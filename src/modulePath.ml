@@ -33,7 +33,7 @@ let create_aux modul =
   let base_filename = Ident.Module.to_file modul in
   let path = Filename.dirname base_filename in
   let path = if String.equal path "." then "" else path in
-  let file = Filename.basename (base_filename ^ ".sfw") in
+  let file = Filename.basename base_filename in
   {path; file}
 
 let matches_module_name =
@@ -60,15 +60,16 @@ let of_module ~parent_module modul =
   {path; file}
 
 let impl {path; file} =
-  Filename.concat path file
+  Filename.concat path file ^ ".sfw"
 
-let intf self =
-  let file = impl self in
-  file ^ "i"
+let cimpl ~build_dir {path; file} =
+  Filename.concat build_dir (Filename.concat path file ^ ".bc")
+
+let intf {path; file} =
+  Filename.concat path file ^ ".sfwi"
 
 let to_module {path; file} =
   let file = Filename.concat path file in
-  let file = Filename.chop_extension file in
   let file = String.nsplit file ~by:Filename.dir_sep in
   let file = List.map String.capitalize file in
   Ident.Module.of_list file

@@ -23,6 +23,7 @@ open BatteriesExceptionless
 open Monomorphic.None
 
 type input_file = string
+type directory = string
 type output_file = string option
 
 type printer =
@@ -81,7 +82,7 @@ let rec build_intf parent_module =
 
 let rec build_impl =
   let tbl = Hashtbl.create 32 in
-  fun parent_module imports ->
+  fun ~build_dir parent_module imports ->
   (* TODO: file that checks the hash of the dependencies *)
   (* TODO: We don't nececary need .sfw in the .sfwi contains only types *)
   let aux ((imports_acc, gamma_acc, impl_acc) as acc) modul =
@@ -91,14 +92,14 @@ let rec build_impl =
         acc
     | None ->
         let interface = build_intf modul in
-        let (_, _, _, _, impl, imports_impl) = compile ~interface modul in
+        let (_, _, _, _, impl, imports_impl) = compile ~build_dir ~interface modul in
         Hashtbl.add tbl modul ();
         let gamma = Gamma.union (ModulePath.to_module modul, interface) gamma_acc in
         (imports_acc @ [modul], gamma, impl :: imports_impl @ impl_acc)
   in
   List.fold_left aux ([], Gamma.empty, []) imports
 
-and compile ?(with_main=false) ~interface modul =
+and compile ~build_dir ?(with_main=false) ~interface modul =
   let module P = ParserHandler.Make(struct let get = ModulePath.impl modul end) in
   let (imports, parse_tree) = P.parse_impl () in
   let imports = Unsugar.create_imports imports in
@@ -107,7 +108,7 @@ and compile ?(with_main=false) ~interface modul =
   let unsugared_tree =
     lazy (prepend_builtins (Lazy.force unsugared_tree))
   in
-  let (imports, gamma, imports_code) = build_impl modul imports in
+  let (imports, gamma, imports_code) = build_impl ~build_dir modul imports in
   let typed_tree =
     lazy begin
       TypeChecker.check ~modul ~interface ~with_main gamma (Lazy.force unsugared_tree)
@@ -117,20 +118,29 @@ and compile ?(with_main=false) ~interface modul =
   let name = ModulePath.to_module modul in
   let code =
     lazy begin
-      let untyped_tree = Lazy.force untyped_tree in
-      Backend.make ~name ~imports untyped_tree
+      let cimpl = ModulePath.cimpl ~build_dir modul in
+      if Sys.file_exists cimpl then begin
+        Backend.read_bitcode cimpl
+      end else begin
+        let untyped_tree = Lazy.force untyped_tree in
+        let code = Backend.make ~name ~imports untyped_tree in
+        if not (Backend.write_bitcode ~o:cimpl code) then
+          Error.fail_module "Module '%s' cannot be written to a file" cimpl;
+        code
+      end
     end
   in
   prerr_endline (fmt "Compiling %s" (Ident.Module.to_module_name name));
   (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code)
 
-let compile ~printer ~lto ~opt ~o modul =
+let compile ~printer ~lto ~opt ~build_dir ~o modul =
   let modul = ModulePath.create modul in
   let (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code) =
-    compile ~with_main:true ~interface:Gamma.empty modul
+    compile ~build_dir ~with_main:true ~interface:Gamma.empty modul
   in
   let code =
     lazy begin
+      Utils.mkdir build_dir 0o750;
       let code = Lazy.force code in
       let imports_code = List.map Lazy.force imports_code in
       let main_module_name = ModulePath.to_module modul in

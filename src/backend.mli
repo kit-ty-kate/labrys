@@ -34,5 +34,6 @@ val optimize : opt:int -> lto:bool -> t -> t
 val to_string : t -> string
 
 val write_bitcode : o:string -> t -> bool
+val read_bitcode : string -> t
 
 val emit_object_file : tmp:string -> t -> unit
