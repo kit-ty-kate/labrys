@@ -22,18 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-type input_file = string
-type directory = string
-type output_file = string option
-
-type printer =
-  | NoPrinter
-  | ParseTree
-  | UnsugaredTree
-  | TypedTree
-  | UntypedTree
-  | LLVM
-  | OptimizedLLVM
+type module_name = string
 
 let fmt = Printf.sprintf
 
@@ -54,7 +43,6 @@ let with_tmp_file f =
   Sys.remove tmp
 
 let write ~o result =
-  let o = Option.default "a.out" o in
   let aux tmp =
     Backend.emit_object_file ~tmp result;
     link ~tmp ~o;
@@ -135,7 +123,7 @@ and compile ~build_dir ?(with_main=false) ~interface modul =
   prerr_endline (fmt "Compiling %s" (Ident.Module.to_module_name name));
   (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code)
 
-let compile ~printer ~lto ~opt ~build_dir ~o modul =
+let compile {Options.printer; lto; opt; build_dir; o} modul =
   let modul = ModulePath.create modul in
   let (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code) =
     compile ~build_dir ~with_main:true ~interface:Gamma.empty modul
@@ -151,18 +139,18 @@ let compile ~printer ~lto ~opt ~build_dir ~o modul =
   in
   let optimized_res = lazy (Backend.optimize ~lto ~opt (Lazy.force code)) in
   begin match printer with
-  | ParseTree ->
+  | Options.ParseTree ->
       print_endline (Printers.ParseTree.dump parse_tree);
-  | UnsugaredTree ->
+  | Options.UnsugaredTree ->
       print_endline (Printers.UnsugaredTree.dump (Lazy.force unsugared_tree));
-  | TypedTree ->
+  | Options.TypedTree ->
       print_endline (Printers.TypedTree.dump (Lazy.force typed_tree));
-  | UntypedTree ->
+  | Options.UntypedTree ->
       print_endline (Printers.UntypedTree.dump (Lazy.force untyped_tree));
-  | LLVM ->
+  | Options.LLVM ->
       print_endline (Backend.to_string (Lazy.force code));
-  | OptimizedLLVM ->
+  | Options.OptimizedLLVM ->
       print_endline (Backend.to_string (Lazy.force optimized_res));
-  | NoPrinter ->
+  | Options.NoPrinter ->
       write ~o (Lazy.force optimized_res)
   end

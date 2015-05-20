@@ -23,12 +23,20 @@ open BatteriesExceptionless
 open Monomorphic.None
 
 let start printer lto opt build_dir o modul =
+  let options =
+    { Options.printer
+    ; lto
+    ; opt
+    ; build_dir
+    ; o
+    }
+  in
 (*  if lto && c then
     Some
       "Error: Cannot enable the lto optimization while compiling.\n\
        This is allowed only during linking"
 *)
-  try Compiler.compile ~printer ~lto ~opt ~build_dir ~o modul; None with
+  try Compiler.compile options modul; None with
   | Error.Exn x -> Some (Error.dump x)
   | ParserHandler.ParseError x -> Some x
   | Sys_error x -> Some x
@@ -40,20 +48,20 @@ let cmd =
   let module Arg = Cmdliner.Arg in
   let ($) = Cmdliner.Term.($) in
   let printers =
-    [ (Compiler.ParseTree, Arg.info ["print-parse-tree"])
-    ; (Compiler.UnsugaredTree, Arg.info ["print-unsugared-tree"])
-    ; (Compiler.TypedTree, Arg.info ["print-typed-tree"])
-    ; (Compiler.UntypedTree, Arg.info ["print-untyped-tree"])
-    ; (Compiler.LLVM, Arg.info ["print-early-llvm"])
-    ; (Compiler.OptimizedLLVM, Arg.info ["print-llvm"])
+    [ (Options.ParseTree, Arg.info ["print-parse-tree"])
+    ; (Options.UnsugaredTree, Arg.info ["print-unsugared-tree"])
+    ; (Options.TypedTree, Arg.info ["print-typed-tree"])
+    ; (Options.UntypedTree, Arg.info ["print-untyped-tree"])
+    ; (Options.LLVM, Arg.info ["print-early-llvm"])
+    ; (Options.OptimizedLLVM, Arg.info ["print-llvm"])
     ]
   in
   let args = Term.pure start in
-  let args = args $ Arg.(value & vflag Compiler.NoPrinter printers) in
+  let args = args $ Arg.(value & vflag Options.NoPrinter printers) in
   let args = args $ Arg.(value & flag & info ["lto"]) in
   let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
   let args = args $ Arg.(value & opt dir "dest" & info ["build-dir"]) in
-  let args = args $ Arg.(value & opt (some string) None & info ["o"]) in
+  let args = args $ Arg.(value & opt file "a.out" & info ["o"]) in
   let args = args $ Arg.(required & pos 0 (some string) None & info []) in
   (args, Term.info ~version:Config.version "cervoise")
 

@@ -19,6 +19,23 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type module_name = string
+type file = string
+type directory = string
 
-val compile : Options.t -> module_name -> unit
+type printer =
+  | NoPrinter
+  | ParseTree
+  | UnsugaredTree
+  | TypedTree
+  | UntypedTree
+  | LLVM
+  | OptimizedLLVM
+
+type t =
+  { printer : printer
+  ; lto : bool
+  ; opt : int
+  ; src_dir : directory
+  ; build_dir : directory
+  ; o : file
+  }
