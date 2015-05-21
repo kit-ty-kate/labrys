@@ -35,6 +35,6 @@ val add_constr : Ident.Type.t -> Ident.Name.t -> (Types.t * int) -> t -> t
 val add_exception : Ident.Exn.t -> Types.t list -> t -> t
 val add_effect : Ident.Eff.t -> t -> t
 
-val union : (Ident.Module.t * t) -> t -> t
+val union : (Module.t * t) -> t -> t
 
 val is_subset_of : t -> t -> string list

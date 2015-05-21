@@ -324,8 +324,8 @@ let check ~modul ~interface ~with_main gamma x =
       Error.fail_module
         "The implementation '%s' does not match the interface '%s'.\n\
          Differences: %s"
-        (ModulePath.impl modul)
-        (ModulePath.intf modul)
+        (Module.impl modul)
+        (Module.intf modul)
         (String.concat ", " diff);
   end;
   res

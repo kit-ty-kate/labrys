@@ -30,7 +30,7 @@ end
 module type S = sig
   include BASE
 
-  val union : (Ident.Module.t * 'a t) -> 'a t -> 'a t
+  val union : (Module.t * 'a t) -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
 end
 

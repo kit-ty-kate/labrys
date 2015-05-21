@@ -23,12 +23,13 @@ exception Error of string
 
 type t
 
-val create : string -> t
-val of_module : parent_module:t -> Ident.Module.t -> t
+val create : current_module:t -> string list -> t
+val from_string : Options.t -> string -> t
 
 val impl : t -> string
-val cimpl : build_dir:string -> t -> string
-val impl_infos : build_dir:string -> t -> string
+val cimpl : t -> string
+val impl_infos : t -> string
 val intf : t -> string
 
-val to_module : t -> Ident.Module.t
+val to_string : t -> string
+val to_list : t -> string list

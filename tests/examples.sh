@@ -1,7 +1,5 @@
 #!/bin/sh
 
-cd examples
-
 EXAMPLES="\
     Multi \
     Nat \
@@ -25,7 +23,7 @@ EXAMPLES="\
 "
 
 for x in $EXAMPLES; do
-    ../main.native $x;
+    ./main.native --src-dir examples $x;
 done
 
 echo
@@ -33,5 +31,5 @@ echo Test compiling printed llvm code
 echo
 
 for x in $EXAMPLES; do
-    ../main.native --print-early-llvm $x | llc-3.5 - -o test.s
+    ./main.native --src-dir examples --print-early-llvm $x | llc-3.5 - -o test.s
 done

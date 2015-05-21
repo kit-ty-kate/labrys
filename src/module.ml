@@ -25,16 +25,18 @@ open Monomorphic.None
 exception Error of string
 
 type t =
-  { path : string
-  ; file : string
+  { src_dir : string
+  ; build_dir : string
+  ; modul : string list (** NOTE: Absolute module name *)
   }
 
-let create_aux modul =
-  let base_filename = Ident.Module.to_file modul in
-  let path = Filename.dirname base_filename in
-  let path = if String.equal path "." then "" else path in
-  let file = Filename.basename base_filename in
-  {path; file}
+let to_file = String.concat "/"
+
+let create ~current_module modul =
+  let src_dir = current_module.src_dir in
+  let build_dir = current_module.build_dir in
+  let modul = Utils.remove_last current_module.modul @ modul in
+  {src_dir; build_dir; modul}
 
 let matches_module_name =
   let open Re in
@@ -45,34 +47,31 @@ let matches_module_name =
   fun modul ->
     test (exec regexp modul) 0
 
-let create modul =
+let from_string options modul =
   let modul = String.nsplit modul ~by:"." in
   let is_correct str =
     if not (matches_module_name str) then
       raise (Error "The name of the module given is not correct.");
   in
   List.iter is_correct modul;
-  create_aux (Ident.Module.of_list modul)
+  let src_dir = options.Options.src_dir in
+  let build_dir = options.Options.build_dir in
+  {src_dir; build_dir; modul}
 
-let of_module ~parent_module modul =
-  let {path; file} = create_aux modul in
-  let path = Filename.concat parent_module.path path in
-  {path; file}
+let impl self =
+  Filename.concat self.src_dir (to_file self.modul) ^ ".sfw"
 
-let impl {path; file} =
-  Filename.concat path file ^ ".sfw"
+let cimpl self =
+  Filename.concat self.build_dir (to_file self.modul) ^ ".bc"
 
-let cimpl ~build_dir {path; file} =
-  Filename.concat build_dir (Filename.concat path file ^ ".bc")
+let impl_infos self =
+  Filename.concat self.build_dir (to_file self.modul) ^ ".csfw"
 
-let impl_infos ~build_dir {path; file} =
-  Filename.concat build_dir (Filename.concat path file ^ ".csfw")
+let intf self =
+  Filename.concat self.src_dir (to_file self.modul) ^ ".sfwi"
 
-let intf {path; file} =
-  Filename.concat path file ^ ".sfwi"
+let to_string self =
+  String.concat "." self.modul
 
-let to_module {path; file} =
-  let file = Filename.concat path file in
-  let file = String.nsplit file ~by:Filename.dir_sep in
-  let file = List.map String.capitalize file in
-  Ident.Module.of_list file
+let to_list self =
+  self.modul

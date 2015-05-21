@@ -23,7 +23,7 @@ type name = Ident.Name.t
 type exn_name = Ident.Exn.t
 type t_name = Ident.Type.t
 type eff_name = Ident.Eff.t
-type module_name = Ident.Module.t
+type module_name = Module.t
 type loc = Location.t
 
 type t_value = (t_name * Kinds.t)

@@ -56,89 +56,85 @@ let prepend_builtins tree =
   let variants = [UnsugaredTree.Variant (Builtins.unit, ty)] in
   UnsugaredTree.Datatype (Builtins.t_unit, Kinds.Star, variants) :: tree
 
-let rec build_intf parent_module =
-  let module P = ParserHandler.Make(struct let get = ModulePath.intf parent_module end) in
+let rec build_intf current_module =
+  let module P = ParserHandler.Make(struct let get = Module.intf current_module end) in
   let (imports, tree) = P.parse_intf () in
-  let imports = Unsugar.create_imports imports in
+  let imports = Unsugar.create_imports ~current_module imports in
   let tree = Unsugar.create_interface tree in
   let aux acc x =
-    let x = ModulePath.of_module ~parent_module x in
-    Gamma.union (ModulePath.to_module x, build_intf x) acc
+    Gamma.union (x, build_intf x) acc
   in
   let gamma = List.fold_left aux Gamma.empty imports in
   Interface.compile gamma tree
 
 let rec build_impl =
   let tbl = Hashtbl.create 32 in
-  fun ~build_dir parent_module imports ->
+  fun imports ->
   (* TODO: file that checks the hash of the dependencies *)
   (* TODO: We don't nececary need .sfw in the .sfwi contains only types *)
   let aux ((imports_acc, gamma_acc, impl_acc) as acc) modul =
-    let modul = ModulePath.of_module ~parent_module modul in
     match Hashtbl.find tbl modul with
     | Some () ->
         acc
     | None ->
         let interface = build_intf modul in
-        let (_, _, _, _, impl, imports_impl) = compile ~build_dir ~interface modul in
+        let (_, _, _, _, impl, imports_impl) = compile ~interface modul in
         Hashtbl.add tbl modul ();
-        let gamma = Gamma.union (ModulePath.to_module modul, interface) gamma_acc in
+        let gamma = Gamma.union (modul, interface) gamma_acc in
         (imports_acc @ [modul], gamma, impl :: imports_impl @ impl_acc)
   in
   List.fold_left aux ([], Gamma.empty, []) imports
 
-and compile ~build_dir ?(with_main=false) ~interface modul =
-  let module P = ParserHandler.Make(struct let get = ModulePath.impl modul end) in
+and compile ?(with_main=false) ~interface modul =
+  let module P = ParserHandler.Make(struct let get = Module.impl modul end) in
   let (imports, parse_tree) = P.parse_impl () in
-  let imports = Unsugar.create_imports imports in
+  let imports = Unsugar.create_imports ~current_module:modul imports in
   (* TODO: Print with and without builtins *)
   let unsugared_tree = lazy (Unsugar.create parse_tree) in
   let unsugared_tree =
     lazy (prepend_builtins (Lazy.force unsugared_tree))
   in
-  let (imports, gamma, imports_code) = build_impl ~build_dir modul imports in
+  let (imports, gamma, imports_code) = build_impl imports in
   let typed_tree =
     lazy begin
       TypeChecker.check ~modul ~interface ~with_main gamma (Lazy.force unsugared_tree)
     end
   in
   let untyped_tree = lazy (Lambda.of_typed_tree (Lazy.force typed_tree)) in
-  let name = ModulePath.to_module modul in
   let code =
     lazy begin
-      let cimpl = ModulePath.cimpl ~build_dir modul in
+      let cimpl = Module.cimpl modul in
       try
-        BuildSystem.check_impl ~build_dir modul;
+        BuildSystem.check_impl modul;
         Backend.read_bitcode cimpl
       with
       | BuildSystem.Failure ->
           let untyped_tree = Lazy.force untyped_tree in
-          let code = Backend.make ~name ~imports untyped_tree in
+          let code = Backend.make ~modul ~imports untyped_tree in
           if not (Backend.write_bitcode ~o:cimpl code) then
             Error.fail_module "Module '%s' cannot be written to a file" cimpl;
-          BuildSystem.write_impl_infos ~build_dir modul;
+          BuildSystem.write_impl_infos modul;
           code
     end
   in
-  prerr_endline (fmt "Compiling %s" (Ident.Module.to_module_name name));
+  prerr_endline (fmt "Compiling %s" (Module.to_string modul));
   (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code)
 
-let compile {Options.printer; lto; opt; build_dir; o} modul =
-  let modul = ModulePath.create modul in
+let compile options modul =
+  let modul = Module.from_string options modul in
   let (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code) =
-    compile ~build_dir ~with_main:true ~interface:Gamma.empty modul
+    compile ~with_main:true ~interface:Gamma.empty modul
   in
   let code =
     lazy begin
-      Utils.mkdir build_dir 0o750;
+      Utils.mkdir options.Options.build_dir 0o750;
       let code = Lazy.force code in
       let imports_code = List.map Lazy.force imports_code in
-      let main_module_name = ModulePath.to_module modul in
-      Backend.link ~main_module_name ~main_module:code imports_code
+      Backend.link ~main_module_name:modul ~main_module:code imports_code
     end
   in
-  let optimized_res = lazy (Backend.optimize ~lto ~opt (Lazy.force code)) in
-  begin match printer with
+  let optimized_res = lazy (Backend.optimize options (Lazy.force code)) in
+  begin match options.Options.printer with
   | Options.ParseTree ->
       print_endline (Printers.ParseTree.dump parse_tree);
   | Options.UnsugaredTree ->
@@ -152,5 +148,5 @@ let compile {Options.printer; lto; opt; build_dir; o} modul =
   | Options.OptimizedLLVM ->
       print_endline (Backend.to_string (Lazy.force optimized_res));
   | Options.NoPrinter ->
-      write ~o (Lazy.force optimized_res)
+      write ~o:options.Options.o (Lazy.force optimized_res)
   end

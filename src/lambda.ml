@@ -175,7 +175,7 @@ let of_typed_tree (acc, names, mapn) = function
       (Value (name, t, linkage) :: acc, names, mapn)
   | TypedTree.Binding (name, arity, value) ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      let name' = Ident.Name.prepend (Ident.Module.of_list [""]) name in
+      let name' = Ident.Name.prepend_empty name in
       let wrappers =
         create_dyn_functions
           (fun () -> ValueBinding (name, name', value, linkage) :: acc)

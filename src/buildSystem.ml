@@ -56,12 +56,12 @@ let parse_impl_infos file =
     | _ ->
         raise Failure
 
-let check_impl ~build_dir modul =
+let check_impl modul =
   try
-    let infos = ModulePath.impl_infos ~build_dir modul in
+    let infos = Module.impl_infos modul in
     let infos = File.with_file_in infos (parse_impl_infos) in
-    let hash = Digest.file (ModulePath.impl modul) in
-    let hash_bc = Digest.file (ModulePath.cimpl ~build_dir modul) in
+    let hash = Digest.file (Module.impl modul) in
+    let hash_bc = Digest.file (Module.cimpl modul) in
     if not
          (String.equal infos.version Config.version
           && String.equal infos.hash hash
@@ -72,10 +72,10 @@ let check_impl ~build_dir modul =
   with
   | _ -> raise Failure
 
-let write_impl_infos ~build_dir modul =
+let write_impl_infos modul =
   let version = Config.version in
-  let hash = Digest.file (ModulePath.impl modul) in
-  let hash_bc = Digest.file (ModulePath.cimpl ~build_dir modul) in
+  let hash = Digest.file (Module.impl modul) in
+  let hash_bc = Digest.file (Module.cimpl modul) in
   let content =
     `FixMap
       [ (`FixRaw (String.explode "version"), `FixRaw (String.explode version))
@@ -85,5 +85,5 @@ let write_impl_infos ~build_dir modul =
   in
   let content = Msgpack.Serialize.serialize_string content in
   File.with_file_out
-    (ModulePath.impl_infos ~build_dir modul)
+    (Module.impl_infos modul)
     (fun file -> IO.write_string file content)

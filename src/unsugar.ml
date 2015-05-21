@@ -267,6 +267,6 @@ let create_interface = function
 
 let create_interface = List.map create_interface
 
-let create_imports =
-  let aux (_, `UpperName name) = Ident.Module.of_list name in
+let create_imports ~current_module =
+  let aux (_, `UpperName name) = Module.create ~current_module name in
   List.map aux

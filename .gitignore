@@ -9,6 +9,6 @@ tests.native
 tests.byte
 
 a.out
-examples/*.o
+dest
 
 src/config.ml

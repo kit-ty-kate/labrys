@@ -23,4 +23,7 @@ val create : ParseTree.top list -> UnsugaredTree.top list
 
 val create_interface : ParseTree.interface list -> InterfaceTree.t list
 
-val create_imports : ParseTree.imports -> UnsugaredTree.imports
+val create_imports :
+  current_module:Module.t ->
+  ParseTree.imports ->
+  UnsugaredTree.imports

@@ -19,14 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-module Module : sig
-  type t
-
-  val of_list : string list -> t
-  val to_file : t -> string
-  val to_module_name : t -> string
-end
-
 module Name : sig
   type t
 
@@ -34,6 +26,7 @@ module Name : sig
   val compare : t -> t -> int
 
   val prepend : Module.t -> t -> t
+  val prepend_empty : t -> t
 
   val of_list : loc:Location.t -> string list -> t
   val to_string : t -> string

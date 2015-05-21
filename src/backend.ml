@@ -65,7 +65,7 @@ let string = Llvm.const_string c
 module Generic (I : sig val m : t end) = struct
   open I
 
-  let init_name name = fmt "__%s_init" (Ident.Module.to_module_name name)
+  let init_name name = fmt "__%s_init" (Module.to_string name)
 
   let frameaddress =
     let ty = Llvm.function_type Type.star [|Type.i32|] in
@@ -84,7 +84,7 @@ module Generic (I : sig val m : t end) = struct
     Llvm.build_store v jmp_buf builder
 end
 
-module Main (I : sig val main_module : Ident.Module.t end) = struct
+module Main (I : sig val main_module : Module.t end) = struct
   let m = Llvm.create_module c "_main_"
 
   module Generic = Generic (struct let m = m end)
@@ -107,13 +107,13 @@ module Main (I : sig val main_module : Ident.Module.t end) = struct
     m
 end
 
-module Make (I : sig val name : Ident.Module.t end) = struct
+module Make (I : sig val name : Module.t end) = struct
   type gamma =
     | Value of Llvm.llvalue
     | Env of int
     | Global of Llvm.llvalue
 
-  let m = Llvm.create_module c (Ident.Module.to_module_name I.name)
+  let m = Llvm.create_module c (Module.to_string I.name)
 
   module Generic = Generic (struct let m = m end)
 
@@ -479,7 +479,6 @@ module Make (I : sig val name : Ident.Module.t end) = struct
 
   let init_imports ~jmp_buf imports builder =
     let aux import =
-      let import = ModulePath.to_module import in
       let f = Llvm.declare_global Type.init (Generic.init_name import) m in
       Llvm.build_call_void f [|jmp_buf|] builder
     in
@@ -534,8 +533,8 @@ module Make (I : sig val name : Ident.Module.t end) = struct
     top []
 end
 
-let make ~name ~imports x =
-  let module Module = Make(struct let name = name end) in
+let make ~modul ~imports x =
+  let module Module = Make(struct let name = modul end) in
   Module.make ~imports x
 
 let main main_module =
@@ -562,7 +561,9 @@ let get_target ~triple =
   let target = Llvm_target.Target.by_triple triple in
   Llvm_target.TargetMachine.create ~triple target
 
-let optimize ~opt ~lto m =
+let optimize options m =
+  let lto = options.Options.lto in
+  let opt = options.Options.opt in
   let triple = get_triple () in
   let target = get_target ~triple in
   let layout = Llvm_target.TargetMachine.data_layout target in

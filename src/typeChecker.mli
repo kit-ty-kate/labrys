@@ -20,7 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 val check :
-  modul:ModulePath.t ->
+  modul:Module.t ->
   interface:Gamma.t ->
   with_main:bool ->
   Gamma.t ->

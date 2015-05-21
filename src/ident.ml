@@ -24,14 +24,6 @@ open Monomorphic.None
 
 let fmt = Printf.sprintf
 
-module Module = struct
-  type t = string list
-
-  let of_list x = x
-  let to_file = String.concat "/"
-  let to_module_name = String.concat "."
-end
-
 module Name = struct
   type t = (Location.t * string list)
 
@@ -41,7 +33,12 @@ module Name = struct
 
   let prepend modul = function
     | (_, []) -> assert false
-    | (loc, ([_] as x)) -> (loc, modul @ x)
+    | (loc, ([_] as x)) -> (loc, Module.to_list modul @ x)
+    | x -> x
+
+  let prepend_empty = function
+    | (_, []) -> assert false
+    | (loc, ([_] as x)) -> (loc, [""] @ x)
     | x -> x
 
   let of_list ~loc x = (loc, x)

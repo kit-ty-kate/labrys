@@ -30,3 +30,7 @@ let rec string_of_list f = function
 let mkdir name perm =
   try Unix.mkdir name perm
   with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
+
+let rec remove_last = function
+  | [] | [_] -> []
+  | x::xs -> x :: remove_last xs
