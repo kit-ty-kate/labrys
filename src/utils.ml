@@ -27,10 +27,23 @@ let rec string_of_list f = function
   | x::[] -> f x
   | x::xs -> f x ^ ", " ^ string_of_list f xs
 
-let mkdir name perm =
-  try Unix.mkdir name perm
-  with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
-
 let rec remove_last = function
   | [] | [_] -> []
   | x::xs -> x :: remove_last xs
+
+let mkdir name =
+  let aux name =
+    try Unix.mkdir name 0o750
+    with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
+  in
+  let l = remove_last (String.nsplit name ~by:Filename.dir_sep) in
+  let l =
+    let aux acc x =
+      match acc with
+      | [] -> [x]
+      | y::_ ->
+          Filename.concat y x :: acc
+    in
+    List.rev (List.fold_left aux [] l)
+  in
+  List.iter aux l

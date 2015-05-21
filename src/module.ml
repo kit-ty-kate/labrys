@@ -55,7 +55,7 @@ let from_string options modul =
   in
   List.iter is_correct modul;
   let src_dir = options.Options.src_dir in
-  let build_dir = options.Options.build_dir in
+  let build_dir = Filename.concat options.Options.build_dir src_dir in
   {src_dir; build_dir; modul}
 
 let impl self =

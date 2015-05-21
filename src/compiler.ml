@@ -90,32 +90,25 @@ and compile ?(with_main=false) ~interface options modul =
   let (imports, parse_tree) = P.parse_impl () in
   let imports = Unsugar.create_imports ~current_module:modul imports in
   (* TODO: Print with and without builtins *)
-  let unsugared_tree = lazy (Unsugar.create parse_tree) in
-  let unsugared_tree =
-    lazy (prepend_builtins (Lazy.force unsugared_tree))
-  in
+  let unsugared_tree = Unsugar.create parse_tree in
+  let unsugared_tree = prepend_builtins unsugared_tree in
   let (imports, gamma, imports_code) = build_impl options imports in
   let typed_tree =
-    lazy begin
-      TypeChecker.check ~modul ~interface ~with_main gamma (Lazy.force unsugared_tree)
-    end
+    TypeChecker.check ~modul ~interface ~with_main gamma unsugared_tree
   in
-  let untyped_tree = lazy (Lambda.of_typed_tree (Lazy.force typed_tree)) in
+  let untyped_tree = Lambda.of_typed_tree typed_tree in
   let code =
-    lazy begin
-      let cimpl = Module.cimpl modul in
-      try
-        BuildSystem.check_impl options modul;
-        Backend.read_bitcode cimpl
-      with
-      | BuildSystem.Failure ->
-          let untyped_tree = Lazy.force untyped_tree in
-          let code = Backend.make ~modul ~imports untyped_tree in
-          if not (Backend.write_bitcode ~o:cimpl code) then
-            Error.fail_module "Module '%s' cannot be written to a file" cimpl;
-          BuildSystem.write_impl_infos imports modul;
-          code
-    end
+    let cimpl = Module.cimpl modul in
+    try
+      BuildSystem.check_impl options modul;
+      Backend.read_bitcode cimpl
+    with
+    | BuildSystem.Failure ->
+        let code = Backend.make ~modul ~imports untyped_tree in
+        if not (Backend.write_bitcode ~o:cimpl code) then
+          Error.fail_module "Module '%s' cannot be written to a file" cimpl;
+        BuildSystem.write_impl_infos imports modul;
+        code
   in
   prerr_endline (fmt "Compiling %s" (Module.to_string modul));
   (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code)
@@ -126,27 +119,22 @@ let compile options modul =
     compile ~with_main:true ~interface:Gamma.empty options modul
   in
   let code =
-    lazy begin
-      Utils.mkdir options.Options.build_dir 0o750;
-      let code = Lazy.force code in
-      let imports_code = List.map Lazy.force imports_code in
-      Backend.link ~main_module_name:modul ~main_module:code imports_code
-    end
+    Backend.link ~main_module_name:modul ~main_module:code imports_code
   in
-  let optimized_res = lazy (Backend.optimize options (Lazy.force code)) in
+  let optimized_res = Backend.optimize options code in
   begin match options.Options.printer with
   | Options.ParseTree ->
       print_endline (Printers.ParseTree.dump parse_tree);
   | Options.UnsugaredTree ->
-      print_endline (Printers.UnsugaredTree.dump (Lazy.force unsugared_tree));
+      print_endline (Printers.UnsugaredTree.dump unsugared_tree);
   | Options.TypedTree ->
-      print_endline (Printers.TypedTree.dump (Lazy.force typed_tree));
+      print_endline (Printers.TypedTree.dump typed_tree);
   | Options.UntypedTree ->
-      print_endline (Printers.UntypedTree.dump (Lazy.force untyped_tree));
+      print_endline (Printers.UntypedTree.dump untyped_tree);
   | Options.LLVM ->
-      print_endline (Backend.to_string (Lazy.force code));
+      print_endline (Backend.to_string code);
   | Options.OptimizedLLVM ->
-      print_endline (Backend.to_string (Lazy.force optimized_res));
+      print_endline (Backend.to_string optimized_res);
   | Options.NoPrinter ->
-      write ~o:options.Options.o (Lazy.force optimized_res)
+      write ~o:options.Options.o optimized_res
   end

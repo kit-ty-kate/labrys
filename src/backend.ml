@@ -574,7 +574,10 @@ let optimize options m =
 
 let to_string = Llvm.string_of_llmodule
 
-let write_bitcode ~o m = Llvm_bitwriter.write_bitcode_file m o
+let write_bitcode ~o m =
+  Utils.mkdir o;
+  Llvm_bitwriter.write_bitcode_file m o
+
 let read_bitcode file =
   try
     let buf = Llvm.MemoryBuffer.of_file file in

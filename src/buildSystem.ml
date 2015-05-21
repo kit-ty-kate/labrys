@@ -114,6 +114,6 @@ let write_impl_infos imports modul =
       ]
   in
   let content = Msgpack.Serialize.serialize_string content in
-  File.with_file_out
-    (Module.impl_infos modul)
-    (fun file -> IO.write_string file content)
+  let file_name = Module.impl_infos modul in
+  Utils.mkdir file_name;
+  File.with_file_out file_name (fun file -> IO.write_string file content)
