@@ -1,14 +1,14 @@
-_build
-setup.data
-setup.log
-setup.exe
+/_build
+/setup.data
+/setup.log
+/setup.exe
 
-main.native
-main.byte
-tests.native
-tests.byte
+/main.native
+/main.byte
+/tests.native
+/tests.byte
 
-a.out
-dest
+/a.out
+/dest
 
-src/config.ml
+/src/config.ml
