@@ -47,4 +47,4 @@ let dump = function
       in
       string_of_location loc ^ "    " ^ x
   | Module x ->
-      fmt "Error:\n%s" x
+      fmt "Error:\n    %s" x
