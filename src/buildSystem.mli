@@ -21,5 +21,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 exception Failure
 
-val check_impl : Options.t -> Module.t -> unit
+val check_impl : Options.t -> Module.t -> Module.t list
 val write_impl_infos : Module.t list -> Module.t -> unit

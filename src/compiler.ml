@@ -109,27 +109,27 @@ let rec build_imports ~imports_code options imports =
   List.fold_left aux imports_code imports
 
 and compile ?(with_main=false) imports_code interface options modul =
-  prerr_endline (fmt "Compiling %s" (Module.to_string modul));
-  let (imports, untyped_tree) = get_untyped_tree ~with_main ~interface modul in
-  let imports_code = build_imports ~imports_code options imports in
   let cimpl = Module.cimpl modul in
-  let code =
-    try
-      BuildSystem.check_impl options modul;
-      Backend.read_bitcode cimpl
-    with
-    | BuildSystem.Failure ->
-        let code = Backend.make ~modul ~imports untyped_tree in
-        Backend.write_bitcode ~o:cimpl code;
-        BuildSystem.write_impl_infos imports modul;
-        code
-  in
-  (imports_code, code)
+  try
+    let imports = BuildSystem.check_impl options modul in
+    let imports_code = build_imports ~imports_code options imports in
+    let code = Backend.read_bitcode cimpl in
+    (imports_code, code)
+  with
+  | BuildSystem.Failure ->
+      prerr_endline (fmt "Compiling %s" (Module.to_string modul));
+      let (imports, untyped_tree) = get_untyped_tree ~with_main ~interface modul in
+      let imports_code = build_imports ~imports_code options imports in
+      let code = Backend.make ~modul ~imports untyped_tree in
+      Backend.write_bitcode ~o:cimpl code;
+      BuildSystem.write_impl_infos imports modul;
+      (imports_code, code)
 
 let get_code options modul =
   let (imports_code, code) =
     compile ~with_main:true Module.Map.empty Gamma.empty options modul
   in
+  prerr_endline (fmt "Linking %s" (Module.to_string modul));
   Backend.link ~main_module_name:modul ~main_module:code imports_code
 
 let get_optimized_code options modul =

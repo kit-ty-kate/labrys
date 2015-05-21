@@ -72,9 +72,10 @@ let check_imports_hash options =
     let modul = Module.from_string options modul in
     let hash_file = Digest.file (Module.impl_infos modul) in
     if not (String.equal hash_file hash) then
-      raise Failure
+      raise Failure;
+    modul
   in
-  List.iter aux
+  List.map aux
 
 let check_impl options modul =
   try
@@ -89,7 +90,7 @@ let check_impl options modul =
          )
     then
       raise Failure;
-    check_imports_hash options infos.imports;
+    check_imports_hash options infos.imports
   with
   | _ -> raise Failure
 
