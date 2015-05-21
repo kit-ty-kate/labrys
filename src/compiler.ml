@@ -69,7 +69,7 @@ let rec build_intf current_module =
 
 let rec build_impl =
   let tbl = Hashtbl.create 32 in
-  fun imports ->
+  fun options imports ->
   (* TODO: file that checks the hash of the dependencies *)
   (* TODO: We don't nececary need .sfw in the .sfwi contains only types *)
   let aux ((imports_acc, gamma_acc, impl_acc) as acc) modul =
@@ -78,14 +78,14 @@ let rec build_impl =
         acc
     | None ->
         let interface = build_intf modul in
-        let (_, _, _, _, impl, imports_impl) = compile ~interface modul in
+        let (_, _, _, _, impl, imports_impl) = compile ~interface options modul in
         Hashtbl.add tbl modul ();
         let gamma = Gamma.union (modul, interface) gamma_acc in
         (imports_acc @ [modul], gamma, impl :: imports_impl @ impl_acc)
   in
   List.fold_left aux ([], Gamma.empty, []) imports
 
-and compile ?(with_main=false) ~interface modul =
+and compile ?(with_main=false) ~interface options modul =
   let module P = ParserHandler.Make(struct let get = Module.impl modul end) in
   let (imports, parse_tree) = P.parse_impl () in
   let imports = Unsugar.create_imports ~current_module:modul imports in
@@ -94,7 +94,7 @@ and compile ?(with_main=false) ~interface modul =
   let unsugared_tree =
     lazy (prepend_builtins (Lazy.force unsugared_tree))
   in
-  let (imports, gamma, imports_code) = build_impl imports in
+  let (imports, gamma, imports_code) = build_impl options imports in
   let typed_tree =
     lazy begin
       TypeChecker.check ~modul ~interface ~with_main gamma (Lazy.force unsugared_tree)
@@ -105,7 +105,7 @@ and compile ?(with_main=false) ~interface modul =
     lazy begin
       let cimpl = Module.cimpl modul in
       try
-        BuildSystem.check_impl modul;
+        BuildSystem.check_impl options modul;
         Backend.read_bitcode cimpl
       with
       | BuildSystem.Failure ->
@@ -113,7 +113,7 @@ and compile ?(with_main=false) ~interface modul =
           let code = Backend.make ~modul ~imports untyped_tree in
           if not (Backend.write_bitcode ~o:cimpl code) then
             Error.fail_module "Module '%s' cannot be written to a file" cimpl;
-          BuildSystem.write_impl_infos modul;
+          BuildSystem.write_impl_infos imports modul;
           code
     end
   in
@@ -123,7 +123,7 @@ and compile ?(with_main=false) ~interface modul =
 let compile options modul =
   let modul = Module.from_string options modul in
   let (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code) =
-    compile ~with_main:true ~interface:Gamma.empty modul
+    compile ~with_main:true ~interface:Gamma.empty options modul
   in
   let code =
     lazy begin

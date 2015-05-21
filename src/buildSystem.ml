@@ -28,6 +28,7 @@ type impl_infos =
   { version : string
   ; hash : string
   ; hash_bc : string
+  ; imports : (string * string) list
   }
 
 let map_msgpack_maps =
@@ -45,18 +46,37 @@ let parse_impl_infos file =
         | [ ("version", `FixRaw version)
           ; ("hash", `Raw16 hash)
           ; ("hash-bc", `Raw16 hash_bc)
+          ; ("imports", `Map32 imports)
           ] ->
             let version = String.implode version in
             let hash = String.implode hash in
             let hash_bc = String.implode hash_bc in
-            {version; hash; hash_bc}
+            let imports =
+              let aux = function
+                | (`Raw16 import, `Raw16 hash_import) ->
+                    (String.implode import, String.implode hash_import)
+                | _ ->
+                    raise Failure
+              in
+              List.map aux imports
+            in
+            {version; hash; hash_bc; imports}
         | _ ->
             raise Failure
         end
     | _ ->
         raise Failure
 
-let check_impl modul =
+let check_imports_hash options =
+  let aux (modul, hash) =
+    let modul = Module.from_string options modul in
+    let hash_file = Digest.file (Module.impl_infos modul) in
+    if not (String.equal hash_file hash) then
+      raise Failure
+  in
+  List.iter aux
+
+let check_impl options modul =
   try
     let infos = Module.impl_infos modul in
     let infos = File.with_file_in infos (parse_impl_infos) in
@@ -68,19 +88,29 @@ let check_impl modul =
           && String.equal infos.hash_bc hash_bc
          )
     then
-      raise Failure
+      raise Failure;
+    check_imports_hash options infos.imports;
   with
   | _ -> raise Failure
 
-let write_impl_infos modul =
+let write_impl_infos imports modul =
   let version = Config.version in
   let hash = Digest.file (Module.impl modul) in
   let hash_bc = Digest.file (Module.cimpl modul) in
+  let imports =
+    let aux modul =
+      let import = Module.to_string modul in
+      let hash_import = Digest.file (Module.impl_infos modul) in
+      (`Raw16 (String.explode import), `Raw16 (String.explode hash_import))
+    in
+    List.map aux imports
+  in
   let content =
     `FixMap
       [ (`FixRaw (String.explode "version"), `FixRaw (String.explode version))
       ; (`FixRaw (String.explode "hash"), `Raw16 (String.explode hash))
       ; (`FixRaw (String.explode "hash-bc"), `Raw16 (String.explode hash_bc))
+      ; (`FixRaw (String.explode "imports"), `Map32 imports)
       ]
   in
   let content = Msgpack.Serialize.serialize_string content in
