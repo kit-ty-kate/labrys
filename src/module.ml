@@ -80,7 +80,7 @@ let to_list self =
 
 type tmp = t
 
-module Map = Utils.Map(struct
+module Map = Map.Make(struct
     type t = tmp
 
     let compare x y = unsafe_compare x y

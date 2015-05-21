@@ -47,15 +47,3 @@ let mkdir name =
     List.rev (List.fold_left aux [] l)
   in
   List.iter aux l
-
-module type MapS = sig
-  include BatMap.S
-
-  val union : 'a t -> 'a t -> 'a t
-end
-
-module Map (I : Map.OrderedType) = struct
-  include Map.Make(I)
-
-  let union x y = fold add x y
-end

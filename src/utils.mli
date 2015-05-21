@@ -24,11 +24,3 @@ val string_of_list : ('a -> string) -> 'a list -> string
 val mkdir : string -> unit
 
 val remove_last : 'a list -> 'a list
-
-module type MapS = sig
-  include BatMap.S
-
-  val union : 'a t -> 'a t -> 'a t
-end
-
-module Map (I : BatMap.OrderedType) : MapS with type key = I.t

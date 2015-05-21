@@ -96,18 +96,22 @@ let get_untyped_tree ~with_main ~interface modul =
   let untyped_tree = Lambda.of_typed_tree typed_tree in
   (imports, untyped_tree)
 
-let rec build_imports options imports =
-  let aux imports modul =
-    let interface = build_intf modul in
-    let (imports_code, code) = compile ~interface options modul in
-    Module.Map.union (Module.Map.add modul code imports_code) imports
+let rec build_imports ~imports_code options imports =
+  let aux imports_code modul =
+    if Module.Map.mem modul imports_code then begin
+      imports_code
+    end else begin
+      let interface = build_intf modul in
+      let (imports_code, code) = compile imports_code interface options modul in
+      Module.Map.add modul code imports_code
+    end
   in
-  List.fold_left aux Module.Map.empty imports
+  List.fold_left aux imports_code imports
 
-and compile ?(with_main=false) ~interface options modul =
+and compile ?(with_main=false) imports_code interface options modul =
   prerr_endline (fmt "Compiling %s" (Module.to_string modul));
   let (imports, untyped_tree) = get_untyped_tree ~with_main ~interface modul in
-  let imports_code = build_imports options imports in
+  let imports_code = build_imports ~imports_code options imports in
   let cimpl = Module.cimpl modul in
   let code =
     try
@@ -124,7 +128,7 @@ and compile ?(with_main=false) ~interface options modul =
 
 let get_code options modul =
   let (imports_code, code) =
-    compile ~with_main:true ~interface:Gamma.empty options modul
+    compile ~with_main:true Module.Map.empty Gamma.empty options modul
   in
   Backend.link ~main_module_name:modul ~main_module:code imports_code
 
