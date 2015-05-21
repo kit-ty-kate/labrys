@@ -33,3 +33,5 @@ val intf : t -> string
 
 val to_string : t -> string
 val to_list : t -> string list
+
+module Map : Utils.MapS with type key = t

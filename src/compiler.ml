@@ -67,74 +67,96 @@ let rec build_intf current_module =
   let gamma = List.fold_left aux Gamma.empty imports in
   Interface.compile gamma tree
 
-let rec build_impl =
-  let tbl = Hashtbl.create 32 in
-  fun options imports ->
-  (* TODO: file that checks the hash of the dependencies *)
-  (* TODO: We don't nececary need .sfw in the .sfwi contains only types *)
-  let aux ((imports_acc, gamma_acc, impl_acc) as acc) modul =
-    match Hashtbl.find tbl modul with
-    | Some () ->
-        acc
-    | None ->
-        let interface = build_intf modul in
-        let (_, _, _, _, impl, imports_impl) = compile ~interface options modul in
-        Hashtbl.add tbl modul ();
-        let gamma = Gamma.union (modul, interface) gamma_acc in
-        (imports_acc @ [modul], gamma, impl :: imports_impl @ impl_acc)
-  in
-  List.fold_left aux ([], Gamma.empty, []) imports
-
-and compile ?(with_main=false) ~interface options modul =
+let get_parse_tree modul =
   let module P = ParserHandler.Make(struct let get = Module.impl modul end) in
-  let (imports, parse_tree) = P.parse_impl () in
+  P.parse_impl ()
+
+let get_unsugared_tree modul =
+  let (imports, parse_tree) = get_parse_tree modul in
   let imports = Unsugar.create_imports ~current_module:modul imports in
   (* TODO: Print with and without builtins *)
   let unsugared_tree = Unsugar.create parse_tree in
   let unsugared_tree = prepend_builtins unsugared_tree in
-  let (imports, gamma, imports_code) = build_impl options imports in
+  (imports, unsugared_tree)
+
+let build_imports_intf imports =
+  let aux gamma modul = Gamma.union (modul, build_intf modul) gamma in
+  List.fold_left aux Gamma.empty imports
+
+let get_typed_tree ~with_main ~interface modul =
+  let (imports, unsugared_tree) = get_unsugared_tree modul in
+  let gamma = build_imports_intf imports in
   let typed_tree =
     TypeChecker.check ~modul ~interface ~with_main gamma unsugared_tree
   in
+  (imports, typed_tree)
+
+let get_untyped_tree ~with_main ~interface modul =
+  let (imports, typed_tree) = get_typed_tree ~with_main ~interface modul in
   let untyped_tree = Lambda.of_typed_tree typed_tree in
+  (imports, untyped_tree)
+
+let rec build_imports options imports =
+  let aux imports modul =
+    let interface = build_intf modul in
+    let (imports_code, code) = compile ~interface options modul in
+    Module.Map.union (Module.Map.add modul code imports_code) imports
+  in
+  List.fold_left aux Module.Map.empty imports
+
+and compile ?(with_main=false) ~interface options modul =
+  prerr_endline (fmt "Compiling %s" (Module.to_string modul));
+  let (imports, untyped_tree) = get_untyped_tree ~with_main ~interface modul in
+  let imports_code = build_imports options imports in
+  let cimpl = Module.cimpl modul in
   let code =
-    let cimpl = Module.cimpl modul in
     try
       BuildSystem.check_impl options modul;
       Backend.read_bitcode cimpl
     with
     | BuildSystem.Failure ->
         let code = Backend.make ~modul ~imports untyped_tree in
-        if not (Backend.write_bitcode ~o:cimpl code) then
-          Error.fail_module "Module '%s' cannot be written to a file" cimpl;
+        Backend.write_bitcode ~o:cimpl code;
         BuildSystem.write_impl_infos imports modul;
         code
   in
-  prerr_endline (fmt "Compiling %s" (Module.to_string modul));
-  (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code)
+  (imports_code, code)
+
+let get_code options modul =
+  let (imports_code, code) =
+    compile ~with_main:true ~interface:Gamma.empty options modul
+  in
+  Backend.link ~main_module_name:modul ~main_module:code imports_code
+
+let get_optimized_code options modul =
+  Backend.optimize options (get_code options modul)
 
 let compile options modul =
   let modul = Module.from_string options modul in
-  let (parse_tree, unsugared_tree, typed_tree, untyped_tree, code, imports_code) =
-    compile ~with_main:true ~interface:Gamma.empty options modul
-  in
-  let code =
-    Backend.link ~main_module_name:modul ~main_module:code imports_code
-  in
-  let optimized_res = Backend.optimize options code in
   begin match options.Options.printer with
   | Options.ParseTree ->
+      let (_, parse_tree) = get_parse_tree modul in
       print_endline (Printers.ParseTree.dump parse_tree);
   | Options.UnsugaredTree ->
+      let (_, unsugared_tree) = get_unsugared_tree modul in
       print_endline (Printers.UnsugaredTree.dump unsugared_tree);
   | Options.TypedTree ->
+      let (_, typed_tree) =
+        get_typed_tree ~with_main:true ~interface:Gamma.empty modul
+      in
       print_endline (Printers.TypedTree.dump typed_tree);
   | Options.UntypedTree ->
+      let (_, untyped_tree) =
+        get_untyped_tree ~with_main:true ~interface:Gamma.empty modul
+      in
       print_endline (Printers.UntypedTree.dump untyped_tree);
   | Options.LLVM ->
+      let code = get_code options modul in
       print_endline (Backend.to_string code);
   | Options.OptimizedLLVM ->
-      print_endline (Backend.to_string optimized_res);
+      let optimized_code = get_optimized_code options modul in
+      print_endline (Backend.to_string optimized_code);
   | Options.NoPrinter ->
-      write ~o:options.Options.o optimized_res
+      let optimized_code = get_optimized_code options modul in
+      write ~o:options.Options.o optimized_code
   end

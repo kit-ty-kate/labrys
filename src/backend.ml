@@ -541,15 +541,15 @@ let main main_module =
   let module Module = Main(struct let main_module = main_module end) in
   Module.make ()
 
-let rec link ~main_module_name ~main_module = function
-  | [] ->
-      let dst = main main_module_name in
-      Llvm_linker.link_modules dst main_module Llvm_linker.Mode.DestroySource;
-      dst
-  | x::xs ->
-      let dst = link ~main_module_name ~main_module xs in
-      Llvm_linker.link_modules dst x Llvm_linker.Mode.DestroySource;
-      dst
+let link ~main_module_name ~main_module imports =
+  let aux _ x dst =
+    Llvm_linker.link_modules dst x Llvm_linker.Mode.DestroySource;
+    dst
+  in
+  let dst = main_module in
+  let src = main main_module_name in
+  Llvm_linker.link_modules dst src Llvm_linker.Mode.DestroySource;
+  Module.Map.fold aux imports dst
 
 let init = lazy (Llvm_all_backends.initialize ())
 
@@ -576,7 +576,8 @@ let to_string = Llvm.string_of_llmodule
 
 let write_bitcode ~o m =
   Utils.mkdir o;
-  Llvm_bitwriter.write_bitcode_file m o
+  if not (Llvm_bitwriter.write_bitcode_file m o) then
+    Error.fail_module "File '%s' cannot be created" o
 
 let read_bitcode file =
   try

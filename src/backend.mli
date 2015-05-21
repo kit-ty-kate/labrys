@@ -27,13 +27,13 @@ val make :
   UntypedTree.top list ->
   t
 
-val link : main_module_name:Module.t -> main_module:t -> t list -> t
+val link : main_module_name:Module.t -> main_module:t -> t Module.Map.t -> t
 
 val optimize : Options.t -> t -> t
 
 val to_string : t -> string
 
-val write_bitcode : o:string -> t -> bool
+val write_bitcode : o:string -> t -> unit
 val read_bitcode : string -> t
 
 val emit_object_file : tmp:string -> t -> unit
