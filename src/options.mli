@@ -37,5 +37,6 @@ type t =
   ; opt : int
   ; src_dir : directory
   ; build_dir : directory
+  ; lib_dir : directory
   ; o : file
   }

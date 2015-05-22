@@ -267,6 +267,11 @@ let create_interface = function
 
 let create_interface = List.map create_interface
 
-let create_imports ~current_module =
-  let aux (_, `UpperName name) = Module.create ~current_module name in
+let create_imports ~current_module options =
+  let aux = function
+    | ParseTree.Source (_, `UpperName name) ->
+        Module.create ~current_module name
+    | ParseTree.Library (_, `UpperName name) ->
+        Module.library_create options name
+  in
   List.map aux

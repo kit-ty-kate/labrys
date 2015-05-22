@@ -24,11 +24,16 @@ open Monomorphic.None
 
 exception Failure
 
+type import_data =
+  { library : bool
+  ; hash_import : string
+  }
+
 type impl_infos =
   { version : string
   ; hash : string
   ; hash_bc : string
-  ; imports : (string * string) list
+  ; imports : (string * import_data) list
   }
 
 let map_msgpack_maps =
@@ -53,8 +58,16 @@ let parse_impl_infos file =
             let hash_bc = String.implode hash_bc in
             let imports =
               let aux = function
-                | (`Raw16 import, `Raw16 hash_import) ->
-                    (String.implode import, String.implode hash_import)
+                | (`Raw16 import, `FixMap l) ->
+                    begin match map_msgpack_maps l with
+                    | [ ("library", `Bool library)
+                      ; ("hash", `Raw16 hash_import)
+                      ] ->
+                        let hash_import = String.implode hash_import in
+                        (String.implode import, {library; hash_import})
+                    | _ ->
+                        raise Failure
+                    end
                 | _ ->
                     raise Failure
               in
@@ -68,10 +81,15 @@ let parse_impl_infos file =
         raise Failure
 
 let check_imports_hash options =
-  let aux (modul, hash) =
-    let modul = Module.from_string options modul in
+  let aux (modul, {library; hash_import}) =
+    let modul =
+      if library then
+        Module.library_from_string options modul
+      else
+        Module.from_string options modul
+    in
     let hash_file = Digest.file (Module.impl_infos modul) in
-    if not (String.equal hash_file hash) then
+    if not (String.equal hash_file hash_import) then
       raise Failure;
     modul
   in
@@ -101,8 +119,15 @@ let write_impl_infos imports modul =
   let imports =
     let aux modul =
       let import = Module.to_string modul in
+      let library = Module.is_library modul in
       let hash_import = Digest.file (Module.impl_infos modul) in
-      (`Raw16 (String.explode import), `Raw16 (String.explode hash_import))
+      let data =
+        `FixMap
+          [ (`FixRaw (String.explode "library"), `Bool library)
+          ; (`FixRaw (String.explode "hash"), `Raw16 (String.explode hash_import))
+          ]
+      in
+      (`Raw16 (String.explode import), data)
     in
     List.map aux imports
   in

@@ -65,6 +65,7 @@ rule main = parse
   | "type" { Parser.Type }
   | "alias" { Parser.Alias }
   | "import" { Parser.Import }
+  | "library" { Parser.Library }
   | "exception" { Parser.Exception }
   | "begin" blank* '\n'
       { let buffer = Buffer.create 4096 in

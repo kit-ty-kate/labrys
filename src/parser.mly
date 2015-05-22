@@ -34,7 +34,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
 %}
 
-%token Import
+%token Import Library
 %token Let Equal In
 %token Rec
 %token Lambda
@@ -391,7 +391,9 @@ bodyInterface:
 
 import:
   | Import modul = upperName
-      { modul }
+      { ParseTree.Source modul }
+  | Import Library modul = upperName
+      { ParseTree.Library modul }
 
 
 (********* Protected rules ***********)

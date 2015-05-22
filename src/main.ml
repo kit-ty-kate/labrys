@@ -22,13 +22,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let start printer lto opt src_dir build_dir o modul =
+let start printer lto opt src_dir build_dir lib_dir o modul =
   let options =
     { Options.printer
     ; lto
     ; opt
     ; src_dir
     ; build_dir
+    ; lib_dir
     ; o
     }
   in
@@ -63,6 +64,7 @@ let cmd =
   let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
   let args = args $ Arg.(value & opt dir "" & info ["src-dir"]) in
   let args = args $ Arg.(value & opt dir "dest" & info ["build-dir"]) in
+  let args = args $ Arg.(value & opt dir "stdlib" & info ["lib-dir"]) in
   let args = args $ Arg.(value & opt file "a.out" & info ["o"]) in
   let args = args $ Arg.(required & pos 0 (some string) None & info []) in
   (args, Term.info ~version:Config.version "cervoise")

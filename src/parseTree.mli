@@ -95,7 +95,11 @@ type top =
   | Datatype of (new_upper_name * Kinds.t option * variant list)
   | Exception of (new_upper_name * ty list)
 
-type imports = upper_name list
+type import =
+  | Source of upper_name
+  | Library of upper_name
+
+type imports = import list
 
 type interface =
   | IVal of (new_lower_name * ty)
