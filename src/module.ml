@@ -19,8 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-let unsafe_compare = compare
-
 open BatteriesExceptionless
 open Monomorphic.None
 
@@ -98,8 +96,13 @@ let to_string self =
 let is_library self =
   self.library
 
-let compare x y =
-  unsafe_compare x y
+let compare {library; src_dir; build_dir; modul} y =
+  Utils.combine_compare
+    [ (fun () -> Bool.compare library y.library)
+    ; (fun () -> String.compare src_dir y.src_dir)
+    ; (fun () -> String.compare build_dir y.build_dir)
+    ; (fun () -> List.compare String.compare modul y.modul)
+    ]
 
 type tmp = t
 

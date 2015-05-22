@@ -59,3 +59,16 @@ let mkdir name =
     List.rev (List.fold_left aux [] l)
   in
   List.iter aux l
+
+let combine_compare l =
+  let rec aux = function
+    | [] ->
+        0
+    | x::xs ->
+        let x = x () in
+        if Int.equal x 0 then
+          aux xs
+        else
+          x
+  in
+  aux l
