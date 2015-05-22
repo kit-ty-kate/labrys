@@ -1,5 +1,9 @@
 import Multi
+import Test.Lol
+import Test.Multi
 
 let test = Multi.id Multi.S Multi.O
+let test = Test.Multi.id Test.Multi.S Test.Multi.O
+let test = Test.Lol.id Test.Lol.S Test.Lol.O
 
 let main = Unit
