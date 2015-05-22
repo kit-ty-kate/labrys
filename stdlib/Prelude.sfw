@@ -1,0 +1,5 @@
+type Unit = Unit : Unit
+
+--notation-expr () = Unit
+--notation-param () = (_ : Unit)
+--notation-pattern () = Unit

@@ -24,33 +24,60 @@ open Monomorphic.None
 
 let fmt = Printf.sprintf
 
+type 'a module_opt =
+  | ModNone
+  | ModFake
+  | ModSome of 'a
+
 module Name = struct
-  type t = (Location.t * string list)
+  type t = (Location.t * Module.t module_opt * string)
 
-  let compare (_, x) (_, y) = List.compare String.compare x y
+  let compare (_, module_x, x) (_, module_y, y) =
+    let cmp_module = match module_x, module_y with
+      | ModNone, (ModSome _ | ModFake) -> -1
+      | ModFake, (ModSome _ | ModNone) -> 1
+      | ModSome _, (ModNone | ModFake) -> 1
+      | ModNone, ModNone -> 0
+      | ModFake, ModFake -> 0
+      | ModSome module_x, ModSome module_y -> Module.compare module_x module_y
+    in
+    if Int.(cmp_module = 0) then
+      String.compare x y
+    else
+      cmp_module
 
-  let equal (_, x) (_, y) = List.eq String.equal x y
+  let equal x y = Int.equal (compare x y) 0
 
   let prepend modul = function
-    | (_, []) -> assert false
-    | (loc, ([_] as x)) -> (loc, Module.to_list modul @ x)
-    | x -> x
+    | (loc, ModNone, name) -> (loc, ModSome modul, name)
+    | (_, ModFake, _) -> assert false
+    | (_, ModSome _, _) as x -> x
 
   let prepend_empty = function
-    | (_, []) -> assert false
-    | (loc, ([_] as x)) -> (loc, [""] @ x)
-    | x -> x
+    | (loc, ModNone, name) -> (loc, ModFake, name)
+    | (_, ModFake, _) -> assert false
+    | (_, ModSome _, _) as x -> x
 
-  let of_list ~loc x = (loc, x)
-  let to_string (_, name) = String.concat "." name
+  let create ~loc modul name =
+    let modul = match modul with
+      | None -> ModNone
+      | Some modul -> ModSome modul
+    in
+    (loc, modul, name)
 
-  let loc = fst
+  let to_string = function
+    | (_, ModSome modul, name) -> Module.to_string modul ^ "." ^ name
+    | (_, ModFake, name) -> "." ^ name
+    | (_, ModNone, name) -> name
 
-  let unique self n = match self with
-    | (loc, [name]) ->
-        (loc, [fmt "%s__%d" name n])
-    | (_, _::_)
-    | (_, []) -> assert false
+  let loc (loc, _, _) = loc
+
+  let unique (loc, modul, name) n = match modul with
+    | ModNone -> (* TODO: Improve here *)
+        (loc, ModNone, fmt "%s__%d" name n)
+    | ModFake
+    | ModSome _ ->
+        assert false
 end
 
 module Type = Name

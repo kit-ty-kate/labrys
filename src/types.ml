@@ -373,6 +373,6 @@ let rec has_io = function
   | Ty _
   | AbsOnTy _ -> true
 
-let is_unit = function
-  | Ty name when Ident.Type.equal name Builtins.t_unit -> true
+let is_unit options = function
+  | Ty name when Ident.Type.equal name (Builtins.t_unit options) -> true
   | Ty _ | Fun _ | Forall _ | ForallEff _ | AppOnTy _ | AbsOnTy _ -> false

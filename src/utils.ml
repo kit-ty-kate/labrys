@@ -31,6 +31,18 @@ let rec remove_last = function
   | [] | [_] -> []
   | x::xs -> x :: remove_last xs
 
+let detach_last =
+  let rec aux = function
+    | [] -> assert false
+    | [last] -> ([], last)
+    | x::xs ->
+        let (xs, last) = aux xs in
+        (x :: xs, last)
+  in
+  function
+  | [] | [_] -> assert false
+  | l -> aux l
+
 let mkdir name =
   let aux name =
     try Unix.mkdir name 0o750

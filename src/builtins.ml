@@ -26,16 +26,21 @@ let unknown_loc =
   let pos = Location.{pos_lnum = -1; pos_cnum = -1} in
   Location.{loc_start = pos; loc_end = pos; filename = "unknown"}
 
-let unit = Ident.Name.of_list ~loc:unknown_loc ["Unit"]
-let t_unit = Ident.Type.of_list ~loc:unknown_loc ["Unit"]
-let t_unit_name = `UpperName ["Unit"]
+let prelude options = Module.library_create options ["Prelude"]
 
-let underscore_loc loc = Ident.Name.of_list ~loc ["_"]
+let unit options =
+  Ident.Name.create ~loc:unknown_loc (Some (prelude options)) "Unit"
+let t_unit options =
+  Ident.Type.create ~loc:unknown_loc (Some (prelude options)) "Unit"
+
+let t_unit_name = `UpperName ["Prelude"; "Unit"]
+
+let underscore_loc loc = Ident.Name.create ~loc None "_"
 let underscore = underscore_loc unknown_loc
 
-let exn = Ident.Eff.of_list ~loc:unknown_loc ["Exn"]
-let io = Ident.Eff.of_list ~loc:unknown_loc ["IO"]
+let exn = Ident.Eff.create ~loc:unknown_loc None "Exn"
+let io = Ident.Eff.create ~loc:unknown_loc None "IO"
 
 let effects = [io; exn]
 
-let main = Ident.Name.of_list ~loc:unknown_loc ["main"]
+let main = Ident.Name.create ~loc:unknown_loc None "main"

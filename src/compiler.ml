@@ -49,18 +49,12 @@ let write ~o result =
   in
   with_tmp_file aux
 
-(* TODO: Do better *)
-let prepend_builtins tree =
-  let loc = Builtins.unknown_loc in
-  let ty = (loc, UnsugaredTree.Ty Builtins.t_unit) in
-  let variants = [UnsugaredTree.Variant (Builtins.unit, ty)] in
-  UnsugaredTree.Datatype (Builtins.t_unit, Kinds.Star, variants) :: tree
-
 let rec build_intf options current_module =
   let module P = ParserHandler.Make(struct let get = Module.intf current_module end) in
   let (imports, tree) = P.parse_intf () in
-  let imports = Unsugar.create_imports ~current_module options imports in
-  let tree = Unsugar.create_interface tree in
+  let (imports, tree) =
+    Unsugar.create_interface ~current_module options imports tree
+  in
   let aux acc x =
     Gamma.union (x, build_intf options x) acc
   in
@@ -73,10 +67,9 @@ let get_parse_tree modul =
 
 let get_unsugared_tree options modul =
   let (imports, parse_tree) = get_parse_tree modul in
-  let imports = Unsugar.create_imports ~current_module:modul options imports in
-  (* TODO: Print with and without builtins *)
-  let unsugared_tree = Unsugar.create parse_tree in
-  let unsugared_tree = prepend_builtins unsugared_tree in
+  let (imports, unsugared_tree) =
+    Unsugar.create ~current_module:modul options imports parse_tree
+  in
   (imports, unsugared_tree)
 
 let build_imports_intf options imports =
@@ -87,7 +80,7 @@ let get_typed_tree ~with_main ~interface options modul =
   let (imports, unsugared_tree) = get_unsugared_tree options modul in
   let gamma = build_imports_intf options imports in
   let typed_tree =
-    TypeChecker.check ~modul ~interface ~with_main gamma unsugared_tree
+    TypeChecker.check ~modul ~interface ~with_main options gamma unsugared_tree
   in
   (imports, typed_tree)
 

@@ -24,3 +24,4 @@ val string_of_list : ('a -> string) -> 'a list -> string
 val mkdir : string -> unit
 
 val remove_last : 'a list -> 'a list
+val detach_last : 'a list -> ('a list * 'a)

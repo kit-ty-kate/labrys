@@ -95,16 +95,16 @@ let intf self =
 let to_string self =
   String.concat "." self.modul
 
-let to_list self =
-  self.modul
-
 let is_library self =
   self.library
+
+let compare x y =
+  unsafe_compare x y
 
 type tmp = t
 
 module Map = Map.Make(struct
     type t = tmp
 
-    let compare x y = unsafe_compare x y
+    let compare = compare
   end)

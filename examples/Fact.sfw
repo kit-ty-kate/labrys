@@ -1,6 +1,7 @@
+import library Prelude
 import library Nat
 
-let printInt : Nat.Nat -[IO]-> Unit = begin
+let printInt : Nat.Nat -[IO]-> Prelude.Unit = begin
   @msg = constant [4 x i8] c"%d\0a\00"
 
   declare i32 @printf(i8*, ...)

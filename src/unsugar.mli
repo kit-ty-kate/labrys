@@ -19,12 +19,16 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val create : ParseTree.top list -> UnsugaredTree.top list
-
-val create_interface : ParseTree.interface list -> InterfaceTree.t list
-
-val create_imports :
+val create :
   current_module:Module.t ->
   Options.t ->
   ParseTree.imports ->
-  UnsugaredTree.imports
+  ParseTree.top list ->
+  (UnsugaredTree.imports * UnsugaredTree.top list)
+
+val create_interface :
+  current_module:Module.t ->
+  Options.t ->
+  ParseTree.imports ->
+  ParseTree.interface list ->
+  (UnsugaredTree.imports * InterfaceTree.t list)

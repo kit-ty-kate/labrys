@@ -19,8 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val unit : Ident.Name.t
-val t_unit : Ident.Type.t
+val unit : Options.t -> Ident.Name.t
+val t_unit : Options.t -> Ident.Type.t
 val t_unit_name : [`UpperName of string list]
 
 val underscore : Ident.Name.t

@@ -35,8 +35,9 @@ val impl_infos : t -> string
 val intf : t -> string
 
 val to_string : t -> string
-val to_list : t -> string list
 
 val is_library : t -> bool
+
+val compare : t -> t -> int
 
 module Map : BatMap.S with type key = t

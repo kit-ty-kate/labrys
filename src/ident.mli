@@ -28,7 +28,7 @@ module Name : sig
   val prepend : Module.t -> t -> t
   val prepend_empty : t -> t
 
-  val of_list : loc:Location.t -> string list -> t
+  val create : loc:Location.t -> Module.t option -> string -> t
   val to_string : t -> string
 
   val loc : t -> Location.t

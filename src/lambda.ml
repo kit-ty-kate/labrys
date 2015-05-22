@@ -124,7 +124,7 @@ let create_dyn_functions zero_case n_case term_case (n, name, linkage) =
         term_case params
     | n ->
         let name =
-          Ident.Name.of_list ~loc:Builtins.unknown_loc [string_of_int n]
+          Ident.Name.create ~loc:Builtins.unknown_loc None (string_of_int n)
         in
         let params = name :: params in
         let (t, used_vars) = aux params (pred n) in
@@ -136,7 +136,7 @@ let create_dyn_functions zero_case n_case term_case (n, name, linkage) =
       zero_case ()
   | n ->
       let name_param =
-        Ident.Name.of_list ~loc:Builtins.unknown_loc [string_of_int n]
+        Ident.Name.create ~loc:Builtins.unknown_loc None (string_of_int n)
       in
       let params = [name_param] in
       let (t, used_vars) = aux params (pred n) in

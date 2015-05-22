@@ -23,6 +23,7 @@ val check :
   modul:Module.t ->
   interface:Gamma.t ->
   with_main:bool ->
+  Options.t ->
   Gamma.t ->
   UnsugaredTree.top list ->
   TypedTree.top list
