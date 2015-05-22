@@ -1,8 +1,6 @@
-type Nat =
-  | O : Nat
-  | S : Nat -> Nat
+import library Nat
 
-let printInt : Nat -[IO]-> Unit = begin
+let printInt : Nat.Nat -[IO]-> Unit = begin
   @msg = constant [4 x i8] c"%d\0a\00"
 
   declare i32 @printf(i8*, ...)
@@ -30,29 +28,29 @@ let printInt : Nat -[IO]-> Unit = begin
   }
 end
 
-let rec plus (n : Nat) (m : Nat) : Nat =
+let rec plus (n : Nat.Nat) (m : Nat.Nat) : Nat.Nat =
   match n with
-  | O -> m
-  | S p -> S (plus p m)
+  | Nat.O -> m
+  | Nat.S p -> Nat.S (plus p m)
   end
 
-let rec mult (n : Nat) (m : Nat) : Nat =
+let rec mult (n : Nat.Nat) (m : Nat.Nat) : Nat.Nat =
   match n with
-  | O -> O
-  | S p -> plus m (mult p m)
+  | Nat.O -> Nat.O
+  | Nat.S p -> plus m (mult p m)
   end
 
-let rec fact (n : Nat) : Nat =
+let rec fact (n : Nat.Nat) : Nat.Nat =
   match n with
-  | O -> S O
-  | S x -> mult (S x) (fact x)
+  | Nat.O -> Nat.S Nat.O
+  | Nat.S x -> mult (Nat.S x) (fact x)
   end
 
 let main =
-  printInt (fact O); -- 1
-  printInt (fact (S O)); -- 1
-  printInt (fact (S (S O))); -- 2
-  printInt (fact (S (S (S O)))); -- 6
-  printInt (fact (S (S (S (S O))))); -- 24
-  printInt (fact (S (S (S (S (S O)))))); -- 120
-  printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))) -- 362880
+  printInt (fact Nat.O); -- 1
+  printInt (fact (Nat.S Nat.O)); -- 1
+  printInt (fact (Nat.S (Nat.S Nat.O))); -- 2
+  printInt (fact (Nat.S (Nat.S (Nat.S Nat.O)))); -- 6
+  printInt (fact (Nat.S (Nat.S (Nat.S (Nat.S Nat.O))))); -- 24
+  printInt (fact (Nat.S (Nat.S (Nat.S (Nat.S (Nat.S Nat.O)))))); -- 120
+  printInt (fact (Nat.S (Nat.S (Nat.S (Nat.S (Nat.S (Nat.S (Nat.S (Nat.S (Nat.S Nat.O)))))))))) -- 362880
