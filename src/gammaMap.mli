@@ -23,7 +23,7 @@ module type S = sig
   include BatMap.S
   include module type of Exceptionless
 
-  val union : (Module.t * 'a t) -> 'a t -> 'a t
+  val union : ('a -> 'a) -> (Module.t * 'a t) -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
 end
 

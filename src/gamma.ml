@@ -45,12 +45,30 @@ let add_exception k x self = {self with exceptions = GammaMap.Exn.add k x self.e
 let add_effect k self = {self with effects = GammaSet.Eff.add k self.effects}
 
 let union (modul, a) b =
-  { values = GammaMap.Value.union (modul, a.values) b.values
-  ; types = GammaMap.Types.union (modul, a.types) b.types
-  ; constructors = GammaMap.Constr.union (modul, a.constructors) b.constructors
-  ; exceptions = GammaMap.Exn.union (modul, a.exceptions) b.exceptions
-  ; effects = b.effects
-  }
+  let values =
+    let aux ty = Types.prepend modul ty in
+    GammaMap.Value.union aux (modul, a.values) b.values
+  in
+  let types =
+    let aux = function
+      | Types.Alias (ty, k) -> Types.Alias (Types.prepend modul ty, k)
+      | Types.Abstract _ as x -> x
+    in
+    GammaMap.Types.union aux (modul, a.types) b.types
+  in
+  let constructors =
+    let aux idx =
+      let aux (ty, idx) = (Types.prepend modul ty, idx) in
+      GammaMap.Index.union aux (modul, idx) GammaMap.Index.empty
+    in
+    GammaMap.Constr.union aux (modul, a.constructors) b.constructors
+  in
+  let exceptions =
+    let aux l = List.map (Types.prepend modul) l in
+    GammaMap.Exn.union aux (modul, a.exceptions) b.exceptions
+  in
+  let effects = b.effects in
+  {values; types; constructors; exceptions; effects}
 
 let ty_equal x y = match x, y with
   | (Types.Abstract k1 | Types.Alias (_, k1)), Types.Abstract k2

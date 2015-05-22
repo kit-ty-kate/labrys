@@ -134,3 +134,8 @@ let replace ~from ~eff self =
       {self with variables = Variables.add name self.variables}
   in
   Variables.fold aux self.variables empty
+
+let prepend modul self =
+  let aux x exns = Exn_set.add (Ident.Exn.prepend modul x) exns in
+  let exns = Exn_set.fold aux self.exns Exn_set.empty in
+  {self with exns}

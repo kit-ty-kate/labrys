@@ -30,15 +30,15 @@ end
 module type S = sig
   include BASE
 
-  val union : (Module.t * 'a t) -> 'a t -> 'a t
+  val union : ('a -> 'a) -> (Module.t * 'a t) -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
 end
 
 module Utils
          (M : BASE)
          (Ident : module type of Ident.Name with type t = M.key) = struct
-  let union (modul, a) b =
-    let aux k = M.add (Ident.prepend modul k) in
+  let union f (modul, a) b =
+    let aux k x = M.add (Ident.prepend modul k) (f x) in
     M.fold aux a b
 
   let diff ~eq a b =

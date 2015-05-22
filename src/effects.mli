@@ -44,3 +44,5 @@ val remove_exn : Ident.Exn.t -> t -> t
 val to_string : t -> string
 
 val replace : from:Ident.Eff.t -> eff:t -> t -> t
+
+val prepend : Module.t -> t -> t

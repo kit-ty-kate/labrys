@@ -262,6 +262,25 @@ let rec head = function
   | AbsOnTy (_, _, t)
   | AppOnTy (t, _) -> head t
 
+let prepend modul =
+  let rec aux vars = function
+    | Ty name when not (List.mem name vars) ->
+        Ty (Ident.Type.prepend modul name)
+    | Ty name ->
+        Ty name
+    | Fun (x, eff, y) ->
+        Fun (aux vars x, Effects.prepend modul eff, aux vars y)
+    | Forall (name, k, t) ->
+        Forall (name, k, aux (name :: vars) t)
+    | ForallEff (name, t) ->
+        ForallEff (name, aux vars t)
+    | AbsOnTy (name, k, t) ->
+        AbsOnTy (name, k, aux (name :: vars) t)
+    | AppOnTy (x, y) ->
+        AppOnTy (aux vars x, aux vars y)
+  in
+  aux []
+
 module Error = struct
   let fail ~loc_t ~has ~expected =
     Error.fail

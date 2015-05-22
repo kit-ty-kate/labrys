@@ -89,3 +89,5 @@ val check_if_returns_type : name:Ident.Name.t -> datatype:name -> t -> unit
 val has_io : t -> bool
 
 val is_unit : t -> bool
+
+val prepend : Module.t -> t -> t

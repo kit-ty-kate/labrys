@@ -93,7 +93,9 @@ let create =
               Error.fail
                 ~loc
                 "The type of the pattern is not equal to the type \
-                 of the value matched";
+                 of the value matched: Have '%s' but expected '%s'"
+                (Types.to_string ty)
+                (Types.to_string ty');
             (MConstr ((name, Types.head ty), args), gamma)
         end
   in
