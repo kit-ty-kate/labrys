@@ -262,14 +262,14 @@ let rec head = function
   | AbsOnTy (_, _, t)
   | AppOnTy (t, _) -> head t
 
-let prepend modul =
+let remove_module_aliases =
   let rec aux vars = function
     | Ty name when not (List.mem name vars) ->
-        Ty (Ident.Type.prepend modul name)
+        Ty (Ident.Type.remove_aliases name)
     | Ty name ->
         Ty name
     | Fun (x, eff, y) ->
-        Fun (aux vars x, Effects.prepend modul eff, aux vars y)
+        Fun (aux vars x, Effects.remove_module_aliases eff, aux vars y)
     | Forall (name, k, t) ->
         Forall (name, k, aux (name :: vars) t)
     | ForallEff (name, t) ->

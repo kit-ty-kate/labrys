@@ -24,64 +24,55 @@ open Monomorphic.None
 
 let fmt = Printf.sprintf
 
-type 'a module_opt =
-  | ModNone
-  | ModFake
-  | ModSome of 'a
-
 module Name = struct
-  type t = (Location.t * Module.t module_opt * string)
+  type t = (Location.t * Module.t * string)
 
   let compare (_, module_x, x) (_, module_y, y) =
-    let cmp_module = match module_x, module_y with
-      | ModNone, (ModSome _ | ModFake) -> -1
-      | ModFake, (ModSome _ | ModNone) -> 1
-      | ModSome _, (ModNone | ModFake) -> 1
-      | ModNone, ModNone -> 0
-      | ModFake, ModFake -> 0
-      | ModSome module_x, ModSome module_y -> Module.compare module_x module_y
-    in
-    if Int.(cmp_module = 0) then
+    let cmp_module = Module.compare module_x module_y in
+    if Int.equal cmp_module 0 then
       String.compare x y
     else
       cmp_module
 
   let equal x y = Int.equal (compare x y) 0
 
-  let prepend modul = function
-    | (loc, ModNone, name) -> (loc, ModSome modul, name)
-    | (_, ModFake, _) -> assert false
-    | (_, ModSome _, _) as x -> x
-
-  let prepend_empty = function
-    | (loc, ModNone, name) -> (loc, ModFake, name)
-    | (_, ModFake, _) -> assert false
-    | (_, ModSome _, _) as x -> x
-
   let create ~loc modul name =
-    let modul = match modul with
-      | None -> ModNone
-      | Some modul -> ModSome modul
-    in
     (loc, modul, name)
 
-  let to_string = function
-    | (_, ModSome modul, name) -> Module.to_string modul ^ "." ^ name
-    | (_, ModFake, name) -> "." ^ name
-    | (_, ModNone, name) -> name
+  let to_string (_, modul, name) =
+    Module.to_string modul ^ "." ^ name
 
   let loc (loc, _, _) = loc
 
-  let unique (loc, modul, name) n = match modul with
-    | ModNone -> (* TODO: Improve here *)
-        (loc, ModNone, fmt "%s__%d" name n)
-    | ModFake
-    | ModSome _ ->
-        assert false
+  let unique (loc, modul, name) n =
+    (loc, modul, fmt "%s__%d" name n)
+
+  let remove_aliases (loc, modul, name) =
+    (loc, Module.remove_aliases modul, name)
+
+  let prepend_empty (loc, modul, name) =
+    (loc, modul, "." ^ name)
+
+  let open_module m ((loc, modul, name) as self) =
+    if Module.equal m modul then
+      (loc, Module.open_module modul, name)
+    else
+      self
 end
 
 module Type = Name
 
 module Exn = Name
 
-module Eff = Name
+module Eff = struct
+  type t = (Location.t * string)
+
+  let compare (_, x) (_, y) =
+    String.compare x y
+  let equal (_, x) (_, y) = String.equal x y
+
+  let create ~loc name = (loc, name)
+  let to_string (_, name) = name
+
+  let loc (loc, _) = loc
+end

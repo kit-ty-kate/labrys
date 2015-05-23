@@ -79,5 +79,6 @@ type top =
   | Binding of (name * ty * string)
   | Datatype of (t_name * Kinds.t * variant list)
   | Exception of (exn_name * ty list)
+  | Open of module_name
 
 type imports = module_name list

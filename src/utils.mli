@@ -27,3 +27,5 @@ val remove_last : 'a list -> 'a list
 val detach_last : 'a list -> ('a list * 'a)
 
 val combine_compare : (unit -> int) list -> int
+
+module StrListSet : BatSet.S with type elt = string list

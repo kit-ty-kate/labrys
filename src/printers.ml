@@ -47,6 +47,8 @@ let dump_eff (_, x) =
 let dump_eff_arg name =
   fmt "(%s : φ)" (dump_eff_name name)
 
+let dump_module = Module.to_string
+
 let string_of_doc doc =
   let buf = Buffer.create 1024 in
   PPrint.ToBuffer.pretty 0.9 80 buf doc;
@@ -63,6 +65,7 @@ module ParseTree = struct
   let dump_exn_name = dump_name
   let dump_t_name = dump_name
   let dump_eff_name = dump_name
+  let dump_module = dump_name
 
   let dump_exn x = String.concat " | " (List.map dump_exn_name x)
 
@@ -309,6 +312,8 @@ module ParseTree = struct
         ^^ PPrint.nest 2 (dump_variants variants)
     | Exception (name, args) ->
         PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))
+    | Open modul ->
+        PPrint.string (fmt "open %s" (dump_module modul))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
@@ -516,6 +521,8 @@ module UnsugaredTree = struct
         ^^ PPrint.nest 2 (dump_variants variants)
     | Exception (name, args) ->
         PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))
+    | Open modul ->
+        PPrint.string (fmt "open %s" (dump_module modul))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in

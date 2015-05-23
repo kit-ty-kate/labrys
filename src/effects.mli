@@ -45,4 +45,4 @@ val to_string : t -> string
 
 val replace : from:Ident.Eff.t -> eff:t -> t -> t
 
-val prepend : Module.t -> t -> t
+val remove_module_aliases : t -> t

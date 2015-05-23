@@ -35,6 +35,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %}
 
 %token Import Library
+%token Open
 %token Let Equal In
 %token Rec
 %token Lambda
@@ -89,6 +90,8 @@ body:
       { ParseTree.Datatype datatype }
   | Exception name = newUpperName args = exceptionArgs
       { ParseTree.Exception (name, args) }
+  | Open modul = upperName
+      { ParseTree.Open modul }
 
 exceptionArgs:
   | x = typeExprProtected xs = exceptionArgs
@@ -385,6 +388,8 @@ bodyInterface:
       { ParseTree.ITypeAlias typeAlias }
   | Exception name = newUpperName args = exceptionArgs
       { ParseTree.IException (name, args) }
+  | Open modul = upperName
+      { ParseTree.IOpen modul }
 
 
 (********* Module utils *********)

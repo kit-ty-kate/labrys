@@ -30,16 +30,17 @@ end
 module type S = sig
   include BASE
 
-  val union : ('a -> 'a) -> (Module.t * 'a t) -> 'a t -> 'a t
+  val union : ('a -> 'a) -> imported:'a t -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
+  val open_module : Module.t -> 'a t -> 'a t
 end
 
 module Utils
          (M : BASE)
          (Ident : module type of Ident.Name with type t = M.key) = struct
-  let union f (modul, a) b =
-    let aux k x = M.add (Ident.prepend modul k) (f x) in
-    M.fold aux a b
+  let union f ~imported b =
+    let aux k x = M.add (Ident.remove_aliases k) (f x) in
+    M.fold aux imported b
 
   let diff ~eq a b =
     let aux k x acc =
@@ -49,6 +50,10 @@ module Utils
       | None -> Ident.to_string k :: acc
     in
     M.fold aux a []
+
+  let open_module modul self =
+    let aux k = M.add (Ident.open_module modul k) in
+    M.fold aux self M.empty
 end
 
 module MakeSelf (I : Map.OrderedType) = struct
@@ -81,6 +86,12 @@ module Index = Value
 
 module Constr = struct
   include Make(Ident.Type)
+
+  let open_module modul self =
+    let aux k idx =
+      add (Ident.Type.open_module modul k) (Index.open_module modul idx)
+    in
+    fold aux self empty
 
   let add k k2 x map =
     match find k map with

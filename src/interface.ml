@@ -60,6 +60,9 @@ let compile gamma =
         in
         let gamma = Gamma.add_exception name args gamma in
         compile gammaT gammaE gamma xs
+    | Open modul :: xs ->
+        let gammaT = GammaMap.Types.open_module modul gammaT in
+        compile gammaT gammaE gamma xs
     | [] ->
         gamma
   in

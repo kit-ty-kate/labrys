@@ -8,7 +8,7 @@ let printZero : Unit -[IO]-> Unit = begin
 
   declare i32 @printf(i8*, ...)
 
-  define i8* @.printZero(i8*) {
+  define i8* @Variants..printZero(i8*) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
@@ -20,7 +20,7 @@ let printOne : Unit -[IO]-> Unit = begin
 
   declare i32 @printf(i8*, ...)
 
-  define i8* @.printOne(i8*) {
+  define i8* @Variants..printOne(i8*) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
@@ -32,7 +32,7 @@ let printTwo : Unit -[IO]-> Unit = begin
 
   declare i32 @printf(i8*, ...)
 
-  define i8* @.printTwo(i8*) {
+  define i8* @Variants..printTwo(i8*) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r
@@ -44,7 +44,7 @@ let printOther : Unit -[IO]-> Unit = begin
 
   declare i32 @printf(i8*, ...)
 
-  define i8* @.printOther(i8*) {
+  define i8* @Variants..printOther(i8*) {
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([7 x i8]* @msg, i32 0, i32 0))
     %r = inttoptr i32 %r1 to i8*
     ret i8* %r

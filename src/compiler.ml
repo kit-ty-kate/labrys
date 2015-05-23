@@ -56,7 +56,7 @@ let rec build_intf options current_module =
     Unsugar.create_interface ~current_module options imports tree
   in
   let aux acc x =
-    Gamma.union (x, build_intf options x) acc
+    Gamma.union ~imported:(build_intf options x) acc
   in
   let gamma = List.fold_left aux Gamma.empty imports in
   Interface.compile gamma tree
@@ -73,7 +73,7 @@ let get_unsugared_tree options modul =
   (imports, unsugared_tree)
 
 let build_imports_intf options imports =
-  let aux gamma modul = Gamma.union (modul, build_intf options modul) gamma in
+  let aux gamma modul = Gamma.union ~imported:(build_intf options modul) gamma in
   List.fold_left aux Gamma.empty imports
 
 let get_typed_tree ~with_main ~interface options modul =
@@ -88,7 +88,7 @@ let get_untyped_tree ~with_main ~interface options modul =
   let (imports, typed_tree) =
     get_typed_tree ~with_main ~interface options modul
   in
-  let untyped_tree = Lambda.of_typed_tree typed_tree in
+  let untyped_tree = Lambda.of_typed_tree ~current_module:modul typed_tree in
   (imports, untyped_tree)
 
 let rec build_imports ~imports_code options imports =
@@ -96,8 +96,11 @@ let rec build_imports ~imports_code options imports =
     if Module.Map.mem modul imports_code then begin
       imports_code
     end else begin
-      let interface = build_intf options modul in
-      let (imports_code, code) = compile imports_code interface options modul in
+      let (imports_code, code) =
+        let modul = Module.open_module modul in
+        let interface = build_intf options modul in
+        compile imports_code interface options modul
+      in
       Module.Map.add modul code imports_code
     end
   in
@@ -136,6 +139,7 @@ let get_optimized_code options modul =
 
 let compile options modul =
   let modul = Module.from_string options modul in
+  let modul = Module.open_module modul in
   begin match options.Options.printer with
   | Options.ParseTree ->
       let (_, parse_tree) = get_parse_tree modul in

@@ -44,28 +44,28 @@ let add_constr k k2 x self = {self with constructors = GammaMap.Constr.add k k2 
 let add_exception k x self = {self with exceptions = GammaMap.Exn.add k x self.exceptions}
 let add_effect k self = {self with effects = GammaSet.Eff.add k self.effects}
 
-let union (modul, a) b =
+let union ~imported b =
   let values =
-    let aux ty = Types.prepend modul ty in
-    GammaMap.Value.union aux (modul, a.values) b.values
+    let aux = Types.remove_module_aliases in
+    GammaMap.Value.union aux ~imported:imported.values b.values
   in
   let types =
     let aux = function
-      | Types.Alias (ty, k) -> Types.Alias (Types.prepend modul ty, k)
+      | Types.Alias (ty, k) -> Types.Alias (Types.remove_module_aliases ty, k)
       | Types.Abstract _ as x -> x
     in
-    GammaMap.Types.union aux (modul, a.types) b.types
+    GammaMap.Types.union aux ~imported:imported.types b.types
   in
   let constructors =
     let aux idx =
-      let aux (ty, idx) = (Types.prepend modul ty, idx) in
-      GammaMap.Index.union aux (modul, idx) GammaMap.Index.empty
+      let aux (ty, idx) = (Types.remove_module_aliases ty, idx) in
+      GammaMap.Index.union aux ~imported:idx GammaMap.Index.empty
     in
-    GammaMap.Constr.union aux (modul, a.constructors) b.constructors
+    GammaMap.Constr.union aux ~imported:imported.constructors b.constructors
   in
   let exceptions =
-    let aux l = List.map (Types.prepend modul) l in
-    GammaMap.Exn.union aux (modul, a.exceptions) b.exceptions
+    let aux l = List.map Types.remove_module_aliases l in
+    GammaMap.Exn.union aux ~imported:imported.exceptions b.exceptions
   in
   let effects = b.effects in
   {values; types; constructors; exceptions; effects}
@@ -84,3 +84,10 @@ let is_subset_of a b =
   @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
   @ GammaMap.Constr.diff ~eq:(GammaMap.Index.equal constr_equal) a.constructors b.constructors
   @ GammaMap.Exn.diff ~eq:(List.eq Types.equal) a.exceptions b.exceptions
+
+let open_module modul {values; types; constructors; exceptions; effects} =
+  let values = GammaMap.Value.open_module modul values in
+  let types = GammaMap.Types.open_module modul types in
+  let constructors = GammaMap.Constr.open_module modul constructors in
+  let exceptions = GammaMap.Exn.open_module modul exceptions in
+  {values; types; constructors; exceptions; effects}

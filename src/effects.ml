@@ -135,7 +135,6 @@ let replace ~from ~eff self =
   in
   Variables.fold aux self.variables empty
 
-let prepend modul self =
-  let aux x exns = Exn_set.add (Ident.Exn.prepend modul x) exns in
-  let exns = Exn_set.fold aux self.exns Exn_set.empty in
+let remove_module_aliases self =
+  let exns = Exn_set.map Ident.Exn.remove_aliases self.exns in
   {self with exns}

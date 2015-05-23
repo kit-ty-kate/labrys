@@ -199,7 +199,6 @@ module Make (I : sig val name : Module.t end) = struct
     (f, builder', closure, gamma)
 
   let get_exn name =
-    let name = Ident.Exn.prepend I.name name in
     let name = Ident.Exn.to_string name in
     Llvm.declare_global Type.i8 name m
 
@@ -347,7 +346,6 @@ module Make (I : sig val name : Module.t end) = struct
             let env = Lazy.force env in
             (Llvm.build_extractvalue env i "" builder, builder)
         | None ->
-            let name = Ident.Name.prepend I.name name in
             let name = Ident.Name.to_string name in
             let extern = Llvm.declare_global Type.star name m in
             (Llvm.build_load extern "" builder, builder)
@@ -441,7 +439,6 @@ module Make (I : sig val name : Module.t end) = struct
     | UntypedTree.Public -> ()
 
   let define_global ~name ~linkage value =
-    let name = Ident.Name.prepend I.name name in
     let name = Ident.Name.to_string name in
     let name' = "." ^ name in
     let v = Llvm.define_global name' value m in
@@ -487,14 +484,12 @@ module Make (I : sig val name : Module.t end) = struct
   let make ~imports =
     let rec top init_list = function
       | UntypedTree.Value (name, t, linkage) :: xs ->
-          let name = Ident.Name.prepend I.name name in
           let name = Ident.Name.to_string name in
           let global = Llvm.define_global name null m in
           set_linkage global linkage;
           top (`Val (global, t) :: init_list) xs
       | UntypedTree.ValueBinding (name, name', binding, linkage) :: xs ->
           let v = Llvm.bind c ~name:name' ~arity:0 binding m in
-          let name = Ident.Name.prepend I.name name in
           let name = Ident.Name.to_string name in
           let v = Llvm.define_global name (Llvm.const_bitcast v Type.star) m in
           set_linkage v linkage;
@@ -504,7 +499,6 @@ module Make (I : sig val name : Module.t end) = struct
           let v = Llvm.bind c ~name ~arity binding m in
           top (`Binding (name, v) :: init_list) xs
       | UntypedTree.Exception name :: xs ->
-          let name = Ident.Exn.prepend I.name name in
           let name = Ident.Exn.to_string name in
           let v = Llvm.define_global name (string name) m in
           Llvm.set_global_constant true v;
@@ -514,7 +508,6 @@ module Make (I : sig val name : Module.t end) = struct
           define_global ~name ~linkage (Llvm.const_array Type.star [|index|]);
           top init_list xs
       | UntypedTree.Function (name, (name', t), linkage) :: xs ->
-          let name = Ident.Name.prepend I.name name in
           let (f, builder) = Llvm.define_function c "__lambda" (Type.lambda ~env_size:0) m in
           Llvm.set_linkage Llvm.Linkage.Private f;
           define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]);

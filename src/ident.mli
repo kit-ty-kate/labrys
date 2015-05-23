@@ -25,19 +25,32 @@ module Name : sig
   val equal : t -> t -> bool
   val compare : t -> t -> int
 
-  val prepend : Module.t -> t -> t
-  val prepend_empty : t -> t
-
-  val create : loc:Location.t -> Module.t option -> string -> t
+  val create : loc:Location.t -> Module.t -> string -> t
   val to_string : t -> string
 
   val loc : t -> Location.t
 
   val unique : t -> int -> t
+
+  val remove_aliases : t -> t
+
+  val prepend_empty : t -> t
+
+  val open_module : Module.t -> t -> t
 end
 
 module Type : module type of Name
 
 module Exn : module type of Name
 
-module Eff : module type of Name
+module Eff : sig
+  type t
+
+  val compare : t -> t -> int
+  val equal : t -> t -> bool
+
+  val create : loc:Location.t -> string -> t
+  val to_string : t -> string
+
+  val loc : t -> Location.t
+end

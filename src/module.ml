@@ -22,12 +22,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
+module Aliases = Utils.StrListSet
+
 exception Error of string
 
 type t =
   { library : bool
   ; src_dir : string
   ; build_dir : string
+  ; aliases : Aliases.t
   ; modul : string list (** NOTE: Absolute module name *)
   }
 
@@ -38,13 +41,15 @@ let create ~current_module modul =
   let src_dir = current_module.src_dir in
   let build_dir = current_module.build_dir in
   let modul = Utils.remove_last current_module.modul @ modul in
-  {library; src_dir; build_dir; modul}
+  let aliases = Aliases.singleton modul in
+  {library; src_dir; build_dir; aliases; modul}
 
 let library_create options modul =
   let library = true in
   let src_dir = options.Options.lib_dir in
   let build_dir = options.Options.lib_dir in
-  {library; src_dir; build_dir; modul}
+  let aliases = Aliases.singleton modul in
+  {library; src_dir; build_dir; aliases; modul}
 
 let matches_module_name =
   let open Re in
@@ -69,14 +74,16 @@ let from_string options modul =
   let src_dir = options.Options.src_dir in
   let build_dir = Filename.concat options.Options.build_dir src_dir in
   let modul = module_from_string modul in
-  {library; src_dir; build_dir; modul}
+  let aliases = Aliases.singleton modul in
+  {library; src_dir; build_dir; aliases; modul}
 
 let library_from_string options modul =
   let library = true in
   let src_dir = options.Options.lib_dir in
   let build_dir = options.Options.lib_dir in
   let modul = module_from_string modul in
-  {library; src_dir; build_dir; modul}
+  let aliases = Aliases.singleton modul in
+  {library; src_dir; build_dir; aliases; modul}
 
 let impl self =
   Filename.concat self.src_dir (to_file self.modul) ^ ".sfw"
@@ -96,13 +103,26 @@ let to_string self =
 let is_library self =
   self.library
 
-let compare {library; src_dir; build_dir; modul} y =
-  Utils.combine_compare
-    [ (fun () -> Bool.compare library y.library)
-    ; (fun () -> String.compare src_dir y.src_dir)
-    ; (fun () -> String.compare build_dir y.build_dir)
-    ; (fun () -> List.compare String.compare modul y.modul)
-    ]
+(* TODO: Remove this *)
+(*let dump_aliases set =
+  let aux x = "[" ^ String.concat ", " x ^ "]" in
+  "[" ^ String.concat ", " (List.map aux (Aliases.to_list set)) ^ "]"
+*)
+let compare x y =
+  if Aliases.exists (fun x -> Aliases.mem x y.aliases) x.aliases then
+    0
+  else
+    1
+
+let equal x y = Int.equal (compare x y) 0
+
+let remove_aliases self =
+  let aliases = Aliases.singleton self.modul in
+  {self with aliases}
+
+let open_module self =
+  let aliases = Aliases.add [] self.aliases in
+  {self with aliases}
 
 type tmp = t
 

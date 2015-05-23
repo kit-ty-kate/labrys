@@ -90,4 +90,4 @@ val has_io : t -> bool
 
 val is_unit : Options.t -> t -> bool
 
-val prepend : Module.t -> t -> t
+val remove_module_aliases : t -> t

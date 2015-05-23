@@ -32,3 +32,4 @@ type t =
   | Datatype of (t_name * Kinds.t * variant list)
   | TypeAlias of (t_name * ty)
   | Exception of (exn_name * ty list)
+  | Open of Module.t

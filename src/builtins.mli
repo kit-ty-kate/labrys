@@ -23,8 +23,8 @@ val unit : Options.t -> Ident.Name.t
 val t_unit : Options.t -> Ident.Type.t
 val t_unit_name : [`UpperName of string list]
 
-val underscore : Ident.Name.t
-val underscore_loc : Location.t -> Ident.Name.t
+val underscore : current_module:Module.t -> Ident.Name.t
+val underscore_loc : current_module:Module.t -> Location.t -> Ident.Name.t
 
 val unknown_loc : Location.t
 
@@ -33,4 +33,14 @@ val io : Ident.Eff.t
 
 val effects : Ident.Eff.t list
 
-val main : Ident.Name.t
+val main : current_module:Module.t -> Ident.Name.t
+
+val imports :
+  Options.t ->
+  (string list * Module.t) list ->
+  (string list * Module.t) list
+
+val tree :
+  Options.t ->
+  UnsugaredTree.top list ->
+  UnsugaredTree.top list

@@ -64,6 +64,7 @@ rule main = parse
   | "forall" { Parser.Forall }
   | "type" { Parser.Type }
   | "alias" { Parser.Alias }
+  | "open" { Parser.Open }
   | "import" { Parser.Import }
   | "library" { Parser.Library }
   | "exception" { Parser.Exception }

@@ -72,3 +72,9 @@ let combine_compare l =
           x
   in
   aux l
+
+module StrListSet = Set.Make(struct
+    type t = string list
+
+    let compare = List.compare String.compare
+  end)

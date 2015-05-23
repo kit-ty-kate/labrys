@@ -94,6 +94,7 @@ type top =
   | Binding of (new_lower_name* ty * string)
   | Datatype of (new_upper_name * Kinds.t option * variant list)
   | Exception of (new_upper_name * ty list)
+  | Open of upper_name
 
 type import =
   | Source of upper_name
@@ -107,3 +108,4 @@ type interface =
   | IDatatype of (new_upper_name * Kinds.t option * variant list)
   | ITypeAlias of (new_upper_name * ty)
   | IException of (new_upper_name * ty list)
+  | IOpen of upper_name

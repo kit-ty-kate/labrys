@@ -26,21 +26,32 @@ let unknown_loc =
   let pos = Location.{pos_lnum = -1; pos_cnum = -1} in
   Location.{loc_start = pos; loc_end = pos; filename = "unknown"}
 
-let prelude options = Module.library_create options ["Prelude"]
+let prelude options =
+  (* TODO: Fix this *)
+  Module.open_module (Module.library_create options ["Prelude"])
 
 let unit options =
-  Ident.Name.create ~loc:unknown_loc (Some (prelude options)) "Unit"
+  Ident.Name.create ~loc:unknown_loc (prelude options) "Unit"
 let t_unit options =
-  Ident.Type.create ~loc:unknown_loc (Some (prelude options)) "Unit"
+  Ident.Type.create ~loc:unknown_loc (prelude options) "Unit"
 
 let t_unit_name = `UpperName ["Prelude"; "Unit"]
 
-let underscore_loc loc = Ident.Name.create ~loc None "_"
-let underscore = underscore_loc unknown_loc
+let underscore_loc ~current_module loc =
+  Ident.Name.create ~loc current_module "_"
+let underscore ~current_module =
+  underscore_loc ~current_module unknown_loc
 
-let exn = Ident.Eff.create ~loc:unknown_loc None "Exn"
-let io = Ident.Eff.create ~loc:unknown_loc None "IO"
+let exn = Ident.Eff.create ~loc:unknown_loc "Exn"
+let io = Ident.Eff.create ~loc:unknown_loc "IO"
 
 let effects = [io; exn]
 
-let main = Ident.Name.create ~loc:unknown_loc None "main"
+let main ~current_module =
+  Ident.Name.create ~loc:unknown_loc current_module "main"
+
+let imports options imports =
+  (["Prelude"], prelude options) :: imports
+
+let tree options tree =
+  UnsugaredTree.Open (prelude options) :: tree
