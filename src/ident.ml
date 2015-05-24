@@ -25,9 +25,11 @@ open Monomorphic.None
 let fmt = Printf.sprintf
 
 module Name = struct
-  type t = (Location.t * Module.t * string)
+  type t = (Location.t * Module.t option * string)
 
   let compare (_, module_x, x) (_, module_y, y) =
+    let module_x = Option.default_delayed (fun () -> assert false) module_x in
+    let module_y = Option.default_delayed (fun () -> assert false) module_y in
     let cmp_module = Module.compare module_x module_y in
     if Int.equal cmp_module 0 then
       String.compare x y
@@ -36,28 +38,54 @@ module Name = struct
 
   let equal x y = Int.equal (compare x y) 0
 
-  let create ~loc modul name =
-    (loc, modul, name)
+  let fill_module ~matches:(_, modul, matches_name) = function
+    | ((loc, None, name) as self) ->
+        if String.equal matches_name name then
+          let modul = Option.default_delayed (fun () -> assert false) modul in
+          ((loc, Some modul, name), true)
+        else
+          (self, false)
+    | ((_, Some _, _) as self) ->
+        (self, true)
 
-  let to_string (_, modul, name) =
-    Module.to_string modul ^ "." ^ name
+  let create ~loc modul name =
+    (loc, Some modul, name)
+
+  let local_create ~loc name =
+    (loc, None, name)
+
+  let to_string = function
+    | (_, Some modul, name) ->
+        Module.to_string modul ^ "." ^ name
+    | (_, None, name) ->
+        name
 
   let loc (loc, _, _) = loc
 
   let unique (loc, modul, name) n =
-    (loc, modul, fmt "%s__%d" name n)
+    let modul = Option.default_delayed (fun () -> assert false) modul in
+    (loc, Some modul, fmt "%s__%d" name n)
 
-  let remove_aliases (loc, modul, name) =
-    (loc, Module.remove_aliases modul, name)
+  let remove_aliases = function
+    | (loc, Some modul, name) ->
+        (loc, Some (Module.remove_aliases modul), name)
+    | (_, None, _) as self ->
+        self
 
-  let prepend_empty (loc, modul, name) =
-    (loc, modul, "." ^ name)
+  let open_module m = function
+    | (loc, Some modul, name) as self ->
+        if Module.equal m modul then
+          (loc, Some (Module.open_module modul), name)
+        else
+          self
+    | (_, None, _) as self ->
+        self
 
-  let open_module m ((loc, modul, name) as self) =
-    if Module.equal m modul then
-      (loc, Module.open_module modul, name)
-    else
-      self
+  let prepend_empty = function
+    | (loc, Some modul, name) ->
+        (loc, Some modul, "." ^ name)
+    | (_, None, _) ->
+        assert false
 end
 
 module Type = Name

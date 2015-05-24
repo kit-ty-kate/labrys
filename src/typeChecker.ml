@@ -152,6 +152,7 @@ let rec aux gamma = function
       let res = Types.replace_eff ~from:param ~eff res in
       (f, res, effect)
   | (loc, UnsugaredTree.Val name) ->
+      let name = GammaMap.Value.fill_module name gamma.Gamma.values in
       begin match GammaMap.Value.find name gamma.Gamma.values with
       | None ->
           Error.fail
@@ -186,6 +187,7 @@ let rec aux gamma = function
   | (_, UnsugaredTree.Let ((name, UnsugaredTree.Rec, _), _)) ->
       fail_rec_val ~loc_name:(Ident.Name.loc name)
   | (loc, UnsugaredTree.Fail (ty, (exn, args))) ->
+      let exn = GammaMap.Exn.fill_module exn gamma.Gamma.exceptions in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
       begin match GammaMap.Exn.find exn gamma.Gamma.exceptions with
       | Some tys ->
@@ -220,6 +222,7 @@ let rec aux gamma = function
           branches
       in
       let aux (acc, effect) ((name, args), t) =
+        let name = GammaMap.Exn.fill_module name gamma.Gamma.exceptions in
         let loc_t = fst t in
         let (t, ty', eff) = aux gamma t in
         if not (Types.equal ty ty') then

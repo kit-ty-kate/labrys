@@ -48,6 +48,7 @@ let create =
         let gamma = Gamma.add_value name ty' gamma in
         (MAny (name, Types.head ty'), gamma)
     | UnsugaredTree.TyConstr (loc, name, args) ->
+        let name = GammaMap.Constr.fill_module name gamma.Gamma.constructors in
         let head_ty = Types.head ty' in
         let constructors =
           GammaMap.Constr.find head_ty gamma.Gamma.constructors

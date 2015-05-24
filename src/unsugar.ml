@@ -41,7 +41,29 @@ let get_module imports loc modul =
   | Some (_, modul) ->
       modul
 
-let aux_to_value ~current_module imports loc f = function
+let transform_name_local imports loc local_f f = function
+  | [] ->
+      assert false
+  | [name] ->
+      local_f ~loc name
+  | name ->
+      let (modul, name) = Utils.detach_last name in
+      let modul = get_module imports loc modul in
+      f ~loc modul name
+
+let upper_name_to_local_value imports (loc, `UpperName name) =
+  transform_name_local imports loc Ident.Name.local_create Ident.Name.create name
+
+let upper_name_to_local_type imports (loc, `UpperName name) =
+  transform_name_local imports loc Ident.Type.local_create Ident.Type.create name
+
+let upper_name_to_local_exn imports (loc, `UpperName name) =
+  transform_name_local imports loc Ident.Exn.local_create Ident.Exn.create name
+
+let lower_name_to_local_value imports (loc, `LowerName name) =
+  transform_name_local imports loc Ident.Name.local_create Ident.Name.create name
+
+let transform_name ~current_module imports loc f = function
   | [] ->
       assert false
   | [name] ->
@@ -52,13 +74,10 @@ let aux_to_value ~current_module imports loc f = function
       f ~loc modul name
 
 let upper_name_to_value ~current_module imports (loc, `UpperName name) =
-  aux_to_value ~current_module imports loc Ident.Name.create name
+  transform_name ~current_module imports loc Ident.Name.create name
 
 let upper_name_to_type ~current_module imports (loc, `UpperName name) =
-  aux_to_value ~current_module imports loc Ident.Type.create name
-
-let upper_name_to_exn ~current_module imports (loc, `UpperName name) =
-  aux_to_value ~current_module imports loc Ident.Exn.create name
+  transform_name ~current_module imports loc Ident.Type.create name
 
 let new_lower_name_to_value ~current_module ~allow_underscore = function
   | (loc, `NewLowerName name) ->
@@ -69,7 +88,7 @@ let new_lower_name_to_value ~current_module ~allow_underscore = function
       Error.fail ~loc "Wildcards are not allowed here"
 
 let lower_name_to_value ~current_module imports (loc, `LowerName name) =
-  aux_to_value ~current_module imports loc Ident.Name.create name
+  transform_name ~current_module imports loc Ident.Name.create name
 
 let unsugar_kind = Option.default Kinds.Star
 
@@ -116,7 +135,7 @@ let rec unsugar_ty ~current_module imports =
       let eff = Option.map (unsugar_eff ~current_module) eff in
       (loc, Fun (unsugar_ty ~current_module imports x, eff, unsugar_ty ~current_module imports y))
   | (loc, ParseTree.Ty name) ->
-      let name = upper_name_to_type ~current_module imports name in
+      let name = upper_name_to_local_type imports name in
       (loc, Ty name)
   | (loc, ParseTree.Forall (args, ty)) ->
       unsugar_forall ~loc ty args
@@ -135,7 +154,7 @@ let rec unsugar_pattern_arg ~current_module imports = function
 
 and unsugar_pattern ~current_module imports = function
   | ParseTree.TyConstr (loc, name, args) ->
-      let name = upper_name_to_value ~current_module imports name in
+      let name = upper_name_to_local_value imports name in
       TyConstr (loc, name, List.map (unsugar_pattern_arg ~current_module imports) args)
   | ParseTree.Any name ->
       let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
@@ -147,7 +166,7 @@ let rec unsugar_pat ~current_module imports options (pattern, t) =
 (* TODO: Allow full patterns but restrict here *)
 and unsugar_try_pattern ~current_module imports options (pattern, t) =
   let pattern =
-    (upper_name_to_exn ~current_module imports (fst pattern),
+    (upper_name_to_local_exn imports (fst pattern),
      List.map (new_lower_name_to_value ~current_module ~allow_underscore:true) (snd pattern)
     )
   in
@@ -166,10 +185,10 @@ and unsugar_t ~current_module imports options = function
       let eff = unsugar_eff ~current_module eff in
       (loc, EApp (unsugar_t ~current_module imports options t, eff))
   | (loc, ParseTree.LowerVal name) ->
-      let name = lower_name_to_value ~current_module imports name in
+      let name = lower_name_to_local_value imports name in
       (loc, Val name)
   | (loc, ParseTree.UpperVal name) ->
-      let name = upper_name_to_value ~current_module imports name in
+      let name = upper_name_to_local_value imports name in
       (loc, Val name)
   | (loc, ParseTree.PatternMatching (t, patterns)) ->
       (loc, PatternMatching (unsugar_t ~current_module imports options t, List.map (unsugar_pat ~current_module imports options) patterns))
@@ -177,7 +196,7 @@ and unsugar_t ~current_module imports options = function
       let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
       (loc, Let ((name, is_rec, unsugar_args ~current_module imports options args annot x), unsugar_t ~current_module imports options t))
   | (loc, ParseTree.Fail (ty, (exn, args))) ->
-      let exn = upper_name_to_exn ~current_module imports exn in
+      let exn = upper_name_to_local_exn imports exn in
       (loc, Fail (unsugar_ty ~current_module imports ty, (exn, List.map (unsugar_t ~current_module imports options) args)))
   | (loc, ParseTree.Try (t, patterns)) ->
       (loc, Try (unsugar_t ~current_module imports options t, List.map (unsugar_try_pattern ~current_module imports options) patterns))

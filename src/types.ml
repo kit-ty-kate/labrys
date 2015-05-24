@@ -124,6 +124,7 @@ let rec of_parse_tree_kind ~pure_arrow gammaT gammaE = function
         fail_not_star ~loc:loc_y "->";
       (Fun (x, eff, y), Kinds.Star)
   | (loc, UnsugaredTree.Ty name) ->
+      let name = GammaMap.Types.fill_module name gammaT in
       begin match GammaMap.Types.find name gammaT with
       | Some (Alias (ty, k)) -> (ty, k)
       | Some (Abstract k) -> (Ty name, k)

@@ -33,6 +33,7 @@ module type S = sig
   val union : ('a -> 'a) -> imported:'a t -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
   val open_module : Module.t -> 'a t -> 'a t
+  val fill_module : key -> 'a t -> key
 end
 
 module Utils
@@ -54,6 +55,22 @@ module Utils
   let open_module modul self =
     let aux k = M.add (Ident.open_module modul k) in
     M.fold aux self M.empty
+
+  let fill_module_aux x self =
+    let rec aux x = function
+      | [] -> (x, false)
+      | (matches, _)::xs ->
+          begin match Ident.fill_module ~matches x with
+          | (x, true) -> (x, true)
+          | (x, false) -> aux x xs
+          end
+    in
+    aux x (M.bindings self)
+
+  let fill_module x self =
+    match fill_module_aux x self with
+    | (x, true) -> x
+    | (_, false) -> assert false
 end
 
 module MakeSelf (I : Map.OrderedType) = struct
@@ -97,6 +114,17 @@ module Constr = struct
     match find k map with
     | None -> add k (Index.singleton k2 x) map
     | Some xs -> add k (Index.add k2 x xs) map
+
+  let fill_module x self =
+    let rec aux x = function
+      | [] -> assert false
+      | (_, matches)::xs ->
+          begin match Index.fill_module_aux x matches with
+          | (x, true) -> x
+          | (x, false) -> aux x xs
+          end
+    in
+    aux x (bindings self)
 end
 
 module Exn = struct
