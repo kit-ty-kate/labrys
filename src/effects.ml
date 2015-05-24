@@ -63,7 +63,9 @@ let has_io {variables; exns = _} =
   not (Variables.is_empty variables)
 
 let add gammaExn gammaE (name, exns) self =
-  let exns = List.map (fun x -> GammaMap.Exn.fill_module x gammaExn) exns in
+  let exns =
+    List.map (fun x -> fst (GammaMap.Exn.fill_module x gammaExn)) exns
+  in
   if GammaSet.Eff.mem name gammaE then begin
     let has_args = Ident.Eff.equal name Builtins.exn in
     if has_args && List.is_empty exns then

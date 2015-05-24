@@ -33,7 +33,6 @@ module type S = sig
   val union : ('a -> 'a) -> imported:'a t -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
   val open_module : Module.t -> 'a t -> 'a t
-  val fill_module : key -> _ t -> key
 end
 
 module Utils
@@ -56,21 +55,16 @@ module Utils
     let aux k = M.add (Ident.open_module modul k) in
     M.fold aux self M.empty
 
-  let fill_module_aux x self =
-    let rec aux x = function
-      | [] -> (x, false)
-      | (matches, _)::xs ->
-          begin match Ident.fill_module ~matches x with
-          | (x, true) -> (x, true)
-          | (x, false) -> aux x xs
+  let fill_module_aux k self =
+    let rec aux = function
+      | [] -> None
+      | (matches, x)::xs ->
+          begin match Ident.fill_module ~matches k with
+          | Some k -> Some (k, x)
+          | None -> aux xs
           end
     in
-    aux x (M.bindings self)
-
-  let fill_module x self =
-    match fill_module_aux x self with
-    | (x, true) -> x
-    | (_, false) -> assert false
+    aux (M.bindings self)
 end
 
 module MakeSelf (I : Map.OrderedType) = struct
@@ -85,7 +79,19 @@ module Make (I : module type of Ident.Name) = struct
   include Utils(Self)(I)
 end
 
-module Value = Make(Ident.Name)
+module Value = struct
+  include Make(Ident.Name)
+
+  let fill_module k self =
+    match fill_module_aux k self with
+    | Some x ->
+        x
+    | None ->
+        Error.fail
+          ~loc:(Ident.Name.loc k)
+          "The value '%s' was not found in Γ"
+          (Ident.Name.to_string k)
+end
 
 module Types = struct
   include Make(Ident.Type)
@@ -97,9 +103,33 @@ module Types = struct
         "A module cannot contain several times the type '%s'"
         (Ident.Type.to_string k);
     add k x map
+
+  let fill_module k self =
+    match fill_module_aux k self with
+    | Some x ->
+        x
+    | None ->
+        Error.fail
+          ~loc:(Ident.Type.loc k)
+          "The type '%s' was not found in Γ"
+          (Ident.Type.to_string k)
 end
 
-module Index = Value
+module Index = struct
+  include Make(Ident.Name)
+
+  let fill_module ~head_ty k self =
+    match fill_module_aux k self with
+    | Some x ->
+        x
+    | None ->
+        Error.fail
+          ~loc:(Ident.Name.loc k)
+          "Constructor '%s' not found in type '%s'"
+          (Ident.Name.to_string k)
+          (Ident.Type.to_string head_ty)
+
+end
 
 module Constr = struct
   include Make(Ident.Type)
@@ -114,17 +144,6 @@ module Constr = struct
     match find k map with
     | None -> add k (Index.singleton k2 x) map
     | Some xs -> add k (Index.add k2 x xs) map
-
-  let fill_module x self =
-    let rec aux x = function
-      | [] -> assert false
-      | (_, matches)::xs ->
-          begin match Index.fill_module_aux x matches with
-          | (x, true) -> x
-          | (x, false) -> aux x xs
-          end
-    in
-    aux x (bindings self)
 end
 
 module Exn = struct
@@ -137,4 +156,13 @@ module Exn = struct
         "A module cannot contain several times the exception '%s'"
         (Ident.Exn.to_string k);
     add k x map
+
+  let fill_module k self =
+    match fill_module_aux k self with
+    | Some x -> x
+    | None ->
+        Error.fail
+          ~loc:(Ident.Exn.loc k)
+          "The exception '%s' is not defined in Γ"
+          (Ident.Exn.to_string k)
 end

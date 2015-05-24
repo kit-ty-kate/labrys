@@ -123,16 +123,10 @@ let rec of_parse_tree_kind ~pure_arrow gammaT gammaExn gammaE = function
       if Kinds.not_star k2 then
         fail_not_star ~loc:loc_y "->";
       (Fun (x, eff, y), Kinds.Star)
-  | (loc, UnsugaredTree.Ty name) ->
-      let name = GammaMap.Types.fill_module name gammaT in
-      begin match GammaMap.Types.find name gammaT with
-      | Some (Alias (ty, k)) -> (ty, k)
-      | Some (Abstract k) -> (Ty name, k)
-      | None ->
-          Error.fail
-            ~loc
-            "The type '%s' was not found in Γ"
-            (Ident.Type.to_string name)
+  | (_, UnsugaredTree.Ty name) ->
+      begin match GammaMap.Types.fill_module name gammaT with
+      | (_, Alias (ty, k)) -> (ty, k)
+      | (name, Abstract k) -> (Ty name, k)
       end
   | (_, UnsugaredTree.Forall ((name, k), ret)) ->
       let loc_ret = fst ret in

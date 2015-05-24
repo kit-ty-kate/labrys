@@ -63,22 +63,6 @@ let upper_name_to_local_exn imports (loc, `UpperName name) =
 let lower_name_to_local_value imports (loc, `LowerName name) =
   transform_name_local imports loc Ident.Name.local_create Ident.Name.create name
 
-let transform_name ~current_module imports loc f = function
-  | [] ->
-      assert false
-  | [name] ->
-      f ~loc current_module name
-  | name ->
-      let (modul, name) = Utils.detach_last name in
-      let modul = get_module imports loc modul in
-      f ~loc modul name
-
-let upper_name_to_value ~current_module imports (loc, `UpperName name) =
-  transform_name ~current_module imports loc Ident.Name.create name
-
-let upper_name_to_type ~current_module imports (loc, `UpperName name) =
-  transform_name ~current_module imports loc Ident.Type.create name
-
 let new_lower_name_to_value ~current_module ~allow_underscore = function
   | (loc, `NewLowerName name) ->
       Ident.Name.create ~loc current_module name
@@ -86,9 +70,6 @@ let new_lower_name_to_value ~current_module ~allow_underscore = function
       Builtins.underscore_loc ~current_module loc
   | (loc, `Underscore) ->
       Error.fail ~loc "Wildcards are not allowed here"
-
-let lower_name_to_value ~current_module imports (loc, `LowerName name) =
-  transform_name ~current_module imports loc Ident.Name.create name
 
 let unsugar_kind = Option.default Kinds.Star
 

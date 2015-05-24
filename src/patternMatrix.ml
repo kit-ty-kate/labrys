@@ -48,7 +48,6 @@ let create =
         let gamma = Gamma.add_value name ty' gamma in
         (MAny (name, Types.head ty'), gamma)
     | UnsugaredTree.TyConstr (loc, name, args) ->
-        let name = GammaMap.Constr.fill_module name gamma.Gamma.constructors in
         let head_ty = Types.head ty' in
         let constructors =
           GammaMap.Constr.find head_ty gamma.Gamma.constructors
@@ -56,50 +55,42 @@ let create =
         let constructors =
           Option.default_delayed (fun () -> assert false) constructors
         in
-        begin match GammaMap.Index.find name constructors with
-        | None ->
-            Error.fail
-              ~loc:(Ident.Name.loc name)
-              "Constructor '%s' not found in type '%s'"
-              (Ident.Name.to_string name)
-              (Ident.Type.to_string head_ty)
-        | Some (ty, _) ->
-            let loc_f = Ident.Name.loc name in
-            let aux (args, ty, gamma) = function
-              | UnsugaredTree.PVal p ->
-                  let (param_ty, effect, res_ty) =
-                    Types.apply ~loc_f ty
-                  in
-                  if not (Effects.is_empty effect) then
-                    assert false;
-                  let (arg, gamma) = aux gamma param_ty p in
-                  (arg :: args, res_ty, gamma)
-              | UnsugaredTree.PTy pty ->
-                  let loc_x = fst pty in
-                  let (pty, kx) =
-                    Types.of_parse_tree_kind
-                      ~pure_arrow:`Allow
-                      gamma.Gamma.types
-                      gamma.Gamma.exceptions
-                      gamma.Gamma.effects
-                      pty
-                  in
-                  let (_, res) =
-                    Types.apply_ty ~loc_f ~loc_x ~ty_x:pty ~kind_x:kx ty
-                  in
-                  (args, res, gamma)
-            in
-            let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
-            let args = List.rev args in
-            if not (Types.equal ty ty') then
-              Error.fail
-                ~loc
-                "The type of the pattern is not equal to the type \
-                 of the value matched: Have '%s' but expected '%s'"
-                (Types.to_string ty)
-                (Types.to_string ty');
-            (MConstr ((name, Types.head ty), args), gamma)
-        end
+        let (name, (ty, _)) = GammaMap.Index.fill_module ~head_ty name constructors in
+        let loc_f = Ident.Name.loc name in
+        let aux (args, ty, gamma) = function
+          | UnsugaredTree.PVal p ->
+              let (param_ty, effect, res_ty) =
+                Types.apply ~loc_f ty
+              in
+              if not (Effects.is_empty effect) then
+                assert false;
+              let (arg, gamma) = aux gamma param_ty p in
+              (arg :: args, res_ty, gamma)
+          | UnsugaredTree.PTy pty ->
+              let loc_x = fst pty in
+              let (pty, kx) =
+                Types.of_parse_tree_kind
+                  ~pure_arrow:`Allow
+                  gamma.Gamma.types
+                  gamma.Gamma.exceptions
+                  gamma.Gamma.effects
+                  pty
+              in
+              let (_, res) =
+                Types.apply_ty ~loc_f ~loc_x ~ty_x:pty ~kind_x:kx ty
+              in
+              (args, res, gamma)
+        in
+        let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
+        let args = List.rev args in
+        if not (Types.equal ty ty') then
+          Error.fail
+            ~loc
+            "The type of the pattern is not equal to the type \
+             of the value matched: Have '%s' but expected '%s'"
+            (Types.to_string ty)
+            (Types.to_string ty');
+        (MConstr ((name, Types.head ty), args), gamma)
   in
   aux
 

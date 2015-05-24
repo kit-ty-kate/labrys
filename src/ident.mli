@@ -25,7 +25,7 @@ module Name : sig
   val equal : t -> t -> bool
   val compare : t -> t -> int
 
-  val fill_module : matches:t -> t -> (t * bool)
+  val fill_module : matches:t -> t -> t option
 
   val create : loc:Location.t -> Module.t -> string -> t
   val local_create : loc:Location.t -> string -> t

@@ -151,17 +151,9 @@ let rec aux gamma = function
       let (param, res) = Types.apply_eff ~loc_f ~loc_x ~eff ty_f in
       let res = Types.replace_eff ~from:param ~eff res in
       (f, res, effect)
-  | (loc, UnsugaredTree.Val name) ->
-      let name = GammaMap.Value.fill_module name gamma.Gamma.values in
-      begin match GammaMap.Value.find name gamma.Gamma.values with
-      | None ->
-          Error.fail
-            ~loc
-            "The value '%s' was not found in Γ"
-            (Ident.Name.to_string name)
-      | Some ty ->
-          (Val name, ty, Effects.empty)
-      end
+  | (_, UnsugaredTree.Val name) ->
+      let (name, ty) = GammaMap.Value.fill_module name gamma.Gamma.values in
+      (Val name, ty, Effects.empty)
   | (loc, UnsugaredTree.PatternMatching (t, patterns)) ->
       let (t, ty, effect1) = aux gamma t in
       let (patterns, results, initial_ty, effect2) =
@@ -187,37 +179,29 @@ let rec aux gamma = function
   | (_, UnsugaredTree.Let ((name, UnsugaredTree.Rec, _), _)) ->
       fail_rec_val ~loc_name:(Ident.Name.loc name)
   | (loc, UnsugaredTree.Fail (ty, (exn, args))) ->
-      let exn = GammaMap.Exn.fill_module exn gamma.Gamma.exceptions in
+      let (exn, tys) = GammaMap.Exn.fill_module exn gamma.Gamma.exceptions in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty in
-      begin match GammaMap.Exn.find exn gamma.Gamma.exceptions with
-      | Some tys ->
-          let (args, effects) =
-            let aux (acc, effects) ty_exn arg =
-              let loc_arg = fst arg in
-              let (arg, ty_arg, eff) = aux gamma arg in
-              if not (Types.equal ty_arg ty_exn) then
-                Types.Error.fail ~loc_t:loc_arg ~has:ty_arg ~expected:ty_exn;
-              (arg :: acc, Effects.union eff effects)
-            in
-            try List.fold_left2 aux ([], Effects.empty) tys args with
-            | Invalid_argument _ ->
-                Error.fail
-                  ~loc
-                  "Cannot apply an exception partially"
-          in
-          let args = List.rev args in
-          (Fail (exn, args), ty, Effects.add_exn exn effects)
-      | None ->
-          Error.fail
-            ~loc:(Ident.Exn.loc exn)
-            "The exception '%s' is not defined in Γ"
-            (Ident.Exn.to_string exn)
-      end
+      let (args, effects) =
+        let aux (acc, effects) ty_exn arg =
+          let loc_arg = fst arg in
+          let (arg, ty_arg, eff) = aux gamma arg in
+          if not (Types.equal ty_arg ty_exn) then
+            Types.Error.fail ~loc_t:loc_arg ~has:ty_arg ~expected:ty_exn;
+          (arg :: acc, Effects.union eff effects)
+        in
+        try List.fold_left2 aux ([], Effects.empty) tys args with
+        | Invalid_argument _ ->
+            Error.fail
+              ~loc
+              "Cannot apply an exception partially"
+      in
+      let args = List.rev args in
+      (Fail (exn, args), ty, Effects.add_exn exn effects)
   | (_, UnsugaredTree.Try (e, branches)) ->
       let (e, ty, effect) = aux gamma e in
       let (branches, effect) =
         let aux (branches, effect) ((name, args), t) =
-          let name = GammaMap.Exn.fill_module name gamma.Gamma.exceptions in
+          let (name, _) = GammaMap.Exn.fill_module name gamma.Gamma.exceptions in
           (branches @ [((name, args), t)], Effects.remove_exn name effect)
         in
         List.fold_left aux ([], effect) branches
