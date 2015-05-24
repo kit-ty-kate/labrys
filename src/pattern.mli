@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = Ident.Name.t
 
-type var = private
+type var = PatternMatrix.var = private
   | VLeaf
   | VNode of (int * var)
 

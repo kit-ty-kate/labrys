@@ -37,6 +37,8 @@ type pattern = private
 
 type matrix = (pattern list * code_index) list
 
+val var_compare : var -> var -> int
+
 val create :
   Gamma.t ->
   Types.t ->

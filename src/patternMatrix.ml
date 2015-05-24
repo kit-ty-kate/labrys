@@ -42,6 +42,19 @@ type pattern =
 
 type matrix = (pattern list * code_index) list
 
+let var_compare x y =
+  let rec aux = function
+    | VLeaf, VLeaf -> 0
+    | VNode (x, xs), VNode (y, ys) ->
+        begin match Int.compare x y with
+        | 0 -> aux (xs, ys)
+        | c -> c
+        end
+    | VLeaf, VNode _ -> 1
+    | VNode _, VLeaf -> -1
+  in
+  aux (x, y)
+
 let create =
   let rec aux gamma ty' = function
     | UnsugaredTree.Any name ->
