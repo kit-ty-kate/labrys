@@ -15,7 +15,7 @@ let printInt : Int -[IO]-> Int = begin
 end
 
 let zero : Int = begin
-  @.zero = constant i8 0
+  @Test..zero = constant i8 0
 end
 
 let app (x:Int->Int) (f:Int->Int->Int) = f

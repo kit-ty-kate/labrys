@@ -15,7 +15,7 @@ let printInt : Int -[IO]-> Int = begin
 end
 
 let zero : Int = begin
-  @.zero = constant i8 0
+  @SystemF..zero = constant i8 0
 end
 
 let id X (x:X) (x:X) = x
