@@ -19,7 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
+open Containers
 open Monomorphic.None
 
 type t =
@@ -83,7 +83,7 @@ let is_subset_of a b =
   GammaMap.Value.diff ~eq:Types.equal a.values b.values
   @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
   @ GammaMap.Constr.diff ~eq:(GammaMap.Index.equal constr_equal) a.constructors b.constructors
-  @ GammaMap.Exn.diff ~eq:(List.eq Types.equal) a.exceptions b.exceptions
+  @ GammaMap.Exn.diff ~eq:(List.equal Types.equal) a.exceptions b.exceptions
 
 let open_module modul {values; types; constructors; exceptions; effects} =
   let values = GammaMap.Value.open_module modul values in
