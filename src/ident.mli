@@ -23,7 +23,6 @@ module Name : sig
   type t
 
   val equal : t -> t -> bool
-  val compare : t -> t -> int
 
   val fill_module : matches:t -> t -> t option
 

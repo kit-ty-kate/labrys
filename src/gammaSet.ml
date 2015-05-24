@@ -22,19 +22,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-module type S = sig
-  include Set.S
-  include module type of Exceptionless
-end
-
 module Value = struct
-  include Set.Make(Ident.Name)
-  include Exceptionless
+  include Utils.EqSet(Ident.Name)
 end
 
 module Eff = struct
-  include Set.Make(Ident.Eff)
-  include Exceptionless
+  include Utils.EqSet(Ident.Eff)
 
   let add k map =
     if mem k map then

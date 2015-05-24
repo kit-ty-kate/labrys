@@ -333,6 +333,7 @@ module Make (I : sig val name : Module.t end) = struct
         let results = List.map (create_result func ~env ~res ~next_block ~jmp_buf gamma builder) results in
         let builder' = Llvm.builder_at_end c next_block in
         let default = create_default_branch func in
+        (* TODO: Remove any uses of polymorphic maps *)
         create_tree func ~env ~default Map.empty gamma builder t results tree;
         (Llvm.build_load res "" builder', builder')
     | UntypedTree.Val name ->

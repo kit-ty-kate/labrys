@@ -19,24 +19,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
+(* TODO: Put Batteries *)
 open Monomorphic.None
 
-module type BASE = sig
-  include Map.S
-  include module type of Exceptionless
-end
-
 module type S = sig
-  include BASE
+  include Utils.EQMAP
 
   val union : ('a -> 'a) -> imported:'a t -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
   val open_module : Module.t -> 'a t -> 'a t
 end
 
-module Utils
-         (M : BASE)
+module Aux
+         (M : Utils.EQMAP)
          (Ident : module type of Ident.Name with type t = M.key) = struct
   let union f ~imported b =
     let aux k x = M.add (Ident.remove_aliases k) (f x) in
@@ -67,16 +62,11 @@ module Utils
     aux (M.bindings self)
 end
 
-module MakeSelf (I : Map.OrderedType) = struct
-  include Map.Make(I)
-  include Exceptionless
-end
-
 module Make (I : module type of Ident.Name) = struct
-  module Self = MakeSelf(I)
+  module Self = Utils.EqMap(I)
 
   include Self
-  include Utils(Self)(I)
+  include Aux(Self)(I)
 end
 
 module Value = struct

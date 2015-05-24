@@ -103,18 +103,8 @@ let to_string self =
 let is_library self =
   self.library
 
-(* TODO: Remove this *)
-(*let dump_aliases set =
-  let aux x = "[" ^ String.concat ", " x ^ "]" in
-  "[" ^ String.concat ", " (List.map aux (Aliases.to_list set)) ^ "]"
-*)
-let compare x y =
-  if Aliases.exists (fun x -> Aliases.mem x y.aliases) x.aliases then
-    0
-  else
-    1
-
-let equal x y = Int.equal (compare x y) 0
+let equal x y =
+  Aliases.exists (fun x -> Aliases.mem x y.aliases) x.aliases
 
 let remove_aliases self =
   let aliases = Aliases.singleton self.modul in
@@ -129,8 +119,8 @@ let is_open self =
 
 type tmp = t
 
-module Map = Map.Make(struct
+module Map = Utils.EqMap (struct
     type t = tmp
 
-    let compare = compare
+    let equal = equal
   end)

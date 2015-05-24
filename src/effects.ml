@@ -24,8 +24,8 @@ open Monomorphic.None
 
 let fmt = Printf.sprintf
 
-module Exn_set = Set.Make(Ident.Exn)
-module Variables = Set.Make(Ident.Eff)
+module Exn_set = Utils.EqSet(Ident.Exn)
+module Variables = Utils.EqSet(Ident.Eff)
 
 type t =
   { variables : Variables.t

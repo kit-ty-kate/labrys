@@ -38,11 +38,10 @@ val to_string : t -> string
 
 val is_library : t -> bool
 
-val compare : t -> t -> int
 val equal : t -> t -> bool
 
 val remove_aliases : t -> t
 val open_module : t -> t
 val is_open : t -> bool
 
-module Map : BatMap.S with type key = t
+module Map : Utils.EQMAP with type key = t

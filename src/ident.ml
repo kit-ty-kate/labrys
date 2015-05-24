@@ -27,16 +27,14 @@ let fmt = Printf.sprintf
 module Name = struct
   type t = (Location.t * Module.t option * string)
 
-  let compare (_, module_x, x) (_, module_y, y) =
+  let equal (_, module_x, x) (_, module_y, y) =
     let module_x = Option.default_delayed (fun () -> assert false) module_x in
     let module_y = Option.default_delayed (fun () -> assert false) module_y in
-    let cmp_module = Module.compare module_x module_y in
-    if Int.equal cmp_module 0 then
-      String.compare x y
+    let eq_module = Module.equal module_x module_y in
+    if eq_module then
+      String.equal x y
     else
-      cmp_module
-
-  let equal x y = Int.equal (compare x y) 0
+      eq_module
 
   let fill_module ~matches:((_, modul, matches_name) as matches) = function
     | (loc, None, name) ->
