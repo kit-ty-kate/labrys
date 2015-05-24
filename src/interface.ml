@@ -63,6 +63,7 @@ let compile gamma =
         compile gammaT gammaExn gammaE gamma xs
     | Open modul :: xs ->
         let gammaT = GammaMap.Types.open_module modul gammaT in
+        let gammaExn = GammaMap.Exn.open_module modul gammaExn in
         compile gammaT gammaExn gammaE gamma xs
     | [] ->
         gamma
