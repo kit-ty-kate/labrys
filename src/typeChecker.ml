@@ -80,13 +80,13 @@ let get_ty_from_let_rec ~loc_name ty =
 
 let check_type ~loc_t ~ty:(ty, eff) ~ty_t ~effects gamma =
   let ty =
-    Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty
+    Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty
   in
   if not (Types.equal ty ty_t) then
     Types.Error.fail ~loc_t ~has:ty_t ~expected:ty;
   begin match eff with
   | Some eff ->
-      let eff = Effects.of_list gamma.Gamma.effects eff in
+      let eff = Effects.of_list gamma.Gamma.exceptions gamma.Gamma.effects eff in
       if not (Effects.equal [] eff effects) then
         Error.fail
           ~loc:loc_t
@@ -108,7 +108,7 @@ let check_effects_forall ~loc_t ~effect =
 
 let rec aux gamma = function
   | (_, UnsugaredTree.Abs ((name, ty), t)) ->
-      let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
+      let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty in
       let gamma = Gamma.add_value name ty gamma in
       let (expr, ty_expr, effect) = aux gamma t in
       let abs_ty = Types.func ~param:ty ~eff:effect ~res:ty_expr in
@@ -139,7 +139,7 @@ let rec aux gamma = function
       let loc_f = fst f in
       let loc_x = fst ty_x in
       let (f, ty_f, effect) = aux gamma f in
-      let (ty_x, kx) = Types.of_parse_tree_kind ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty_x in
+      let (ty_x, kx) = Types.of_parse_tree_kind ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty_x in
       let (param, res) = Types.apply_ty ~loc_f ~loc_x ~ty_x ~kind_x:kx ty_f in
       let res = Types.replace ~from:param ~ty:ty_x res in
       (f, res, effect)
@@ -147,7 +147,7 @@ let rec aux gamma = function
       let loc_f = fst f in
       let loc_x = fst eff in
       let (f, ty_f, effect) = aux gamma f in
-      let eff = Effects.of_list gamma.Gamma.effects eff in
+      let eff = Effects.of_list gamma.Gamma.exceptions gamma.Gamma.effects eff in
       let (param, res) = Types.apply_eff ~loc_f ~loc_x ~eff ty_f in
       let res = Types.replace_eff ~from:param ~eff res in
       (f, res, effect)
@@ -179,7 +179,7 @@ let rec aux gamma = function
       (Let (name, t, xs), ty_xs, Effects.union effect1 effect2)
   | (_, UnsugaredTree.Let ((name, UnsugaredTree.Rec, t), xs)) when well_formed_rec t ->
       let ty = get_ty_from_let_rec ~loc_name:(Ident.Name.loc name) t in
-      let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
+      let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty in
       let gamma = Gamma.add_value name ty gamma in
       let (t, _, effect1) = aux gamma t in
       let (xs, ty_xs, effect2) = aux gamma xs in
@@ -188,7 +188,7 @@ let rec aux gamma = function
       fail_rec_val ~loc_name:(Ident.Name.loc name)
   | (loc, UnsugaredTree.Fail (ty, (exn, args))) ->
       let exn = GammaMap.Exn.fill_module exn gamma.Gamma.exceptions in
-      let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
+      let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty in
       begin match GammaMap.Exn.find exn gamma.Gamma.exceptions with
       | Some tys ->
           let (args, effects) =
@@ -215,14 +215,14 @@ let rec aux gamma = function
       end
   | (_, UnsugaredTree.Try (e, branches)) ->
       let (e, ty, effect) = aux gamma e in
-      let effect =
-        List.fold_left
-          (fun effect ((name, _), _) -> Effects.remove_exn name effect)
-          effect
-          branches
+      let (branches, effect) =
+        let aux (branches, effect) ((name, args), t) =
+          let name = GammaMap.Exn.fill_module name gamma.Gamma.exceptions in
+          (branches @ [((name, args), t)], Effects.remove_exn name effect)
+        in
+        List.fold_left aux ([], effect) branches
       in
       let aux (acc, effect) ((name, args), t) =
-        let name = GammaMap.Exn.fill_module name gamma.Gamma.exceptions in
         let loc_t = fst t in
         let (t, ty', eff) = aux gamma t in
         if not (Types.equal ty ty') then
@@ -241,7 +241,7 @@ let rec aux gamma = function
 let transform_variants ~datatype gamma =
   let rec aux index = function
     | UnsugaredTree.Variant (name, ty) :: xs ->
-        let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
+        let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty in
         Types.check_if_returns_type ~name ~datatype ty;
         let (xs, gamma) = aux (succ index) xs in
         let gamma = Gamma.add_value name ty gamma in
@@ -281,7 +281,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       (Value (name, x) :: xs, has_main, gamma)
   | UnsugaredTree.Value (name, UnsugaredTree.Rec, term) :: xs when well_formed_rec term ->
       let ty = get_ty_from_let_rec ~loc_name:(Ident.Name.loc name) term in
-      let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
+      let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty in
       let gamma = Gamma.add_value name ty gamma in
       let (has_main, x, _) = check_effects ~current_module ~with_main ~has_main ~name options (aux gamma term) in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
@@ -289,11 +289,11 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
   | UnsugaredTree.Value (name, UnsugaredTree.Rec, _) :: _ ->
       fail_rec_val ~loc_name:(Ident.Name.loc name)
   | UnsugaredTree.Type (name, ty) :: xs ->
-      let ty = Types.of_parse_tree_kind ~pure_arrow:`Forbid gamma.Gamma.types gamma.Gamma.effects ty in
+      let ty = Types.of_parse_tree_kind ~pure_arrow:`Forbid gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty in
       let gamma = Gamma.add_type name (Types.Alias ty) gamma in
       from_parse_tree ~current_module ~with_main ~has_main options gamma xs
   | UnsugaredTree.Binding (name, ty, binding) :: xs ->
-      let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.effects ty in
+      let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty in
       if not (Types.has_io ty) then
         Error.fail
           ~loc:(Ident.Name.loc name)
@@ -309,7 +309,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       (Datatype variants :: xs, has_main, gamma)
   | UnsugaredTree.Exception (name, args) :: xs ->
-      let args = List.map (Types.of_parse_tree ~pure_arrow:`Forbid gamma.Gamma.types gamma.Gamma.effects) args in
+      let args = List.map (Types.of_parse_tree ~pure_arrow:`Forbid gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects) args in
       let gamma = Gamma.add_exception name args gamma in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       (Exception name :: xs, has_main, gamma)

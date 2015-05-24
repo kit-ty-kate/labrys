@@ -282,9 +282,9 @@ effectName:
       { (name, args) }
 
 eff_exn:
-  | name = newUpperName
+  | name = upperName
       { [name] }
-  | name = newUpperName Pipe xs = eff_exn
+  | name = upperName Pipe xs = eff_exn
       { name :: xs }
 
 exceptionValue:

@@ -33,7 +33,7 @@ module type S = sig
   val union : ('a -> 'a) -> imported:'a t -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
   val open_module : Module.t -> 'a t -> 'a t
-  val fill_module : key -> 'a t -> key
+  val fill_module : key -> _ t -> key
 end
 
 module Utils

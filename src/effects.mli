@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type t
 
-val of_list : GammaSet.Eff.t -> UnsugaredTree.effects -> t
+val of_list : _ GammaMap.Exn.t -> GammaSet.Eff.t -> UnsugaredTree.effects -> t
 
 val empty : t
 

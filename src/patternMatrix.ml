@@ -80,6 +80,7 @@ let create =
                     Types.of_parse_tree_kind
                       ~pure_arrow:`Allow
                       gamma.Gamma.types
+                      gamma.Gamma.exceptions
                       gamma.Gamma.effects
                       pty
                   in

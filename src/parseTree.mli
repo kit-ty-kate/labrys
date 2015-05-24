@@ -35,7 +35,7 @@ type forall_arg =
   | Typ of ty_arg
   | TyClass of tyclass_arg
 
-type effects = (loc * (new_upper_name * new_upper_name list) list)
+type effects = (loc * (new_upper_name * upper_name list) list)
 
 type is_rec =
   | Rec

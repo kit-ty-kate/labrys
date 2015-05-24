@@ -26,7 +26,7 @@ module type S = sig
   val union : ('a -> 'a) -> imported:'a t -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
   val open_module : Module.t -> 'a t -> 'a t
-  val fill_module : key -> 'a t -> key
+  val fill_module : key -> _ t -> key
 end
 
 module Value : S with type key = Ident.Name.t
@@ -40,7 +40,7 @@ module Constr : sig
 
   val add : key -> Index.key -> 'a -> 'a Index.t t -> 'a Index.t t
   val open_module : Module.t -> 'a Index.t t -> 'a Index.t t
-  val fill_module : Index.key -> 'a Index.t t -> Index.key
+  val fill_module : Index.key -> _ Index.t t -> Index.key
 end
 
 module Exn : S with type key = Ident.Exn.t

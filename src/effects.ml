@@ -62,7 +62,8 @@ let is_subset_of list_eq x y =
 let has_io {variables; exns = _} =
   not (Variables.is_empty variables)
 
-let add gammaE (name, exns) self =
+let add gammaExn gammaE (name, exns) self =
+  let exns = List.map (fun x -> GammaMap.Exn.fill_module x gammaExn) exns in
   if GammaSet.Eff.mem name gammaE then begin
     let has_args = Ident.Eff.equal name Builtins.exn in
     if has_args && List.is_empty exns then
@@ -122,8 +123,8 @@ let to_string self =
   in
   fmt "[%s]" (String.concat ", " (exns @ Variables.fold aux self.variables []))
 
-let of_list gammaE (_, l) =
-  let aux acc ty = add gammaE ty acc in
+let of_list gammaExn gammaE (_, l) =
+  let aux acc ty = add gammaExn gammaE ty acc in
   List.fold_left aux empty l
 
 let replace ~from ~eff self =

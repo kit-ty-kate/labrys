@@ -92,10 +92,10 @@ let lower_name_to_value ~current_module imports (loc, `LowerName name) =
 
 let unsugar_kind = Option.default Kinds.Star
 
-let unsugar_eff ~current_module (loc, l) =
+let unsugar_eff imports (loc, l) =
   let aux (name, args) =
     let name = new_upper_name_to_eff name in
-    let args = List.map (new_upper_name_to_exn ~current_module) args in
+    let args = List.map (upper_name_to_local_exn imports) args in
     (name, args)
   in
   (loc, List.map aux l)
@@ -132,7 +132,7 @@ let rec unsugar_ty ~current_module imports =
   in
   function
   | (loc, ParseTree.Fun (x, eff, y)) ->
-      let eff = Option.map (unsugar_eff ~current_module) eff in
+      let eff = Option.map (unsugar_eff imports) eff in
       (loc, Fun (unsugar_ty ~current_module imports x, eff, unsugar_ty ~current_module imports y))
   | (loc, ParseTree.Ty name) ->
       let name = upper_name_to_local_type imports name in
@@ -145,7 +145,7 @@ let rec unsugar_ty ~current_module imports =
       (loc, AppOnTy (unsugar_ty ~current_module imports x, unsugar_ty ~current_module imports y))
 
 let unsugar_annot ~current_module imports (annot, eff) =
-  let eff = Option.map (unsugar_eff ~current_module) eff in
+  let eff = Option.map (unsugar_eff imports) eff in
   (unsugar_ty ~current_module imports annot, eff)
 
 let rec unsugar_pattern_arg ~current_module imports = function
@@ -182,7 +182,7 @@ and unsugar_t ~current_module imports options = function
   | (loc, ParseTree.TApp (t, ty)) ->
       (loc, TApp (unsugar_t ~current_module imports options t, unsugar_ty ~current_module imports ty))
   | (loc, ParseTree.EApp (t, eff)) ->
-      let eff = unsugar_eff ~current_module eff in
+      let eff = unsugar_eff imports eff in
       (loc, EApp (unsugar_t ~current_module imports options t, eff))
   | (loc, ParseTree.LowerVal name) ->
       let name = lower_name_to_local_value imports name in
