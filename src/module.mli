@@ -42,7 +42,7 @@ val compare : t -> t -> int
 val equal : t -> t -> bool
 
 val remove_aliases : t -> t
-
 val open_module : t -> t
+val is_open : t -> bool
 
 module Map : BatMap.S with type key = t

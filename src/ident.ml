@@ -38,15 +38,18 @@ module Name = struct
 
   let equal x y = Int.equal (compare x y) 0
 
-  let fill_module ~matches:(_, modul, matches_name) = function
+  let fill_module ~matches:((_, modul, matches_name) as matches) = function
     | (loc, None, name) ->
-        if String.equal matches_name name then
-          let modul = Option.default_delayed (fun () -> assert false) modul in
+        let modul = Option.default_delayed (fun () -> assert false) modul in
+        if Module.is_open modul && String.equal matches_name name then
           Some (loc, Some modul, name)
         else
           None
-    | (_, Some _, _) ->
-        None
+    | (_, Some _, _) as self ->
+        if equal self matches then
+          Some self
+        else
+          None
 
   let create ~loc modul name =
     (loc, Some modul, name)

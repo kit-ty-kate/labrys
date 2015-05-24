@@ -124,6 +124,9 @@ let open_module self =
   let aliases = Aliases.add [] self.aliases in
   {self with aliases}
 
+let is_open self =
+  Aliases.mem [] self.aliases
+
 type tmp = t
 
 module Map = Map.Make(struct
