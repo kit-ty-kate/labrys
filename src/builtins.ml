@@ -27,8 +27,7 @@ let unknown_loc =
   Location.{loc_start = pos; loc_end = pos; filename = "unknown"}
 
 let prelude options =
-  (* TODO: Fix this *)
-  Module.open_module (Module.library_create options ["Prelude"])
+  Module.library_create options ["Prelude"]
 
 let unit options =
   Ident.Name.create ~loc:unknown_loc (prelude options) "Unit"
