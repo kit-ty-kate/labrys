@@ -50,14 +50,13 @@ let write ~o result =
   with_tmp_file aux
 
 let rec build_intf options current_module =
+  let current_module = Module.open_module current_module in
   let module P = ParserHandler.Make(struct let get = Module.intf current_module end) in
   let (imports, tree) = P.parse_intf () in
   let (imports, tree) =
     Unsugar.create_interface ~current_module options imports tree
   in
-  let aux acc x =
-    Gamma.union ~imported:(build_intf options x) acc
-  in
+  let aux acc x = Gamma.union ~imported:(build_intf options x) acc in
   let gamma = List.fold_left aux Gamma.empty imports in
   Interface.compile gamma tree
 
@@ -96,17 +95,15 @@ let rec build_imports ~imports_code options imports =
     if Module.Map.mem modul imports_code then begin
       imports_code
     end else begin
-      let (imports_code, code) =
-        let modul = Module.open_module modul in
-        let interface = build_intf options modul in
-        compile imports_code interface options modul
-      in
+      let interface = build_intf options modul in
+      let (imports_code, code) = compile imports_code interface options modul in
       Module.Map.add modul code imports_code
     end
   in
   List.fold_left aux imports_code imports
 
 and compile ?(with_main=false) imports_code interface options modul =
+  let modul = Module.open_module modul in
   let cimpl = Module.cimpl modul in
   try
     let imports = BuildSystem.check_impl options modul in
