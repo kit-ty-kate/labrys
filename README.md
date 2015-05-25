@@ -1,7 +1,6 @@
-Cervoise is a toy-language that implement the System Fω type-system.
-It compiles natively thanks to LLVM.
+Cervoise is a toy language based on LLVM that implements the System Fω type-system.
 
 ### Requirements
 
-* the Boehm GC: libgc-dev on debian.
-* See requirements in `_oasis`
+* Boehm GC: libgc-dev on debian.
+* OCaml and OCaml libraries: for more details, see the `_oasis` file
