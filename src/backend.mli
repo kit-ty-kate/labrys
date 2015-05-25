@@ -29,7 +29,7 @@ val make :
 
 val link : main_module_name:Module.t -> main_module:t -> t Module.Map.t -> t
 
-val optimize : Options.t -> t -> t
+val optimize : <lto : bool; opt : int; ..> -> t -> t
 
 val to_string : t -> string
 

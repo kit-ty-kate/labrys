@@ -20,15 +20,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 val create :
+  no_prelude:bool ->
   current_module:Module.t ->
-  Options.t ->
+  <lib_dir : string; ..> ->
   ParseTree.imports ->
   ParseTree.top list ->
   (UnsugaredTree.imports * UnsugaredTree.top list)
 
 val create_interface :
   current_module:Module.t ->
-  Options.t ->
+  < lib_dir : string; .. > ->
   ParseTree.imports ->
   ParseTree.interface list ->
   (UnsugaredTree.imports * InterfaceTree.t list)

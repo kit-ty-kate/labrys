@@ -564,8 +564,8 @@ let get_target ~triple =
   Llvm_target.TargetMachine.create ~triple target
 
 let optimize options m =
-  let lto = options.Options.lto in
-  let opt = options.Options.opt in
+  let lto = options#lto in
+  let opt = options#opt in
   let triple = get_triple () in
   let target = get_target ~triple in
   let layout = Llvm_target.TargetMachine.data_layout target in

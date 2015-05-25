@@ -90,6 +90,6 @@ val check_if_returns_type : name:Ident.Name.t -> datatype:name -> t -> unit
 
 val has_io : t -> bool
 
-val is_unit : Options.t -> t -> bool
+val is_unit : <lib_dir : string; ..> -> t -> bool
 
 val remove_module_aliases : t -> t

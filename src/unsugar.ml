@@ -282,11 +282,11 @@ let create_imports ~current_module options =
   in
   List.map aux
 
-let create ~current_module options imports tree =
+let create ~no_prelude ~current_module options imports tree =
   let imports = create_imports ~current_module options imports in
-  let imports = Builtins.imports options imports in
+  let imports = Builtins.imports ~no_prelude options imports in
   let tree = List.map (create ~current_module imports options) tree in
-  let tree = Builtins.tree options tree in
+  let tree = Builtins.tree ~no_prelude options tree in
   (List.map snd imports, tree)
 
 let create_interface ~current_module imports = function

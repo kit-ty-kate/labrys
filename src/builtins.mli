@@ -19,8 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val unit : Options.t -> Ident.Name.t
-val t_unit : Options.t -> Ident.Type.t
+val unit : <lib_dir : string; ..> -> Ident.Name.t
+val t_unit : <lib_dir : string; ..> -> Ident.Type.t
 val t_unit_name : [`UpperName of string list]
 
 val underscore : current_module:Module.t -> Ident.Name.t
@@ -36,11 +36,13 @@ val effects : Ident.Eff.t list
 val main : current_module:Module.t -> Ident.Name.t
 
 val imports :
-  Options.t ->
+  no_prelude:bool ->
+  <lib_dir : string; ..> ->
   (string list * Module.t) list ->
   (string list * Module.t) list
 
 val tree :
-  Options.t ->
+  no_prelude:bool ->
+  <lib_dir : string; ..> ->
   UnsugaredTree.top list ->
   UnsugaredTree.top list

@@ -49,8 +49,14 @@ let effects = [io; exn]
 let main ~current_module =
   Ident.Name.create ~loc:unknown_loc current_module "main"
 
-let imports options imports =
+let imports ~no_prelude options imports =
+  if no_prelude then
+    imports
+  else
   (["Prelude"], prelude options) :: imports
 
-let tree options tree =
-  UnsugaredTree.Open (prelude options) :: tree
+let tree ~no_prelude options tree =
+  if no_prelude then
+    tree
+  else
+    UnsugaredTree.Open (prelude options) :: tree

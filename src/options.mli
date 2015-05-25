@@ -22,21 +22,57 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type file = string
 type directory = string
 
-type printer =
-  | NoPrinter
-  | ParseTree
-  | UnsugaredTree
-  | TypedTree
-  | UntypedTree
-  | LLVM
-  | OptimizedLLVM
+class type restrained_base = object
+  method src_dir : directory
+  method build_dir : directory
+end
 
-type t =
-  { printer : printer
-  ; lto : bool
-  ; opt : int
-  ; src_dir : directory
-  ; build_dir : directory
-  ; lib_dir : directory
-  ; o : file
-  }
+class type base = object
+  inherit restrained_base
+  method lib_dir : directory
+end
+
+class type extended_base = object
+  inherit base
+  method no_prelude : bool
+end
+
+class type optimization = object
+  method lto : bool
+  method opt : int
+end
+
+class type program = object
+  inherit base
+  inherit optimization
+  method o : file
+end
+
+class type modul = object
+  inherit extended_base
+end
+
+class type print_parse_tree = object
+  inherit restrained_base
+end
+
+class type print_unsugared_tree = object
+  inherit extended_base
+end
+
+class type print_typed_tree = object
+  inherit extended_base
+end
+
+class type print_untyped_tree = object
+  inherit extended_base
+end
+
+class type print_early_llvm = object
+  inherit extended_base
+end
+
+class type print_llvm = object
+  inherit base
+  inherit optimization
+end

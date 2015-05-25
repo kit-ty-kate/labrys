@@ -24,10 +24,13 @@ exception Error of string
 type t
 
 val create : current_module:t -> string list -> t
-val from_string : Options.t -> string -> t
+val from_string :
+  <src_dir : string; build_dir : string; ..> ->
+  string ->
+  t
 
-val library_create : Options.t -> string list -> t
-val library_from_string : Options.t -> string -> t
+val library_create : <lib_dir : string; ..> -> string list -> t
+val library_from_string : <lib_dir : string; ..> -> string -> t
 
 val impl : t -> string
 val cimpl : t -> string

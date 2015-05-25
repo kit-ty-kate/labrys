@@ -46,8 +46,8 @@ let create ~current_module modul =
 
 let library_create options modul =
   let library = true in
-  let src_dir = options.Options.lib_dir in
-  let build_dir = options.Options.lib_dir in
+  let src_dir = options#lib_dir in
+  let build_dir = options#lib_dir in
   let aliases = Aliases.singleton modul in
   {library; src_dir; build_dir; aliases; modul}
 
@@ -71,16 +71,16 @@ let module_from_string modul =
 
 let from_string options modul =
   let library = false in
-  let src_dir = options.Options.src_dir in
-  let build_dir = Filename.concat options.Options.build_dir src_dir in
+  let src_dir = options#src_dir in
+  let build_dir = Filename.concat options#build_dir src_dir in
   let modul = module_from_string modul in
   let aliases = Aliases.singleton modul in
   {library; src_dir; build_dir; aliases; modul}
 
 let library_from_string options modul =
   let library = true in
-  let src_dir = options.Options.lib_dir in
-  let build_dir = options.Options.lib_dir in
+  let src_dir = options#lib_dir in
+  let build_dir = options#lib_dir in
   let modul = module_from_string modul in
   let aliases = Aliases.singleton modul in
   {library; src_dir; build_dir; aliases; modul}

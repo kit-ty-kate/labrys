@@ -22,55 +22,172 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open BatteriesExceptionless
 open Monomorphic.None
 
-let start printer lto opt src_dir build_dir lib_dir o modul =
-  let options =
-    { Options.printer
-    ; lto
-    ; opt
-    ; src_dir
-    ; build_dir
-    ; lib_dir
-    ; o
-    }
-  in
-(*  if lto && c then
-    Some
-      "Error: Cannot enable the lto optimization while compiling.\n\
-       This is allowed only during linking"
-*)
-  try Compiler.compile options modul; None with
+module Term = Cmdliner.Term
+module Arg = Cmdliner.Arg
+
+let ($) = Term.($)
+
+let start f options modul =
+  try f options modul; None with
   | Error.Exn x -> Some (Error.dump x)
   | ParserHandler.ParseError x -> Some x
   | Sys_error x -> Some x
   | Llvm_irreader.Error x -> Some x
   | Module.Error x -> Some x
 
-let cmd =
-  let module Term = Cmdliner.Term in
-  let module Arg = Cmdliner.Arg in
-  let ($) = Cmdliner.Term.($) in
-  let printers =
-    [ (Options.ParseTree, Arg.info ["print-parse-tree"])
-    ; (Options.UnsugaredTree, Arg.info ["print-unsugared-tree"])
-    ; (Options.TypedTree, Arg.info ["print-typed-tree"])
-    ; (Options.UntypedTree, Arg.info ["print-untyped-tree"])
-    ; (Options.LLVM, Arg.info ["print-early-llvm"])
-    ; (Options.OptimizedLLVM, Arg.info ["print-llvm"])
-    ]
-  in
-  let args = Term.pure start in
-  let args = args $ Arg.(value & vflag Options.NoPrinter printers) in
-  let args = args $ Arg.(value & flag & info ["lto"]) in
-  let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
+let start_program modul src_dir build_dir lib_dir lto opt o =
+  let options = object
+    method src_dir = src_dir
+    method build_dir = build_dir
+    method lib_dir = lib_dir
+    method lto = lto
+    method opt = opt
+    method o = o
+  end in
+  start Compiler.compile_program options modul
+
+let start_module modul src_dir build_dir lib_dir no_prelude =
+  let options = object
+    method src_dir = src_dir
+    method build_dir = build_dir
+    method lib_dir = lib_dir
+    method no_prelude = no_prelude
+  end in
+  start Compiler.compile_module options modul
+
+let start_print_parse_tree modul src_dir build_dir =
+  let options = object
+    method src_dir = src_dir
+    method build_dir = build_dir
+  end in
+  start Compiler.print_parse_tree options modul
+
+let start_print_unsugared_tree modul src_dir build_dir lib_dir no_prelude =
+  let options = object
+    method src_dir = src_dir
+    method build_dir = build_dir
+    method lib_dir = lib_dir
+    method no_prelude = no_prelude
+  end in
+  start Compiler.print_unsugared_tree options modul
+
+let start_print_typed_tree modul src_dir build_dir lib_dir no_prelude =
+  let options = object
+    method src_dir = src_dir
+    method build_dir = build_dir
+    method lib_dir = lib_dir
+    method no_prelude = no_prelude
+  end in
+  start Compiler.print_typed_tree options modul
+
+let start_print_untyped_tree modul src_dir build_dir lib_dir no_prelude =
+  let options = object
+    method src_dir = src_dir
+    method build_dir = build_dir
+    method lib_dir = lib_dir
+    method no_prelude = no_prelude
+  end in
+  start Compiler.print_untyped_tree options modul
+
+let start_print_early_llvm modul src_dir build_dir lib_dir no_prelude =
+  let options = object
+    method src_dir = src_dir
+    method build_dir = build_dir
+    method lib_dir = lib_dir
+    method no_prelude = no_prelude
+  end in
+  start Compiler.print_early_llvm options modul
+
+let start_print_llvm modul src_dir build_dir lib_dir lto opt =
+  let options = object
+    method src_dir = src_dir
+    method build_dir = build_dir
+    method lib_dir = lib_dir
+    method lto = lto
+    method opt = opt
+  end in
+  start Compiler.print_llvm options modul
+
+let restrained_base args =
+  let args = args $ Arg.(required & pos 0 (some string) None & info []) in
   let args = args $ Arg.(value & opt dir "" & info ["src-dir"]) in
   let args = args $ Arg.(value & opt dir "dest" & info ["build-dir"]) in
+  args
+
+let base args =
+  let args = restrained_base args in
   let args = args $ Arg.(value & opt dir "stdlib" & info ["lib-dir"]) in
+  args
+
+let extended_base args =
+  let args = base args in
+  let args = args $ Arg.(value & flag & info ["no-prelude"]) in
+  args
+
+let optimization args =
+  let args = args $ Arg.(value & flag & info ["lto"]) in
+  let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
+  args
+
+let program =
+  let args = Term.pure start_program in
+  let args = base args in
+  let args = optimization args in
   let args = args $ Arg.(value & opt file "a.out" & info ["o"]) in
-  let args = args $ Arg.(required & pos 0 (some string) None & info []) in
-  (args, Term.info ~version:Config.version "cervoise")
+  (args, Term.info "build-program")
+
+let library =
+  let args = Term.pure start_module in
+  let args = extended_base args in
+  (args, Term.info "build-module")
+
+let print_parse_tree =
+  let args = Term.pure start_print_parse_tree in
+  let args = restrained_base args in
+  (args, Term.info "print-parse-tree")
+
+let print_unsugared_tree =
+  let args = Term.pure start_print_unsugared_tree in
+  let args = extended_base args in
+  (args, Term.info "print-unsugared-tree")
+
+let print_typed_tree =
+  let args = Term.pure start_print_typed_tree in
+  let args = extended_base args in
+  (args, Term.info "print-typed-tree")
+
+let print_untyped_tree =
+  let args = Term.pure start_print_untyped_tree in
+  let args = extended_base args in
+  (args, Term.info "print-untyped-tree")
+
+let print_early_llvm =
+  let args = Term.pure start_print_early_llvm in
+  let args = extended_base args in
+  (args, Term.info "print-early-llvm")
+
+let print_llvm =
+  let args = Term.pure start_print_llvm in
+  let args = base args in
+  let args = optimization args in
+  (args, Term.info "print-llvm")
+
+let default_cmd =
+  (Term.pure None, Term.info ~version:Config.version "cervoise")
+
+let cmds =
+  [ program
+  ; library
+  ; print_parse_tree
+  ; print_unsugared_tree
+  ; print_typed_tree
+  ; print_untyped_tree
+  ; print_early_llvm
+  ; print_llvm
+  ]
 
 let () =
-  match Cmdliner.Term.eval cmd with
+  match Term.eval_choice default_cmd cmds with
   | `Help
   | `Version
   | `Ok None -> exit 0
