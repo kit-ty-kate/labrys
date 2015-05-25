@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open Containers
-open Monomorphic.None
+open Monomorphic_containers
 
 let unknown_loc =
   let pos = Location.{pos_lnum = -1; pos_cnum = -1} in

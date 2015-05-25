@@ -29,9 +29,8 @@ Executable cervoise
     llvm.linker,
     llvm.scalar_opts,
     batteries (>= 2.2),
-    containers,
     containers.io,
-    monomorphic
+    monomorphic.containers
   CompiledObject: best
   ByteOpt: -w A-44-33-4
   NativeOpt: -w A-44-33-4
