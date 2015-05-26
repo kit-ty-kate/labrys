@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 module Set = GammaSet.Value
 module Map = struct
@@ -29,8 +28,6 @@ module Map = struct
 
       let compare = PatternMatrix.var_compare
     end)
-
-  include Exceptionless
 end
 
 module Llvm = struct
@@ -128,7 +125,7 @@ module Make (I : sig val name : Module.t end) = struct
 
   let init ptr ty values builder =
     let aux acc i x = Llvm.build_insertvalue acc x i "" builder in
-    let values = List.fold_lefti aux (Llvm.undef ty) values in
+    let values = List.Idx.foldi aux (Llvm.undef ty) values in
     Llvm.build_store values ptr builder
 
   let malloc_and_init ty values builder =
@@ -213,9 +210,9 @@ module Make (I : sig val name : Module.t end) = struct
 
   let rec llvalue_of_pattern_var vars value builder var =
     match Map.find var vars with
-    | Some value ->
+    | value ->
         (value, vars)
-    | None ->
+    | exception Not_found ->
         let (value, vars) =
           match var with
           | Pattern.VLeaf ->
@@ -286,7 +283,7 @@ module Make (I : sig val name : Module.t end) = struct
         let value = Llvm.build_extractvalue exn_args i "" builder in
         GammaMap.Value.add name (Value value) gamma
       in
-      List.fold_lefti aux gamma args
+      List.Idx.foldi aux gamma args
     in
     let (v, builder) = lambda func ~env ~jmp_buf gamma builder result in
     Llvm.build_store v res builder;

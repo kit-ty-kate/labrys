@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 open InterfaceTree
 
@@ -44,7 +43,7 @@ let compile gamma =
             let gamma = Gamma.add_value name ty gamma in
             Gamma.add_constr datatype name (ty, i) gamma
           in
-          List.fold_lefti (aux ~datatype:name) gamma variants
+          List.Idx.foldi (aux ~datatype:name) gamma variants
         in
         compile gammaT gammaExn gammaE gamma xs
     | TypeAlias (name, ty) :: xs ->
