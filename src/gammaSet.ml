@@ -31,7 +31,7 @@ module Eff = struct
 
   let add k map =
     if mem k map then
-      Error.fail
+      Err.fail
         ~loc:(Ident.Eff.loc k)
         "A module cannot contain several times the effect '%s'"
         (Ident.Eff.to_string k);

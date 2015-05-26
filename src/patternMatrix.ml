@@ -97,7 +97,7 @@ let create =
         let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
         let args = List.rev args in
         if not (Types.equal ty ty') then
-          Error.fail
+          Err.fail
             ~loc
             "The type of the pattern is not equal to the type \
              of the value matched: Have '%s' but expected '%s'"

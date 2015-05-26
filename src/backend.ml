@@ -579,7 +579,7 @@ let to_string = Llvm.string_of_llmodule
 let write_bitcode ~o m =
   Utils.mkdir o;
   if not (Llvm_bitwriter.write_bitcode_file m o) then
-    Error.fail_module "File '%s' cannot be created" o
+    Err.fail_module "File '%s' cannot be created" o
 
 let read_bitcode file =
   try

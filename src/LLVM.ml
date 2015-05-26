@@ -58,7 +58,7 @@ let bind c ~name ~arity s m =
       if Int.(arity > 0) then begin
         let len = Array.length (params v) in
         if Int.(len <> arity) then
-          Error.fail
+          Err.fail
             ~loc:loc_name
             "Arity doesn't match for the LLVM binding '%s'. \
              Expected %d, got %d"
@@ -68,7 +68,7 @@ let bind c ~name ~arity s m =
       end;
       v
   | None ->
-      Error.fail
+      Err.fail
         ~loc:loc_name
         "Cannot found the LLVM binding '%s'"
         name

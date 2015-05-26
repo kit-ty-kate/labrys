@@ -39,7 +39,7 @@ let start printer lto opt src_dir build_dir lib_dir o modul =
        This is allowed only during linking"
 *)
   try Compiler.compile options modul; None with
-  | Error.Exn x -> Some (Error.dump x)
+  | Err.Exn x -> Some (Err.dump x)
   | ParserHandler.ParseError x -> Some x
   | Sys_error x -> Some x
   | Llvm_irreader.Error x -> Some x

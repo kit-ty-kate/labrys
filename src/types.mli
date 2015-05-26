@@ -62,7 +62,7 @@ val size : t -> int
 
 val head : t -> name
 
-module Error : sig
+module Err : sig
   val fail : loc_t:Location.t -> has:t -> expected:t -> 'a
 end
 

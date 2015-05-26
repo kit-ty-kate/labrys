@@ -42,10 +42,10 @@ type visibility =
 let fmt = Printf.sprintf
 
 let fail_not_star ~loc x =
-  Error.fail ~loc "The type construct '%s' cannot be used with kind /= '*'" x
+  Err.fail ~loc "The type construct '%s' cannot be used with kind /= '*'" x
 
 let kind_missmatch ~loc_x ~has ~expected =
-  Error.fail
+  Err.fail
     ~loc:loc_x
     "Error: This type has kind '%s' but a \
      type was expected of kind '%s'"
@@ -57,7 +57,7 @@ let kind_eff_missmatch ~loc_x ~has ~expected =
     | `Eff -> "φ"
     | `Kind k -> Kinds.to_string k
   in
-  Error.fail
+  Err.fail
     ~loc:loc_x
     "Error: This type has kind '%s' but a \
      type was expected of kind '%s'"
@@ -105,7 +105,7 @@ let handle_effects ~loc (b, _) gammaExn gammaE = function
   | None when b -> Effects.empty
   | None ->
       (* TODO: Be more precise *)
-      Error.fail
+      Err.fail
         ~loc
         "Pure arrows are forbidden here. If you really want one use the \
          explicit syntax '-[]->' instead"
@@ -164,7 +164,7 @@ let rec of_parse_tree_kind ~pure_arrow gammaT gammaExn gammaE = function
         | Kinds.KFun (p, r) when Kinds.equal p kx -> r
         | (Kinds.KFun _ as k)
         | (Kinds.Star as k) ->
-            Error.fail
+            Err.fail
               ~loc
               "Kind '%s' can't be applied on '%s'"
               (Kinds.to_string kx)
@@ -184,7 +184,7 @@ let of_parse_tree ~pure_arrow gammaT gammaExn gammaE ty =
   let (loc, _) = ty in
   let (ty, k) = of_parse_tree_kind ~pure_arrow gammaT gammaExn gammaE ty in
   if Kinds.not_star k then
-    Error.fail ~loc "Values cannot be of kind /= '*'";
+    Err.fail ~loc "Values cannot be of kind /= '*'";
   ty
 
 let func ~param ~eff ~res = Fun (param, eff, res)
@@ -276,9 +276,9 @@ let remove_module_aliases =
   in
   aux []
 
-module Error = struct
+module Err = struct
   let fail ~loc_t ~has ~expected =
-    Error.fail
+    Err.fail
       ~loc:loc_t
       "Error: This expression has type '%s' but an \
        expression was expected of type '%s'"
@@ -286,21 +286,21 @@ module Error = struct
       (to_string expected)
 
   let function_type ~loc_f ty =
-    Error.fail
+    Err.fail
       ~loc:loc_f
       "Error: This expression has type '%s'. \
        This is not a function; it cannot be applied."
       (to_string ty)
 
   let forall_type ~loc_f ty =
-    Error.fail
+    Err.fail
       ~loc:loc_f
       "Error: This expression has type '%s'. \
        This is not a type abstraction; it cannot be applied by a value."
       (to_string ty)
 
   let fail_return_type name =
-    Error.fail
+    Err.fail
       ~loc:(Ident.Name.loc name)
       "The variant '%s' doesn't return its type"
       (Ident.Name.to_string name)
@@ -313,7 +313,7 @@ let apply ~loc_f = function
   | (ForallEff _ as ty)
   | (AppOnTy _ as ty)
   | (Ty _ as ty) ->
-      Error.function_type ~loc_f ty
+      Err.function_type ~loc_f ty
   | AbsOnTy _ ->
       assert false
 
@@ -328,7 +328,7 @@ let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x = function
   | (Fun _ as ty)
   | (AppOnTy _ as ty)
   | (Ty _ as ty) ->
-      Error.forall_type ~loc_f ty
+      Err.forall_type ~loc_f ty
   | AbsOnTy _ ->
       assert false
 
@@ -341,7 +341,7 @@ let apply_eff ~loc_f ~loc_x ~eff = function
   | (Fun _ as ty)
   | (AppOnTy _ as ty)
   | (Ty _ as ty) ->
-      Error.forall_type ~loc_f ty
+      Err.forall_type ~loc_f ty
   | AbsOnTy _ ->
       assert false
 
@@ -355,7 +355,7 @@ let rec check_if_returns_type ~datatype = function
 
 let check_if_returns_type ~name ~datatype ty =
   if not (check_if_returns_type ~datatype ty) then begin
-    Error.fail_return_type name
+    Err.fail_return_type name
   end
 
 let rec has_io = function

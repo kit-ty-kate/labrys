@@ -113,7 +113,7 @@ and compile ?(with_main=false) imports_code interface options modul =
   with
   | BuildSystem.Failure ->
       if Module.is_library modul then
-        Error.fail_module
+        Err.fail_module
           "The library %s cannot be collected"
           (Module.to_string modul);
       prerr_endline (fmt "Compiling %s" (Module.to_string modul));

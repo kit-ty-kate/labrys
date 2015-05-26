@@ -69,12 +69,12 @@ let add gammaExn gammaE (name, exns) self =
   if GammaSet.Eff.mem name gammaE then begin
     let has_args = Ident.Eff.equal name Builtins.exn in
     if has_args && List.is_empty exns then
-      Error.fail
+      Err.fail
         ~loc:(Ident.Eff.loc name)
         "The '%s' effect must have at least one argument"
         (Ident.Eff.to_string name);
     if not has_args && not (List.is_empty exns) then
-      Error.fail
+      Err.fail
         ~loc:(Ident.Eff.loc name)
         "The '%s' effect doesn't have any arguments"
         (Ident.Eff.to_string name);
@@ -88,7 +88,7 @@ let add gammaExn gammaE (name, exns) self =
     in
     {variables; exns}
   end else
-    Error.fail
+    Err.fail
       ~loc:(Ident.Eff.loc name)
       "Unknown effect '%s'"
       (Ident.Eff.to_string name)
@@ -106,7 +106,7 @@ let union3 x y z =
 
 let remove_exn x self =
   if not (Exn_set.mem x self.exns) then
-    Error.fail
+    Err.fail
       ~loc:(Ident.Exn.loc x)
       "Useless case. The exception '%s' is not included in the handled \
        expression"
