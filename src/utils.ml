@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 let rec string_of_list f = function
   | [] -> ""
@@ -48,7 +47,7 @@ let mkdir name =
     try Unix.mkdir name 0o750
     with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
   in
-  let l = remove_last (String.nsplit name ~by:Filename.dir_sep) in
+  let l = remove_last (String.Split.list_cpy name ~by:Filename.dir_sep) in
   let l =
     let aux acc x =
       match acc with
@@ -117,14 +116,14 @@ module EqMap (I : EQ) = struct
     (k, x) :: self
 
   let find x self =
-    Option.map snd (List.find (fun (y, _) -> I.equal x y) self)
+    Option.map snd (List.find_pred (fun (y, _) -> I.equal x y) self)
 
   let modify_def x k f self =
     match find k self with
     | Some x -> add k (f x) self
     | None -> add k (f x) self
 
-  let bindings = identity
+  let bindings = Fun.id
 
   let singleton k x = [(k, x)]
 

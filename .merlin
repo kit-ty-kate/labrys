@@ -1,7 +1,7 @@
 PKG cmdliner
 PKG pprint
 PKG llvm
-PKG batteries
+PKG containers
 PKG monomorphic
 PKG re
 PKG msgpack

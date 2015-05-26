@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 module Aliases = Utils.StrListSet
 
@@ -61,7 +60,7 @@ let matches_module_name =
     test (exec regexp modul) 0
 
 let module_from_string modul =
-  let modul = String.nsplit modul ~by:"." in
+  let modul = String.Split.list_cpy modul ~by:"." in
   let is_correct str =
     if not (matches_module_name str) then
       raise (Error "The name of the module given is not correct.");

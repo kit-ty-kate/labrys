@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 open UnsugaredTree
 
@@ -34,10 +33,10 @@ let new_upper_name_to_eff (loc, `NewUpperName name) =
   Ident.Eff.create ~loc name
 
 let get_module imports loc modul =
-  let aux (k, _) = List.eq String.equal k modul in
-  match List.find aux imports with
+  let aux (k, _) = List.equal String.equal k modul in
+  match List.find_pred aux imports with
   | None ->
-      Error.fail ~loc "Unbound module %s" (String.concat "." modul)
+      Err.fail ~loc "Unbound module %s" (String.concat "." modul)
   | Some (_, modul) ->
       modul
 
@@ -69,9 +68,9 @@ let new_lower_name_to_value ~current_module ~allow_underscore = function
   | (loc, `Underscore) when allow_underscore ->
       Builtins.underscore_loc ~current_module loc
   | (loc, `Underscore) ->
-      Error.fail ~loc "Wildcards are not allowed here"
+      Err.fail ~loc "Wildcards are not allowed here"
 
-let unsugar_kind = Option.default Kinds.Star
+let unsugar_kind = Option.get Kinds.Star
 
 let unsugar_eff imports (loc, l) =
   let aux (name, args) =

@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 let fmt = Printf.sprintf
 
@@ -47,7 +46,7 @@ module Make (Filename : sig val get : string end) = struct
           raise
             (ParseError (fmt "%s: Parsing error at: %s" Filename.get (get_offset ())))
     in
-    File.with_file_in Filename.get aux
+    CCIO.with_in Filename.get aux
 
     let parse_impl () = parse Parser.main
     let parse_intf () = parse Parser.mainInterface

@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 open UntypedTree
 
@@ -157,7 +156,7 @@ let of_typed_variant ~current_module (acc, names, mapn) i (TypedTree.Variant (na
     create_dyn_functions
       ~current_module
       (fun () -> ConstVariant (name, i, linkage))
-      identity
+      Fun.id
       (fun params -> (Variant (i, List.rev params), Set.of_list params))
       (ty_size, name, linkage)
   in
@@ -194,7 +193,7 @@ let of_typed_tree ~current_module (acc, names, mapn) = function
       (wrappers, names, mapn)
   | TypedTree.Datatype variants ->
       let (variants, names, mapn) =
-        List.fold_lefti (of_typed_variant ~current_module) ([], names, mapn) variants
+        List.Idx.foldi (of_typed_variant ~current_module) ([], names, mapn) variants
       in
       let variants = List.rev variants in
       (variants @ acc, names, mapn)

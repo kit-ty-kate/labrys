@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 let fmt = Printf.sprintf
 let (^^) = PPrint.(^^)
@@ -646,7 +645,7 @@ module TypedTree = struct
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
            )
     in
-    List.fold_lefti aux PPrint.empty results
+    List.Idx.foldi aux PPrint.empty results
 
   and dump_exn_branches branches =
     let dump_args args =
@@ -835,7 +834,7 @@ module UntypedTree = struct
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
            )
     in
-    List.fold_lefti aux PPrint.empty results
+    List.Idx.foldi aux PPrint.empty results
 
   and dump_exn_branches branches =
     let dump_args args =

@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 module type S = sig
   include Utils.EQMAP
@@ -77,7 +76,7 @@ module Value = struct
     | Some x ->
         x
     | None ->
-        Error.fail
+        Err.fail
           ~loc:(Ident.Name.loc k)
           "The value '%s' was not found in Γ"
           (Ident.Name.to_string k)
@@ -88,7 +87,7 @@ module Types = struct
 
   let add k x map =
     if mem k map then
-      Error.fail
+      Err.fail
         ~loc:(Ident.Type.loc k)
         "A module cannot contain several times the type '%s'"
         (Ident.Type.to_string k);
@@ -99,7 +98,7 @@ module Types = struct
     | Some x ->
         x
     | None ->
-        Error.fail
+        Err.fail
           ~loc:(Ident.Type.loc k)
           "The type '%s' was not found in Γ"
           (Ident.Type.to_string k)
@@ -113,7 +112,7 @@ module Index = struct
     | Some x ->
         x
     | None ->
-        Error.fail
+        Err.fail
           ~loc:(Ident.Name.loc k)
           "Constructor '%s' not found in type '%s'"
           (Ident.Name.to_string k)
@@ -141,7 +140,7 @@ module Exn = struct
 
   let add k x map =
     if mem k map then
-      Error.fail
+      Err.fail
         ~loc:(Ident.Exn.loc k)
         "A module cannot contain several times the exception '%s'"
         (Ident.Exn.to_string k);
@@ -151,7 +150,7 @@ module Exn = struct
     match fill_module_aux k self with
     | Some x -> x
     | None ->
-        Error.fail
+        Err.fail
           ~loc:(Ident.Exn.loc k)
           "The exception '%s' is not defined in Γ"
           (Ident.Exn.to_string k)

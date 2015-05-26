@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 module Term = Cmdliner.Term
 module Arg = Cmdliner.Arg
@@ -29,7 +28,7 @@ let ($) = Term.($)
 
 let start f options modul =
   try f options modul; None with
-  | Error.Exn x -> Some (Error.dump x)
+  | Err.Exn x -> Some (Err.dump x)
   | ParserHandler.ParseError x -> Some x
   | Sys_error x -> Some x
   | Llvm_irreader.Error x -> Some x

@@ -19,13 +19,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 open TypedTree
 
 let fail_rec_val ~loc_name =
-  Error.fail ~loc:loc_name "Recursive values are not allowed"
+  Err.fail ~loc:loc_name "Recursive values are not allowed"
 
 let rec well_formed_rec = function
   | (_, UnsugaredTree.Abs _) ->
@@ -64,14 +63,14 @@ let get_rec_ty ~loc_name = function
   | Some (ty, None) ->
       ty
   | Some (_, Some (loc, [])) ->
-      Error.fail
+      Err.fail
         ~loc
         "This empty effect annotation is useless as functions cannot have \
          effects"
   | Some (_, Some (loc, _)) ->
-      Error.fail ~loc "Functions doesn't have effects"
+      Err.fail ~loc "Functions doesn't have effects"
   | None ->
-      Error.fail
+      Err.fail
         ~loc:loc_name
         "Recursive functions must have explicit return types"
 
@@ -83,12 +82,12 @@ let check_type ~loc_t ~ty:(ty, eff) ~ty_t ~effects gamma =
     Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty
   in
   if not (Types.equal ty ty_t) then
-    Types.Error.fail ~loc_t ~has:ty_t ~expected:ty;
+    Types.Err.fail ~loc_t ~has:ty_t ~expected:ty;
   begin match eff with
   | Some eff ->
       let eff = Effects.of_list gamma.Gamma.exceptions gamma.Gamma.effects eff in
       if not (Effects.equal [] eff effects) then
-        Error.fail
+        Err.fail
           ~loc:loc_t
           "This expression has the effect %s but expected the effect %s"
           (Effects.to_string effects)
@@ -98,13 +97,13 @@ let check_type ~loc_t ~ty:(ty, eff) ~ty_t ~effects gamma =
   end
 
 let check_type_opt ~loc_t ~ty ~ty_t ~effects gamma =
-  Option.may (fun ty -> check_type ~loc_t ~ty ~ty_t ~effects gamma) ty
+  Option.iter (fun ty -> check_type ~loc_t ~ty ~ty_t ~effects gamma) ty
 
 let check_effects_forall ~loc_t ~effect =
   (* TODO: Do I need only that to ensure type soundness with side effects ?
      Do I also need to check for exceptions ? *)
   if Effects.has_io effect then
-    Error.fail ~loc:loc_t "Cannot have IO effects under a forall"
+    Err.fail ~loc:loc_t "Cannot have IO effects under a forall"
 
 let rec aux gamma = function
   | (_, UnsugaredTree.Abs ((name, ty), t)) ->
@@ -134,7 +133,7 @@ let rec aux gamma = function
       if Types.is_subset_of ty_x param then
         (App (f, x), res, Effects.union3 effect1 effect2 effect3)
       else
-        Types.Error.fail ~loc_t:loc_x ~has:ty_x ~expected:param
+        Types.Err.fail ~loc_t:loc_x ~has:ty_x ~expected:param
   | (_, UnsugaredTree.TApp (f, ty_x)) ->
       let loc_f = fst f in
       let loc_x = fst ty_x in
@@ -186,12 +185,12 @@ let rec aux gamma = function
           let loc_arg = fst arg in
           let (arg, ty_arg, eff) = aux gamma arg in
           if not (Types.equal ty_arg ty_exn) then
-            Types.Error.fail ~loc_t:loc_arg ~has:ty_arg ~expected:ty_exn;
+            Types.Err.fail ~loc_t:loc_arg ~has:ty_arg ~expected:ty_exn;
           (arg :: acc, Effects.union eff effects)
         in
         try List.fold_left2 aux ([], Effects.empty) tys args with
         | Invalid_argument _ ->
-            Error.fail
+            Err.fail
               ~loc
               "Cannot apply an exception partially"
       in
@@ -210,7 +209,7 @@ let rec aux gamma = function
         let loc_t = fst t in
         let (t, ty', eff) = aux gamma t in
         if not (Types.equal ty ty') then
-          Types.Error.fail ~loc_t ~has:ty' ~expected:ty;
+          Types.Err.fail ~loc_t ~has:ty' ~expected:ty;
         (((name, args), t) :: acc, Effects.union eff effect)
       in
       let (branches, effect) = List.fold_left aux ([], effect) branches in
@@ -239,15 +238,15 @@ let transform_variants ~datatype gamma =
 let is_main ~current_module ~has_main x =
   let b = Ident.Name.equal x (Builtins.main ~current_module) in
   if has_main && b then
-    Error.fail ~loc:(Ident.Name.loc x) "There must be only one main";
+    Err.fail ~loc:(Ident.Name.loc x) "There must be only one main";
   b
 
 let check_effects ~current_module ~with_main ~has_main ~name options (t, ty, effects) =
   let is_main = with_main && is_main ~current_module ~has_main name in
   if not (is_main || Effects.is_empty effects) then
-    Error.fail ~loc:(Ident.Name.loc name) "Effects are not allowed on toplevel";
+    Err.fail ~loc:(Ident.Name.loc name) "Effects are not allowed on toplevel";
   if is_main && not (Types.is_unit options ty) then
-    Error.fail
+    Err.fail
       ~loc:(Ident.Name.loc name)
       "The main must have type '%s' but has type '%s'"
       (Ident.Type.to_string (Builtins.t_unit options))
@@ -279,7 +278,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
   | UnsugaredTree.Binding (name, ty, binding) :: xs ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty in
       if not (Types.has_io ty) then
-        Error.fail
+        Err.fail
           ~loc:(Ident.Name.loc name)
           "The binding '%s' cannot be pure. \
            All bindings have to use the IO effect"
@@ -306,12 +305,12 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
 let check ~modul ~interface ~with_main options gamma x =
   let (res, has_main, gamma) = from_parse_tree ~current_module:modul ~with_main ~has_main:false options gamma x in
   if with_main && not has_main then
-    Error.fail_module "The 'main' hasn't been found in the main module";
+    Err.fail_module "The 'main' hasn't been found in the main module";
   begin match Gamma.is_subset_of interface gamma with
   | [] ->
       ()
   | diff ->
-      Error.fail_module
+      Err.fail_module
         "The implementation '%s' does not match the interface '%s'.\n\
          Differences: %s"
         (Module.impl modul)

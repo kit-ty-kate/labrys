@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 type name = Ident.Name.t
 
@@ -66,7 +65,7 @@ let create =
           GammaMap.Constr.find head_ty gamma.Gamma.constructors
         in
         let constructors =
-          Option.default_delayed (fun () -> assert false) constructors
+          Option.get_lazy (fun () -> assert false) constructors
         in
         let (name, (ty, _)) = GammaMap.Index.fill_module ~head_ty name constructors in
         let loc_f = Ident.Name.loc name in
@@ -97,7 +96,7 @@ let create =
         let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
         let args = List.rev args in
         if not (Types.equal ty ty') then
-          Error.fail
+          Err.fail
             ~loc
             "The type of the pattern is not equal to the type \
              of the value matched: Have '%s' but expected '%s'"

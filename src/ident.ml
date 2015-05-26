@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 let fmt = Printf.sprintf
 
@@ -28,8 +27,8 @@ module Name = struct
   type t = (Location.t * Module.t option * string)
 
   let equal (_, module_x, x) (_, module_y, y) =
-    let module_x = Option.default_delayed (fun () -> assert false) module_x in
-    let module_y = Option.default_delayed (fun () -> assert false) module_y in
+    let module_x = Option.get_lazy (fun () -> assert false) module_x in
+    let module_y = Option.get_lazy (fun () -> assert false) module_y in
     let eq_module = Module.equal module_x module_y in
     if eq_module then
       String.equal x y
@@ -38,7 +37,7 @@ module Name = struct
 
   let fill_module ~matches:((_, modul, matches_name) as matches) = function
     | (loc, None, name) ->
-        let modul = Option.default_delayed (fun () -> assert false) modul in
+        let modul = Option.get_lazy (fun () -> assert false) modul in
         if Module.is_open modul && String.equal matches_name name then
           Some (loc, Some modul, name)
         else
@@ -64,7 +63,7 @@ module Name = struct
   let loc (loc, _, _) = loc
 
   let unique (loc, modul, name) n =
-    let modul = Option.default_delayed (fun () -> assert false) modul in
+    let modul = Option.get_lazy (fun () -> assert false) modul in
     (loc, Some modul, fmt "%s__%d" name n)
 
   let remove_aliases = function

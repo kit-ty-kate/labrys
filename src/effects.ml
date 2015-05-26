@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 let fmt = Printf.sprintf
 
@@ -44,7 +43,7 @@ let is_empty {variables; exns} =
 let var_eq list_eq x y =
   let aux k =
     let mem k = Variables.mem k y in
-    match List.find (fun (k', _) -> Ident.Eff.equal k k') list_eq with
+    match List.find_pred (fun (k', _) -> Ident.Eff.equal k k') list_eq with
     | Some (_, k) -> mem k
     | None -> mem k
   in
@@ -69,12 +68,12 @@ let add gammaExn gammaE (name, exns) self =
   if GammaSet.Eff.mem name gammaE then begin
     let has_args = Ident.Eff.equal name Builtins.exn in
     if has_args && List.is_empty exns then
-      Error.fail
+      Err.fail
         ~loc:(Ident.Eff.loc name)
         "The '%s' effect must have at least one argument"
         (Ident.Eff.to_string name);
     if not has_args && not (List.is_empty exns) then
-      Error.fail
+      Err.fail
         ~loc:(Ident.Eff.loc name)
         "The '%s' effect doesn't have any arguments"
         (Ident.Eff.to_string name);
@@ -88,7 +87,7 @@ let add gammaExn gammaE (name, exns) self =
     in
     {variables; exns}
   end else
-    Error.fail
+    Err.fail
       ~loc:(Ident.Eff.loc name)
       "Unknown effect '%s'"
       (Ident.Eff.to_string name)
@@ -106,7 +105,7 @@ let union3 x y z =
 
 let remove_exn x self =
   if not (Exn_set.mem x self.exns) then
-    Error.fail
+    Err.fail
       ~loc:(Ident.Exn.loc x)
       "Useless case. The exception '%s' is not included in the handled \
        expression"

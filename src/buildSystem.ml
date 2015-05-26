@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 exception Failure
 
@@ -38,13 +37,13 @@ type impl_infos =
 
 let map_msgpack_maps =
   let aux = function
-    | (`FixRaw name, value) -> (String.implode name, value)
+    | (`FixRaw name, value) -> (String.of_list name, value)
     | _ -> raise Failure
   in
   List.map aux
 
 let parse_impl_infos file =
-  let content = IO.read_all file in
+  let content = CCIO.read_all file in
   match Msgpack.Serialize.deserialize_string content with
     | `FixMap l ->
         begin match map_msgpack_maps l with
@@ -53,9 +52,9 @@ let parse_impl_infos file =
           ; ("hash-bc", `Raw16 hash_bc)
           ; ("imports", `Map32 imports)
           ] ->
-            let version = String.implode version in
-            let hash = String.implode hash in
-            let hash_bc = String.implode hash_bc in
+            let version = String.of_list version in
+            let hash = String.of_list hash in
+            let hash_bc = String.of_list hash_bc in
             let imports =
               let aux = function
                 | (`Raw16 import, `FixMap l) ->
@@ -63,8 +62,8 @@ let parse_impl_infos file =
                     | [ ("library", `Bool library)
                       ; ("hash", `Raw16 hash_import)
                       ] ->
-                        let hash_import = String.implode hash_import in
-                        (String.implode import, {library; hash_import})
+                        let hash_import = String.of_list hash_import in
+                        (String.of_list import, {library; hash_import})
                     | _ ->
                         raise Failure
                     end
@@ -98,7 +97,7 @@ let check_imports_hash options =
 let check_impl options modul =
   try
     let infos = Module.impl_infos modul in
-    let infos = File.with_file_in infos (parse_impl_infos) in
+    let infos = CCIO.with_in infos (parse_impl_infos) in
     let hash = Digest.file (Module.impl modul) in
     let hash_bc = Digest.file (Module.cimpl modul) in
     if not
@@ -123,23 +122,23 @@ let write_impl_infos imports modul =
       let hash_import = Digest.file (Module.impl_infos modul) in
       let data =
         `FixMap
-          [ (`FixRaw (String.explode "library"), `Bool library)
-          ; (`FixRaw (String.explode "hash"), `Raw16 (String.explode hash_import))
+          [ (`FixRaw (String.to_list "library"), `Bool library)
+          ; (`FixRaw (String.to_list "hash"), `Raw16 (String.to_list hash_import))
           ]
       in
-      (`Raw16 (String.explode import), data)
+      (`Raw16 (String.to_list import), data)
     in
     List.map aux imports
   in
   let content =
     `FixMap
-      [ (`FixRaw (String.explode "version"), `FixRaw (String.explode version))
-      ; (`FixRaw (String.explode "hash"), `Raw16 (String.explode hash))
-      ; (`FixRaw (String.explode "hash-bc"), `Raw16 (String.explode hash_bc))
-      ; (`FixRaw (String.explode "imports"), `Map32 imports)
+      [ (`FixRaw (String.to_list "version"), `FixRaw (String.to_list version))
+      ; (`FixRaw (String.to_list "hash"), `Raw16 (String.to_list hash))
+      ; (`FixRaw (String.to_list "hash-bc"), `Raw16 (String.to_list hash_bc))
+      ; (`FixRaw (String.to_list "imports"), `Map32 imports)
       ]
   in
   let content = Msgpack.Serialize.serialize_string content in
   let file_name = Module.impl_infos modul in
   Utils.mkdir file_name;
-  File.with_file_out file_name (fun file -> IO.write_string file content)
+  CCIO.with_out file_name (fun file -> output_string file content)

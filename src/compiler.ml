@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 type module_name = string
 
@@ -113,7 +112,7 @@ and compile ?(with_main=false) ?(no_prelude=false) imports_code interface option
   with
   | BuildSystem.Failure ->
       if Module.is_library modul then
-        Error.fail_module
+        Err.fail_module
           "The library %s cannot be collected"
           (Module.to_string modul);
       prerr_endline (fmt "Compiling %s" (Module.to_string modul));
