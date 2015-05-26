@@ -21,8 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (* NOTE: Types are in normal form *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 type name = Ident.Type.t
 type eff_name = Ident.Eff.t

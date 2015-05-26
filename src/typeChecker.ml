@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 open TypedTree
 
@@ -98,7 +97,7 @@ let check_type ~loc_t ~ty:(ty, eff) ~ty_t ~effects gamma =
   end
 
 let check_type_opt ~loc_t ~ty ~ty_t ~effects gamma =
-  Option.may (fun ty -> check_type ~loc_t ~ty ~ty_t ~effects gamma) ty
+  Option.iter (fun ty -> check_type ~loc_t ~ty ~ty_t ~effects gamma) ty
 
 let check_effects_forall ~loc_t ~effect =
   (* TODO: Do I need only that to ensure type soundness with side effects ?

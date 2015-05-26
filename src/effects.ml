@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 let fmt = Printf.sprintf
 
@@ -44,7 +43,7 @@ let is_empty {variables; exns} =
 let var_eq list_eq x y =
   let aux k =
     let mem k = Variables.mem k y in
-    match List.find (fun (k', _) -> Ident.Eff.equal k k') list_eq with
+    match List.find_pred (fun (k', _) -> Ident.Eff.equal k k') list_eq with
     | Some (_, k) -> mem k
     | None -> mem k
   in

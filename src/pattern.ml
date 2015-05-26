@@ -19,8 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open BatteriesExceptionless
-open Monomorphic.None
+open Monomorphic_containers
 
 module Matrix = PatternMatrix
 
@@ -50,7 +49,7 @@ let specialize name m =
   let size =
     let rec aux = function
       | (Matrix.Constr (_, (x, _), args) :: _, _) :: m when eq name x ->
-          Int.max (List.length args) (aux m)
+          Int.Cmp.max (List.length args) (aux m)
       | ([], _) :: m
       | (Matrix.Constr _ :: _, _) :: m
       | (Matrix.Any _ :: _, _) :: m ->
@@ -66,7 +65,7 @@ let specialize name m =
     | (Matrix.Constr _ :: _, _) :: m ->
         aux m
     | ((Matrix.Any _ as x) :: xs, code_index) :: m ->
-        (List.make size x @ xs, code_index) :: aux m
+        (List.replicate size x @ xs, code_index) :: aux m
     | ([], _) :: _ ->
         assert false
     | [] ->
@@ -82,7 +81,7 @@ let create ~loc gammaD =
     | (Matrix.Constr (var, (_, ty), _) :: _, _) :: _->
         let variants = GammaMap.Constr.find ty gammaD in
         let variants =
-          Option.default_delayed (fun () -> assert false) variants
+          Option.get_lazy (fun () -> assert false) variants
         in
         let variants =
           let aux name (_, index) acc =
@@ -110,7 +109,7 @@ let create ~loc gammaD =
 
 let rec get_unused_cases results = function
   | Leaf i ->
-      List.remove results i
+      List.remove results ~x:i
   | Node (_, l) ->
       List.fold_left (fun r (_, p) -> get_unused_cases r p) results l
 
