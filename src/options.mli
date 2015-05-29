@@ -33,19 +33,24 @@ class type base = object
   method no_prelude : bool
 end
 
+class type base_llvm = object
+  inherit base
+  method debug : bool
+end
+
 class type optimization = object
   method lto : bool
   method opt : int
 end
 
 class type program = object
-  inherit base
+  inherit base_llvm
   inherit optimization
   method o : file
 end
 
 class type modul = object
-  inherit base
+  inherit base_llvm
 end
 
 class type print_parse_tree = object
@@ -65,10 +70,10 @@ class type print_untyped_tree = object
 end
 
 class type print_early_llvm = object
-  inherit base
+  inherit base_llvm
 end
 
 class type print_llvm = object
-  inherit base
+  inherit base_llvm
   inherit optimization
 end

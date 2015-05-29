@@ -34,24 +34,26 @@ let start f options modul =
   | Llvm_irreader.Error x -> Some x
   | Module.Error x -> Some x
 
-let start_program modul src_dir build_dir lib_dir no_prelude lto opt o =
+let start_program modul src_dir build_dir lib_dir no_prelude debug lto opt o =
   let options = object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
+    method debug = debug
     method lto = lto
     method opt = opt
     method o = o
   end in
   start Compiler.compile_program options modul
 
-let start_module modul src_dir build_dir lib_dir no_prelude =
+let start_module modul src_dir build_dir lib_dir no_prelude debug =
   let options = object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
+    method debug = debug
   end in
   start Compiler.compile_module options modul
 
@@ -89,21 +91,23 @@ let start_print_untyped_tree modul src_dir build_dir lib_dir no_prelude =
   end in
   start Compiler.print_untyped_tree options modul
 
-let start_print_early_llvm modul src_dir build_dir lib_dir no_prelude =
+let start_print_early_llvm modul src_dir build_dir lib_dir no_prelude debug =
   let options = object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
+    method debug = debug
   end in
   start Compiler.print_early_llvm options modul
 
-let start_print_llvm modul src_dir build_dir lib_dir no_prelude lto opt =
+let start_print_llvm modul src_dir build_dir lib_dir no_prelude debug lto opt =
   let options = object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
+    method debug = debug
     method lto = lto
     method opt = opt
   end in
@@ -121,6 +125,11 @@ let base args =
   let args = args $ Arg.(value & flag & info ["no-prelude"]) in
   args
 
+let base_llvm args =
+  let args = base args in
+  let args = args $ Arg.(value & flag & info ["debug"]) in
+  args
+
 let optimization args =
   let args = args $ Arg.(value & flag & info ["lto"]) in
   let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
@@ -128,14 +137,14 @@ let optimization args =
 
 let program =
   let args = Term.pure start_program in
-  let args = base args in
+  let args = base_llvm args in
   let args = optimization args in
   let args = args $ Arg.(value & opt file "a.out" & info ["o"]) in
   (args, Term.info "build-program")
 
 let library =
   let args = Term.pure start_module in
-  let args = base args in
+  let args = base_llvm args in
   (args, Term.info "build-module")
 
 let print_parse_tree =
@@ -160,12 +169,12 @@ let print_untyped_tree =
 
 let print_early_llvm =
   let args = Term.pure start_print_early_llvm in
-  let args = base args in
+  let args = base_llvm args in
   (args, Term.info "print-early-llvm")
 
 let print_llvm =
   let args = Term.pure start_print_llvm in
-  let args = base args in
+  let args = base_llvm args in
   let args = optimization args in
   (args, Term.info "print-llvm")
 

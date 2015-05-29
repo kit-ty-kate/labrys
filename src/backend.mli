@@ -24,6 +24,7 @@ type t
 val make :
   modul:Module.t ->
   imports:Module.t list ->
+  <debug : bool; ..> ->
   UntypedTree.top list ->
   t
 

@@ -40,6 +40,11 @@ type t = Llvm.llmodule
 let fmt = Printf.sprintf
 let c = Llvm.global_context ()
 
+module type I = sig
+  val name : Module.t
+  val debug : bool
+end
+
 module Type = struct
   let void = Llvm.void_type c
   let i8 = Llvm.i8_type c
@@ -113,7 +118,7 @@ module Main (I : sig val main_module : Module.t end) = struct
     m
 end
 
-module Make (I : sig val name : Module.t end) = struct
+module Make (I : I) = struct
   type gamma =
     | Value of Llvm.llvalue
     | Env of int
@@ -140,6 +145,11 @@ module Make (I : sig val name : Module.t end) = struct
 
   let debug_trap = Llvm.declare_function "llvm.debugtrap" Type.unit_function m
 
+  let unreachable builder =
+    if I.debug then
+      Llvm.build_call_void debug_trap [||] builder;
+    Llvm.build_unreachable builder
+
   let longjmp =
     let ty = Llvm.function_type Type.void [|Type.star|] in
     Llvm.declare_function "llvm.eh.sjlj.longjmp" ty m
@@ -163,8 +173,7 @@ module Make (I : sig val name : Module.t end) = struct
   let create_default_branch func =
     let block = Llvm.append_block c "" func in
     let builder = Llvm.builder_at_end c block in
-    Llvm.build_call_void debug_trap [||] builder;
-    Llvm.build_unreachable builder;
+    unreachable builder;
     block
 
   let fold_env ~env gamma builder =
@@ -304,7 +313,7 @@ module Make (I : sig val name : Module.t end) = struct
     let builder = List.fold_left aux builder branches in
     let jmp_buf = Llvm.build_bitcast jmp_buf Type.star "" builder in
     Llvm.build_call_void longjmp [|jmp_buf|] builder;
-    Llvm.build_unreachable builder;
+    unreachable builder;
 
   and abs ~f ~name t gamma builder =
     let param = Llvm.param f 0 in
@@ -400,7 +409,7 @@ module Make (I : sig val name : Module.t end) = struct
         Llvm.build_store tag exn_tag_var builder;
         let jmp_buf = Llvm.build_bitcast jmp_buf Type.star "" builder in
         Llvm.build_call_void longjmp [|jmp_buf|] builder;
-        Llvm.build_unreachable builder;
+        unreachable builder;
         (undef, Llvm.builder_at_end c (Llvm.append_block c "" func))
     | UntypedTree.Try (t, branches) ->
         let jmp_buf' = Llvm.build_alloca Type.jmp_buf "" builder in
@@ -532,8 +541,13 @@ module Make (I : sig val name : Module.t end) = struct
     top []
 end
 
-let make ~modul ~imports x =
-  let module Module = Make(struct let name = modul end) in
+let make ~modul ~imports options x =
+  let module Module =
+    Make(struct
+      let name = modul
+      let debug = options#debug
+    end)
+  in
   Module.make ~imports x
 
 let main main_module =
