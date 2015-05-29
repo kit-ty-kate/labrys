@@ -30,10 +30,6 @@ end
 class type base = object
   inherit restrained_base
   method lib_dir : directory
-end
-
-class type extended_base = object
-  inherit base
   method no_prelude : bool
 end
 
@@ -49,7 +45,7 @@ class type program = object
 end
 
 class type modul = object
-  inherit extended_base
+  inherit base
 end
 
 class type print_parse_tree = object
@@ -57,19 +53,19 @@ class type print_parse_tree = object
 end
 
 class type print_unsugared_tree = object
-  inherit extended_base
+  inherit base
 end
 
 class type print_typed_tree = object
-  inherit extended_base
+  inherit base
 end
 
 class type print_untyped_tree = object
-  inherit extended_base
+  inherit base
 end
 
 class type print_early_llvm = object
-  inherit extended_base
+  inherit base
 end
 
 class type print_llvm = object

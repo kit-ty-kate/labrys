@@ -63,8 +63,9 @@ let get_parse_tree modul =
   let module P = ParserHandler.Make(struct let get = Module.impl modul end) in
   P.parse_impl ()
 
-let get_unsugared_tree ~no_prelude options modul =
+let get_unsugared_tree options modul =
   let (imports, parse_tree) = get_parse_tree modul in
+  let no_prelude = options#no_prelude in
   let (imports, unsugared_tree) =
     Unsugar.create ~no_prelude ~current_module:modul options imports parse_tree
   in
@@ -74,17 +75,17 @@ let build_imports_intf options imports =
   let aux gamma modul = Gamma.union ~imported:(build_intf options modul) gamma in
   List.fold_left aux Gamma.empty imports
 
-let get_typed_tree ~with_main ~no_prelude ~interface options modul =
-  let (imports, unsugared_tree) = get_unsugared_tree ~no_prelude options modul in
+let get_typed_tree ~with_main ~interface options modul =
+  let (imports, unsugared_tree) = get_unsugared_tree options modul in
   let gamma = build_imports_intf options imports in
   let typed_tree =
     TypeChecker.check ~modul ~interface ~with_main options gamma unsugared_tree
   in
   (imports, typed_tree)
 
-let get_untyped_tree ~with_main ~no_prelude ~interface options modul =
+let get_untyped_tree ~with_main ~interface options modul =
   let (imports, typed_tree) =
-    get_typed_tree ~with_main ~no_prelude ~interface options modul
+    get_typed_tree ~with_main ~interface options modul
   in
   let untyped_tree = Lambda.of_typed_tree ~current_module:modul typed_tree in
   (imports, untyped_tree)
@@ -95,13 +96,15 @@ let rec build_imports ~imports_code options imports =
       imports_code
     end else begin
       let interface = build_intf options modul in
-      let (imports_code, code) = compile imports_code interface options modul in
+      let (imports_code, code) =
+        compile imports_code interface options modul
+      in
       Module.Map.add modul code imports_code
     end
   in
   List.fold_left aux imports_code imports
 
-and compile ?(with_main=false) ?(no_prelude=false) imports_code interface options modul =
+and compile ?(with_main=false) imports_code interface options modul =
   let modul = Module.open_module modul in
   let cimpl = Module.cimpl modul in
   try
@@ -116,7 +119,9 @@ and compile ?(with_main=false) ?(no_prelude=false) imports_code interface option
           "The library %s cannot be collected"
           (Module.to_string modul);
       prerr_endline (fmt "Compiling %s" (Module.to_string modul));
-      let (imports, untyped_tree) = get_untyped_tree ~with_main ~no_prelude ~interface options modul in
+      let (imports, untyped_tree) =
+        get_untyped_tree ~with_main ~interface options modul
+      in
       let imports_code = build_imports ~imports_code options imports in
       let code = Backend.make ~modul ~imports untyped_tree in
       Backend.write_bitcode ~o:cimpl code;
@@ -140,9 +145,8 @@ let compile_program options modul =
 
 let compile_module options modul =
   let modul = Module.from_string options modul in
-  let no_prelude = options#no_prelude in
   let (_, _) =
-    compile ~no_prelude Module.Map.empty Gamma.empty options modul
+    compile Module.Map.empty Gamma.empty options modul
   in
   prerr_endline (fmt "Module %s compiled" (Module.to_string modul))
 
@@ -155,35 +159,22 @@ let print_parse_tree options modul =
 let print_unsugared_tree options modul =
   let modul = Module.from_string options modul in
   let modul = Module.open_module modul in
-  let no_prelude = options#no_prelude in
-  let (_, unsugared_tree) = get_unsugared_tree ~no_prelude options modul in
+  let (_, unsugared_tree) = get_unsugared_tree options modul in
   print_endline (Printers.UnsugaredTree.dump unsugared_tree)
 
 let print_typed_tree options modul =
   let modul = Module.from_string options modul in
   let modul = Module.open_module modul in
-  let no_prelude = options#no_prelude in
   let (_, typed_tree) =
-    get_typed_tree
-      ~with_main:true
-      ~no_prelude
-      ~interface:Gamma.empty
-      options
-      modul
+    get_typed_tree ~with_main:true ~interface:Gamma.empty options modul
   in
   print_endline (Printers.TypedTree.dump typed_tree)
 
 let print_untyped_tree options modul =
   let modul = Module.from_string options modul in
   let modul = Module.open_module modul in
-  let no_prelude = options#no_prelude in
   let (_, untyped_tree) =
-    get_untyped_tree
-      ~with_main:true
-      ~no_prelude
-      ~interface:Gamma.empty
-      options
-      modul
+    get_untyped_tree ~with_main:true ~interface:Gamma.empty options modul
   in
   print_endline (Printers.UntypedTree.dump untyped_tree)
 

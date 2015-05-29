@@ -34,11 +34,12 @@ let start f options modul =
   | Llvm_irreader.Error x -> Some x
   | Module.Error x -> Some x
 
-let start_program modul src_dir build_dir lib_dir lto opt o =
+let start_program modul src_dir build_dir lib_dir no_prelude lto opt o =
   let options = object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
+    method no_prelude = no_prelude
     method lto = lto
     method opt = opt
     method o = o
@@ -97,11 +98,12 @@ let start_print_early_llvm modul src_dir build_dir lib_dir no_prelude =
   end in
   start Compiler.print_early_llvm options modul
 
-let start_print_llvm modul src_dir build_dir lib_dir lto opt =
+let start_print_llvm modul src_dir build_dir lib_dir no_prelude lto opt =
   let options = object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
+    method no_prelude = no_prelude
     method lto = lto
     method opt = opt
   end in
@@ -116,10 +118,6 @@ let restrained_base args =
 let base args =
   let args = restrained_base args in
   let args = args $ Arg.(value & opt dir "stdlib" & info ["lib-dir"]) in
-  args
-
-let extended_base args =
-  let args = base args in
   let args = args $ Arg.(value & flag & info ["no-prelude"]) in
   args
 
@@ -137,7 +135,7 @@ let program =
 
 let library =
   let args = Term.pure start_module in
-  let args = extended_base args in
+  let args = base args in
   (args, Term.info "build-module")
 
 let print_parse_tree =
@@ -147,22 +145,22 @@ let print_parse_tree =
 
 let print_unsugared_tree =
   let args = Term.pure start_print_unsugared_tree in
-  let args = extended_base args in
+  let args = base args in
   (args, Term.info "print-unsugared-tree")
 
 let print_typed_tree =
   let args = Term.pure start_print_typed_tree in
-  let args = extended_base args in
+  let args = base args in
   (args, Term.info "print-typed-tree")
 
 let print_untyped_tree =
   let args = Term.pure start_print_untyped_tree in
-  let args = extended_base args in
+  let args = base args in
   (args, Term.info "print-untyped-tree")
 
 let print_early_llvm =
   let args = Term.pure start_print_early_llvm in
-  let args = extended_base args in
+  let args = base args in
   (args, Term.info "print-early-llvm")
 
 let print_llvm =
