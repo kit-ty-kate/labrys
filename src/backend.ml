@@ -523,7 +523,7 @@ module Make (I : I) = struct
           define_global ~name ~linkage (Llvm.const_array Type.star [|index|]);
           top init_list xs
       | UntypedTree.Function (name, (name', t), linkage) :: xs ->
-          let (f, builder) = Llvm.define_function c "__lambda" (Type.lambda ~env_size:0) m in
+          let (f, builder) = Llvm.define_function c (".." ^ Ident.Name.to_string name) (Type.lambda ~env_size:0) m in
           Llvm.set_linkage Llvm.Linkage.Private f;
           define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]);
           let g bindings = abs ~f ~name:name' t bindings builder in
