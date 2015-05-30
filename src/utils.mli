@@ -76,3 +76,5 @@ module type EQSET = sig
 end
 
 module EqSet (I : EQ) : EQSET with type elt = I.t
+
+module CCIO : module type of CCIO

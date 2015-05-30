@@ -46,7 +46,7 @@ module Make (Filename : sig val get : string end) = struct
           raise
             (ParseError (fmt "%s: Parsing error at: %s" Filename.get (get_offset ())))
     in
-    CCIO.with_in Filename.get aux
+    Utils.CCIO.with_in Filename.get aux
 
     let parse_impl () = parse Parser.main
     let parse_intf () = parse Parser.mainInterface

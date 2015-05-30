@@ -215,3 +215,13 @@ module EqSet (I : EQ) = struct
 
   let union l l' = fold add l l'
 end
+
+module CCIO = struct
+  include CCIO
+
+  let with_in ?mode ?(flags=[Open_rdonly; Open_text]) filename f =
+    with_in ?mode ~flags filename f
+
+  let with_out ?mode ?(flags=[Open_wronly; Open_creat; Open_trunc; Open_text]) filename f =
+    with_out ?mode ~flags filename f
+end

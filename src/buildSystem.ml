@@ -97,7 +97,7 @@ let check_imports_hash options =
 let check_impl options modul =
   try
     let infos = Module.impl_infos modul in
-    let infos = CCIO.with_in infos (parse_impl_infos) in
+    let infos = Utils.CCIO.with_in infos (parse_impl_infos) in
     let hash = Digest.file (Module.impl modul) in
     let hash_bc = Digest.file (Module.cimpl modul) in
     if not
@@ -141,4 +141,4 @@ let write_impl_infos imports modul =
   let content = Msgpack.Serialize.serialize_string content in
   let file_name = Module.impl_infos modul in
   Utils.mkdir file_name;
-  CCIO.with_out file_name (fun file -> output_string file content)
+  Utils.CCIO.with_out file_name (fun file -> output_string file content)
