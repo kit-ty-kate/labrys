@@ -63,6 +63,8 @@ module Name = struct
   let loc (loc, _, _) = loc
 
   let unique (loc, modul, name) n =
+    if n <= 0 then
+      assert false;
     let modul = Option.get_lazy (fun () -> assert false) modul in
     (loc, Some modul, fmt "%s__%d" name n)
 
