@@ -9,6 +9,7 @@ EXAMPLES="\
     CombS \
     Exn \
     Fact \
+    TailFact \
     LetRecIn \
     MultiTypes \
     Multi \
