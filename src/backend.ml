@@ -241,7 +241,7 @@ module Make (I : I) = struct
     create_tree func ~env ~default vars gamma builder value results tree;
     block
 
-  and create_result func ~env ~jmp_buf ~res ~next_block gamma builder (vars, result) =
+  and create_result func ~env ~jmp_buf ~next_block gamma builder (vars, result) =
     let block = Llvm.append_block c "" func in
     let builder' = Llvm.builder_at_end c block in
     let (gamma, pattern_vars) =
@@ -253,13 +253,12 @@ module Make (I : I) = struct
       List.fold_left aux (gamma, []) vars
     in
     let (v, builder') = lambda func ~env ~jmp_buf gamma builder' result in
-    Llvm.build_store v res builder';
     Llvm.build_br next_block builder';
-    (block, pattern_vars)
+    (block, (v, Llvm.insertion_block builder'), pattern_vars)
 
   and create_tree func ~env ~default vars gamma builder value results = function
     | UntypedTree.Leaf i ->
-        let (block, pattern_vars) = List.nth results i in
+        let (block, _, pattern_vars) = List.nth results i in
         let aux vars (var, variable) =
           let (var, vars) = llvalue_of_pattern_var vars value builder var in
           Llvm.build_store var variable builder;
@@ -281,7 +280,7 @@ module Make (I : I) = struct
           )
           cases
 
-  and create_exn_result func ~env ~jmp_buf ~res ~next_block ~exn_args gamma (args, result) =
+  and create_exn_result func ~env ~jmp_buf ~next_block ~exn_args gamma (args, result) =
     let block = Llvm.append_block c "" func in
     let builder = Llvm.builder_at_end c block in
     let exn_args = Llvm.build_bitcast exn_args (Type.array_ptr (List.length args)) "" builder in
@@ -295,25 +294,25 @@ module Make (I : I) = struct
       List.Idx.foldi aux gamma args
     in
     let (v, builder) = lambda func ~env ~jmp_buf gamma builder result in
-    Llvm.build_store v res builder;
     Llvm.build_br next_block builder;
-    block
+    ((v, Llvm.insertion_block builder), block)
 
-  and create_exn_branches func ~env ~jmp_buf ~res ~next_block gamma builder branches =
+  and create_exn_branches func ~env ~jmp_buf ~next_block gamma builder branches =
     let exn_tag = Llvm.build_load exn_tag_var "" builder in
     let exn_args = Llvm.build_load exn_args_var "" builder in
-    let aux builder ((name, args), t) =
-      let block = create_exn_result func ~env ~res ~next_block ~jmp_buf ~exn_args gamma (args, t) in
+    let aux (acc, builder) ((name, args), t) =
+      let (x, block) = create_exn_result func ~env ~next_block ~jmp_buf ~exn_args gamma (args, t) in
       let exn = get_exn name in
       let next_block = Llvm.append_block c "" func in
       let cond = Llvm.build_icmp Llvm.Icmp.Eq exn exn_tag "" builder in
       Llvm.build_cond_br cond block next_block builder;
-      Llvm.builder_at_end c next_block
+      (x :: acc, Llvm.builder_at_end c next_block)
     in
-    let builder = List.fold_left aux builder branches in
+    let (x, builder) = List.fold_left aux ([], builder) branches in
     let jmp_buf = Llvm.build_bitcast jmp_buf Type.star "" builder in
     Llvm.build_call_void longjmp [|jmp_buf|] builder;
     unreachable builder;
+    x
 
   and abs ~f ~name t gamma builder =
     let param = Llvm.param f 0 in
@@ -343,13 +342,13 @@ module Make (I : I) = struct
         (Llvm.build_call f [|x; closure; jmp_buf|] "" builder, builder)
     | UntypedTree.PatternMatching (t, results, tree) ->
         let (t, builder) = lambda func ~env ~jmp_buf gamma builder t in
-        let res = Llvm.build_alloca Type.star "" builder in
         let next_block = Llvm.append_block c "" func in
-        let results = List.map (create_result func ~env ~res ~next_block ~jmp_buf gamma builder) results in
+        let results = List.map (create_result func ~env ~next_block ~jmp_buf gamma builder) results in
         let builder' = Llvm.builder_at_end c next_block in
         let default = create_default_branch func in
         create_tree func ~env ~default Map.empty gamma builder t results tree;
-        (Llvm.build_load res "" builder', builder')
+        let results = List.map (fun (_, x, _) -> x) results in
+        (Llvm.build_phi results "" builder', builder')
     | UntypedTree.Val name ->
         begin match GammaMap.Value.find name gamma with
         | Some (Global _) ->
@@ -414,28 +413,26 @@ module Make (I : I) = struct
     | UntypedTree.Try (t, branches) ->
         let jmp_buf' = Llvm.build_alloca Type.jmp_buf "" builder in
         Generic.init_jmp_buf jmp_buf' builder;
-        let res = Llvm.build_alloca Type.star "" builder in
         let next_block = Llvm.append_block c "" func in
-        let try_block =
+        let (try_result, try_block) =
           let block = Llvm.append_block c "" func in
           let builder = Llvm.builder_at_end c block in
           let (t, builder) = lambda func ~env ~jmp_buf:jmp_buf' gamma builder t in
-          Llvm.build_store t res builder;
           Llvm.build_br next_block builder;
-          block
+          ((t, Llvm.insertion_block builder), block)
         in
-        let catch_block =
+        let (results, catch_block) =
           let block = Llvm.append_block c "" func in
           let builder = Llvm.builder_at_end c block in
-          create_exn_branches func ~env ~jmp_buf ~res ~next_block gamma builder branches;
-          block
+          let results = create_exn_branches func ~env ~jmp_buf ~next_block gamma builder branches in
+          (try_result :: results, block)
         in
         let jmp_buf' = Llvm.build_bitcast jmp_buf' Type.star "" builder in
         let jmp_res = Llvm.build_call setjmp [|jmp_buf'|] "" builder in
         let cond = Llvm.build_icmp Llvm.Icmp.Eq jmp_res (i32 0) "" builder in
         Llvm.build_cond_br cond try_block catch_block builder;
         let builder = Llvm.builder_at_end c next_block in
-        (Llvm.build_load res "" builder, builder)
+        (Llvm.build_phi results "" builder, builder)
 
   and fold_args func ~env ~jmp_buf gamma builder args =
     let aux (acc, builder) x =
