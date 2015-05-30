@@ -110,6 +110,7 @@ let get_name_and_linkage name' names mapn =
   match GammaMap.Value.find name' names with
   | Some 0
   | None ->
+      let mapn = GammaMap.Value.add name' name' mapn in
       (name', names, mapn, Public)
   | Some n ->
       let name = Ident.Name.unique name' n in
