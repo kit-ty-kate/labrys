@@ -2,7 +2,6 @@
 
 == Short term ==
 
-* Fix the bug with swapped argumemts
 * Define a proper operational semantics
 * Typeclasses
 

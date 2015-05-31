@@ -122,6 +122,7 @@ module Make (I : I) = struct
   type gamma =
     | Value of Llvm.llvalue
     | Env of int
+    | RecFun
     | Global of Llvm.llvalue
 
   let m = Llvm.create_module c (Module.to_string I.name)
@@ -176,7 +177,7 @@ module Make (I : I) = struct
     unreachable builder;
     block
 
-  let fold_env ~env gamma builder =
+  let fold_env func ~env gamma builder =
     let aux name value (i, values, gamma) =
       match value with
       | Value value ->
@@ -189,6 +190,10 @@ module Make (I : I) = struct
           let values = value :: values in
           let gamma = GammaMap.Value.add name (Env i) gamma in
           (succ i, values, gamma)
+      | RecFun ->
+          let values = Llvm.param func 1 :: values in
+          let gamma = GammaMap.Value.add name (Env i) gamma in
+          (succ i, values, gamma)
       | Global value ->
           let gamma = GammaMap.Value.add name (Global value) gamma in
           (i, values, gamma)
@@ -196,13 +201,13 @@ module Make (I : I) = struct
     let (_, b, c) = GammaMap.Value.fold aux gamma (1, [], GammaMap.Value.empty) in
     (List.rev b, c)
 
-  let create_closure ~isrec ~used_vars ~env gamma builder =
+  let create_closure func ~isrec ~used_vars ~env gamma builder =
     let gamma = GammaMap.Value.filter (fun x _ -> Set.mem x used_vars) gamma in
-    let (values, gamma) = fold_env ~env gamma builder in
+    let (values, gamma) = fold_env func ~env gamma builder in
     let env_size = List.length values in
     let gamma = match isrec with
       | Some rec_name when Set.mem rec_name used_vars ->
-          GammaMap.Value.add rec_name (Env 0) gamma
+          GammaMap.Value.add rec_name RecFun gamma
       | Some _ | None ->
           gamma
     in
@@ -327,7 +332,7 @@ module Make (I : I) = struct
   and lambda func ?isrec ~env ~jmp_buf gamma builder = function
     | UntypedTree.Abs (name, used_vars, t) ->
         let (f, builder', closure, gamma) =
-          create_closure ~isrec ~used_vars ~env gamma builder
+          create_closure func ~isrec ~used_vars ~env gamma builder
         in
         abs ~f ~name t gamma builder';
         let closure = Llvm.build_bitcast closure Type.star "" builder in
@@ -359,6 +364,8 @@ module Make (I : I) = struct
         | Some (Env i) ->
             let env = Lazy.force env in
             (Llvm.build_extractvalue env i "" builder, builder)
+        | Some RecFun ->
+            (Llvm.param func 1, builder)
         | None ->
             let name = Ident.Name.to_string name in
             let extern = Llvm.declare_global Type.star name m in
@@ -371,6 +378,7 @@ module Make (I : I) = struct
           | Some (Env i) ->
               let env = Lazy.force env in
               Llvm.build_extractvalue env i "" builder
+          | Some RecFun
           | Some (Global _)
           | None ->
               assert false
@@ -385,7 +393,7 @@ module Make (I : I) = struct
         let f =
           match GammaMap.Value.find name gamma with
           | Some (Global value) -> value
-          | Some (Value _) | Some (Env _) | None -> assert false
+          | Some (Value _) | Some (Env _) | Some RecFun | None -> assert false
         in
         let (args, builder) = fold_args func ~env ~jmp_buf gamma builder args in
         let args = Array.of_list args in
