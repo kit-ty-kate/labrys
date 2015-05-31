@@ -2,23 +2,23 @@
 
 == Short term ==
 
+* Fix the bug with swapped argumemts
 * Define a proper operational semantics
 * Typeclasses
 
 
 == Medium term ==
 
+* Records
+* Extensible records & extensible variants
 * Clean:
   * Fix TODO
   * Remove names in backend (« %comment = call donothing » or metadata instead) ?
   * Add functions in backend (like access_env …)
   * Add more explicit type names (like « type name = string » instead of just use a string)
-
 * Clean error the handling system: extend an error type (+= ..) for each module that can raise errors and print them in ErrorPrinter
 * Cleaning (parser, typechecker, backend, printer, …)
 * Unit-tests
-* Finish the module system
-* Records
 * Handle dynamic exceptions (allocation failures, …)
     let main try with
       | CannotAllocate -> ()
@@ -32,5 +32,7 @@
 
 == Long term ==
 
-* Recursive type aliases
-* Compile libraries
+* Do we change for System Fc ? (Recursive type aliases, GADTs, …)
+* Have a real custom GC
+* Type inference
+* Have a real FFI
