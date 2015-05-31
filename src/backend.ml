@@ -195,7 +195,9 @@ module Make (I : I) = struct
           let gamma = GammaMap.Value.add name (Env i) gamma in
           (succ i, values, gamma)
       | RecFun ->
-          let values = Llvm.param func 1 :: values in
+          let value = Llvm.param func 1 in
+          let value = Llvm.build_bitcast value Type.star "" builder in
+          let values = value :: values in
           let gamma = GammaMap.Value.add name (Env i) gamma in
           (succ i, values, gamma)
       | Global value ->
@@ -366,7 +368,9 @@ module Make (I : I) = struct
             let env = load_env func builder in
             (Llvm.build_extractvalue env i "" builder, builder)
         | Some RecFun ->
-            (Llvm.param func 1, builder)
+            let value = Llvm.param func 1 in
+            let value = Llvm.build_bitcast value Type.star "" builder in
+            (value, builder)
         | None ->
             let name = Ident.Name.to_string name in
             let extern = Llvm.declare_global Type.star name m in
