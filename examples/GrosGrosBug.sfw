@@ -1,0 +1,68 @@
+import library Nat
+
+open Nat
+
+let printInt : Nat -[IO]-> Unit = begin
+  @msg = constant [4 x i8] c"%d\0a\00"
+
+  declare i32 @printf(i8*, ...)
+  
+  define i32 @__int_of_nat(i8*) {
+    %var = bitcast i8* %0 to [2 x i8*]*
+    %variant = load [2 x i8*]* %var
+    %keyp = extractvalue [2 x i8*] %variant, 0
+    %key = ptrtoint i8* %keyp to i32
+    %cond = icmp eq i32 %key, 0
+    br i1 %cond, label %end, label %loop
+  loop:
+    %next = extractvalue [2 x i8*] %variant, 1
+    %val = call i32 @__int_of_nat(i8* %next)
+    %res = add i32 1, %val
+    ret i32 %res
+  end:
+    ret i32 0
+  }
+
+  define i8* @GrosGrosBug..printInt(i8*) {
+    %i = call i32 @__int_of_nat(i8* %0)
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %i)
+    ret i8* null
+  }
+end
+
+let plus =
+  let rec aux (n : Nat) (m : Nat) : Nat.Nat =
+    match n with
+    | O -> m
+    | S p -> aux p (S m)
+    end
+  in
+  aux
+
+let mult (n : Nat) (m : Nat) =
+  let rec aux (acc : Nat) (n : Nat.Nat) (m : Nat.Nat) : [IO] Nat.Nat =
+    match n with
+    | Nat.O -> acc
+    | Nat.S p -> aux (plus m acc) p m
+    end
+  in
+  aux O n m
+
+let fact (n : Nat) =
+  let rec aux (acc : Nat) (n : Nat) : [IO] Nat =
+    match n with
+    | O -> acc
+    | S x -> aux (mult n acc) x
+    end
+  in
+  aux (S O) n
+
+let main =
+  printInt (fact O); -- 1
+  printInt (fact (S O)); -- 1
+  printInt (fact (S (S O))); -- 2
+  printInt (fact (S (S (S O)))); -- 6
+  printInt (fact (S (S (S (S O))))); -- 24
+  printInt (fact (S (S (S (S (S O)))))); -- 120
+  printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))); -- 362880
+  printInt (fact (S (S (S (S (S (S (S (S (S (S O))))))))))) -- 3628800

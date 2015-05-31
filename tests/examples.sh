@@ -10,6 +10,7 @@ EXAMPLES="\
     Exn \
     Fact \
     TailFact \
+    GrosGrosBug \
     LetRecIn \
     MultiTypes \
     Multi \
