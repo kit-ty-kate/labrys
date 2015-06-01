@@ -1,5 +1,5 @@
 OASISFormat: 0.4
-OCamlVersion: >= 3.12.1
+OCamlVersion: >= 4.02
 Name: Cervoise
 Version: 0.1
 Synopsis: A System F omega compiler (LLVM based)
@@ -19,7 +19,7 @@ Executable cervoise
     pprint,
     re,
     msgpack,
-    llvm (>= 3.5),
+    llvm,
     llvm.irreader,
     llvm.passmgr_builder,
     llvm.target,
@@ -28,7 +28,7 @@ Executable cervoise
     llvm.all_backends,
     llvm.linker,
     llvm.scalar_opts,
-    containers.io (>= 0.11),
+    containers.io,
     monomorphic.containers
   CompiledObject: best
   ByteOpt: -w A-44-33-4
