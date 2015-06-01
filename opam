@@ -1,0 +1,26 @@
+opam-version: "1.2"
+name: "cervoise"
+version: "dev"
+license: "MIT"
+maintainer: "Jacques-Pascal Deplaix <jp.deplaix@gmail.com>"
+authors: "Jacques-Pascal Deplaix <jp.deplaix@gmail.com>"
+homepage: "https://github.com/jpdeplaix/cervoise"
+dev-repo: "https://github.com/jpdeplaix/cervoise"
+bug-reports: "https://github.com/jpdeplaix/cervoise/issues"
+build: [
+  ["./configure"]
+  [make]
+]
+depends: [
+  "ocamlfind" {build}
+  "menhir" {build}
+  "base-unix"
+  "cmdliner"
+  "pprint"
+  "re"
+  "msgpack"
+  "llvm" {>= "3.5"}
+  "containers" {>= "0.11"}
+  "monomorphic" {>= "0.2"}
+]
+available: [ocaml-version >= "4.02.0"]
