@@ -5,3 +5,4 @@
 "examples": not_hygienic
 
 true: use_menhir, explain, safe_string
+true: warn(A-44-33-4)

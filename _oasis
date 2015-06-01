@@ -31,8 +31,6 @@ Executable cervoise
     containers.io,
     monomorphic.containers
   CompiledObject: best
-  ByteOpt: -w A-44-33-4
-  NativeOpt: -w A-44-33-4
 
 Executable test
   Path: tests
@@ -42,8 +40,6 @@ Executable test
   BuildDepends:
     oUnit (>= 2.0)
   CompiledObject: best
-  ByteOpt: -w A-44-33-4
-  NativeOpt: -w A-44-33-4
 
 Test tests
   Run$: flag(tests)
