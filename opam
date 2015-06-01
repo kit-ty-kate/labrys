@@ -13,6 +13,7 @@ build: [
 ]
 depends: [
   "ocamlfind" {build}
+  "oasis" {build & >= "0.4.5"}
   "menhir" {build}
   "base-unix"
   "cmdliner"
@@ -21,6 +22,6 @@ depends: [
   "msgpack"
   "llvm" {>= "3.5"}
   "containers" {>= "0.11"}
-  "monomorphic" {>= "0.2"}
+  "monomorphic" {>= "1.2"}
 ]
 available: [ocaml-version >= "4.02.0"]

@@ -1,2 +1,6 @@
 language: c
 script: bash -ex .travis-ci.sh
+env:
+  matrix:
+    - LLVM_VERSION=3.5
+    - LLVM_VERSION=3.6
