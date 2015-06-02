@@ -29,7 +29,7 @@ let print_error () =
   prerr_endline "\nThe compilation processes exited abnormally"
 
 let link ~tmp ~o =
-  let ld = Utils.exec_command "cc" ["-lgc"; tmp; "-o"; o] in
+  let ld = Utils.exec_command "clang" ["-lgc"; tmp; "-o"; o] in
   if Int.(ld <> 0) then begin
     print_error ();
   end

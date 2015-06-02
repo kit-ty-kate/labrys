@@ -4,7 +4,7 @@ echo "deb http://llvm.org/apt/precise/ llvm-toolchain-precise-$LLVM_VERSION main
 wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
 sudo apt-get update -qq
 sudo apt-get install -qq ocaml ocaml-native-compilers camlp4-extra opam
-sudo apt-get install -qq "llvm-$LLVM_VERSION" libgc-dev
+sudo apt-get install -qq "llvm-$LLVM_VERSION" libgc-dev clang
 export OPAMYES=1
 opam init
 eval `opam config env`
