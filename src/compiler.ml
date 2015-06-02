@@ -29,9 +29,7 @@ let print_error () =
   prerr_endline "\nThe compilation processes exited abnormally"
 
 let link ~tmp ~o =
-  let tmp = Filename.quote tmp in
-  let o = Filename.quote o in
-  let ld = Sys.command (fmt "cc -lgc %s -o %s" tmp o) in
+  let ld = Utils.exec_command "cc" ["-lgc"; tmp; "-o"; o] in
   if Int.(ld <> 0) then begin
     print_error ();
   end

@@ -28,6 +28,8 @@ val detach_last : 'a list -> ('a list * 'a)
 
 val combine_compare : (unit -> int) list -> int
 
+val exec_command : string -> string list -> int
+
 module StrListSet : CCSet.S with type elt = string list
 
 module type EQ = sig

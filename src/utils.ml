@@ -21,6 +21,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open Monomorphic_containers.Open
 
+let fmt = Printf.sprintf
+
 let rec string_of_list f = function
   | [] -> ""
   | x::[] -> f x
@@ -71,6 +73,24 @@ let combine_compare l =
           x
   in
   aux l
+
+let exec_command cmd args =
+  match Unix.fork () with
+  | 0 ->
+      begin try
+        Unix.execvp cmd (Array.of_list (cmd :: args))
+      with
+      | _ ->
+          prerr_endline (fmt "Command %s failed" cmd);
+          exit 1
+      end
+  | -1 ->
+      raise (Sys_error "Fatal error: Fork")
+  | pid ->
+      match Unix.waitpid [] pid with
+      | (_, Unix.WEXITED code) -> code
+      | (_, Unix.WSIGNALED code) -> code
+      | (_, Unix.WSTOPPED code) -> code
 
 module StrListSet = Set.Make(struct
     type t = string list
