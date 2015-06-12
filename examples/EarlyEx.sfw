@@ -1,0 +1,61 @@
+-- Featuring: Multi-parameters classes
+
+class Fractional (A : *) (E : φ) =
+  let (/) : A -> A -[E]-> A
+end
+
+exception DivByZero
+
+-- Should I fix the syntax for variants ?
+type Nat =
+  | O : Nat
+  | S : Nat -> Nat
+
+instance Fractonal Nat [Exn [DivByZero]] =
+  let (/) x y = …
+end
+
+let foo () : [Exn [DivByZero]] Nat = O / O
+
+instance Fractional Float [] =
+  let (/) x y = …
+end
+
+let foo () : Float = FO / FO
+
+let div : forall (Fractional X E), X -> X -[E]-> X = (/)
+let oneDiv : Nat -> Nat = div (S O)
+
+
+
+-----------------------------------
+
+
+
+type Ordering =
+  | LT : Ordering
+  | EQ : Ordering
+  | GT : Ordering
+
+class Eq A =
+  let (==) : A -> A -> Bool
+end
+
+class Ord A =
+  let compare : A -> A -> Ordering
+end
+
+class Collection (C : * -> *) A =
+  let empty : C A
+  let insert : A -> C A -> C A
+end
+
+instance Eq A => Collection ListSet A =
+  let empty = …
+  let insert x l = …
+end
+
+instance Ord A => Collection TreeSet A =
+  let empty = …
+  let insert x tree = …
+end
