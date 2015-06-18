@@ -7,22 +7,31 @@ metavar typvar, X ::=
 grammar
   t :: 't_' ::=                                         {{ com term }}
     | x                   ::   :: Var                     {{ com variable }}
-    | \ ( x : T ) -> t     ::   :: Lam  (+ bind x in t +)  {{ com abstraction }}
+    | \ ( x : T ) -> t    ::   :: Lam                     {{ com abstraction }}
+    | \ ( X : K ) -> t    ::   :: TLam                    {{ com type abstraction }}
     | t t'                ::   :: App                     {{ com application }}
-    | ( t )               :: S :: paren   {{ ich [[t]] }}
-    | { t / x } t'        :: M :: tsub    {{ ich ( tsubst_t [[t]] [[x]] [[t']] ) }}
+    | ( t )               :: S :: paren
+    | { t / x } t'        :: M :: tsub
 
   v :: 'v_' ::=                                         {{ com  value }}
     | \ ( x : T ) -> t        ::   :: Lam                     {{ com abstraction }}
+    | \ ( X : K ) -> t        ::   :: TLam                     {{ com type abstraction }}
 
   T :: T_ ::=                                           {{ com type }}
     | X                   ::   :: var                     {{ com variable }}
     | T -> T'             ::   :: arrow                   {{ com function }}
-    | ( T )               :: S :: paren {{ ich [[T]] }} {{ ocaml int }}
+    | forall X , T        ::   :: forall                  {{ com forall }} 
+    | ( T )               :: S :: paren
+    | { t / x } t'        :: M :: tsub
+
+  K :: K_ ::=
+    | *                   ::   :: star                 {{ com kind star }}
+    | K -> K'             ::   :: kindArrow            {{ com kind arrow }}
 
   G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
     | empty               ::   :: em {{ com empty }}
     | G , x : T           ::   :: vn {{ com vars }}
+    | G , X : K           ::   :: tn {{ com tvars }}
 
   terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -34,27 +43,35 @@ grammar
   formula :: 'formula_' ::=
     | judgement           ::   :: judgement
     | not ( formula )     ::   :: not
-    | x = x'              ::   :: eqv  {{ ich [[x]]=[[x']] }}
+    | x = x'              ::   :: eqv
     | x : T in G          ::   :: xTG
+    | T : K in G          ::   :: TKG
 
 subrules
   v <:: t
 
 freevars
+  T X :: ftv
   t x :: fv
 
 substitutions
   single t x :: tsubst
+  single T X :: Tsubst
 
 defns
   Jtype :: '' ::=
 
 defn
     G |- t : T :: :: GtT :: GtT_ by
+    G |- T : K :: :: GTK :: GTK_ by
 
     x:T in G
     -------- :: value_name
     G |- x:T
+
+    X:K in G
+    -------- :: type_kind
+    G |- X:K
 
     G |- t : T1->T2
     G |- t' : T1
