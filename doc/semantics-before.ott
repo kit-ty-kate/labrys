@@ -66,67 +66,67 @@ substitutions
 defns
   Jtype :: '' ::=
 
-    defn
-    G |- t : T :: :: GtT :: GtT_ by
+  defn
+    G |- t : T :: :: GtT :: T_ {{ com Typing }} by
 
     x:T in G
-    -------- :: value_name
+    -------- :: Var
     G |- x:T
-
-    G |- t : T1->T2
-    G |- t' : T1
-    ---------------- :: apply
-    G |- t t' : T2
 
     G, x1 : T1 |- t : T
     G |- T1 : *
-    ------------------ :: lambda
+    ------------------------------ :: Abs
     G |- \(x1 : T1) -> t : T1 -> T
+
+    G |- t : T1 -> T2
+    G |- t' : T1
+    ----------------- :: App
+    G |- t t' : T2
+
+    G, X : K |- t : T
+    -------------------------------------- :: TAbs
+    G |- \(X : K) -> t : forall (X : K), T
 
     G |- t : forall (X : K), T2
     G |- T1 : K
-    --------------------------- :: tapply
+    --------------------------- :: TApp
     G |- t [T1] : [X |-> T1]T2
-
-    G, X : K |- t : T
-    -------------------------- :: tabs
-    G |- \(X : K) -> t : forall (X : K), T
 
     G |- t : X
     X == X'
     G |- X' : *
-    ------------ :: T_EQ
+    ------------ :: Eq
     G |- t : X'
 
-    defn
-    G |- T : K :: :: GT :: GT_ by
+  defn
+    G |- T : K :: :: GT :: K_ {{ com Kinding }} by
 
     X : K in G
-    -------- :: type_kind
+    ---------- :: TVar
     G |- X : K
 
 defns
   Jop :: '' ::=
 
-    defn
-    t1 --> t2 ::  :: reduce :: ''       {{ com [[t1]] reduces to [[t2]] }} by
-
-
-    ----------------------------  :: ax_app
-    (\(x : T) -> t12) v2 -->  [x |-> v2]t12
+  defn
+    t --> t' ::  :: reduce :: E_ {{ com Evaluation }} by
 
     t1 --> t1'
-    -------------- :: ctx_app_fun
+    -------------- :: App1
     t1 t --> t1' t
 
     t1 --> t1'
-    -------------- :: ctx_app_arg
+    -------------- :: App2
     v t1 --> v t1'
 
+
+    --------------------------------------- :: AppAbs
+    (\(x : T) -> t12) v2 -->  [x |-> v2]t12
+
     t --> t'
-    ---------------- :: ETApp
+    ---------------- :: TApp
     t [T] --> t' [T]
 
 
-    --------------------- :: ETAppTabs
+    ---------------------------------- :: TAppTAbs
     (\(X : K) -> t) [T] --> [X |-> T]t
