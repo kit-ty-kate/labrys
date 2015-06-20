@@ -8,7 +8,7 @@ grammar
   t :: 't_' ::=                                         {{ com term }}
     | x                   ::   :: Var                     {{ com variable }}
     | \ ( x : T ) -> t    ::   :: Lam                     {{ com abstraction }}
-    | \ X -> t            ::   :: TLam                    {{ com type abstraction }}
+    | \ ( X : K ) -> t    ::   :: TLam                    {{ com type abstraction }}
     | t t'                ::   :: App                     {{ com application }}
     | t [ T ]             ::   :: TApp                    {{ com type application }}
     | ( t )               :: S :: paren
@@ -16,20 +16,24 @@ grammar
     | [ X |-> T ] t       :: M :: Tsub
 
   v :: 'v_' ::=                                         {{ com  value }}
-    | \ ( x : T ) -> t        ::   :: Lam                 {{ com abstraction }}
-    | \ X -> t                ::   :: TLam                {{ com type abstraction }}
+    | \ ( x : T ) -> t    ::   :: Lam                 {{ com abstraction }}
+    | \ ( X : K ) -> t    ::   :: TLam                {{ com type abstraction }}
+
+  K :: 'K_' ::=                                    {{ com kinds }}
+    | *                   ::   :: Star               {{ com star }}
+    | K -> K'             ::   :: KArrow             {{ com kind arrow }}
 
   T :: T_ ::=                                           {{ com type }}
-    | X                   ::   :: var                     {{ com variable }}
-    | T -> T'             ::   :: arrow                   {{ com function }}
-    | forall X , T        ::   :: forall                  {{ com forall }} 
-    | ( T )               :: S :: paren
-    | [ X |-> T ] T'      :: M :: sub
+    | X                       ::   :: var                     {{ com variable }}
+    | T -> T'                 ::   :: arrow                   {{ com function }}
+    | forall ( X : K ) , T    ::   :: forall                  {{ com forall }} 
+    | ( T )                   :: S :: paren
+    | [ X |-> T ] T'          :: M :: sub
 
   G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
     | empty               ::   :: em {{ com empty }}
     | G , x : T           ::   :: vn {{ com vars }}
-    | G , X               ::   :: tn {{ com tvars }}
+    | G , X : K           ::   :: tn {{ com tvars }}
 
   terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -38,13 +42,15 @@ grammar
     | |-                  ::   :: turnstile  {{ tex \vdash }}
     | |->                 ::   :: mapsto     {{ tex \mapsto }}
     | in                  ::   :: in         {{ tex \in }}
+    | ==                  ::   :: equiv      {{ tex \equiv }}
 
   formula :: 'formula_' ::=
     | judgement           ::   :: judgement
     | not ( formula )     ::   :: not
     | x = x'              ::   :: eqv
+    | X == X'             ::   :: Teqv
     | x : T in G          ::   :: xTG
-    | X in G              ::   :: XG
+    | X : K in G          ::   :: XG
 
 subrules
   v <:: t
@@ -72,24 +78,32 @@ defns
     ---------------- :: apply
     G |- t t' : T2
 
-    G |- t : T
+    G, x1 : T1 |- t : T
+    G |- T1 : *
     ------------------ :: lambda
-    G |- \(x1 : T1) -> t : T1->T
+    G |- \(x1 : T1) -> t : T1 -> T
 
-    G |- t : forall X, T2
-    ---------------- :: tapply
+    G |- t : forall (X : K), T2
+    G |- T1 : K
+    --------------------------- :: tapply
     G |- t [T1] : [X |-> T1]T2
 
-    G, X |- t : T
+    G, X : K |- t : T
     -------------------------- :: tabs
-    G |- \X -> t : forall X, T
+    G |- \(X : K) -> t : forall (X : K), T
+
+    G |- t : X
+    X == X'
+    G |- X' : *
+    ------------ :: T_EQ
+    G |- t : X'
 
     defn
-    G |- T :: :: GT :: GT_ by
+    G |- T : K :: :: GT :: GT_ by
 
-    X in G
+    X : K in G
     -------- :: type_kind
-    G |- X
+    G |- X : K
 
 defns
   Jop :: '' ::=
@@ -114,5 +128,5 @@ defns
     t [T] --> t' [T]
 
 
-    --------------- :: ETAppTabs
-    (\X -> t) [T] --> [X |-> T]t
+    --------------------- :: ETAppTabs
+    (\(X : K) -> t) [T] --> [X |-> T]t
