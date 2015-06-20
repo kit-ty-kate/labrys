@@ -26,7 +26,9 @@ grammar
   T :: T_ ::=                                           {{ com type }}
     | X                       ::   :: var                     {{ com variable }}
     | T -> T'                 ::   :: arrow                   {{ com function }}
-    | forall ( X : K ) , T    ::   :: forall                  {{ com forall }} 
+    | \ ( X : K ) -> T        ::   :: abs                     {{ com operator abstraction }}
+    | forall ( X : K ) , T    ::   :: forall                  {{ com forall }}
+    | T T'                    ::   :: app                     {{ com operator application }}
     | ( T )                   :: S :: paren
     | [ X |-> T ] T'          :: M :: sub
 
@@ -104,6 +106,15 @@ defns
     X : K in G
     ---------- :: TVar
     G |- X : K
+
+    G, X : K1 |- T : K2
+    ------------------------------ :: Abs
+    G |- \(X : K1) -> T : K1 -> K2
+
+    G |- T1 : K11 -> K12
+    G |- T2 : K11
+    -------------------- :: App
+    G |- T1 T2 : K12
 
 defns
   Jop :: '' ::=
