@@ -11,6 +11,7 @@ grammar
     | \ ( X : K ) -> t    ::   :: TLam                    {{ com type abstraction }}
     | t t'                ::   :: App                     {{ com application }}
     | t [ T ]             ::   :: TApp                    {{ com type application }}
+    | let x = t1 in t2    ::   :: Let                     {{ com let bindings }}
     | ( t )               :: S :: paren
     | [ x |-> t ] t'      :: M :: tsub
     | [ X |-> T ] t       :: M :: Tsub
@@ -99,6 +100,10 @@ defns
     G |- X' : *
     ------------ :: Eq
     G |- t : X'
+
+    G, x : T1 |- t2 : T2
+    -------------------------- :: Let
+    G |- let x = t1 in t2 : T2
 
 defns
   Jkind :: '' ::=
@@ -194,3 +199,11 @@ defns
 
     ---------------------------------- :: TAppTAbs
     (\(X : K) -> t) [T] --> [X |-> T]t
+
+    t1 --> t1'
+    -------------------------------------- :: Let1
+    let x = t1 in t2 --> let x = t1' in t2
+
+    t1 --> t1'
+    ------------------------------------ :: Let2
+    let x = v in t1 --> let x = v in t1'
