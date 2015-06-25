@@ -10,49 +10,49 @@ metavar typvar, X ::=
 indexvar n ::=
 
 grammar
-  t :: 't_' ::=                                         {{ com term }}
-    | x                                                 ::   :: Var                     {{ com variable }}
-    | \ ( x : T ) -> t                                  ::   :: Lam                     {{ com abstraction }}
-    | \ ( X : K ) -> t                                  ::   :: TLam                    {{ com type abstraction }}
-    | t t'                                              ::   :: App                     {{ com application }}
-    | t [ T ]                                           ::   :: TApp                    {{ com type application }}
-    | let x = t1 in t2                                  ::   :: Let                     {{ com let binding }}
-    | let rec x : T = abs in t                          ::   :: LetRec                  {{ com recursive let binding }}
-    | match t with p1 -> t1 | .. | pn -> tn end         ::   :: PatternMatching         {{ com pattern matching }}
+  t :: 't_' ::=                                                                         {{ com term }}
+    | x                                                 ::   :: Var                       {{ com variable }}
+    | \ ( x : T ) -> t                                  ::   :: Lam                       {{ com abstraction }}
+    | \ ( X : K ) -> t                                  ::   :: TLam                      {{ com type abstraction }}
+    | t t'                                              ::   :: App                       {{ com application }}
+    | t [ T ]                                           ::   :: TApp                      {{ com type application }}
+    | let x = t1 in t2                                  ::   :: Let                       {{ com let binding }}
+    | let rec x : T = abs in t                          ::   :: LetRec                    {{ com recursive let binding }}
+    | match t with p1 -> t1 | .. | pn -> tn end         ::   :: PatternMatching           {{ com pattern matching }}
     | ( t )                                             :: S :: paren
     | [ x |-> t ] t'                                    :: M :: tsub
     | [ X |-> T ] t                                     :: M :: Tsub
 
-  v :: 'v_' ::=                                     {{ com value }}
-    | x                   ::   :: Var                 {{ com variable }}
-    | \ ( x : T ) -> t    ::   :: Lam                 {{ com abstraction }}
+  v :: 'v_' ::=                                 {{ com value }}
+    | x                   ::   :: Var             {{ com variable }}
+    | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
 
-  abs :: 'abs_' ::=
-    | \ ( x : T ) -> t    ::   :: Lam
-    | \ ( X : K ) -> abs  ::   :: TLam
+  abs :: 'abs_' ::=                             {{ com lambda abstractions }}
+    | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
+    | \ ( X : K ) -> abs  ::   :: TLam            {{ com type abstraction }}
 
   p :: 'p_' ::=                                 {{ com pattern }}
     | V p1 .. pn        ::   :: Variant           {{ com variant }}
     | V                 ::   :: Variant0          {{ com variant with no parameter }}
     | x                 ::   :: Wildcard          {{ com wildcard variable }}
 
-  K :: 'K_' ::=                                    {{ com kinds }}
-    | *                   ::   :: Star               {{ com star }}
-    | K -> K'             ::   :: KArrow             {{ com kind arrow }}
+  K :: 'K_' ::=                                 {{ com kinds }}
+    | *                   ::   :: Star            {{ com star }}
+    | K -> K'             ::   :: KArrow          {{ com kind arrow }}
 
-  T :: T_ ::=                                           {{ com type }}
-    | X                       ::   :: var                     {{ com variable }}
-    | T -> T'                 ::   :: arrow                   {{ com function }}
-    | \ ( X : K ) , T         ::   :: abs                     {{ com operator abstraction }}
-    | forall ( X : K ) , T    ::   :: forall                  {{ com forall }}
-    | T T'                    ::   :: app                     {{ com operator application }}
+  T :: T_ ::=                                   {{ com type }}
+    | X                       ::   :: var         {{ com variable }}
+    | T -> T'                 ::   :: arrow       {{ com function }}
+    | \ ( X : K ) , T         ::   :: abs         {{ com operator abstraction }}
+    | forall ( X : K ) , T    ::   :: forall      {{ com forall }}
+    | T T'                    ::   :: app         {{ com operator application }}
     | ( T )                   :: S :: paren
     | [ X |-> T ] T'          :: M :: sub
 
-  G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
-    | empty               ::   :: em {{ com empty }}
-    | G , x : T           ::   :: vn {{ com vars }}
-    | G , X : K           ::   :: tn {{ com tvars }}
+  G {{ tex \Gamma }} :: G_ ::=                  {{ com type environment }}
+    | empty               ::   :: em              {{ com empty }}
+    | G , x : T           ::   :: vn              {{ com vars }}
+    | G , X : K           ::   :: tn              {{ com tvars }}
 
   terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -196,7 +196,7 @@ defns
 
 
     ---------------------------------------- :: AppAbs
-    (\(X : K), T11) T12 == [X |-> T12] T11
+    (\(X : K), T11) T12 == [X |-> T12]T11
 
 defns
   Jop :: '' ::=
@@ -214,7 +214,7 @@ defns
 
 
     --------------------------------------- :: AppAbs
-    (\(x : T) -> t12) v2 -->  [x |-> v2]t12
+    (\(x : T) -> t12) v2 --> [x |-> v2]t12
 
     t --> t'
     ---------------- :: TApp
