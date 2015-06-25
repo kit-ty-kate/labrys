@@ -19,6 +19,7 @@ grammar
     | let x = t1 in t2                                  ::   :: Let                       {{ com let binding }}
     | let rec x : T = abs in t                          ::   :: LetRec                    {{ com recursive let binding }}
     | match t with p1 -> t1 | .. | pn -> tn end         ::   :: PatternMatching           {{ com pattern matching }}
+    | ( t : T )                                         ::   :: Annot                     {{ com annotation }}
     | ( t )                                             :: S :: paren
     | [ x |-> t ] t'                                    :: M :: tsub
     | [ X |-> T ] t                                     :: M :: Tsub
@@ -33,7 +34,7 @@ grammar
 
   p :: 'p_' ::=                                 {{ com pattern }}
     | V p1 .. pn        ::   :: Variant           {{ com variant }}
-    | V                 ::   :: Variant0          {{ com variant with no parameter }}
+    | V                 :: S :: Variant0          {{ com variant with no parameter }}
     | x                 ::   :: Wildcard          {{ com wildcard variable }}
 
   K :: 'K_' ::=                                 {{ com kinds }}
@@ -128,6 +129,10 @@ defns
     G |- let rec x : T1 = abs in t2 : T2
 
 % TODO: Semantics of match
+
+    G |- t : T
+    ----------- :: Annot
+    (t : T) : T
 
 defns
   Jkind :: '' ::=
@@ -236,3 +241,7 @@ defns
     let rec x : T = abs in t --> [x |-> (let rec x : T = abs in abs)]t
 
 % TODO: Semantics of match
+
+    t --> t'
+    -------------- :: Annot
+    (t : T) --> t'
