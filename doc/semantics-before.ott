@@ -17,9 +17,13 @@ grammar
     | [ x |-> t ] t'            :: M :: tsub
     | [ X |-> T ] t             :: M :: Tsub
 
-  v :: 'v_' ::=                                         {{ com  value }}
+  v :: 'v_' ::=                                     {{ com value }}
+    | x                   ::   :: Var                 {{ com variable }}
     | \ ( x : T ) -> t    ::   :: Lam                 {{ com abstraction }}
-    | \ ( X : K ) -> t    ::   :: TLam                {{ com type abstraction }}
+
+  abs :: 'abs_' ::=
+    | \ ( x : T ) -> t    ::   :: Lam
+    | \ ( X : K ) -> abs  ::   :: TLam
 
   K :: 'K_' ::=                                    {{ com kinds }}
     | *                   ::   :: Star               {{ com star }}
@@ -58,6 +62,7 @@ grammar
 
 subrules
   v <:: t
+  abs <:: t
 
 freevars
   T X :: ftv
@@ -106,10 +111,10 @@ defns
     -------------------------- :: Let
     G |- let x = t1 in t2 : T2
 
-    G, x : T1 |- v : T1
+    G, x : T1 |- abs : T1
     G, x : T1 |- t2 : T2
     ---------------------------------- :: LetRec
-    G |- let rec x : T1 = v in t2 : T2
+    G |- let rec x : T1 = abs in t2 : T2
 
 defns
   Jkind :: '' ::=
@@ -210,10 +215,9 @@ defns
     -------------------------------------- :: Let1
     let x = t1 in t2 --> let x = t1' in t2
 
-    t1 --> t1'
-    ------------------------------------ :: Let2
-    let x = v in t1 --> let x = v in t1'
+    ----------------------------- :: Let2
+    let x = v in t --> [x |-> v]t
 
-    t --> t'
-    -------------------------------------------------- :: LetRec
-    let rec x : T = v in t --> let rec x : T = v in t'
+
+    ------------------------------------------------------------------ :: LetRec
+    let rec x : T = abs in t --> [x |-> (let rec x : T = abs in abs)]t
