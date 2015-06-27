@@ -1,3 +1,5 @@
+% Cervoise's semantics before implementing effects
+
 metavar termvar, x ::=
   {{ tex \mathit{[[termvar]]} }} {{ com  term variable  }}
 
@@ -33,9 +35,12 @@ grammar
     | \ ( X : K ) -> abs  ::   :: TLam            {{ com type abstraction }}
 
   p :: 'p_' ::=                                 {{ com pattern }}
-    | V p1 .. pn        ::   :: Variant           {{ com variant }}
-    | V                 :: S :: Variant0          {{ com variant with no parameter }}
+    | V patargs         ::   :: Variant           {{ com variant }}
     | x                 ::   :: Wildcard          {{ com wildcard variable }}
+
+  patargs :: 'patargs_' ::=                   {{ com pattern arguments }}
+    |                   ::   :: Empty           {{ com no arguments }}
+    | p1 .. pn          ::   :: Args            {{ com arguments }}
 
   K :: 'K_' ::=                                 {{ com kinds }}
     | *                   ::   :: Star            {{ com star }}
@@ -128,11 +133,11 @@ defns
     ---------------------------------- :: LetRec
     G |- let rec x : T1 = abs in t2 : T2
 
-% TODO: Semantics of match
+    % TODO: Semantics of match
 
     G |- t : T
     ----------- :: Annot
-    (t : T) : T
+    G |- (t : T) : T
 
 defns
   Jkind :: '' ::=
@@ -240,7 +245,7 @@ defns
     ------------------------------------------------------------------ :: LetRec
     let rec x : T = abs in t --> [x |-> (let rec x : T = abs in abs)]t
 
-% TODO: Semantics of match
+    % TODO: Semantics of match
 
     t --> t'
     -------------- :: Annot
