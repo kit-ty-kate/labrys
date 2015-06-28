@@ -31,15 +31,15 @@ grammar
     | let rec x : T = abs in t                          ::   :: LetRec                    {{ com recursive let binding }}
     | match t with p1 -> t1 | .. | pn -> tn end         ::   :: PatternMatching           {{ com pattern matching }}
     | ( t : T )                                         ::   :: Annot                     {{ com annotation }}
-    | fail [ T ] Exc failargs                           ::   :: Fail                      {{ com fail }}
+    | fail [ T ] Exc t1 .. tn                           ::   :: Fail                      {{ com fail }}
     | try t with pe1 -> t1 | .. | pen -> tn end         ::   :: Try                       {{ com try }}
     | ( t )                                             :: S :: paren
     | [ x |-> t ] t'                                    :: M :: tsub
     | [ X |-> T ] t                                     :: M :: Tsub
-    | failure                                           :: M :: Failure
+    | failure Exc                                       :: M :: Failure
 
   v :: 'v_' ::=                                 {{ com value }}
-%    | V                   ::   :: Variant         {{ com type constructors }} % TODO: Am I forgeting this ?
+%    | V                   ::   :: Variant         {{ com type constructors }} % TODO: Am I forgetting this ?
     | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
 
   abs :: 'abs_' ::=                             {{ com lambda abstractions }}
@@ -48,23 +48,11 @@ grammar
     | \ ( E : ! ) -> abs  ::   :: ELam            {{ com effect abstraction }}
 
   p :: 'p_' ::=                                 {{ com pattern }}
-    | V patargs         ::   :: Variant           {{ com variant }}
+    | V p1 .. pn        ::   :: Variant           {{ com variant }}
     | x                 ::   :: Wildcard          {{ com wildcard variable }}
 
   pe :: 'pe_' ::=                               {{ com try pattern }}
-    | Exc pateargs      ::   :: Exception         {{ com Exception pattern }}
-
-  pateargs :: 'pateargs_' ::=                   {{ com exception patterns arguments }}
-    |                   ::   :: Empty             {{ com no arguments }}
-    | x1 .. xn          ::   :: Args              {{ com arguments }}
-
-  failargs :: 'failargs_' ::=                   {{ com fail arguments }}
-    |                   ::   :: Empty             {{ com no arguments }}
-    | t1 .. tn          ::   :: Args              {{ com arguments }}
-
-  patargs :: 'patargs_' ::=                   {{ com pattern arguments }}
-    |                   ::   :: Empty           {{ com no arguments }}
-    | p1 .. pn          ::   :: Args            {{ com arguments }}
+    | Exc x1 .. xn      ::   :: Exception         {{ com Exception pattern }}
 
   effelm :: 'effelm_' ::=                                       {{ com effects elements }}
     | E                                 ::   :: Effect            {{ com effect }}
@@ -72,8 +60,7 @@ grammar
     | Exn [ Exc1 | .. | Excn ]          ::   :: Exn               {{ com exception }}
 
   eff :: 'eff_' ::=                                             {{ com effect }}
-    |                                  ::   :: EmptyEffect        {{ com empty effect }}
-    | effelm1 , .. , effelmn           ::   :: Effect             {{ com effect }}
+    | effelm1 , .. , effelmn           ::   :: Effect
 
   K :: 'K_' ::=                                 {{ com kinds }}
     | *                   ::   :: Star            {{ com star }}
@@ -311,12 +298,12 @@ defns
     t --> t' ::  :: reduce :: E_ {{ com Evaluation }} by
 
 
-    --------------------- :: App1Failure
-    failure t --> failure
+    ------------------------------- :: App1Failure
+    (failure Exc) t --> failure Exc
 
 
-    --------------------- :: App2Failure
-    v failure --> failure
+    ------------------------------- :: App2Failure
+    v (failure Exc) --> failure Exc
 
     t1 --> t1'
     -------------- :: App1
@@ -331,8 +318,8 @@ defns
     (\(x : T) -> t12) v2 --> [x |-> v2]t12
 
 
-    ----------------------- :: TAppFailure
-    failure [T] --> failure
+    --------------------------------- :: TAppFailure
+    (failure Exc) [T] --> failure Exc
 
     t --> t'
     ---------------- :: TApp
@@ -343,8 +330,8 @@ defns
     (\(X : K) -> t) [T] --> [X |-> T]t
 
 
-    --------------------------------- :: LetFailure
-    let x = failure in t2 --> failure
+    ----------------------------------------- :: LetFailure
+    let x = failure Exc in t2 --> failure Exc
 
     t1 --> t1'
     -------------------------------------- :: Let1
@@ -363,3 +350,11 @@ defns
     t --> t'
     -------------- :: Annot
     (t : T) --> t'
+
+    t --> t'
+    ---------------------------------------------------------------------- :: FailureArgs
+    fail [T] Exc v1 .. vn t t1 .. tn --> fail [T] Exc v1 .. vn t' t1 .. tn
+
+
+    ---------------------------------- :: Failure
+    fail [T] Exc v1 .. vn --> failure Exc

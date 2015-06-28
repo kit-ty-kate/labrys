@@ -28,7 +28,7 @@ grammar
     | [ X |-> T ] t                                     :: M :: Tsub
 
   v :: 'v_' ::=                                 {{ com value }}
-%    | V                   ::   :: Variant         {{ com type constructors }} % TODO: Am I forgeting this ?
+%    | V                   ::   :: Variant         {{ com type constructors }} % TODO: Am I forgetting this ?
     | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
 
   abs :: 'abs_' ::=                             {{ com lambda abstractions }}
@@ -36,12 +36,9 @@ grammar
     | \ ( X : K ) -> abs  ::   :: TLam            {{ com type abstraction }}
 
   p :: 'p_' ::=                                 {{ com pattern }}
-    | V patargs         ::   :: Variant           {{ com variant }}
+    | V p1 .. pn        ::   :: Variant           {{ com variant }}
     | x                 ::   :: Wildcard          {{ com wildcard variable }}
 
-  patargs :: 'patargs_' ::=                   {{ com pattern arguments }}
-    |                   ::   :: Empty           {{ com no arguments }}
-    | p1 .. pn          ::   :: Args            {{ com arguments }}
 
   K :: 'K_' ::=                                 {{ com kinds }}
     | *                   ::   :: Star            {{ com star }}
