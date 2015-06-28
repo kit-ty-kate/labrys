@@ -14,6 +14,7 @@ indexvar n ::=
 grammar
   t :: 't_' ::=                                                                         {{ com term }}
     | x                                                 ::   :: Var                       {{ com variable }}
+    | V                                                 ::   :: Variant                   {{ com type constructors }}
     | \ ( x : T ) -> t                                  ::   :: Lam                       {{ com abstraction }}
     | \ ( X : K ) -> t                                  ::   :: TLam                      {{ com type abstraction }}
     | t t'                                              ::   :: App                       {{ com application }}
@@ -27,7 +28,7 @@ grammar
     | [ X |-> T ] t                                     :: M :: Tsub
 
   v :: 'v_' ::=                                 {{ com value }}
-    | x                   ::   :: Var             {{ com variable }}
+%    | V                   ::   :: Variant         {{ com type constructors }} % TODO: Am I forgeting this ?
     | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
 
   abs :: 'abs_' ::=                             {{ com lambda abstractions }}
@@ -59,6 +60,7 @@ grammar
     | empty               ::   :: em              {{ com empty }}
     | G , x : T           ::   :: vn              {{ com vars }}
     | G , X : K           ::   :: tn              {{ com tvars }}
+    | G , V : T           ::   :: Vn              {{ com variants }}
 
   terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -68,14 +70,16 @@ grammar
     | |->                 ::   :: mapsto     {{ tex \mapsto }}
     | in                  ::   :: in         {{ tex \in }}
     | ==                  ::   :: equiv      {{ tex \equiv }}
+    | forall              ::   :: forall     {{ tex \forall }}
 
   formula :: 'formula_' ::=
-    | judgement           ::   :: judgement
-    | not ( formula )     ::   :: not
-    | x = x'              ::   :: eqv
-    | X == X'             ::   :: Teqv
-    | x : T in G          ::   :: xTG
-    | X : K in G          ::   :: XG
+    | judgement                         ::   :: judgement
+    | not ( formula )                   ::   :: not
+    | x = x'                            ::   :: eqv
+    | X == X'                           ::   :: Teqv
+    | x : T in G                        ::   :: xTG
+    | X : K in G                        ::   :: XG
+    | V : T in G                        ::   :: VTG
 
 subrules
   v <:: t
@@ -98,6 +102,10 @@ defns
     x:T in G
     -------- :: Var
     G |- x:T
+
+    V : T in G
+    ---------- :: Variant
+    G |- V : T
 
     G, x1 : T1 |- t : T
     G |- T1 : *
@@ -237,6 +245,7 @@ defns
     t1 --> t1'
     -------------------------------------- :: Let1
     let x = t1 in t2 --> let x = t1' in t2
+
 
     ----------------------------- :: Let2
     let x = v in t --> [x |-> v]t
