@@ -61,6 +61,7 @@ rule main = parse
   | "match" { Parser.Match }
   | "with" { Parser.With }
   | "end" { Parser.End }
+  | "∀"
   | "forall" { Parser.Forall }
   | "type" { Parser.Type }
   | "alias" { Parser.Alias }
