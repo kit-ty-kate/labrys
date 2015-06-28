@@ -16,6 +16,7 @@ metavar effect, E ::=
   {{ tex \mathit{[[effect]]} }} {{ com effect }}
 
 indexvar n ::=
+indexvar m ::=
 
 grammar
   t :: 't_' ::=                                                                         {{ com term }}
@@ -37,9 +38,10 @@ grammar
     | [ x |-> t ] t'                                            :: M :: tsub
     | [ X |-> T ] t                                             :: M :: Tsub
     | failure Exc                                               :: M :: Failure
+    | TConstr v1 .. vn                                          :: M :: TConstr
 
   v :: 'v_' ::=                                 {{ com value }}
-%    | V                   ::   :: Variant         {{ com type constructors }} % TODO: Am I forgetting this ?
+    | TConstr v1 .. vn    ::   :: TConstr         {{ com type constructors }}
     | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
 
   abs :: 'abs_' ::=                             {{ com lambda abstractions }}
@@ -57,7 +59,10 @@ grammar
   effelm :: 'effelm_' ::=                                       {{ com effects elements }}
     | E                                 ::   :: Effect            {{ com effect }}
     | IO                                ::   :: IOEffect          {{ com IO effect }}
-    | Exn [ Exc1 | .. | Excn ]          ::   :: Exn               {{ com exception }}
+    | Exn [ exn ]                       ::   :: Exn               {{ com exception }}
+
+  exn :: 'exn_' ::=                                             {{ com exceptions }}
+    | Exc1 | .. | Excn                  ::   :: Exc
 
   eff :: 'eff_' ::=                                             {{ com effect }}
     | effelm1 , .. , effelmn           ::   :: Effect
@@ -77,13 +82,14 @@ grammar
     | ( T )                   :: S :: paren
     | [ X |-> T ] T'          :: M :: sub
 
-  G {{ tex \Gamma }} :: G_ ::=                  {{ com type environment }}
-    | empty               ::   :: em              {{ com empty }}
-    | G , x : T           ::   :: vn              {{ com vars }}
-    | G , X : K           ::   :: tn              {{ com tvars }}
-    | G , V : T           ::   :: Vn              {{ com variants }}
-    | G , E               ::   :: eff             {{ com effects }}
-    | G , Exc T1 .. Tn  ::   :: exn             {{ com exceptions }}
+  G {{ tex \Gamma }} :: G_ ::=                                  {{ com type environment }}
+    | empty                                     ::   :: em        {{ com empty }}
+    | G , x : T                                 ::   :: vn        {{ com vars }}
+    | G , V : T                                 :: S :: Vn'       {{ com type constructors (contained in the above values environment) }}
+    | G , X : K                                 ::   :: tn        {{ com tvars }}
+    | G , T : { V1 : T1 V2 : T2 .. Vn : Tn }    ::   :: Vn        {{ com variants }}
+    | G , Exc T1 .. Tn                          ::   :: exn       {{ com exceptions }}
+    | G , E                                     ::   :: eff       {{ com effects }}
 
   terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -100,15 +106,16 @@ grammar
     | judgement                         ::   :: judgement
     | formula1 .. formulan              ::   :: dots
     | not ( formula )                   ::   :: not
-    | x = x'                            ::   :: eqv
-    | X == X'                           ::   :: Teqv
+    | T == T'                           ::   :: Teqv
     | x : T in G                        ::   :: xTG
     | X : K in G                        ::   :: XG
     | V : T in G                        ::   :: VTG
-    | Exc T1 .. Tn in G               ::   :: ExcTG
-    | eff is a permutation of eff'      ::   :: EffPermute
-    | unify duplicates eff              ::   :: UnifyDuplicates
-    | Exc matches pe1 .. pen            ::   :: ExceptionPatternMatching
+    | Exc T1 .. Tn in G                 ::   :: ExcTG
+    | set ( eff ) = set ( eff' )        ::   :: SetEq1
+    | set ( exn ) = set ( exn' )        ::   :: SetEq2
+    | Exc matches pe                    ::   :: ExceptionPatternMatching
+    | n = 0                             ::   :: neqz
+    | n > 0                             ::   :: ngtz
 
 subrules
   v <:: t
@@ -128,9 +135,9 @@ defns
   defn
     G |- t : T :: :: GtT :: T_ {{ com Typing }} by
 
-    x:T in G
-    -------- :: Var
-    G |- x:T
+    x : T in G
+    ---------- :: Var
+    G |- x : T
 
     V : T in G
     ---------- :: Variant
@@ -279,9 +286,7 @@ defns
     ---------- :: Refl
     eff == eff
 
-    unify duplicates effelm1, .., effelmn
-    unify duplicates effelm1', .., effelmn'
-    effelm1, .., effelmn is a permutation of effelm1', .., effelmn'
+    set(effelm1, .., effelmn) = set(effelm1', .., effelmn')
     --------------------------------------------------------------- :: Eq
     effelm1, .., effelmn == effelm1', .., effelmn'
 
@@ -304,9 +309,7 @@ defns
     ------------------ :: Trans
     effelm1 == effelm3
 
-    unify duplicates Exn [Exc1 | .. | Excn]
-    unify duplicates Exn [Exc1' | .. | Excn']
-    Exn [Exc1 | .. | Excn] is a permutation of Exn [Exc1' | .. | Excn']
+    set(Exc1 | .. | Excn) = set(Exc1' | .. | Excn')
     ------------------------------------------------------------------- :: ExnEq
     Exn [Exc1 | .. | Excn] == Exn [Exc1' | .. | Excn']
 
@@ -315,6 +318,10 @@ defns
 
   defn
     t --> t' ::  :: reduce :: E_ {{ com Evaluation }} by
+
+
+    ------------- :: Variant
+    V --> TConstr
 
 
     ------------------------------- :: App1Failure
@@ -331,6 +338,10 @@ defns
     t1 --> t1'
     -------------- :: App2
     v t1 --> v t1'
+
+
+    --------------------------------------------- :: AppVariant
+    (TConstr v1 .. vn) vm --> TConstr v1 .. vn vm
 
 
     --------------------------------------- :: AppAbs
@@ -364,6 +375,10 @@ defns
     ------------------------------------------------------------------ :: LetRec
     let rec x : T = abs in t --> [x |-> (let rec x : T = abs in abs)]t
 
+
+    ------------------------------------------------------------------------------ :: MatchFailure
+    match failure Exc with p1 -> t1 | p2 -> t2 | .. | pn -> tn end --> failure Exc
+
     t --> t'
     -------------------------------------------------------------------------------------------------------------- :: Match1
     match t with p1 -> t1 | p2 -> t2 | .. | pn -> tn end --> match t' with p1 -> t1 | p2 -> t2 | .. | pn -> tn end
@@ -390,8 +405,12 @@ defns
     ----------------------------------------------------------- :: Try2
     try v with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> v
 
-    not (Exc matches pe1 pe2 .. pen)
+    n = 0
     ------------------------------------------------------------------------------- :: Try3
     try failure Exc with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> failure Exc
+
+%    n > 0
+%    ------------------------------------------------------------------------------- :: Try4
+%    try failure Exc with Exc t1' .. tn' -> t1 | pe2 -> t2 | .. | pen -> tn end --> []t1
 
     % TODO: Semantics of try matching something
