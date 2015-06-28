@@ -19,24 +19,24 @@ indexvar n ::=
 
 grammar
   t :: 't_' ::=                                                                         {{ com term }}
-    | x                                                 ::   :: Var                       {{ com variable }}
-    | V                                                 ::   :: Variant                   {{ com type constructors }}
-    | \ ( x : T ) -> t                                  ::   :: Lam                       {{ com abstraction }}
-    | \ ( X : K ) -> t                                  ::   :: TLam                      {{ com type abstraction }}
-    | \ ( E : ! ) -> t                                  ::   :: ELam                      {{ com effect abstraction }}
-    | t t'                                              ::   :: App                       {{ com application }}
-    | t [ T ]                                           ::   :: TApp                      {{ com type application }}
-    | t [ [ eff ] ]                                     ::   :: EApp                      {{ com effect application }}
-    | let x = t1 in t2                                  ::   :: Let                       {{ com let binding }}
-    | let rec x : T = abs in t                          ::   :: LetRec                    {{ com recursive let binding }}
-    | match t with p1 -> t1 | .. | pn -> tn end         ::   :: PatternMatching           {{ com pattern matching }}
-    | ( t : T )                                         ::   :: Annot                     {{ com annotation }}
-    | fail [ T ] Exc t1 .. tn                           ::   :: Fail                      {{ com fail }}
-    | try t with pe1 -> t1 | .. | pen -> tn end         ::   :: Try                       {{ com try }}
-    | ( t )                                             :: S :: paren
-    | [ x |-> t ] t'                                    :: M :: tsub
-    | [ X |-> T ] t                                     :: M :: Tsub
-    | failure Exc                                       :: M :: Failure
+    | x                                                         ::   :: Var               {{ com variable }}
+    | V                                                         ::   :: Variant           {{ com type constructors }}
+    | \ ( x : T ) -> t                                          ::   :: Lam               {{ com abstraction }}
+    | \ ( X : K ) -> t                                          ::   :: TLam              {{ com type abstraction }}
+    | \ ( E : ! ) -> t                                          ::   :: ELam              {{ com effect abstraction }}
+    | t t'                                                      ::   :: App               {{ com application }}
+    | t [ T ]                                                   ::   :: TApp              {{ com type application }}
+    | t [ [ eff ] ]                                             ::   :: EApp              {{ com effect application }}
+    | let x = t1 in t2                                          ::   :: Let               {{ com let binding }}
+    | let rec x : T = abs in t                                  ::   :: LetRec            {{ com recursive let binding }}
+    | match t with p1 -> t1 | p2 -> t2 | .. | pn -> tn end      ::   :: PatternMatching   {{ com pattern matching }}
+    | ( t : T )                                                 ::   :: Annot             {{ com annotation }}
+    | fail [ T ] Exc t1 .. tn                                   ::   :: Fail              {{ com fail }}
+    | try t with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end     ::   :: Try               {{ com try }}
+    | ( t )                                                     :: S :: paren
+    | [ x |-> t ] t'                                            :: M :: tsub
+    | [ X |-> T ] t                                             :: M :: Tsub
+    | failure Exc                                               :: M :: Failure
 
   v :: 'v_' ::=                                 {{ com value }}
 %    | V                   ::   :: Variant         {{ com type constructors }} % TODO: Am I forgetting this ?
@@ -83,6 +83,7 @@ grammar
     | G , X : K           ::   :: tn              {{ com tvars }}
     | G , V : T           ::   :: Vn              {{ com variants }}
     | G , E               ::   :: eff             {{ com effects }}
+    | G , Exc T1 .. Tn  ::   :: exn             {{ com exceptions }}
 
   terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -97,14 +98,17 @@ grammar
 
   formula :: 'formula_' ::=
     | judgement                         ::   :: judgement
+    | formula1 .. formulan              ::   :: dots
     | not ( formula )                   ::   :: not
     | x = x'                            ::   :: eqv
     | X == X'                           ::   :: Teqv
     | x : T in G                        ::   :: xTG
     | X : K in G                        ::   :: XG
     | V : T in G                        ::   :: VTG
+    | Exc T1 .. Tn in G               ::   :: ExcTG
     | eff is a permutation of eff'      ::   :: EffPermute
     | unify duplicates eff              ::   :: UnifyDuplicates
+    | Exc matches pe1 .. pen            ::   :: ExceptionPatternMatching
 
 subrules
   v <:: t
@@ -166,11 +170,26 @@ defns
     ---------------------------------- :: LetRec
     G |- let rec x : T1 = abs in t2 : T2
 
-    % TODO: Semantics of match
+    % TODO: Check p types
+    G |- t1 : T2  G |- t2 : T2 .. G |- tn : T2
+    G |- t : T1
+    -------------------------------------------------------------- :: Match
+    G |- match t with p1 -> t1 | p2 -> t2 | .. | pn -> tn end : T2
 
     G |- t : T
     ----------- :: Annot
     G |- (t : T) : T
+
+    G |- t1 : T1 .. G |- tn : Tn
+    Exc T1 .. Tn in G
+    ------------------------------ :: Fail
+    G |- fail [T] Exc t1 .. tn : T
+
+    % TODO: Check pe types
+    G |- t1 : T  G |- t2 : T .. G |- tn : T
+    G |- t : T
+    -------------------------------------------------------------- :: Try
+    G |- try t with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end : T
 
 defns
   Jkind :: '' ::=
@@ -345,6 +364,10 @@ defns
     ------------------------------------------------------------------ :: LetRec
     let rec x : T = abs in t --> [x |-> (let rec x : T = abs in abs)]t
 
+    t --> t'
+    -------------------------------------------------------------------------------------------------------------- :: Match1
+    match t with p1 -> t1 | p2 -> t2 | .. | pn -> tn end --> match t' with p1 -> t1 | p2 -> t2 | .. | pn -> tn end
+
     % TODO: Semantics of match
 
     t --> t'
@@ -358,3 +381,17 @@ defns
 
     ---------------------------------- :: Failure
     fail [T] Exc v1 .. vn --> failure Exc
+
+    t --> t'
+    ---------------------------------------------------------------------------------------------------------------- :: Try1
+    try t with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> try t' with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end
+
+
+    ----------------------------------------------------------- :: Try2
+    try v with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> v
+
+    not (Exc matches pe1 pe2 .. pen)
+    ------------------------------------------------------------------------------- :: Try3
+    try failure Exc with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> failure Exc
+
+    % TODO: Semantics of try matching something
