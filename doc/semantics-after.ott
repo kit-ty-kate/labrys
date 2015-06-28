@@ -20,6 +20,7 @@ indexvar n ::=
 grammar
   t :: 't_' ::=                                                                         {{ com term }}
     | x                                                 ::   :: Var                       {{ com variable }}
+    | V                                                 ::   :: Variant                   {{ com type constructors }}
     | \ ( x : T ) -> t                                  ::   :: Lam                       {{ com abstraction }}
     | \ ( X : K ) -> t                                  ::   :: TLam                      {{ com type abstraction }}
     | \ ( E : ! ) -> t                                  ::   :: ELam                      {{ com effect abstraction }}
@@ -35,9 +36,10 @@ grammar
     | ( t )                                             :: S :: paren
     | [ x |-> t ] t'                                    :: M :: tsub
     | [ X |-> T ] t                                     :: M :: Tsub
+    | failure                                           :: M :: Failure
 
   v :: 'v_' ::=                                 {{ com value }}
-    | x                   ::   :: Var             {{ com variable }}
+%    | V                   ::   :: Variant         {{ com type constructors }} % TODO: Am I forgeting this ?
     | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
 
   abs :: 'abs_' ::=                             {{ com lambda abstractions }}
@@ -79,7 +81,7 @@ grammar
 
   T :: T_ ::=                                   {{ com type }}
     | X                       ::   :: var         {{ com variable }}
-    | T -> T'                 ::   :: PureArrow   {{ com pure function }}
+    | T -> T'                 :: S :: PureArrow   {{ com pure function }}
     | T -[ eff ]-> T'         ::   :: Arrow       {{ com function }}
     | \ ( X : K ) , T         ::   :: abs         {{ com operator abstraction }}
     | forall ( X : K ) , T    ::   :: forall      {{ com forall }}
@@ -92,6 +94,8 @@ grammar
     | empty               ::   :: em              {{ com empty }}
     | G , x : T           ::   :: vn              {{ com vars }}
     | G , X : K           ::   :: tn              {{ com tvars }}
+    | G , V : T           ::   :: Vn              {{ com variants }}
+    | G , E               ::   :: eff             {{ com effects }}
 
   terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -102,14 +106,18 @@ grammar
     | in                  ::   :: in         {{ tex \in }}
     | ==                  ::   :: equiv      {{ tex \equiv }}
     | !                   ::   :: phi        {{ tex \varphi }}
+    | forall              ::   :: forall     {{ tex \forall }}
 
   formula :: 'formula_' ::=
-    | judgement           ::   :: judgement
-    | not ( formula )     ::   :: not
-    | x = x'              ::   :: eqv
-    | X == X'             ::   :: Teqv
-    | x : T in G          ::   :: xTG
-    | X : K in G          ::   :: XG
+    | judgement                         ::   :: judgement
+    | not ( formula )                   ::   :: not
+    | x = x'                            ::   :: eqv
+    | X == X'                           ::   :: Teqv
+    | x : T in G                        ::   :: xTG
+    | X : K in G                        ::   :: XG
+    | V : T in G                        ::   :: VTG
+    | eff is a permutation of eff'      ::   :: EffPermute
+    | unify duplicates eff              ::   :: UnifyDuplicates
 
 subrules
   v <:: t
@@ -132,6 +140,10 @@ defns
     x:T in G
     -------- :: Var
     G |- x:T
+
+    V : T in G
+    ---------- :: Variant
+    G |- V : T
 
     G, x1 : T1 |- t : T
     G |- T1 : *
@@ -195,11 +207,15 @@ defns
     G |- T1 : *
     G |- T2 : *
     ----------------- :: Arrow
-    G |- T1 -> T2 : *
+    G |- T1 -[eff]-> T2 : *
 
     G, X : K1 |- T2 : *
     ----------------------------- :: All
     G |- forall (X : K1), T2 : *
+
+    G, E |- T : *
+    -------------------------- :: EAll
+    G |- forall (E : !), T : *
 
 defns
   Jequiv :: '' ::=
@@ -221,13 +237,18 @@ defns
     T1 == T3
 
     T11 == T21
+    eff1 == eff2
     T12 == T22
-    ------------------------ :: Arrow
-    T11 -> T12 == T21 -> T22
+    ---------------------------------- :: Arrow
+    T11 -[eff1]-> T12 == T21 -[eff2]-> T22
 
     T1 == T2
     ---------------------------------------- :: All
     forall (X : K), T1 == forall (X : K), T2
+
+    T1 == T2
+    ---------------------------------------- :: EAll
+    forall (E : !), T1 == forall (E : !), T2
 
     T1 == T2
     -------------------------------- :: Abs
@@ -243,10 +264,59 @@ defns
     (\(X : K), T11) T12 == [X |-> T12]T11
 
 defns
+  JEffEquiv :: '' ::=
+
+  defn
+    eff == eff' :: :: effequiv :: EffEq_ {{ com Effects equivalence }} by
+
+
+    ---------- :: Refl
+    eff == eff
+
+    unify duplicates effelm1, .., effelmn
+    unify duplicates effelm1', .., effelmn'
+    effelm1, .., effelmn is a permutation of effelm1', .., effelmn'
+    --------------------------------------------------------------- :: Eq
+    effelm1, .., effelmn == effelm1', .., effelmn'
+
+defns
+  JEffElmEquiv :: '' ::=
+
+  defn
+    effelm == effelm' :: :: effelmequiv :: EffElmEq_ {{ com Effect element equivalence }} by
+
+
+    ---------------- :: Refl
+    effelm == effelm
+
+    effelm == effelm'
+    ----------------- :: Symm
+    effelm' == effelm
+
+    effelm1 == effelm2
+    effelm2 == effelm3
+    ------------------ :: Trans
+    effelm1 == effelm3
+
+    unify duplicates Exn [Exc1 | .. | Excn]
+    unify duplicates Exn [Exc1' | .. | Excn']
+    Exn [Exc1 | .. | Excn] is a permutation of Exn [Exc1' | .. | Excn']
+    ------------------------------------------------------------------- :: ExnEq
+    Exn [Exc1 | .. | Excn] == Exn [Exc1' | .. | Excn']
+
+defns
   Jop :: '' ::=
 
   defn
     t --> t' ::  :: reduce :: E_ {{ com Evaluation }} by
+
+
+    --------------------- :: App1Failure
+    failure t --> failure
+
+
+    --------------------- :: App2Failure
+    v failure --> failure
 
     t1 --> t1'
     -------------- :: App1
@@ -260,6 +330,10 @@ defns
     --------------------------------------- :: AppAbs
     (\(x : T) -> t12) v2 --> [x |-> v2]t12
 
+
+    ----------------------- :: TAppFailure
+    failure [T] --> failure
+
     t --> t'
     ---------------- :: TApp
     t [T] --> t' [T]
@@ -268,9 +342,14 @@ defns
     ---------------------------------- :: TAppTAbs
     (\(X : K) -> t) [T] --> [X |-> T]t
 
+
+    --------------------------------- :: LetFailure
+    let x = failure in t2 --> failure
+
     t1 --> t1'
     -------------------------------------- :: Let1
     let x = t1 in t2 --> let x = t1' in t2
+
 
     ----------------------------- :: Let2
     let x = v in t --> [x |-> v]t
