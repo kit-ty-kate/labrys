@@ -30,14 +30,15 @@ grammar
     | t [ [ eff ] ]                                             ::   :: EApp              {{ com effect application }}
     | let x = t1 in t2                                          ::   :: Let               {{ com let binding }}
     | let rec x : T = abs in t                                  ::   :: LetRec            {{ com recursive let binding }}
-    | match t with p1 -> t1 | p2 -> t2 | .. | pn -> tn end      ::   :: PatternMatching   {{ com pattern matching }}
+    | match t with p1 -> t1 | .. | pn -> tn end                 ::   :: PatternMatching   {{ com pattern matching }}
     | ( t : [ eff ] T )                                         ::   :: Annot             {{ com annotation }}
     | fail [ T ] Exc t1 .. tn                                   ::   :: Fail              {{ com fail }}
-    | try t with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end     ::   :: Try               {{ com try }}
+    | try t with pe1 -> t1 | .. | pen -> tn end                 ::   :: Try               {{ com try }}
+    | t ; t'                                                    :: S :: Seq               {{ com sequence == let (\_ : Unit) = t in t' }}
     | ( t )                                                     :: S :: paren
-    | [ x |-> t ] t'                                            :: M :: tsub
+    | [ x1 |-> t1 , .. , xn |-> tn ] t                          :: M :: tsub
     | [ X |-> T ] t                                             :: M :: Tsub
-    | failure Exc                                               :: M :: Failure
+    | failure exnval                                            :: M :: Failure
     | TConstr v1 .. vn                                          :: M :: TConstr
 
   v :: 'v_' ::=                                 {{ com value }}
@@ -57,6 +58,9 @@ grammar
   pe :: 'pe_' ::=                               {{ com try pattern }}
     | Exc x1 .. xn      ::   :: Exception         {{ com Exception pattern }}
 
+  exnval :: 'exnval_' ::=                       {{ com runtime value of exceptions }}
+    | Exc v1 .. vn      ::   :: Exc
+
   effelm :: 'effelm_' ::=                                       {{ com effects elements }}
     | E                                 ::   :: Effect            {{ com effect }}
     | IO                                ::   :: IOEffect          {{ com IO effect }}
@@ -75,7 +79,8 @@ grammar
 
   T :: T_ ::=                                   {{ com type }}
     | X                       ::   :: var         {{ com variable }}
-    | T -> T'                 :: S :: PureArrow   {{ com pure function }}
+    | Unit                    :: L :: unit        {{ com Unit type (contained in the module opened by default) }}
+    | T -> T'                 :: S :: PureArrow   {{ com pure function == T -[]-> T' }}
     | T -[ eff ]-> T'         ::   :: Arrow       {{ com function }}
     | \ ( X : K ) , T         ::   :: abs         {{ com operator abstraction }}
     | forall ( X : K ) , T    ::   :: forall      {{ com forall }}
@@ -99,24 +104,25 @@ grammar
     |  ->                 ::   :: arrow      {{ tex \rightarrow }}
     | |-                  ::   :: turnstile  {{ tex \vdash }}
     | |->                 ::   :: mapsto     {{ tex \mapsto }}
-    | in                  ::   :: in         {{ tex \in }}
+    | isin                ::   :: isin       {{ tex \in }}
     | ==                  ::   :: equiv      {{ tex \equiv }}
     | !                   ::   :: phi        {{ tex \varphi }}
     | forall              ::   :: forall     {{ tex \forall }}
     | U                   ::   :: union      {{ tex \cup }}
+    | |>                  ::   :: rhd        {{ tex \rhd }}
+    | <-                  ::   :: leftarrow  {{ tex \leftarrow }}
 
   formula :: 'formula_' ::=
     | judgement                         ::   :: judgement
     | formula1 .. formulan              ::   :: dots
     | not ( formula )                   ::   :: not
     | T == T'                           ::   :: Teqv
-    | x : T in G                        ::   :: xTG
-    | X : K in G                        ::   :: XG
-    | V : T in G                        ::   :: VTG
-    | Exc T1 .. Tn in G                 ::   :: ExcTG
+    | x : T isin G                      ::   :: xTG
+    | X : K isin G                      ::   :: XG
+    | V : T isin G                      ::   :: VTG
+    | Exc T1 .. Tn isin  G              ::   :: ExcTG
     | set ( eff ) = set ( eff' )        ::   :: SetEq1
     | set ( exn ) = set ( exn' )        ::   :: SetEq2
-    | Exc matches pe                    ::   :: ExceptionPatternMatching
     | n = 0                             ::   :: neqz
     | n > 0                             ::   :: ngtz
 
@@ -138,12 +144,12 @@ defns
   defn
     G |- t : [ eff ] T :: :: GtT :: T_ {{ com Typing }} by
 
-    x : T in G
-    ---------- :: Var
+    x : T isin G
+    ------------- :: Var
     G |- x : [] T
 
-    V : T in G
-    ---------- :: Variant
+    V : T isin G
+    ------------- :: Variant
     G |- V : [] T
 
     G, x1 : T1 |- t : [eff] T
@@ -181,25 +187,25 @@ defns
     G |- let rec x : T1 = abs in t2 : [eff] T2
 
     % TODO: Check p types
-    G |- t1 : [eff1] T2  G |- t2 : [eff2] T2 .. G |- tn : [effn] T2
+    G |- t1 : [eff1] T2 .. G |- tn : [effn] T2
     G |- t : [eff] T1
-    --------------------------------------------------------------------------------------- :: Match
-    G |- match t with p1 -> t1 | p2 -> t2 | .. | pn -> tn end : [eff U eff1 U eff2 U .. U effn] T2
+    ---------------------------------------------------------------------------- :: Match
+    G |- match t with p1 -> t1 | .. | pn -> tn end : [eff U eff1 U .. U effn] T2
 
     G |- t : [eff] T
     ---------------------------- :: Annot
     G |- (t : [eff] T) : [eff] T
 
     G |- t1 : [eff1] T1 .. G |- tn : [effn] Tn
-    Exc T1 .. Tn in G
+    Exc T1 .. Tn isin G
     -------------------------------------------------------- :: Fail
     G |- fail [T] Exc t1 .. tn : [Exn [Exc] U eff1 U effn] T
 
     % TODO: Check pe types
-%    G |- t1 : T  G |- t2 : T .. G |- tn : T
+%    G |- t1 : T .. G |- tn : T
 %    G |- t : T
 %    -------------------------------------------------------------- :: Try
-%    G |- try t with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end : T
+%    G |- try t with pe1 -> t1 | .. | pen -> tn end : T
 
 defns
   Jkind :: '' ::=
@@ -207,8 +213,8 @@ defns
   defn
     G |- T : K :: :: GT :: K_ {{ com Kinding }} by
 
-    X : K in G
-    ---------- :: TVar
+    X : K isin G
+    ------------ :: TVar
     G |- X : K
 
     G, X : K1 |- T : K2
@@ -222,7 +228,7 @@ defns
 
     G |- T1 : *
     G |- T2 : *
-    ----------------- :: Arrow
+    ----------------------- :: Arrow
     G |- T1 -[eff]-> T2 : *
 
     G, X : K1 |- T2 : *
@@ -327,12 +333,12 @@ defns
     V --> TConstr
 
 
-    ------------------------------- :: App1Failure
-    (failure Exc) t --> failure Exc
+    ------------------------------------- :: App1Failure
+    (failure exnval) t --> failure exnval
 
 
-    ------------------------------- :: App2Failure
-    v (failure Exc) --> failure Exc
+    ------------------------------------- :: App2Failure
+    v (failure exnval) --> failure exnval
 
     t1 --> t1'
     -------------- :: App1
@@ -351,8 +357,8 @@ defns
     (\(x : T) -> t12) v2 --> [x |-> v2]t12
 
 
-    --------------------------------- :: TAppFailure
-    (failure Exc) [T] --> failure Exc
+    --------------------------------------- :: TAppFailure
+    (failure exnval) [T] --> failure exnval
 
     t --> t'
     ---------------- :: TApp
@@ -363,8 +369,8 @@ defns
     (\(X : K) -> t) [T] --> [X |-> T]t
 
 
-    ----------------------------------------- :: LetFailure
-    let x = failure Exc in t2 --> failure Exc
+    ----------------------------------------------- :: LetFailure
+    let x = failure exnval in t2 --> failure exnval
 
     t1 --> t1'
     -------------------------------------- :: Let1
@@ -379,12 +385,12 @@ defns
     let rec x : T = abs in t --> [x |-> (let rec x : T = abs in abs)]t
 
 
-    ------------------------------------------------------------------------------ :: MatchFailure
-    match failure Exc with p1 -> t1 | p2 -> t2 | .. | pn -> tn end --> failure Exc
+    ------------------------------------------------------------------------------------ :: MatchFailure
+    match failure exnval with p1 -> t1 | .. | pn -> tn end --> failure exnval
 
     t --> t'
-    -------------------------------------------------------------------------------------------------------------- :: Match1
-    match t with p1 -> t1 | p2 -> t2 | .. | pn -> tn end --> match t' with p1 -> t1 | p2 -> t2 | .. | pn -> tn end
+    ---------------------------------------------------------------------------------------- :: Match1
+    match t with p1 -> t1 | .. | pn -> tn end --> match t' with p1 -> t1 | .. | pn -> tn end
 
     % TODO: Semantics of match
 
@@ -397,23 +403,37 @@ defns
     fail [T] Exc v1 .. vn t t1 .. tn --> fail [T] Exc v1 .. vn t' t1 .. tn
 
 
-    ---------------------------------- :: Failure
-    fail [T] Exc v1 .. vn --> failure Exc
+    ---------------------------------------------- :: Failure
+    fail [T] Exc v1 .. vn --> failure Exc v1 .. vn
 
     t --> t'
-    ---------------------------------------------------------------------------------------------------------------- :: Try1
-    try t with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> try t' with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end
+    ---------------------------------------------------------------------------------------- :: Try1
+    try t with pe1 -> t1 | .. | pen -> tn end --> try t' with pe1 -> t1 | .. | pen -> tn end
 
 
-    ----------------------------------------------------------- :: Try2
-    try v with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> v
+    ----------------------------------------------- :: Try2
+    try v with pe1 -> t1 | .. | pen -> tn end --> v
 
     n = 0
-    ------------------------------------------------------------------------------- :: Try3
-    try failure Exc with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> failure Exc
+    ------------------------------------------------------------------------------------- :: Try3
+    try failure exnval with pe1 -> t1 | .. | pen -> tn end --> failure exnval
 
-%    n > 0
-%    ------------------------------------------------------------------------------- :: Try4
-%    try failure Exc with Exc t1' .. tn' -> t1 | pe2 -> t2 | .. | pen -> tn end --> []t1
+    n > 0
+    exnval matches pe1 |> {x1 <- v1, .., xn <- vn}
+    --------------------------------------------------------------------------------------- :: Try4
+    try failure exnval with pe1 -> t1 | .. | pen -> tn end --> [x1 |-> v1, .., xn |-> vn]t1
 
-    % TODO: Semantics of try matching something
+    n > 0
+    not (exnval matches pe1 |> {x1 <- v1, .., xn <- vn})
+    ----------------------------------------------------------------------------------------------------------------------------- :: Try5
+    try failure exnval with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> try failure exnval with pe2 -> t2 | .. | pen -> tn end
+
+defns
+  JExnMatches :: '' ::=
+
+  defn
+    exnval matches pe |> { x1 <- v1 , .. , xn <- vn } :: :: exnmatches :: ExnMatches_ {{ com Exception pattern matching with substitution creation }} by
+
+
+    --------------------------------------------------------------- :: Matches
+    Exc v1 .. vn matches Exc x1 .. xn |> {x1 <- v1, .., xn <- vn}
