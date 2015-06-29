@@ -44,3 +44,10 @@ setup.exe: setup.ml
 .PHONY: build doc test all install uninstall reinstall clean distclean configure
 
 # OASIS_STOP
+
+DOC = doc
+
+build-semantics: $(DOC)/semantics.ott
+	ott -i $< -o $(<:.ott=.tex) \
+	    && rubber --pdf --into $(DOC) $(<:.ott=.tex) \
+	    && $(RM) $(<:.ott=.aux) $(<:.ott=.log) $(<:.ott=.tex)
