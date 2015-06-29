@@ -1,13 +1,13 @@
 % Cervoise's semantics after implementing effects
 
 metavar termvar, x ::=
-  {{ tex \mathit{[[termvar]]} }} {{ com  term variable  }}
+  {{ tex \mathit{[[termvar]]} }} {{ com term variable }}
 
 metavar variant, V ::=
   {{ tex \mathit{[[variant]]} }} {{ com variant }}
 
 metavar typvar, X ::=
-  {{ tex \mathit{[[typvar]]} }} {{ com  type variable  }}
+  {{ tex \mathit{[[typvar]]} }} {{ com type variable }}
 
 metavar exc, Exc ::=
   {{ tex \mathit{[[exc]]} }} {{ com exception }}
@@ -38,6 +38,7 @@ grammar
     | ( t )                                                     :: S :: paren
     | [ x1 |-> t1 , .. , xn |-> tn ] t                          :: M :: tsub
     | [ X |-> T ] t                                             :: M :: Tsub
+    | [ E |-> eff ] t                                           :: M :: Esub
     | failure exnval                                            :: M :: Failure
     | TConstr V v1 .. vn                                        :: M :: TConstr
 
@@ -72,6 +73,8 @@ grammar
   eff :: 'eff_' ::=                                             {{ com effect }}
     | effelm1 , .. , effelmn           ::   :: Effect
     | eff1 U eff2 U .. U effn          :: M :: Union
+    | eff1 \\ [ exn ]                  :: M :: Substraction
+    | ( eff )                          :: S :: Paren
 
   K :: 'K_' ::=                                 {{ com kinds }}
     | *                   ::   :: Star            {{ com star }}
@@ -88,18 +91,23 @@ grammar
     | T T'                    ::   :: app         {{ com operator application }}
     | ( T )                   :: S :: paren
     | [ X |-> T ] T'          :: M :: sub
+    | [ E |-> eff ] T         :: M :: Esub
 
   G {{ tex \Gamma }} :: G_ ::=                                  {{ com type environment }}
     | empty                                     ::   :: em        {{ com empty }}
     | G , x : T                                 ::   :: vn        {{ com vars }}
     | G , V : T                                 :: S :: Vn'       {{ com type constructors (contained in the above values environment) }}
     | G , X : K                                 ::   :: tn        {{ com tvars }}
-    | G , T : { V1 : T1 V2 : T2 .. Vn : Tn }    ::   :: Vn        {{ com variants }}
-    | G , Exc T1 .. Tn                          ::   :: exn       {{ com exceptions }}
+    | G , T : { V1 : T1 .. Vn : Tn }            ::   :: Vn        {{ com variants }}
+    | G , Exc excTy                             ::   :: exn       {{ com exceptions }}
     | G , E                                     ::   :: eff       {{ com effects }}
+
+  excTy :: excTy_ ::=
+    | T1 .. Tn            ::   :: Ty
 
   terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
+    | \\                  ::   :: backslash  {{ tex \backslash }}
     | -->                 ::   :: red        {{ tex \longrightarrow }}
     |  ->                 ::   :: arrow      {{ tex \rightarrow }}
     | |-                  ::   :: turnstile  {{ tex \vdash }}
@@ -113,16 +121,18 @@ grammar
     | <-                  ::   :: leftarrow  {{ tex \leftarrow }}
 
   formula :: 'formula_' ::=
-    | judgement                         ::   :: judgement
-    | formula1 .. formulan              ::   :: dots
-    | not ( formula )                   ::   :: not
-    | T == T'                           ::   :: Teqv
-    | x : T isin G                      ::   :: xTG
-    | X : K isin G                      ::   :: XG
-    | V : T isin G                      ::   :: VTG
-    | Exc T1 .. Tn isin  G              ::   :: ExcTG
-    | set ( eff ) = set ( eff' )        ::   :: SetEq1
-    | set ( exn ) = set ( exn' )        ::   :: SetEq2
+    | judgement                             ::   :: judgement
+    | formula1 .. formulan                  ::   :: dots
+    | not ( formula )                       ::   :: not
+    | T == T'                               ::   :: Teqv
+    | x : T isin G                          ::   :: xTG
+    | X : K isin G                          ::   :: XG
+    | V : T isin G                          ::   :: VTG
+    | T : { V1 : T1 .. Vn : Tn }  isin G    ::   :: TVnG
+    | E isin G                              ::   :: EG
+    | Exc excTy isin G                      ::   :: ExcTG
+    | set ( eff ) = set ( eff' )            ::   :: SetEq1
+    | set ( exn ) = set ( exn' )            ::   :: SetEq2
 
   substs :: 'substs_' ::=
     | x1 <- v1 , .. , xn <- vn  ::   :: substs
@@ -168,10 +178,19 @@ defns
     -------------------------------------------- :: TAbs
     G |- \(X : K) -> t : [eff] forall (X : K), T
 
+    G, E |- t : [eff] T
+    -------------------------------------------- :: EAbs
+    G |- \(E : !) -> t : [eff] forall (E : !), T
+
     G |- t : [eff] forall (X : K), T2
     G |- T1 : K
     --------------------------------- :: TApp
     G |- t [T1] : [eff] [X |-> T1]T2
+
+    G |- t : [eff] forall (E : !), T
+    G |- eff'
+    ------------------------------------- :: EApp
+    G |- t [[eff']] : [eff] [E |-> eff']T
 
     G |- t : [eff] X
     X == X'
@@ -188,8 +207,8 @@ defns
     ------------------------------------------ :: LetRec
     G |- let rec x : T1 = abs in t2 : [eff] T2
 
-    % TODO: Check p types
     G |- t1 : [eff1] T2 .. G |- tn : [effn] T2
+    G |- p1 .. pn : T1
     G |- t : [eff] T1
     ---------------------------------------------------------------------------- :: Match
     G |- match t with p1 -> t1 | .. | pn -> tn end : [eff U eff1 U .. U effn] T2
@@ -200,14 +219,14 @@ defns
 
     G |- t1 : [eff1] T1 .. G |- tn : [effn] Tn
     Exc T1 .. Tn isin G
-    -------------------------------------------------------- :: Fail
-    G |- fail [T] Exc t1 .. tn : [Exn [Exc] U eff1 U effn] T
+    ------------------------------------------------------------- :: Fail
+    G |- fail [T] Exc t1 .. tn : [Exn [Exc] U eff1 U .. U effn] T
 
-    % TODO: Check pe types
-%    G |- t1 : T .. G |- tn : T
-%    G |- t : T
-%    -------------------------------------------------------------- :: Try
-%    G |- try t with pe1 -> t1 | .. | pen -> tn end : T
+    G |- t1 : [eff1] T .. G |- tn : [effn] T
+    G |- pe1 |> Exc1 .. G |- pen |> Excn
+    G |- t : [eff] T
+    --------------------------------------------------------------------------------------------------- :: Try
+    G |- try t with pe1 -> t1 | .. | pen -> tn end : [(eff \\ [Exc1 | .. | Excn]) U eff1 U .. U effn] T
 
 defns
   Jkind :: '' ::=
@@ -229,6 +248,7 @@ defns
     G |- T1 T2 : K12
 
     G |- T1 : *
+    G |- eff
     G |- T2 : *
     ----------------------- :: Arrow
     G |- T1 -[eff]-> T2 : *
@@ -240,6 +260,60 @@ defns
     G, E |- T : *
     -------------------------- :: EAll
     G |- forall (E : !), T : *
+
+defns
+  JEff :: '' ::=
+
+  defn
+    G |- eff :: :: Eff :: Eff_ {{ com Effects typing }} by
+
+    G |- effelm1 .. G |- effelmn
+    ---------------------------- :: Eff
+    G |- effelm1, .., effelmn
+
+defns
+  JEffElm :: '' ::=
+
+  defn
+    G |- effelm :: :: EffElm :: EffElm_ {{ com Effects elements typing }} by
+
+    E isin G
+    -------- :: Eff
+    G |- E
+
+
+    ------- :: IO
+    G |- IO
+
+    Exc1 excTy1 isin G .. Excn excTyn isin G
+    ---------------------------------------- :: Exn
+    G |- Exn [Exc1 | .. | Excn]
+
+defns
+  JPatternTyping :: '' ::=
+
+  defn
+    G |- p1 .. pn : T :: :: PatternTy :: PTy_ {{ com Pattern matching typing }} by
+
+%    T : {V T1 .. Tn isin G
+%    G |- p1 : T1 .. G |- pn : Tn
+%    ---------------------------- :: Variant
+%    G |- V p1 .. pn : T
+
+
+    -------------------- :: Wildcard
+    G |- x : T
+
+defns
+  JExnPatternTyping :: '' ::=
+
+  defn
+    G |- pe |> Exc :: :: ExnPatternTy :: PETy_ {{ com Exception pattern matching typing }} by
+
+    Exc T1 .. Tn isin G
+    G |- x1 : T1 .. G |- xn : Tn
+    --------------------------------- :: Exc
+    G |- Exc x1 .. xn |> Exc
 
 defns
   Jequiv :: '' ::=
@@ -369,6 +443,18 @@ defns
 
     ---------------------------------- :: TAppTAbs
     (\(X : K) -> t) [T] --> [X |-> T]t
+
+
+    ------------------------------------------- :: EAppFailure
+    (failure exnval) [[eff]] --> failure exnval
+
+    t --> t'
+    ------------------------ :: EApp
+    t [[eff]] --> t' [[eff]]
+
+
+    ---------------------------------------- :: EAppEAbs
+    (\(E : !) -> t) [[eff]] --> [E |-> eff]t
 
 
     ----------------------------------------------- :: LetFailure
