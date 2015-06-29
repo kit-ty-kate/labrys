@@ -31,7 +31,7 @@ grammar
     | let x = t1 in t2                                          ::   :: Let               {{ com let binding }}
     | let rec x : T = abs in t                                  ::   :: LetRec            {{ com recursive let binding }}
     | match t with p1 -> t1 | p2 -> t2 | .. | pn -> tn end      ::   :: PatternMatching   {{ com pattern matching }}
-    | ( t : T )                                                 ::   :: Annot             {{ com annotation }}
+    | ( t : [ eff ] T )                                         ::   :: Annot             {{ com annotation }}
     | fail [ T ] Exc t1 .. tn                                   ::   :: Fail              {{ com fail }}
     | try t with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end     ::   :: Try               {{ com try }}
     | ( t )                                                     :: S :: paren
@@ -48,6 +48,7 @@ grammar
     | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
     | \ ( X : K ) -> abs  ::   :: TLam            {{ com type abstraction }}
     | \ ( E : ! ) -> abs  ::   :: ELam            {{ com effect abstraction }}
+    | ( abs : [ eff ] T ) ::   :: Annot           {{ com type annotation }}
 
   p :: 'p_' ::=                                 {{ com pattern }}
     | V p1 .. pn        ::   :: Variant           {{ com variant }}
@@ -66,6 +67,7 @@ grammar
 
   eff :: 'eff_' ::=                                             {{ com effect }}
     | effelm1 , .. , effelmn           ::   :: Effect
+    | eff1 U eff2 U .. U effn          :: M :: Union
 
   K :: 'K_' ::=                                 {{ com kinds }}
     | *                   ::   :: Star            {{ com star }}
@@ -101,6 +103,7 @@ grammar
     | ==                  ::   :: equiv      {{ tex \equiv }}
     | !                   ::   :: phi        {{ tex \varphi }}
     | forall              ::   :: forall     {{ tex \forall }}
+    | U                   ::   :: union      {{ tex \cup }}
 
   formula :: 'formula_' ::=
     | judgement                         ::   :: judgement
@@ -133,70 +136,70 @@ defns
   Jtype :: '' ::=
 
   defn
-    G |- t : T :: :: GtT :: T_ {{ com Typing }} by
+    G |- t : [ eff ] T :: :: GtT :: T_ {{ com Typing }} by
 
     x : T in G
     ---------- :: Var
-    G |- x : T
+    G |- x : [] T
 
     V : T in G
     ---------- :: Variant
-    G |- V : T
+    G |- V : [] T
 
-    G, x1 : T1 |- t : T
+    G, x1 : T1 |- t : [eff] T
     G |- T1 : *
-    ------------------------------ :: Abs
-    G |- \(x1 : T1) -> t : T1 -> T
+    --------------------------------------- :: Abs
+    G |- \(x1 : T1) -> t : [] T1 -[eff]-> T
 
-    G |- t : T1 -> T2
-    G |- t' : T1
-    ----------------- :: App
-    G |- t t' : T2
+    G |- t : [eff1] T1 -[eff2]-> T2
+    G |- t' : [eff3] T1
+    ----------------------------------- :: App
+    G |- t t' : [eff1 U eff2 U eff3] T2
 
-    G, X : K |- t : T
-    -------------------------------------- :: TAbs
-    G |- \(X : K) -> t : forall (X : K), T
+    G, X : K |- t : [eff] T
+    -------------------------------------------- :: TAbs
+    G |- \(X : K) -> t : [eff] forall (X : K), T
 
-    G |- t : forall (X : K), T2
+    G |- t : [eff] forall (X : K), T2
     G |- T1 : K
-    --------------------------- :: TApp
-    G |- t [T1] : [X |-> T1]T2
+    --------------------------------- :: TApp
+    G |- t [T1] : [eff] [X |-> T1]T2
 
-    G |- t : X
+    G |- t : [eff] X
     X == X'
     G |- X' : *
-    ------------ :: Eq
-    G |- t : X'
+    ----------------- :: Eq
+    G |- t : [eff] X'
 
-    G, x : T1 |- t2 : T2
-    -------------------------- :: Let
-    G |- let x = t1 in t2 : T2
+    G, x : T1 |- t2 : [eff2] T2
+    ------------------------------------------------------ :: Let
+    G |- let x = (t1 : [eff1] T1) in t2 : [eff1 U eff2] T2
 
-    G, x : T1 |- abs : T1
-    G, x : T1 |- t2 : T2
-    ---------------------------------- :: LetRec
-    G |- let rec x : T1 = abs in t2 : T2
+    G, x : T1 |- abs : [] T1
+    G, x : T1 |- t2 : [eff] T2
+    ------------------------------------------ :: LetRec
+    G |- let rec x : T1 = abs in t2 : [eff] T2
 
     % TODO: Check p types
-    G |- t1 : T2  G |- t2 : T2 .. G |- tn : T2
-    G |- t : T1
-    -------------------------------------------------------------- :: Match
-    G |- match t with p1 -> t1 | p2 -> t2 | .. | pn -> tn end : T2
+    G |- t1 : [eff1] T2  G |- t2 : [eff2] T2 .. G |- tn : [effn] T2
+    G |- t : [eff] T1
+    --------------------------------------------------------------------------------------- :: Match
+    G |- match t with p1 -> t1 | p2 -> t2 | .. | pn -> tn end : [eff U eff1 U eff2 U .. U effn] T2
 
-    G |- t : T
-    ----------- :: Annot
-    G |- (t : T) : T
+    G |- t : [eff] T
+    ---------------------------- :: Annot
+    G |- (t : [eff] T) : [eff] T
 
-    G |- t1 : T1 .. G |- tn : Tn
+    G |- t1 : [eff1] T1 .. G |- tn : [effn] Tn
     Exc T1 .. Tn in G
-    ------------------------------ :: Fail
-    G |- fail [T] Exc t1 .. tn : T
+    -------------------------------------------------------- :: Fail
+    G |- fail [T] Exc t1 .. tn : [Exn [Exc] U eff1 U effn] T
 
     % TODO: Check pe types
-    G |- t1 : T  G |- t2 : T .. G |- tn : T
-    G |- t : T
-    -------------------------------------------------------------- :: Try
-    G |- try t with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end : T
+%    G |- t1 : T  G |- t2 : T .. G |- tn : T
+%    G |- t : T
+%    -------------------------------------------------------------- :: Try
+%    G |- try t with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end : T
 
 defns
   Jkind :: '' ::=
@@ -386,8 +389,8 @@ defns
     % TODO: Semantics of match
 
     t --> t'
-    -------------- :: Annot
-    (t : T) --> t'
+    -------------------- :: Annot
+    (t : [eff] T) --> t'
 
     t --> t'
     ---------------------------------------------------------------------- :: FailureArgs
