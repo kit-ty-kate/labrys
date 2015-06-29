@@ -123,8 +123,6 @@ grammar
     | Exc T1 .. Tn isin  G              ::   :: ExcTG
     | set ( eff ) = set ( eff' )        ::   :: SetEq1
     | set ( exn ) = set ( exn' )        ::   :: SetEq2
-    | n = 0                             ::   :: neqz
-    | n > 0                             ::   :: ngtz
 
   substs :: 'substs_' ::=
     | x1 <- v1 , .. , xn <- vn  ::   :: substs
@@ -424,16 +422,14 @@ defns
     ----------------------------------------------- :: TryNoFailure
     try v with pe1 -> t1 | .. | pen -> tn end --> v
 
-    n = 0
+    not (exnval matches pe1 |> {x1 <- v1, .., xn <- vn})
     ------------------------------------------------------------------------------------- :: TryNotFound
-    try failure exnval with pe1 -> t1 | .. | pen -> tn end --> failure exnval
+    try failure exnval with pe1 -> t1 end --> failure exnval
 
-    n > 0
     exnval matches pe1 |> {x1 <- v1, .., xn <- vn}
     --------------------------------------------------------------------------------------- :: TryFound
     try failure exnval with pe1 -> t1 | .. | pen -> tn end --> [x1 |-> v1, .., xn |-> vn]t1
 
-    n > 0
     not (exnval matches pe1 |> {x1 <- v1, .., xn <- vn})
     ----------------------------------------------------------------------------------------------------------------------------- :: TryStep
     try failure exnval with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> try failure exnval with pe2 -> t2 | .. | pen -> tn end
