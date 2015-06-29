@@ -39,10 +39,10 @@ grammar
     | [ x1 |-> t1 , .. , xn |-> tn ] t                          :: M :: tsub
     | [ X |-> T ] t                                             :: M :: Tsub
     | failure exnval                                            :: M :: Failure
-    | TConstr v1 .. vn                                          :: M :: TConstr
+    | TConstr V v1 .. vn                                        :: M :: TConstr
 
   v :: 'v_' ::=                                 {{ com value }}
-    | TConstr v1 .. vn    ::   :: TConstr         {{ com type constructors }}
+    | TConstr V v1 .. vn  ::   :: TConstr         {{ com type constructors }}
     | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
 
   abs :: 'abs_' ::=                             {{ com lambda abstractions }}
@@ -125,6 +125,10 @@ grammar
     | set ( exn ) = set ( exn' )        ::   :: SetEq2
     | n = 0                             ::   :: neqz
     | n > 0                             ::   :: ngtz
+
+  substs :: 'substs_' ::=
+    | x1 <- v1 , .. , xn <- vn  ::   :: substs
+    | substs1 U .. U substsn    :: M :: union
 
 subrules
   v <:: t
@@ -319,7 +323,7 @@ defns
     effelm1 == effelm3
 
     set(Exc1 | .. | Excn) = set(Exc1' | .. | Excn')
-    ------------------------------------------------------------------- :: ExnEq
+    -------------------------------------------------- :: ExnEq
     Exn [Exc1 | .. | Excn] == Exn [Exc1' | .. | Excn']
 
 defns
@@ -329,8 +333,8 @@ defns
     t --> t' ::  :: reduce :: E_ {{ com Evaluation }} by
 
 
-    ------------- :: Variant
-    V --> TConstr
+    --------------- :: Variant
+    V --> TConstr V
 
 
     ------------------------------------- :: App1Failure
@@ -349,8 +353,8 @@ defns
     v t1 --> v t1'
 
 
-    --------------------------------------------- :: AppVariant
-    (TConstr v1 .. vn) vm --> TConstr v1 .. vn vm
+    ------------------------------------------------- :: AppVariant
+    (TConstr V v1 .. vn) vm --> TConstr V v1 .. vn vm
 
 
     --------------------------------------- :: AppAbs
@@ -389,10 +393,16 @@ defns
     match failure exnval with p1 -> t1 | .. | pn -> tn end --> failure exnval
 
     t --> t'
-    ---------------------------------------------------------------------------------------- :: Match1
+    ---------------------------------------------------------------------------------------- :: Match
     match t with p1 -> t1 | .. | pn -> tn end --> match t' with p1 -> t1 | .. | pn -> tn end
 
-    % TODO: Semantics of match
+    v matches p1 |> {x1 <- v1, .., xn <- vn}
+    -------------------------------------------------------------------------- :: MatchFound
+    match v with p1 -> t1 | .. | pn -> tn end --> [x1 |-> v1, .., xn |-> vn]t1
+
+    not (v matches p1 |> {x1 <- v1, .., xn <- vn})
+    -------------------------------------------------------------------------------------------------- :: MatchStep
+    match v with p1 -> t1 | p2 -> t2 | .. | pn -> tn end --> match v with p2 -> t2 | .. | pn -> tn end
 
     t --> t'
     -------------------- :: Annot
@@ -407,25 +417,25 @@ defns
     fail [T] Exc v1 .. vn --> failure Exc v1 .. vn
 
     t --> t'
-    ---------------------------------------------------------------------------------------- :: Try1
+    ---------------------------------------------------------------------------------------- :: Try
     try t with pe1 -> t1 | .. | pen -> tn end --> try t' with pe1 -> t1 | .. | pen -> tn end
 
 
-    ----------------------------------------------- :: Try2
+    ----------------------------------------------- :: TryNoFailure
     try v with pe1 -> t1 | .. | pen -> tn end --> v
 
     n = 0
-    ------------------------------------------------------------------------------------- :: Try3
+    ------------------------------------------------------------------------------------- :: TryNotFound
     try failure exnval with pe1 -> t1 | .. | pen -> tn end --> failure exnval
 
     n > 0
     exnval matches pe1 |> {x1 <- v1, .., xn <- vn}
-    --------------------------------------------------------------------------------------- :: Try4
+    --------------------------------------------------------------------------------------- :: TryFound
     try failure exnval with pe1 -> t1 | .. | pen -> tn end --> [x1 |-> v1, .., xn |-> vn]t1
 
     n > 0
     not (exnval matches pe1 |> {x1 <- v1, .., xn <- vn})
-    ----------------------------------------------------------------------------------------------------------------------------- :: Try5
+    ----------------------------------------------------------------------------------------------------------------------------- :: TryStep
     try failure exnval with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> try failure exnval with pe2 -> t2 | .. | pen -> tn end
 
 defns
@@ -437,3 +447,17 @@ defns
 
     --------------------------------------------------------------- :: Matches
     Exc v1 .. vn matches Exc x1 .. xn |> {x1 <- v1, .., xn <- vn}
+
+defns
+  JMatches :: '' ::=
+
+  defn
+    v matches p |> { substs } :: :: matches :: Matches_ {{ com Pattern matching with substitution creation }} by
+
+
+    ----------------------- :: Any
+    v matches x |> {x <- v}
+
+    v1 matches p1 |> {substs1} .. vn matches pn |> {substsn}
+    ----------------------------------------------------------------- :: Matches
+    TConstr V v1 .. vn matches V p1 .. pn |> {substs1 U .. U substsn}
