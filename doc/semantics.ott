@@ -19,6 +19,18 @@ indexvar n ::=
 indexvar m ::=
 
 grammar
+  program :: 'program_' ::=
+    |                                               ::   :: Empty
+    | top program                                   ::   :: Program
+    | [ x |-> t ] program                           :: M :: sub
+
+  top :: 'top_' ::=
+    | let x = t                                         ::   :: Let
+    | let rec x : T = abs                               ::   :: LetRec
+    | type alias X = T                                  ::   :: TypeAlias
+    | type X variantArgs = V1 tyList1 | .. | Vn tyListn ::   :: Type
+    | exception Exc tyList                              ::   :: Exception
+
   t :: 't_' ::=                                                                         {{ com term }}
     | x                                                         ::   :: Var               {{ com variable }}
     | V                                                         ::   :: Variant           {{ com type constructors }}
@@ -92,19 +104,24 @@ grammar
     | ( T )                   :: S :: paren
     | [ X |-> T ] T'          :: M :: sub
     | [ E |-> eff ] T         :: M :: Esub
+    | T1 -> .. -> Tn -> T     :: M :: PureArrowRepeat
+    | T T1 .. Tn              :: M :: AppRepeat
 
   G {{ tex \Gamma }} :: G_ ::=                                  {{ com type environment }}
     | empty                                     ::   :: em        {{ com empty }}
     | G , x1 : T1 , .. , xn : Tn                ::   :: vn        {{ com vars }}
     | G , V : T                                 :: S :: Vn'       {{ com type constructors (contained in the above values environment) }}
-    | G , X : K                                 ::   :: tn        {{ com tvars }}
-    | G , T : { V1 : T1 .. Vn : Tn }            ::   :: Vn        {{ com variants }}
-    | G , Exc excTy                             ::   :: exn       {{ com exceptions }}
+    | G , X1 : K1 , .. , Xn : Kn                ::   :: tn        {{ com tvars }}
+    | G , X : { V1 tyList1 .. Vn tyListn }      ::   :: Vn        {{ com variants }}
+    | G , Exc tyList                            ::   :: exn       {{ com exceptions }}
     | G , E                                     ::   :: eff       {{ com effects }}
-    | G1 U .. U Gn                         :: M :: union
+    | G1 U .. U Gn                              :: M :: union
 
-  excTy :: excTy_ ::=
+  tyList :: 'tyList_' ::=
     | T1 .. Tn            ::   :: Ty
+
+  variantArgs :: 'variantArgs_' ::=
+    | ( X1 : K1 ) .. ( Xn : Kn )        ::   :: VariantArgs
 
   terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -132,11 +149,12 @@ grammar
     | V : T isin G                                  ::   :: VTG
     | T : { Variant } isin G                        ::   :: TVnG
     | E isin G                                      ::   :: EG
-    | Exc excTy isin G                              ::   :: ExcTG
+    | Exc tyList isin G                             ::   :: ExcTG
     | set ( eff ) = set ( eff' )                    ::   :: SetEq1
     | set ( exn ) = set ( exn' )                    ::   :: SetEq2
     | V isin Variant |> T1 .. Tn                    ::   :: VVariant
-    | Variant is empty                              ::   :: VariantEmpty
+    | RetVar = RetVar'                              ::   :: RVEq
+    | G = G'                                        ::   :: GEq
 
   % Metarules
 
@@ -155,6 +173,9 @@ grammar
     | empty                     ::   :: Empty
     | Variant \\ V              :: M :: Substraction
 
+  RetVar :: 'RetVar_' ::=
+    | X X1 .. Xn                ::   :: RetVar
+
 subrules
   v <:: t
   abs <:: t
@@ -166,6 +187,59 @@ freevars
 substitutions
   single t x :: tsubst
   single T X :: Tsubst
+
+defns
+  JProgram :: '' ::=
+
+  defn
+    G |- program |> G' :: :: Program :: Prog_ {{ com Program typing }} by
+
+
+    --------- :: Empty
+    G |- |> G
+
+    :TopType: G |- top |> G'
+    G' |- program |> G''
+    ----------------------- :: Program
+    G |- top program |> G''
+
+defns
+  JTopType :: '' ::=
+
+  defn
+    G |- top |> G' :: :: TopType :: Top_ {{ com Toplevel typing }} by
+
+    G |- t : [] T
+    -------------------------- :: Let
+    G |- let x = t |> G, x : T
+
+    G, x : T |- abs : [] T
+    ------------------------------------ :: LetRec
+    G |- let rec x : T = abs |> G, x : T
+
+    G |- T : K
+    --------------------------------- :: TypeAlias
+    G |- type alias X = T |> G, X : K
+
+    RetVar = X X1 .. Xn
+    G' = G, X : K, X1 : K1, .. , Xn : Kn
+    RetVar & G' |- V1 tyList1 |> G1 .. RetVar & G' |- Vn tyListn |> Gn
+    ---------------------------------------------------------------------------------- :: Type
+    G |- type X (X1 : K1) (Xn : Kn) = V1 tyList1 | .. | Vn tyListn |> G U G1 U .. U Gn, X : {V1 tyList1 .. Vn tyListn}
+
+    G |- T1 : K1 .. G |- Tn : Kn
+    ---------------------------------------------- :: Exception
+    G |- exception Exc T1 .. Tn |> G, Exc T1 .. Tn
+
+defns
+  JTypeDecl :: '' ::=
+
+  defn
+    RetVar & G |- V tyList |> G' :: :: TypeDecl :: TyDecl_ {{ com Type declaration }} by
+
+    G |- T1 : K1 .. G |- Tn : Kn
+    ----------------------------------------------------------------------- :: Decl
+    X X1 .. Xn & G |- V T1 .. Tn |> empty, V : T1 -> .. -> Tn -> X X1 .. Xn
 
 defns
   Jtype :: '' ::=
@@ -306,8 +380,8 @@ defns
     ------- :: IO
     G |- IO
 
-    Exc1 excTy1 isin G .. Excn excTyn isin G
-    ---------------------------------------- :: Exn
+    Exc1 tyList1 isin G .. Excn tyListn isin G
+    ------------------------------------------ :: Exn
     G |- Exn [Exc1 | .. | Excn]
 
 defns
@@ -428,6 +502,37 @@ defns
     set(Exc1 | .. | Excn) = set(Exc1' | .. | Excn')
     -------------------------------------------------- :: ExnEq
     Exn [Exc1 | .. | Excn] == Exn [Exc1' | .. | Excn']
+
+defns
+  JTopOp :: '' ::=
+
+  defn
+    program --> program' :: :: topReduce :: TopE_ {{ com Toplevel evaluation }} by
+
+    t --> t'
+    ---------------------------------------- :: Let1
+    let x = t program --> let x = t' program
+
+
+    -------------------------------------- :: Let2
+    let x = v program --> [x |-> v]program
+
+
+    --------------------------------------------------------------------------- :: LetRec
+    let rec x : T = abs program --> [x |-> (let rec x : T = abs in abs)]program
+
+
+    ------------------------------------ :: TypeAlias
+    type alias X = T program --> program
+
+    % TODO: vvv ???
+
+    --------------------------------------------------------------------- :: Type
+    type X variantArgs = V1 tyList1 | .. | Vn tyListn program --> program
+
+
+    ---------------------------------------- :: Exception
+    exception Exc tyList program --> program
 
 defns
   Jop :: '' ::=
