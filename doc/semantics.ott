@@ -1,4 +1,4 @@
-% Cervoise's semantics after implementing effects
+% Cervoise's semantics
 
 metavar termvar, x ::=
   {{ tex \mathit{[[termvar]]} }} {{ com term variable }}
@@ -43,14 +43,13 @@ grammar
     | let x = t1 in t2                                          ::   :: Let               {{ com let binding }}
     | let rec x : T = abs in t                                  ::   :: LetRec            {{ com recursive let binding }}
     | match t with p1 -> t1 | .. | pn -> tn end                 ::   :: PatternMatching   {{ com pattern matching }}
-    | ( t : [ eff ] T )                                         ::   :: Annot             {{ com annotation }}
+    | t : [ eff ] T                                             ::   :: Annot             {{ com type annotation }}
+    | t : T                                                     :: S :: AnnotEmpty        {{ com type annotation = (t : [] T) }}
     | fail [ T ] Exc t1 .. tn                                   ::   :: Fail              {{ com fail }}
     | try t with pe1 -> t1 | .. | pen -> tn end                 ::   :: Try               {{ com try }}
     | t ; t'                                                    :: S :: Seq               {{ com sequence == let (\_ : Unit) = t in t' }}
     | ( t )                                                     :: S :: paren
     | [ x1 |-> t1 , .. , xn |-> tn ] t                          :: M :: tsub
-    | [ X |-> T ] t                                             :: M :: Tsub
-    | [ E |-> eff ] t                                           :: M :: Esub
     | failure exnval                                            :: M :: Failure
     | TConstr V v1 .. vn                                        :: M :: TConstr
 
@@ -62,7 +61,8 @@ grammar
     | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
     | \ ( X : K ) -> abs  ::   :: TLam            {{ com type abstraction }}
     | \ ( E : ! ) -> abs  ::   :: ELam            {{ com effect abstraction }}
-    | ( abs : [ eff ] T ) ::   :: Annot           {{ com type annotation }}
+    | abs : [ eff ] T     ::   :: Annot           {{ com type annotation }}
+    | abs : T             :: S :: AnnotEmpty      {{ com type annotation = (abs : [] T) }}
 
   p :: 'p_' ::=                                 {{ com pattern }}
     | V p1 .. pn        ::   :: Variant           {{ com variant }}
