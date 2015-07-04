@@ -1,6 +1,6 @@
 type Int =
-  | O : Int
-  | S : Int -> Int
+  | O
+  | S Int
 
 let printInt : forall X, X -[IO]-> Int = begin
   @msg = constant [4 x i8] c"%d\0a\00"
@@ -23,6 +23,6 @@ let main =
   Unit
 
 type Nat =
-  | O : Nat
-  | S : Nat -> Nat
-  | D : Nat -> Nat -> Nat
+  | O
+  | S Nat
+  | D Nat Nat

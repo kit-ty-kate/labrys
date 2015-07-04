@@ -48,8 +48,8 @@ end
 module Constr : sig
   include S with type key = Ident.Type.t
 
-  val add : key -> Index.key -> 'a -> 'a Index.t t -> 'a Index.t t
-  val open_module : Module.t -> 'a Index.t t -> 'a Index.t t
+  val add : key -> Index.key -> 'a -> 'b -> ('a * 'b Index.t) t -> ('a * 'b Index.t) t
+  val open_module : Module.t -> (Ident.Type.t list * 'a Index.t) t -> (Ident.Type.t list * 'a Index.t) t
 end
 
 module Exn : sig

@@ -128,14 +128,10 @@ let unsugar_annot ~current_module imports (annot, eff) =
   let eff = Option.map (unsugar_eff imports) eff in
   (unsugar_ty ~current_module imports annot, eff)
 
-let rec unsugar_pattern_arg ~current_module imports = function
-  | ParseTree.PVal pattern -> PVal (unsugar_pattern ~current_module imports pattern)
-  | ParseTree.PTy ty -> PTy (unsugar_ty ~current_module imports ty)
-
-and unsugar_pattern ~current_module imports = function
+let rec unsugar_pattern ~current_module imports = function
   | ParseTree.TyConstr (loc, name, args) ->
       let name = upper_name_to_local_value imports name in
-      TyConstr (loc, name, List.map (unsugar_pattern_arg ~current_module imports) args)
+      TyConstr (loc, name, List.map (unsugar_pattern ~current_module imports) args)
   | ParseTree.Any name ->
       let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
       Any name
@@ -245,11 +241,25 @@ and unsugar_args ~current_module imports options args annot t =
   | (Some ty, t) -> (fst t, Annot (t, ty))
   | (None, t) -> t
 
-let unsugar_variant ~current_module imports (ParseTree.Variant (name, ty)) =
+let unsugar_variant ~current_module imports ~datatype ~args (ParseTree.Variant (name, tys)) =
   let name = new_upper_name_to_value ~current_module name in
-  Variant (name, unsugar_ty ~current_module imports ty)
+  let tys = List.map (unsugar_ty ~current_module imports) tys in
+  let uloc = Builtins.unknown_loc in
+  let ty =
+    let rec aux = function
+      | [] -> List.fold_left (fun ty (x, _) -> AppOnTy ((uloc, ty), (uloc, Ty x))) (Ty datatype) args
+      | x::xs -> Fun (x, None, (uloc, aux xs))
+    in
+    List.fold_left (fun ty x -> Forall (x, (uloc, ty))) (aux tys) args
+  in
+  Variant (name, tys, (uloc, ty))
 
-let unsugar_variants ~current_module imports = List.map (unsugar_variant ~current_module imports)
+let unsugar_variants ~current_module imports ~datatype ~args =
+  List.map (unsugar_variant ~current_module imports ~datatype ~args)
+
+let unsugar_variant_args ~current_module args =
+  let aux (x, k) = (new_upper_name_to_type ~current_module x, unsugar_kind k) in
+  List.map aux args
 
 let create ~current_module imports options = function
   | ParseTree.Value (name, is_rec, (args, (ty, t))) ->
@@ -261,9 +271,12 @@ let create ~current_module imports options = function
   | ParseTree.Binding (name, ty, content) ->
       let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
       Binding (name, unsugar_ty ~current_module imports ty, content)
-  | ParseTree.Datatype (name, k, variants) ->
+  | ParseTree.Datatype (name, args, variants) ->
+      let kind = Kinds.from_list (List.map (fun (_, k) -> unsugar_kind k) args) in
       let name = new_upper_name_to_type ~current_module name in
-      Datatype (name, unsugar_kind k, unsugar_variants ~current_module imports variants)
+      let args = unsugar_variant_args ~current_module args in
+      let variants = unsugar_variants ~current_module imports ~datatype:name ~args variants in
+      Datatype (name, kind, args, variants)
   | ParseTree.Exception (name, tys) ->
       let name = new_upper_name_to_exn ~current_module name in
       Exception (name, List.map (unsugar_ty ~current_module imports) tys)
@@ -295,9 +308,12 @@ let create_interface ~current_module imports = function
   | ParseTree.IAbstractType (name, k) ->
       let name = new_upper_name_to_type ~current_module name in
       InterfaceTree.AbstractType (name, unsugar_kind k)
-  | ParseTree.IDatatype (name, k, variants) ->
+  | ParseTree.IDatatype (name, args, variants) ->
+      let kind = Kinds.from_list (List.map (fun (_, k) -> unsugar_kind k) args) in
       let name = new_upper_name_to_type ~current_module name in
-      InterfaceTree.Datatype (name, unsugar_kind k, unsugar_variants ~current_module imports variants)
+      let args = unsugar_variant_args ~current_module args in
+      let variants = unsugar_variants ~current_module imports ~datatype:name ~args variants in
+      InterfaceTree.Datatype (name, kind, args, variants)
   | ParseTree.ITypeAlias (name, ty) ->
       let name = new_upper_name_to_type ~current_module name in
       InterfaceTree.TypeAlias (name, unsugar_ty ~current_module imports ty)

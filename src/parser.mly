@@ -122,8 +122,8 @@ let_aux:
       { Some ty }
 
 datatype:
-  | Type name = newUpperName k = kindopt Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
-      { (name, k, variants) }
+  | Type name = newUpperName args = list(kind_and_name) Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
+      { (name, args, variants) }
 
 typeAlias:
   | Type Alias name = newUpperName Equal ty = typeExpr
@@ -304,8 +304,8 @@ exn_pattern:
       { ((exn, args), t) }
 
 variant:
-  | name = newUpperName Colon ty = typeExpr
-      { ParseTree.Variant (name, ty) }
+  | name = newUpperName tys = list(typeExprProtected)
+      { ParseTree.Variant (name, tys) }
 
 kindopt:
   | { None }
@@ -329,21 +329,23 @@ pattern:
   | p = pat Arrow t = term
       { (p, t) }
 
-pat:
+patClosed:
   | name = newLowerName
       { ParseTree.Any name }
-  | name = upperName args = list(pat_arg)
+  | name = upperName
+      { ParseTree.TyConstr (loc $startpos $endpos, name, []) }
+
+patUnclosed:
+  | name = upperName args = nonempty_list(patProtected)
       { ParseTree.TyConstr (loc $startpos $endpos, name, args) }
 
-pat_arg:
-  | name = newLowerName
-      { ParseTree.PVal (ParseTree.Any name) }
-  | name = upperName
-      { ParseTree.(PVal (TyConstr (loc $startpos $endpos, name, []))) }
-  | LParen p = pat RParen
-      { ParseTree.PVal p }
-  | LBracket ty = typeExpr RBracket
-      { ParseTree.PTy ty }
+pat:
+  | p = patClosed { p }
+  | p = patUnclosed { p }
+
+patProtected:
+  | p = patClosed { p }
+  | LParen p = patUnclosed RParen { p }
 
 
 (********* Names *********)

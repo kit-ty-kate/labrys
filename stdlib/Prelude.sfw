@@ -1,4 +1,4 @@
-type Unit = Unit : Unit
+type Unit = Unit
 
 --notation-expr () = Unit
 --notation-param () = (_ : Unit)

@@ -124,15 +124,16 @@ module Constr = struct
   include Make(Ident.Type)
 
   let open_module modul self =
-    let aux k idx =
-      add (Ident.Type.open_module modul k) (Index.open_module modul idx)
+    let aux k (args, idx) =
+      let args = List.map (Ident.Type.open_module modul) args in
+      add (Ident.Type.open_module modul k) (args, Index.open_module modul idx)
     in
     fold aux self empty
 
-  let add k k2 x map =
+  let add k k2 args x map =
     match find k map with
-    | None -> add k (Index.singleton k2 x) map
-    | Some xs -> add k (Index.add k2 x xs) map
+    | None -> add k (args, Index.singleton k2 x) map
+    | Some (args, xs) -> add k (args, Index.add k2 x xs) map
 end
 
 module Exn = struct

@@ -29,7 +29,7 @@ type variant = UnsugaredTree.variant
 type t =
   | Val of (name * ty)
   | AbstractType of (t_name * Kinds.t)
-  | Datatype of (t_name * Kinds.t * variant list)
+  | Datatype of (t_name * Kinds.t * (t_name * Kinds.t) list * variant list)
   | TypeAlias of (t_name * ty)
   | Exception of (exn_name * ty list)
   | Open of Module.t

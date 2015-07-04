@@ -24,7 +24,7 @@ open Monomorphic_containers.Open
 type t =
   { values : Types.t GammaMap.Value.t
   ; types : Types.visibility GammaMap.Types.t
-  ; constructors : ((Types.t * int) GammaMap.Index.t) GammaMap.Constr.t
+  ; constructors : (Ident.Type.t list * (Types.t list * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : Types.t list GammaMap.Exn.t
   ; effects : GammaSet.Eff.t
   }
@@ -39,7 +39,7 @@ let empty =
 
 let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
 let add_type k x self = {self with types = GammaMap.Types.add k x self.types}
-let add_constr k k2 x self = {self with constructors = GammaMap.Constr.add k k2 x self.constructors}
+let add_constr k k2 args x self = {self with constructors = GammaMap.Constr.add k k2 args x self.constructors}
 let add_exception k x self = {self with exceptions = GammaMap.Exn.add k x self.exceptions}
 let add_effect k self = {self with effects = GammaSet.Eff.add k self.effects}
 
@@ -56,9 +56,11 @@ let union ~imported b =
     GammaMap.Types.union aux ~imported:imported.types b.types
   in
   let constructors =
-    let aux idx =
-      let aux (ty, idx) = (Types.remove_module_aliases ty, idx) in
-      GammaMap.Index.union aux ~imported:idx GammaMap.Index.empty
+    let aux (args, idx) =
+      let aux (tys, idx) =
+        (List.map Types.remove_module_aliases tys, idx)
+      in
+      (args, GammaMap.Index.union aux ~imported:idx GammaMap.Index.empty)
     in
     GammaMap.Constr.union aux ~imported:imported.constructors b.constructors
   in
@@ -76,12 +78,15 @@ let ty_equal x y = match x, y with
   | Types.Alias (ty1, k1), Types.Alias (ty2, k2) ->
       Types.equal ty1 ty2 && Kinds.equal k1 k2
 
-let constr_equal (x, y) (x', y') = Types.equal x x' && Int.equal y y'
+let idx_equal (x, y) (x', y') = List.equal Types.equal x x' && Int.equal y y'
+
+let constr_equal (x, y) (x', y') =
+  List.equal Ident.Type.equal x x' && GammaMap.Index.equal idx_equal y y'
 
 let is_subset_of a b =
   GammaMap.Value.diff ~eq:Types.equal a.values b.values
   @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
-  @ GammaMap.Constr.diff ~eq:(GammaMap.Index.equal constr_equal) a.constructors b.constructors
+  @ GammaMap.Constr.diff ~eq:constr_equal a.constructors b.constructors
   @ GammaMap.Exn.diff ~eq:(List.equal Types.equal) a.exceptions b.exceptions
 
 let open_module modul {values; types; constructors; exceptions; effects} =

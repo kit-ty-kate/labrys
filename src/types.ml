@@ -248,13 +248,23 @@ let rec size = function
   | ForallEff (_, t)
   | Forall (_, _, t) -> size t
 
+let rec is_value = function
+  | Ty _ -> true
+  | AbsOnTy _ -> assert false
+  | Fun _
+  | Forall _
+  | ForallEff _ -> false
+  | AppOnTy (t, _) -> is_value t
+
 let rec head = function
-  | Ty name -> name
-  | Fun (_, _, t)
-  | Forall (_, _, t)
-  | ForallEff (_, t)
-  | AbsOnTy (_, _, t)
-  | AppOnTy (t, _) -> head t
+  | Ty name -> (name, [])
+  | Fun _
+  | Forall _
+  | ForallEff _
+  | AbsOnTy _ -> assert false
+  | AppOnTy (t, y) ->
+      let (x, xs) = head t in
+      (x, y :: xs)
 
 let remove_module_aliases =
   let rec aux vars = function
@@ -297,12 +307,6 @@ module Err = struct
       "Error: This expression has type '%s'. \
        This is not a type abstraction; it cannot be applied by a value."
       (to_string ty)
-
-  let fail_return_type name =
-    Err.fail
-      ~loc:(Ident.Name.loc name)
-      "The variant '%s' doesn't return its type"
-      (Ident.Name.to_string name)
 end
 
 let apply ~loc_f = function
@@ -343,19 +347,6 @@ let apply_eff ~loc_f ~loc_x ~eff = function
       Err.forall_type ~loc_f ty
   | AbsOnTy _ ->
       assert false
-
-let rec check_if_returns_type ~datatype = function
-  | Ty x -> Ident.Type.equal x datatype
-  | Forall (_, _, ret)
-  | ForallEff (_, ret)
-  | AppOnTy (ret, _)
-  | Fun (_, _, ret) -> check_if_returns_type ~datatype ret
-  | AbsOnTy _ -> false
-
-let check_if_returns_type ~name ~datatype ty =
-  if not (check_if_returns_type ~datatype ty) then begin
-    Err.fail_return_type name
-  end
 
 let rec has_io = function
   | Fun (_, eff, Forall _)

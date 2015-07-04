@@ -1,7 +1,7 @@
 type Nat =
-  | O : Nat
-  | S : Nat -> Nat
-  | D : Nat -> Nat -> Nat
+  | O
+  | S Nat
+  | D Nat Nat
 
 let printZero : Unit -[IO]-> Unit = begin
   @msg = constant [3 x i8] c"0\0a\00"

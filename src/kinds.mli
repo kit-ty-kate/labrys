@@ -23,6 +23,8 @@ type t =
   | Star
   | KFun of (t * t)
 
+val from_list : t list -> t
+
 val to_string : t -> string
 
 val equal : t -> t -> bool

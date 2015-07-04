@@ -58,9 +58,11 @@ val replace : from:name -> ty:t -> t -> t
 
 val replace_eff : from:eff_name -> eff:Effects.t -> t -> t
 
+val is_value : t -> bool
+
 val size : t -> int
 
-val head : t -> name
+val head : t -> (name * t list)
 
 module Err : sig
   val fail : loc_t:Location.t -> has:t -> expected:t -> 'a
@@ -85,8 +87,6 @@ val apply_eff :
   eff:Effects.t ->
   t ->
   (eff_name * t)
-
-val check_if_returns_type : name:Ident.Name.t -> datatype:name -> t -> unit
 
 val has_io : t -> bool
 

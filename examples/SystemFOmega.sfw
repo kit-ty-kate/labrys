@@ -1,6 +1,6 @@
 type Int =
-  | O : Int
-  | S : Int -> Int
+  | O
+  | S Int
 
 let printInt : Int -[IO]-> Int = begin
   @msg = constant [4 x i8] c"%d\0a\00"
@@ -27,9 +27,16 @@ type alias Ip = Id
 
 type alias II = Ip Int
 
-type Pair : * -> * -> * = Pair : forall X Y, X -> Y -> Pair X Y
+type Pair X Y = Pair X Y
 
 let test = Pair [Int] [Int] O O
+
+let test = match test with
+  | Pair O O -> Unit
+  | x -> Unit
+  end
+
+--type alias Test = λX, λX, X
 
 let rec recursiveFun (x : Int) (y : Int) : [IO] Int =
   recursiveFun y (printInt x)

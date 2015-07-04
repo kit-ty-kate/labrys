@@ -1,6 +1,6 @@
 type Int =
-  | O : Int
-  | S : Int -> Int
+  | O
+  | S Int
 
 let s (x:Int->Int->Int) (y:Int->Int) (z:Int) = x z (y z)
 

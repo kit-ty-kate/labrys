@@ -80,7 +80,7 @@ let create ~loc gammaD =
     | (Matrix.Any (var, (_, ty)) :: _, _) :: _
     | (Matrix.Constr (var, (_, ty), _) :: _, _) :: _->
         let variants = GammaMap.Constr.find ty gammaD in
-        let variants =
+        let (_, variants) =
           Option.get_lazy (fun () -> assert false) variants
         in
         let variants =

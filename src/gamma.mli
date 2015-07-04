@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type t = private
   { values : Types.t GammaMap.Value.t
   ; types : Types.visibility GammaMap.Types.t
-  ; constructors : ((Types.t * int) GammaMap.Index.t) GammaMap.Constr.t
+  ; constructors : (Ident.Type.t list * (Types.t list * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : Types.t list GammaMap.Exn.t
   ; effects : GammaSet.Eff.t
   }
@@ -31,7 +31,7 @@ val empty : t
 
 val add_value : Ident.Name.t -> Types.t -> t -> t
 val add_type : Ident.Type.t -> Types.visibility -> t -> t
-val add_constr : Ident.Type.t -> Ident.Name.t -> (Types.t * int) -> t -> t
+val add_constr : Ident.Type.t -> Ident.Name.t -> Ident.Type.t list -> (Types.t list * int) -> t -> t
 val add_exception : Ident.Exn.t -> Types.t list -> t -> t
 val add_effect : Ident.Eff.t -> t -> t
 

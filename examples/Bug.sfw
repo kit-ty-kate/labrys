@@ -1,6 +1,6 @@
 type Int =
-  | O : Int
-  | S : Int -> Int
+  | O
+  | S Int
 
 let printInt : Int -[IO]-> Unit = begin
   @msg = constant [4 x i8] c"%d\0a\00"

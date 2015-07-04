@@ -154,7 +154,10 @@ let rec aux gamma = function
       let (name, ty) = GammaMap.Value.fill_module name gamma.Gamma.values in
       (Val name, ty, Effects.empty)
   | (loc, UnsugaredTree.PatternMatching (t, patterns)) ->
+      let loc_t = fst t in
       let (t, ty, effect1) = aux gamma t in
+      if not (Types.is_value ty) then
+        Err.fail ~loc:loc_t "This value cannot be matched";
       let (patterns, results, initial_ty, effect2) =
         Pattern.create ~loc aux gamma ty patterns
       in
@@ -221,14 +224,15 @@ let rec aux gamma = function
       check_type ~loc_t ~ty ~ty_t ~effects gamma;
       res
 
-let transform_variants ~datatype gamma =
+let transform_variants ~datatype ~ty_args ~args gamma =
+  let gamma' = List.fold_left (fun gamma (name, k) -> Gamma.add_type name (Types.Abstract k) gamma) gamma args in
   let rec aux index = function
-    | UnsugaredTree.Variant (name, ty) :: xs ->
+    | UnsugaredTree.Variant (name, tys, ty) :: xs ->
+        let tys = List.map (Types.of_parse_tree ~pure_arrow:`Allow gamma'.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects) tys in
         let ty = Types.of_parse_tree ~pure_arrow:`Allow gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects ty in
-        Types.check_if_returns_type ~name ~datatype ty;
         let (xs, gamma) = aux (succ index) xs in
         let gamma = Gamma.add_value name ty gamma in
-        let gamma = Gamma.add_constr datatype name (ty, index) gamma in
+        let gamma = Gamma.add_constr datatype name ty_args (tys, index) gamma in
         (Variant (name, Types.size ty) :: xs, gamma)
     | [] ->
         ([], gamma)
@@ -286,9 +290,10 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       let gamma = Gamma.add_value name ty gamma in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       (Binding (name, Types.size ty, binding) :: xs, has_main, gamma)
-  | UnsugaredTree.Datatype (name, kind, variants) :: xs ->
+  | UnsugaredTree.Datatype (name, kind, args, variants) :: xs ->
+      let ty_args = List.map fst args in
       let gamma = Gamma.add_type name (Types.Abstract kind) gamma in
-      let (variants, gamma) = transform_variants ~datatype:name gamma variants in
+      let (variants, gamma) = transform_variants ~datatype:name ~ty_args ~args gamma variants in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       (Datatype variants :: xs, has_main, gamma)
   | UnsugaredTree.Exception (name, args) :: xs ->

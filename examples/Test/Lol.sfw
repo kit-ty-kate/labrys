@@ -1,6 +1,6 @@
 type Int =
-  | O : Int
-  | S : Int -> Int
+  | O
+  | S Int
 
 let id = \(x:Int->Int) -> x
 

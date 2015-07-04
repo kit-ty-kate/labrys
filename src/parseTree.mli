@@ -54,12 +54,8 @@ type ty_annot = (ty * effects option)
 type v_arg = (new_lower_name * ty)
 
 type pattern =
-  | TyConstr of (loc * upper_name * pattern_arg list)
+  | TyConstr of (loc * upper_name * pattern list)
   | Any of new_lower_name
-
-and pattern_arg =
-  | PVal of pattern
-  | PTy of ty
 
 type arg' =
   | VArg of v_arg
@@ -86,13 +82,13 @@ type t' =
 
 and t = (loc * t')
 
-type variant = Variant of (new_upper_name * ty)
+type variant = Variant of (new_upper_name * ty list)
 
 type top =
   | Value of (new_lower_name * is_rec * (arg list * (ty_annot option * t)))
   | Type of (new_upper_name * ty)
   | Binding of (new_lower_name* ty * string)
-  | Datatype of (new_upper_name * Kinds.t option * variant list)
+  | Datatype of (new_upper_name * ty_arg list * variant list)
   | Exception of (new_upper_name * ty list)
   | Open of upper_name
 
@@ -105,7 +101,7 @@ type imports = import list
 type interface =
   | IVal of (new_lower_name * ty)
   | IAbstractType of (new_upper_name * Kinds.t option)
-  | IDatatype of (new_upper_name * Kinds.t option * variant list)
+  | IDatatype of (new_upper_name * ty_arg list * variant list)
   | ITypeAlias of (new_upper_name * ty)
   | IException of (new_upper_name * ty list)
   | IOpen of upper_name

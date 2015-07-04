@@ -1,6 +1,6 @@
 type T =
-  | O : T
-  | S : T -> T
+  | O
+  | S T
 
 let print : T -[IO]-> Unit = begin
   @msg = constant [4 x i8] c"%d\0a\00"

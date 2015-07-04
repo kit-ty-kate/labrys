@@ -25,6 +25,10 @@ type t =
   | Star
   | KFun of (t * t)
 
+let rec from_list = function
+  | [] -> Star
+  | k::ks -> KFun (k, from_list ks)
+
 let rec to_string = function
   | Star -> "*"
   | KFun (p, r) -> to_string p ^ " -> " ^ to_string r

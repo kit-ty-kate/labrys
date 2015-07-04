@@ -142,13 +142,9 @@ module ParseTree = struct
         fmt
           "(%s %s)"
           (dump_name name)
-          (String.concat " " (List.map dump_pattern_arg args))
+          (String.concat " " (List.map dump_pattern args))
     | Any name ->
         dump_name name
-
-  and dump_pattern_arg = function
-    | PVal p -> dump_pattern p
-    | PTy ty -> fmt "[%s]" (dump_ty ty)
 
   let rec dump_t = function
     | (_, Abs (args, t)) ->
@@ -280,8 +276,8 @@ module ParseTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
     List.fold_left aux PPrint.empty args
 
-  let dump_variants (Variant (name, ty)) =
-    PPrint.string (fmt "| %s : %s" (dump_name name) (dump_ty ty))
+  let dump_variants (Variant (name, tys)) =
+    PPrint.string (fmt "| %s %s" (dump_name name) (String.concat " " (List.map dump_ty tys)))
 
   let dump_variants variants =
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_variants x in
@@ -303,11 +299,8 @@ module ParseTree = struct
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Datatype (name, None, variants) ->
-        PPrint.string (fmt "type %s =" (dump_t_name name))
-        ^^ PPrint.nest 2 (dump_variants variants)
-    | Datatype (name, Some k, variants) ->
-        PPrint.string (fmt "type %s : %s =" (dump_t_name name) (dump_k k))
+    | Datatype (name, args, variants) ->
+        PPrint.string (fmt "type %s %s =" (dump_t_name name) (String.concat " " (List.map dump_t_name_ty_opt args)))
         ^^ PPrint.nest 2 (dump_variants variants)
     | Exception (name, args) ->
         PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))
@@ -352,13 +345,9 @@ module UnsugaredTree = struct
         fmt
           "(%s %s)"
           (dump_name name)
-          (String.concat " " (List.map dump_pattern_arg args))
+          (String.concat " " (List.map dump_pattern args))
     | Any name ->
         dump_name name
-
-  and dump_pattern_arg = function
-    | PVal p -> dump_pattern p
-    | PTy ty -> fmt "[%s]" (dump_ty ty)
 
   let rec dump_t = function
     | (_, Abs ((name, ty), t)) ->
@@ -493,8 +482,8 @@ module UnsugaredTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
     List.fold_left aux PPrint.empty args
 
-  let dump_variants (Variant (name, ty)) =
-    PPrint.string (fmt "| %s : %s" (dump_name name) (dump_ty ty))
+  let dump_variants (Variant (name, tys, ty)) =
+    PPrint.string (fmt "| %s %s : %s" (dump_name name) (String.concat " " (List.map dump_ty tys)) (dump_ty ty))
 
   let dump_variants variants =
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_variants x in
@@ -515,8 +504,8 @@ module UnsugaredTree = struct
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Datatype (name, k, variants) ->
-        PPrint.string (fmt "type %s : %s =" (dump_t_name name) (dump_k k))
+    | Datatype (name, k, args, variants) ->
+        PPrint.string (fmt "type %s %s : %s =" (dump_t_name name) (String.concat " " (List.map (fun (name, k) -> fmt "(%s : %s)" (dump_t_name name) (dump_k k)) args)) (dump_k k))
         ^^ PPrint.nest 2 (dump_variants variants)
     | Exception (name, args) ->
         PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))

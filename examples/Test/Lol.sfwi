@@ -1,5 +1,5 @@
 type Int =
-  | O : Int
-  | S : Int -> Int
+  | O
+  | S Int
 
 let id : (Int -[]-> Int) -> Int -> Int

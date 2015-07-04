@@ -33,15 +33,17 @@ let compile gamma =
         let gamma = Gamma.add_type name (Types.Abstract k) gamma in
         let gammaT = GammaMap.Types.add name (Types.Abstract k) gammaT in
         compile gammaT gammaExn gammaE gamma xs
-    | Datatype (name, k, variants) :: xs ->
+    | Datatype (name, k, args, variants) :: xs ->
+        let ty_args = List.map fst args in
         let gamma = Gamma.add_type name (Types.Abstract k) gamma in
         let gammaT = GammaMap.Types.add name (Types.Abstract k) gammaT in
         let gamma =
-          let aux ~datatype gamma i (UnsugaredTree.Variant (name, ty)) =
+          let gammaT' = List.fold_left (fun gammaT (name, k) -> GammaMap.Types.add name (Types.Abstract k) gammaT) gammaT args in
+          let aux ~datatype gamma i (UnsugaredTree.Variant (name, tys, ty)) =
+            let tys = List.map (Types.of_parse_tree ~pure_arrow:`Partial gammaT' gammaExn gammaE) tys in
             let ty = Types.of_parse_tree ~pure_arrow:`Partial gammaT gammaExn gammaE ty in
-            Types.check_if_returns_type ~name ~datatype ty;
             let gamma = Gamma.add_value name ty gamma in
-            Gamma.add_constr datatype name (ty, i) gamma
+            Gamma.add_constr datatype name ty_args (tys, i) gamma
           in
           List.Idx.foldi (aux ~datatype:name) gamma variants
         in

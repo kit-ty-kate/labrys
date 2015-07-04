@@ -58,51 +58,36 @@ let create =
   let rec aux gamma ty' = function
     | UnsugaredTree.Any name ->
         let gamma = Gamma.add_value name ty' gamma in
-        (MAny (name, Types.head ty'), gamma)
+        (MAny (name, fst (Types.head ty')), gamma)
     | UnsugaredTree.TyConstr (loc, name, args) ->
-        let head_ty = Types.head ty' in
-        let constructors =
-          GammaMap.Constr.find head_ty gamma.Gamma.constructors
-        in
-        let constructors =
-          Option.get_lazy (fun () -> assert false) constructors
-        in
-        let (name, (ty, _)) = GammaMap.Index.fill_module ~head_ty name constructors in
-        let loc_f = Ident.Name.loc name in
-        let aux (args, ty, gamma) = function
-          | UnsugaredTree.PVal p ->
-              let (param_ty, effect, res_ty) =
-                Types.apply ~loc_f ty
+        let (head_ty, tail_ty) = Types.head ty' in
+        let constructors = GammaMap.Constr.find head_ty gamma.Gamma.constructors in
+        let (ty_args, constructors) = Option.get_lazy (fun () -> assert false) constructors in
+        let (name, (tys, _)) = GammaMap.Index.fill_module ~head_ty name constructors in
+        let aux (args, tys, gamma) p =
+          match tys with
+          | [] ->
+              Err.fail ~loc "Too many parameters to this type constructor"
+          | ty::xs ->
+              let ty =
+                let rec aux ty' = function
+                  | from::xs, ty::ys ->
+                      aux (Types.replace ~from ~ty ty') (xs, ys)
+                  | [], [] ->
+                      ty'
+                  | _, [] | [], _ ->
+                      assert false
+                in
+                aux ty (ty_args, tail_ty)
               in
-              if not (Effects.is_empty effect) then
-                assert false;
-              let (arg, gamma) = aux gamma param_ty p in
-              (arg :: args, res_ty, gamma)
-          | UnsugaredTree.PTy pty ->
-              let loc_x = fst pty in
-              let (pty, kx) =
-                Types.of_parse_tree_kind
-                  ~pure_arrow:`Allow
-                  gamma.Gamma.types
-                  gamma.Gamma.exceptions
-                  gamma.Gamma.effects
-                  pty
-              in
-              let (_, res) =
-                Types.apply_ty ~loc_f ~loc_x ~ty_x:pty ~kind_x:kx ty
-              in
-              (args, res, gamma)
+              let (arg, gamma) = aux gamma ty p in
+              (arg :: args, xs, gamma)
         in
-        let (args, ty, gamma) = List.fold_left aux ([], ty, gamma) args in
+        let (args, tys, gamma) = List.fold_left aux ([], tys, gamma) args in
+        if not (List.is_empty tys) then
+          Err.fail ~loc "Not enough parameters to this type constructor";
         let args = List.rev args in
-        if not (Types.equal ty ty') then
-          Err.fail
-            ~loc
-            "The type of the pattern is not equal to the type \
-             of the value matched: Have '%s' but expected '%s'"
-            (Types.to_string ty)
-            (Types.to_string ty');
-        (MConstr ((name, Types.head ty), args), gamma)
+        (MConstr ((name, head_ty), args), gamma)
   in
   aux
 

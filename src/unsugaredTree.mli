@@ -48,12 +48,8 @@ type ty_annot = (ty * effects option)
 type value = (name * ty)
 
 type pattern =
-  | TyConstr of (loc * name * pattern_arg list)
+  | TyConstr of (loc * name * pattern list)
   | Any of name
-
-and pattern_arg =
-  | PVal of pattern
-  | PTy of ty
 
 type t' =
   | Abs of (value * t)
@@ -71,13 +67,13 @@ type t' =
 
 and t = (loc * t')
 
-type variant = Variant of (name * ty)
+type variant = Variant of (name * ty list * ty)
 
 type top =
   | Value of (name * is_rec * t)
   | Type of (t_name * ty)
   | Binding of (name * ty * string)
-  | Datatype of (t_name * Kinds.t * variant list)
+  | Datatype of (t_name * Kinds.t * (t_name * Kinds.t) list * variant list)
   | Exception of (exn_name * ty list)
   | Open of module_name
 
