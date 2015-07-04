@@ -56,6 +56,7 @@ module Type = struct
   let variant_ptr = array_ptr
   let closure = array
   let closure_ptr = array_ptr
+
   (** Note: jmp_buf is a five word buffer (see the Llvm doc). *)
   let jmp_buf = Llvm.array_type star 5
   let jmp_buf_ptr = Llvm.pointer_type jmp_buf
