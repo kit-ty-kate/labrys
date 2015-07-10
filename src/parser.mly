@@ -94,7 +94,7 @@ body:
       { ParseTree.Open modul }
 
 exceptionArgs:
-  | x = typeExprProtected xs = exceptionArgs
+  | x = typeExprClosed xs = exceptionArgs
       { x :: xs }
   | { [] }
 
@@ -223,13 +223,13 @@ nonempty_args(rest):
 
 typeExprStrictlyUnclosed:
   | param = typeExprProtectedPermissive Arrow ret = typeExpr
-      { ParseTree.Fun (param, None, ret) }
+      { (loc $startpos $endpos, ParseTree.Fun (param, None, ret)) }
   | param = typeExprProtectedPermissive LArrowEff eff = eff RArrowEff ret = typeExpr
-      { ParseTree.Fun (param, Some eff, ret) }
+      { (loc $startpos $endpos, ParseTree.Fun (param, Some eff, ret)) }
   | Forall x = nonempty_list(forallItems) Comma ret = typeExpr
-      { ParseTree.Forall (x, ret) }
+      { (loc $startpos $endpos, ParseTree.Forall (x, ret)) }
   | Lambda x = nonempty_list(kind_and_name) Comma ret = typeExpr
-      { ParseTree.AbsOnTy (x, ret) }
+      { (loc $startpos $endpos, ParseTree.AbsOnTy (x, ret)) }
 
 typeExprNonStrictlyUnclosed:
   | x = tyApp
@@ -241,23 +241,23 @@ typeExprUnclosed:
 
 typeExprClosed:
   | name = upperName
-      { ParseTree.Ty name }
+      { (loc $startpos $endpos, ParseTree.Ty name) }
   | LParen x = typeExpr RParen
-      { snd x }
+      { x }
 
 typeExpr:
-  | x = typeExprUnclosed { (loc $startpos $endpos, x) }
-  | x = typeExprClosed { (loc $startpos $endpos, x) }
+  | x = typeExprUnclosed { x }
+  | x = typeExprClosed { x }
 
 typeExprProtectedPermissive:
-  | x = typeExprNonStrictlyUnclosed { (loc $startpos $endpos, x) }
-  | x = typeExprClosed { (loc $startpos $endpos, x) }
+  | x = typeExprNonStrictlyUnclosed { x }
+  | x = typeExprClosed { x }
 
 tyApp:
-  | f = typeExprProtected x = typeExprProtected
-      { ParseTree.AppOnTy (f, x) }
-  | f = tyApp x = typeExprProtected
-      { ParseTree.AppOnTy ((loc $startpos(f) $endpos(f), f), x) }
+  | f = typeExprClosed x = typeExprClosed
+      { (loc $startpos $endpos, ParseTree.AppOnTy (f, x)) }
+  | f = tyApp x = typeExprClosed
+      { (loc $startpos $endpos, ParseTree.AppOnTy (f, x)) }
 
 kindUnclosed:
   | k1 = kindClosed Arrow k2 = kind
@@ -304,7 +304,7 @@ exn_pattern:
       { ((exn, args), t) }
 
 variant:
-  | name = newUpperName tys = list(typeExprProtected)
+  | name = newUpperName tys = list(typeExprClosed)
       { ParseTree.Variant (name, tys) }
 
 kindopt:
@@ -401,11 +401,6 @@ import:
       { ParseTree.Source modul }
   | Import Library modul = upperName
       { ParseTree.Library modul }
-
-
-(********* Protected rules ***********)
-
-typeExprProtected: x = typeExprClosed { (loc $startpos $endpos, x) }
 
 
 (********* Functions ***********)
