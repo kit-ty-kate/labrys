@@ -36,9 +36,12 @@ let rec plus (n : Nat.Nat) (m : Nat.Nat) : Nat.Nat =
   | Nat.S p -> Nat.S (plus p m)
   end
 
-let rec mult (n : Nat.Nat) (m : Nat.Nat) : Nat.Nat =
+let rec mult =
+  let y = Nat.O in
+  let rec z = \() : Nat -> y in
+  \(n : Nat.Nat) (m : Nat.Nat) : Nat.Nat ->
   match n with
-  | Nat.O -> Nat.O
+  | Nat.O -> z Unit
   | Nat.S p -> plus m (mult p m)
   end
 

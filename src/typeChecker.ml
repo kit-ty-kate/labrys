@@ -31,6 +31,7 @@ let rec well_formed_rec = function
       true
   | (_, UnsugaredTree.TAbs (_, t))
   | (_, UnsugaredTree.Annot (t, _))
+  | (_, UnsugaredTree.Let (_, t))
   | (_, UnsugaredTree.EAbs (_, t)) ->
       well_formed_rec t
   | (_, UnsugaredTree.App _)
@@ -38,14 +39,15 @@ let rec well_formed_rec = function
   | (_, UnsugaredTree.EApp _)
   | (_, UnsugaredTree.Val _)
   | (_, UnsugaredTree.PatternMatching _)
-  | (_, UnsugaredTree.Let _)
   | (_, UnsugaredTree.Fail _)
   | (_, UnsugaredTree.Try _) ->
       false
 
-let get_ty_from_let = function
+let rec get_ty_from_let = function
   | (_, UnsugaredTree.Annot (_, ty)) ->
       Some ty
+  | (_, UnsugaredTree.Let (_, t)) ->
+      get_ty_from_let t
   | (_, UnsugaredTree.Abs _)
   | (_, UnsugaredTree.TAbs _)
   | (_, UnsugaredTree.EAbs _)
@@ -54,7 +56,6 @@ let get_ty_from_let = function
   | (_, UnsugaredTree.EApp _)
   | (_, UnsugaredTree.Val _)
   | (_, UnsugaredTree.PatternMatching _)
-  | (_, UnsugaredTree.Let _)
   | (_, UnsugaredTree.Fail _)
   | (_, UnsugaredTree.Try _) ->
       None

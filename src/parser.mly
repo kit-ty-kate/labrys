@@ -103,22 +103,22 @@ let_case:
       { (name, r, x) }
 
 let_aux:
-  | ty = ty_opt Equal t = term
+  | ty = ty_opt(typeExpr) Equal t = term
       { (ty, t) }
 
 %inline is_rec:
   | { ParseTree.NonRec }
   | Rec { ParseTree.Rec }
 
-%inline ty_annot:
-  | Colon LBracket eff = eff RBracket ty = typeExpr
+%inline ty_annot(ty):
+  | Colon LBracket eff = eff RBracket ty = ty
       { (ty, Some eff) }
-  | Colon ty = typeExpr
+  | Colon ty = ty
       { (ty, None) }
 
-%inline ty_opt:
+%inline ty_opt(ty):
   | { None }
-  | ty = ty_annot
+  | ty = ty_annot(ty)
       { Some ty }
 
 datatype:
@@ -129,9 +129,10 @@ typeAlias:
   | Type Alias name = newUpperName Equal ty = typeExpr
       { (name, ty) }
 
+(* TODO: Fix this *)
 lambda_aux:
-  | Arrow t = term
-      { t }
+  | ty = ty_opt(typeExprClosed) Arrow t = term
+      { (ty, t) }
 
 termStrictlyUnclosed:
   | Lambda args = nonempty_args(lambda_aux)
@@ -162,7 +163,7 @@ termClosed:
       { (loc $startpos $endpos, ParseTree.Try (t, p)) }
   | LParen x = term RParen
       { x }
-  | LParen t = term ty = ty_annot RParen
+  | LParen t = term ty = ty_annot(typeExpr) RParen
       { (loc $startpos $endpos, ParseTree.Annot (t, ty)) }
 
 term:

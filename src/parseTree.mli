@@ -67,7 +67,7 @@ type arg' =
 and arg = (loc * arg')
 
 type t' =
-  | Abs of (arg list * t)
+  | Abs of (arg list * (ty_annot option * t))
   | App of (t * t)
   | TApp of (t * ty)
   | EApp of (t * effects)

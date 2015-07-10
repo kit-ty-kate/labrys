@@ -147,10 +147,10 @@ module ParseTree = struct
         dump_name name
 
   let rec dump_t = function
-    | (_, Abs (args, t)) ->
+    | (_, Abs (args, (ty, t))) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "λ %s ->" (dump_args args))
+           ^^ PPrint.string (fmt "λ %s : %s ->" (dump_args args) (dump_ty_opt ty))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )

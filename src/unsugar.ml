@@ -152,7 +152,7 @@ and unsugar_t ~current_module imports options = function
   | (_, ParseTree.Abs (args, t)) ->
       if List.is_empty args then
         assert false;
-      unsugar_args ~current_module imports options args None t
+      unsugar_args ~current_module imports options args t
   | (loc, ParseTree.App (f, x)) ->
       (loc, App (unsugar_t ~current_module imports options f, unsugar_t ~current_module imports options x))
   | (loc, ParseTree.TApp (t, ty)) ->
@@ -168,9 +168,9 @@ and unsugar_t ~current_module imports options = function
       (loc, Val name)
   | (loc, ParseTree.PatternMatching (t, patterns)) ->
       (loc, PatternMatching (unsugar_t ~current_module imports options t, List.map (unsugar_pat ~current_module imports options) patterns))
-  | (loc, ParseTree.Let ((name, is_rec, (args, (annot, x))), t)) ->
+  | (loc, ParseTree.Let ((name, is_rec, (args, x)), t)) ->
       let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
-      (loc, Let ((name, is_rec, unsugar_args ~current_module imports options args annot x), unsugar_t ~current_module imports options t))
+      (loc, Let ((name, is_rec, unsugar_args ~current_module imports options args x), unsugar_t ~current_module imports options t))
   | (loc, ParseTree.Fail (ty, (exn, args))) ->
       let exn = upper_name_to_local_exn imports exn in
       (loc, Fail (unsugar_ty ~current_module imports ty, (exn, List.map (unsugar_t ~current_module imports options) args)))
@@ -183,7 +183,7 @@ and unsugar_t ~current_module imports options = function
   | (loc, ParseTree.Annot (t, ty)) ->
       (loc, Annot (unsugar_t ~current_module imports options t, unsugar_annot ~current_module imports ty))
 
-and unsugar_args ~current_module imports options args annot t =
+and unsugar_args ~current_module imports options args (annot, t) =
   let rec aux = function
     | (loc, ParseTree.VArg (name, ty)) :: xs ->
         let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
@@ -264,7 +264,7 @@ let unsugar_variant_args ~current_module args =
 let create ~current_module imports options = function
   | ParseTree.Value (name, is_rec, (args, (ty, t))) ->
       let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
-      Value (name, is_rec, unsugar_args ~current_module imports options args ty t)
+      Value (name, is_rec, unsugar_args ~current_module imports options args (ty, t))
   | ParseTree.Type (name, ty) ->
       let name = new_upper_name_to_type ~current_module name in
       Type (name, unsugar_ty ~current_module imports ty)
