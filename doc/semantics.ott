@@ -19,17 +19,24 @@ indexvar n ::=
 indexvar m ::=
 
 grammar
-  program :: 'program_' ::=
-    |                                               ::   :: Empty
-    | top program                                   ::   :: Program
-    | [ x |-> t ] program                           :: M :: sub
+  program :: 'program_' ::=                                                     {{ com program }}
+    |                                               ::   :: Empty                 {{ com nothing }}
+    | top program                                   ::   :: Program               {{ com a piece of the program }}
 
-  top :: 'top_' ::=
-    | let x = t                                         ::   :: Let
-    | let rec x : T = abs                               ::   :: LetRec
-    | type alias X = T                                  ::   :: TypeAlias
-    | type X variantArgs = V1 tyList1 | .. | Vn tyListn ::   :: Type
-    | exception Exc tyList                              ::   :: Exception
+  top :: 'top_' ::=                                                             {{ com toplevel construct }}
+    | let x params = t                                  ::   :: Let               {{ com let binding }}
+    | let rec x params = abs                            ::   :: LetRec            {{ com recursive let binding }}
+    | type alias X = T                                  ::   :: TypeAlias         {{ com type alias }}
+    | type X variantArgs = V1 tyList1 | .. | Vn tyListn ::   :: Type              {{ com variants }}
+    | exception Exc tyList                              ::   :: Exception         {{ com exception }}
+
+  variantArgs :: 'variantArgs_' ::=
+    | ( X1 : K1 ) .. ( Xn : Kn )        ::   :: VariantArgs
+
+  tyList :: 'tyList_' ::=
+    | T1 .. Tn            ::   :: Ty
+
+  % Expression
 
   t :: 't_' ::=                                                                         {{ com term }}
     | x                                                         ::   :: Var               {{ com variable }}
@@ -37,42 +44,45 @@ grammar
     | \ ( x : T ) -> t                                          ::   :: Lam               {{ com abstraction }}
     | \ ( X : K ) -> t                                          ::   :: TLam              {{ com type abstraction }}
     | \ ( E : ! ) -> t                                          ::   :: ELam              {{ com effect abstraction }}
+    | \ params -> t                                             :: S :: MultiAbs
     | t t'                                                      ::   :: App               {{ com application }}
     | t [ T ]                                                   ::   :: TApp              {{ com type application }}
     | t [ [ eff ] ]                                             ::   :: EApp              {{ com effect application }}
-    | let x = t1 in t2                                          ::   :: Let               {{ com let binding }}
-    | let rec x : T = abs in t                                  ::   :: LetRec            {{ com recursive let binding }}
+    | let x params = t1 in t2                                   ::   :: Let               {{ com let binding }}
+    | let rec x params = abs in t                               ::   :: LetRec            {{ com recursive let binding }}
     | match t with p1 -> t1 | .. | pn -> tn end                 ::   :: PatternMatching   {{ com pattern matching }}
-    | t : [ eff ] T                                             ::   :: Annot             {{ com type annotation }}
-    | t : T                                                     :: S :: AnnotEmpty        {{ com type annotation = (t : [] T) }}
+    | t : annot                                                 ::   :: Annot             {{ com type annotation }}
     | fail [ T ] Exc t1 .. tn                                   ::   :: Fail              {{ com fail }}
     | try t with pe1 -> t1 | .. | pen -> tn end                 ::   :: Try               {{ com try }}
-    | t ; t'                                                    :: S :: Seq               {{ com sequence == let (\_ : Unit) = t in t' }}
+    | t ; t'                                                    :: S :: Seq               {{ com == let \_ : Unit = t in t' }}
     | ( t )                                                     :: S :: paren
-    | [ x1 |-> t1 , .. , xn |-> tn ] t                          :: M :: tsub
     | failure exnval                                            :: M :: Failure
     | TConstr V v1 .. vn                                        :: M :: TConstr
 
-  v :: 'v_' ::=                                 {{ com value }}
-    | TConstr V v1 .. vn  ::   :: TConstr         {{ com type constructors }}
-    | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
+  v :: 'v_' ::=                                                     {{ com value }}
+    | TConstr V v1 .. vn                           :: M :: TConstr    {{ com type constructors }}
+    | \ ( x : T ) -> t                             ::   :: Lam        {{ com abstraction }}
+    | \ valueParams -> v                           :: S :: MultiAbs
+    | let rec x params = valAbs1 in valAbs2        ::   :: LetRec     {{ com recursive let binding }}
 
-  abs :: 'abs_' ::=                             {{ com lambda abstractions }}
-    | \ ( x : T ) -> t    ::   :: Lam             {{ com abstraction }}
-    | \ ( X : K ) -> abs  ::   :: TLam            {{ com type abstraction }}
-    | \ ( E : ! ) -> abs  ::   :: ELam            {{ com effect abstraction }}
-    | abs : [ eff ] T     ::   :: Annot           {{ com type annotation }}
-    | abs : T             :: S :: AnnotEmpty      {{ com type annotation = (abs : [] T) }}
+  valAbs :: 'valAbs_' ::=
+    | \ ( x : T ) -> t                             ::   :: Lam        {{ com abstraction }}
 
-  p :: 'p_' ::=                                 {{ com pattern }}
-    | V p1 .. pn        ::   :: Variant           {{ com variant }}
-    | x                 ::   :: Wildcard          {{ com wildcard variable }}
+  abs :: 'abs_' ::=                                        {{ com lambda abstractions }}
+    | \ ( x : T ) -> t                    ::   :: Lam             {{ com abstraction }}
+    | \ ( X : K ) -> abs                  ::   :: TLam            {{ com type abstraction }}
+    | \ ( E : ! ) -> abs                  ::   :: ELam            {{ com effect abstraction }}
+    | let x params = t in abs             ::   :: Let             {{ com let binding }}
+    | let rec x params = abs1 in abs2     ::   :: LetRec          {{ com recursive let binding }}
+    | abs : annot                         ::   :: Annot           {{ com type annotation }}
 
-  pe :: 'pe_' ::=                               {{ com try pattern }}
-    | Exc x1 .. xn      ::   :: Exception         {{ com Exception pattern }}
+  % Type, kinds and effects
 
-  exnval :: 'exnval_' ::=                       {{ com runtime value of exceptions }}
-    | Exc v1 .. vn      ::   :: Exc
+  eff :: 'eff_' ::=                                             {{ com effect }}
+    | effelm1 , .. , effelmn           ::   :: Effect
+    | eff1 U eff2 U .. U effn          :: M :: Union
+    | eff1 \\ [ exn ]                  :: M :: Substraction
+    | ( eff )                          :: S :: Paren
 
   effelm :: 'effelm_' ::=                                       {{ com effects elements }}
     | E                                 ::   :: Effect            {{ com effect }}
@@ -82,12 +92,6 @@ grammar
   exn :: 'exn_' ::=                                             {{ com exceptions }}
     | Exc1 | .. | Excn                  ::   :: Exc
 
-  eff :: 'eff_' ::=                                             {{ com effect }}
-    | effelm1 , .. , effelmn           ::   :: Effect
-    | eff1 U eff2 U .. U effn          :: M :: Union
-    | eff1 \\ [ exn ]                  :: M :: Substraction
-    | ( eff )                          :: S :: Paren
-
   K :: 'K_' ::=                                 {{ com kinds }}
     | *                   ::   :: Star            {{ com star }}
     | K -> K'             ::   :: KArrow          {{ com kind arrow }}
@@ -95,17 +99,62 @@ grammar
   T :: T_ ::=                                   {{ com type }}
     | X                       ::   :: var         {{ com variable }}
     | Unit                    :: L :: unit        {{ com Unit type (contained in the module opened by default) }}
-    | T -> T'                 :: S :: PureArrow   {{ com pure function == T -[]-> T' }}
+    | T -> T'                 :: S :: PureArrow   {{ com == T -[]-> T' }}
     | T -[ eff ]-> T'         ::   :: Arrow       {{ com function }}
     | \ ( X : K ) , T         ::   :: abs         {{ com operator abstraction }}
     | forall ( X : K ) , T    ::   :: forall      {{ com forall }}
     | forall ( E : ! ) , T    ::   :: EForall     {{ com effect forall }}
+    | forall tyParams , T     :: S :: MultiForall
     | T T'                    ::   :: app         {{ com operator application }}
     | ( T )                   :: S :: paren
     | [ X |-> T ] T'          :: M :: sub
     | [ E |-> eff ] T         :: M :: Esub
     | T1 -> .. -> Tn -> T     :: M :: PureArrowRepeat
     | T T1 .. Tn              :: M :: AppRepeat
+
+  % Patterns
+
+  p :: 'p_' ::=                                 {{ com pattern }}
+    | V p1 .. pn        ::   :: Variant           {{ com variant }}
+    | x                 ::   :: Wildcard          {{ com wildcard variable }}
+
+  pe :: 'pe_' ::=                               {{ com try pattern }}
+    | Exc x1 .. xn      ::   :: Exception         {{ com Exception pattern }}
+
+  % Other
+
+  lambda :: 'lambda_' ::=                       {{ com lambda parameters }}
+    | ( x : T )           ::   :: Value           {{ com value }}
+    | tyLambda            ::   :: Type            {{ com type }}
+
+  valueLambda :: 'valueLambda_' ::=
+    | ( x : T )           ::   :: Value           {{ com value }}
+
+  tyLambda :: 'tyLambda_' ::=
+    | ( X : K )           ::   :: Type            {{ com type }}
+    | X                   :: S :: TypeStar
+    | ( E : ! )           ::   :: Effect          {{ com effect }}
+
+  valueParams :: 'valueParams_' ::=
+    | valueLambda1 .. valueLambdan      :: S :: Params
+
+  tyParams :: 'tyParams_' ::=
+    | tyLambda1 .. tyLambdan      :: S :: Params
+
+  exnval :: 'exnval_' ::=                       {{ com runtime value of exceptions }}
+    | Exc v1 .. vn      ::   :: Exc
+
+  % Syntaxic sugars
+
+  annot :: 'annot_' ::=
+    | T                   :: S :: Annot
+    | [ eff ] T           :: S :: EffAnnot
+
+  params :: 'params_' ::=
+    | lambda1 .. lambdan            :: S :: Params
+    | lambda1 .. lambdan : annot    :: S :: AnnotedParams
+
+  % Environments
 
   G {{ tex \Gamma }} :: G_ ::=                                  {{ com type environment }}
     | empty                                     ::   :: em        {{ com empty }}
@@ -117,11 +166,13 @@ grammar
     | G , E                                     ::   :: eff       {{ com effects }}
     | G1 U .. U Gn                              :: M :: union
 
-  tyList :: 'tyList_' ::=
-    | T1 .. Tn            ::   :: Ty
+  D {{ tex \Delta }} :: D_ ::=                                  {{ com runtime environment }}
+    | empty                                     ::   :: empty     {{ com empty }}
+    | D , { x1 <- v1 .. xn <- vn }              ::   :: vars      {{ com vars }}
+    | D , { V1 <- v1 .. Vn <- vn }              ::   :: Vvars     {{ com variant vars }}
+    | D1 U .. U Dn                              :: M :: union
 
-  variantArgs :: 'variantArgs_' ::=
-    | ( X1 : K1 ) .. ( Xn : Kn )        ::   :: VariantArgs
+  % Ott rules
 
   terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -138,6 +189,7 @@ grammar
     | |>                  ::   :: rhd        {{ tex \rhd }}
     | <-                  ::   :: leftarrow  {{ tex \leftarrow }}
     | &                   ::   :: and        {{ tex \ \& \  }}
+    | empty               ::   :: empty      {{ tex \emptyset }}
 
   formula :: 'formula_' ::=
     | judgement                                     ::   :: judgement
@@ -155,12 +207,11 @@ grammar
     | V isin Variant |> T1 .. Tn                    ::   :: VVariant
     | RetVar = RetVar'                              ::   :: RVEq
     | G = G'                                        ::   :: GEq
+    | { x <- v } isin D                             ::   :: xvD
+    | { V <- v } isin D                             ::   :: VvD
+    | ( formula ) after applications                ::   :: afterApp % HACK
 
   % Metarules
-
-  substs :: 'substs_' ::=
-    | x1 <- v1 , .. , xn <- vn  ::   :: substs
-    | substs1 U .. U substsn    :: M :: union
 
   patterns :: 'patterns_' ::=
     | p1 .. pn                  ::   :: patterns
@@ -170,7 +221,6 @@ grammar
 
   Variant :: 'Variant_' ::=
     | V1 VArgs1 .. Vn VArgsn    ::   :: Variants
-    | empty                     ::   :: Empty
     | Variant \\ V              :: M :: Substraction
 
   RetVar :: 'RetVar_' ::=
@@ -179,6 +229,9 @@ grammar
 subrules
   v <:: t
   abs <:: t
+  valAbs <:: abs
+  valueLambda <:: lambda
+  valueParams <:: params
 
 freevars
   T X :: ftv
@@ -224,7 +277,7 @@ defns
     RetVar = X X1 .. Xn
     G' = G, X : K, X1 : K1, .. , Xn : Kn
     RetVar & G' |- V1 tyList1 |> G1 .. RetVar & G' |- Vn tyListn |> Gn
-    ---------------------------------------------------------------------------------- :: Type
+    ------------------------------------------------------------------------------------------------------------------ :: Type
     G |- type X (X1 : K1) (Xn : Kn) = V1 tyList1 | .. | Vn tyListn |> G U G1 U .. U Gn, X : {V1 tyList1 .. Vn tyListn}
 
     G |- T1 : K1 .. G |- Tn : Kn
@@ -296,7 +349,7 @@ defns
     G, x : T1 |- abs : [] T1
     G, x : T1 |- t2 : [eff] T2
     ------------------------------------------ :: LetRec
-    G |- let rec x : T1 = abs in t2 : [eff] T2
+    G |- let rec x = abs : T1 in t2 : [eff] T2
 
     G U G1 |- t1 : [eff1] T2 .. G U Gn |- tn : [effn] T2
     T1 : {Variant} isin G
@@ -477,7 +530,7 @@ defns
     eff == eff
 
     set(effelm1, .., effelmn) = set(effelm1', .., effelmn')
-    --------------------------------------------------------------- :: Eq
+    ------------------------------------------------------- :: Eq
     effelm1, .., effelmn == effelm1', .., effelmn'
 
 defns
@@ -507,159 +560,185 @@ defns
   JTopOp :: '' ::=
 
   defn
-    program --> program' :: :: topReduce :: TopE_ {{ com Toplevel evaluation }} by
+    D |- program --> D' |- program' :: :: topReduce :: TopE_ {{ com Toplevel evaluation }} by
 
-    t --> t'
-    ---------------------------------------- :: Let1
-    let x = t program --> let x = t' program
-
-
-    -------------------------------------- :: Let2
-    let x = v program --> [x |-> v]program
+    D |- t --> D |- t'
+    -------------------------------------------------- :: Let1
+    D |- let x = t program --> D |- let x = t' program
 
 
-    --------------------------------------------------------------------------- :: LetRec
-    let rec x : T = abs program --> [x |-> (let rec x : T = abs in abs)]program
+    ------------------------------------------------- :: Let2
+    D |- let x = v program --> D, {x <- v} |- program
+
+    D |- abs --> D |- abs'
+    -------------------------------------------------------------- :: LetRec1
+    D |- let rec x = abs program --> D |- let rec x = abs' program
 
 
-    ------------------------------------ :: TypeAlias
-    type alias X = T program --> program
-
-    % TODO: vvv ???
-
-    --------------------------------------------------------------------- :: Type
-    type X variantArgs = V1 tyList1 | .. | Vn tyListn program --> program
+    ------------------------------------------------------------------------------------- :: LetRec2
+    D |- let rec x = valAbs program --> D, {x <- let rec x = valAbs in valAbs} |- program
 
 
-    ---------------------------------------- :: Exception
-    exception Exc tyList program --> program
+    ---------------------------------------------- :: TypeAlias
+    D |- type alias X = T program --> D |- program
+
+    V1 tyList1 |> v1 .. Vn tyListn |> vn
+    ------------------------------------------------------------------------------------------------------- :: Type
+    D |- type X variantArgs = V1 tyList1 | .. | Vn tyListn program --> D, {V1 <- v1 .. Vn <- vn} |- program
+
+
+    -------------------------------------------------- :: Exception
+    D |- exception Exc tyList program --> D |- program
+
+defns
+  JVarCreationOp :: '' ::=
+
+  defn
+    V tyList |> v :: :: VarCreation :: VarCreation_ {{ com Variants creation }} by
+
+    % HACK
+    ({x1 <- v1} isin D) after applications .. ({xn <- vn} isin D) after applications
+    -------------------------------------------------------------------------------- :: Create
+    V T1 .. Tn |> \(x1 : T1) .. (xn : Tn) -> TConstr V v1 .. vn
 
 defns
   Jop :: '' ::=
 
   defn
-    t --> t' ::  :: reduce :: E_ {{ com Evaluation }} by
+    D |- t --> D' |- t' ::  :: reduce :: E_ {{ com Evaluation }} by
+
+    {x <- v} isin D
+    ----------------- :: Var
+    D |- x --> D |- v
+
+    {V <- v} isin D
+    ----------------- :: Variant
+    D |- V --> D |- v
 
 
-    --------------- :: Variant
-    V --> TConstr V
+    ----------------------------------------------- :: App1Failure
+    D |- (failure exnval) t --> D |- failure exnval
 
 
-    ------------------------------------- :: App1Failure
-    (failure exnval) t --> failure exnval
+    ----------------------------------------------- :: App2Failure
+    D |- v (failure exnval) --> D |- failure exnval
+
+    D |- t1 --> D |- t1'
+    ------------------------ :: App1
+    D |- t1 t --> D |- t1' t
+
+    D |- t1 --> D |- t1'
+    ------------------------ :: App2
+    D |- v t1 --> D |- v t1'
 
 
-    ------------------------------------- :: App2Failure
-    v (failure exnval) --> failure exnval
-
-    t1 --> t1'
-    -------------- :: App1
-    t1 t --> t1' t
-
-    t1 --> t1'
-    -------------- :: App2
-    v t1 --> v t1'
+    ------------------------------------------------- :: AppAbs
+    D |- (\(x : T) -> t12) v2 --> D, {x <- v2} |- t12
 
 
-    ------------------------------------------------- :: AppVariant
-    (TConstr V v1 .. vn) vm --> TConstr V v1 .. vn vm
+    ----------------------------- :: TAbs
+    D |- \(X : K) -> t --> D |- t
 
 
-    --------------------------------------- :: AppAbs
-    (\(x : T) -> t12) v2 --> [x |-> v2]t12
+    ----------------------------- :: EAbs
+    D |- \(E : !) -> t --> D |- t
 
 
-    ----------- :: TApp
-    t [T] --> t
+    --------------------- :: TApp
+    D |- t [T] --> D |- t
 
 
-    --------------- :: EApp
-    t [[eff]] --> t
+    ------------------------- :: EApp
+    D |- t [[eff]] --> D |- t
 
 
-    ----------------------------------------------- :: LetFailure
-    let x = failure exnval in t2 --> failure exnval
+    --------------------------------------------------------- :: LetFailure
+    D |- let x = failure exnval in t2 --> D |- failure exnval
 
-    t1 --> t1'
-    -------------------------------------- :: Let1
-    let x = t1 in t2 --> let x = t1' in t2
-
-
-    ----------------------------- :: Let2
-    let x = v in t --> [x |-> v]t
+    D |- t1 --> D |- t1'
+    ------------------------------------------------ :: Let1
+    D |- let x = t1 in t2 --> D |- let x = t1' in t2
 
 
-    ------------------------------------------------------------------ :: LetRec
-    let rec x : T = abs in t --> [x |-> (let rec x : T = abs in abs)]t
+    ----------------------------------------- :: Let2
+    D |- let x = v in t --> D, {x <- v} |- t
+
+    D |- abs --> D |- abs'
+    -------------------------------------------------------- :: LetRec1
+    D |- let rec x = abs in t --> D |- let rec x = abs' in t
 
 
-    ------------------------------------------------------------------------------------ :: MatchFailure
-    match failure exnval with p1 -> t1 | .. | pn -> tn end --> failure exnval
-
-    t --> t'
-    ---------------------------------------------------------------------------------------- :: Match
-    match t with p1 -> t1 | .. | pn -> tn end --> match t' with p1 -> t1 | .. | pn -> tn end
-
-    v matches p1 |> {x1 <- v1, .., xn <- vn}
-    -------------------------------------------------------------------------- :: MatchFound
-    match v with p1 -> t1 | .. | pn -> tn end --> [x1 |-> v1, .., xn |-> vn]t1
-
-    not (v matches p1 |> {x1 <- v1, .., xn <- vn})
-    -------------------------------------------------------------------------------------------------- :: MatchStep
-    match v with p1 -> t1 | p2 -> t2 | .. | pn -> tn end --> match v with p2 -> t2 | .. | pn -> tn end
-
-    t --> t'
-    -------------------- :: Annot
-    (t : [eff] T) --> t'
-
-    t --> t'
-    ---------------------------------------------------------------------- :: FailureArgs
-    fail [T] Exc v1 .. vn t t1 .. tn --> fail [T] Exc v1 .. vn t' t1 .. tn
+    ---------------------------------------------------------------------------- :: LetRec2
+    D |- let rec x = valAbs in t --> D, {x <- let rec x = valAbs in valAbs} |- t
 
 
-    ---------------------------------------------- :: Failure
-    fail [T] Exc v1 .. vn --> failure Exc v1 .. vn
+    ----------------------------------------------------------------------------------- :: MatchFailure
+    D |- match failure exnval with p1 -> t1 | .. | pn -> tn end --> D |- failure exnval
 
-    t --> t'
-    ---------------------------------------------------------------------------------------- :: Try
-    try t with pe1 -> t1 | .. | pen -> tn end --> try t' with pe1 -> t1 | .. | pen -> tn end
+    D |- t --> D |- t'
+    -------------------------------------------------------------------------------------------------- :: Match
+    D |- match t with p1 -> t1 | .. | pn -> tn end --> D |- match t' with p1 -> t1 | .. | pn -> tn end
+
+    v matches p1 |> D'
+    --------------------------------------------------------------- :: MatchFound
+    D |- match v with p1 -> t1 | .. | pn -> tn end --> D U D' |- t1
+
+    not (v matches p1 |> D')
+    ------------------------------------------------------------------------------------------------------------ :: MatchStep
+    D |- match v with p1 -> t1 | p2 -> t2 | .. | pn -> tn end --> D |- match v with p2 -> t2 | .. | pn -> tn end
+
+    D |- t --> D |- t'
+    ------------------------------ :: Annot
+    D |- (t : [eff] T) --> D |- t'
+
+    D |- t --> D |- t'
+    -------------------------------------------------------------------------------- :: FailureArgs
+    D |- fail [T] Exc v1 .. vn t t1 .. tn --> D |- fail [T] Exc v1 .. vn t' t1 .. tn
 
 
-    ----------------------------------------------- :: TryNoFailure
-    try v with pe1 -> t1 | .. | pen -> tn end --> v
+    -------------------------------------------------------- :: Failure
+    D |- fail [T] Exc v1 .. vn --> D |- failure Exc v1 .. vn
 
-    not (exnval matches pe1 |> {x1 <- v1, .., xn <- vn})
-    ------------------------------------------------------------------------------------- :: TryNotFound
-    try failure exnval with pe1 -> t1 end --> failure exnval
+    D |- t --> D |- t'
+    -------------------------------------------------------------------------------------------------- :: Try
+    D |- try t with pe1 -> t1 | .. | pen -> tn end --> D |- try t' with pe1 -> t1 | .. | pen -> tn end
 
-    exnval matches pe1 |> {x1 <- v1, .., xn <- vn}
-    --------------------------------------------------------------------------------------- :: TryFound
-    try failure exnval with pe1 -> t1 | .. | pen -> tn end --> [x1 |-> v1, .., xn |-> vn]t1
 
-    not (exnval matches pe1 |> {x1 <- v1, .., xn <- vn})
-    ----------------------------------------------------------------------------------------------------------------------------- :: TryStep
-    try failure exnval with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> try failure exnval with pe2 -> t2 | .. | pen -> tn end
+    --------------------------------------------------------- :: TryNoFailure
+    D |- try v with pe1 -> t1 | .. | pen -> tn end --> D |- v
+
+    not (exnval matches pe1 |> D')
+    ------------------------------------------------------------------ :: TryNotFound
+    D |- try failure exnval with pe1 -> t1 end --> D |- failure exnval
+
+    exnval matches pe1 |> D'
+    ---------------------------------------------------------------------------- :: TryFound
+    D |- try failure exnval with pe1 -> t1 | .. | pen -> tn end --> D U D' |- t1
+
+    not (exnval matches pe1 |> D')
+    --------------------------------------------------------------------------------------------------------------------------------------- :: TryStep
+    D |- try failure exnval with pe1 -> t1 | pe2 -> t2 | .. | pen -> tn end --> D |- try failure exnval with pe2 -> t2 | .. | pen -> tn end
 
 defns
   JExnMatches :: '' ::=
 
   defn
-    exnval matches pe |> { x1 <- v1 , .. , xn <- vn } :: :: exnmatches :: ExnMatches_ {{ com Exception pattern matching with substitution creation }} by
+    exnval matches pe |> D :: :: exnmatches :: ExnMatches_ {{ com Exception pattern matching with substitution creation }} by
 
 
-    --------------------------------------------------------------- :: Matches
-    Exc v1 .. vn matches Exc x1 .. xn |> {x1 <- v1, .., xn <- vn}
+    ------------------------------------------------------------------ :: Matches
+    Exc v1 .. vn matches Exc x1 .. xn |> empty, {x1 <- v1 .. xn <- vn}
 
 defns
   JMatches :: '' ::=
 
   defn
-    v matches p |> { substs } :: :: matches :: Matches_ {{ com Pattern matching with substitution creation }} by
+    v matches p |> D :: :: matches :: Matches_ {{ com Pattern matching with substitution creation }} by
 
 
-    ----------------------- :: Any
-    v matches x |> {x <- v}
+    ------------------------------ :: Any
+    v matches x |> empty, {x <- v}
 
-    v1 matches p1 |> {substs1} .. vn matches pn |> {substsn}
-    ----------------------------------------------------------------- :: Matches
-    TConstr V v1 .. vn matches V p1 .. pn |> {substs1 U .. U substsn}
+    v1 matches p1 |> D1 .. vn matches pn |> Dn
+    ----------------------------------------------------- :: Matches
+    TConstr V v1 .. vn matches V p1 .. pn |> D1 U .. U Dn
