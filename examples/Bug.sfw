@@ -26,7 +26,7 @@ exception A
 
 let test () = try fail [Int] A with A -> O end
 
-let test (_ : Unit) = fail [Int] A
+let test (_ : Unit) = fail [Int] A : Int
 
 let test = try test Unit with A -> O end
 

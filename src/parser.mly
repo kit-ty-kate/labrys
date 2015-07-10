@@ -129,9 +129,8 @@ typeAlias:
   | Type Alias name = newUpperName Equal ty = typeExpr
       { (name, ty) }
 
-(* TODO: Fix this *)
 lambda_aux:
-  | ty = ty_opt(typeExprClosed) Arrow t = term
+  | ty = ty_opt(typeExprProtectedPermissive) Arrow t = term
       { (ty, t) }
 
 termStrictlyUnclosed:
@@ -141,6 +140,8 @@ termStrictlyUnclosed:
       { (loc $startpos $endpos, ParseTree.Let (x, xs)) }
   | x = termProtectedPermissive Semicolon y = term
       { (loc $startpos $endpos, ParseTree.Seq (x, y)) }
+  | t = termProtectedPermissive ty = ty_annot(typeExpr)
+      { (loc $startpos $endpos, ParseTree.Annot (t, ty)) }
 
 termNonStrictlyUnclosed:
   | x = app
@@ -163,8 +164,6 @@ termClosed:
       { (loc $startpos $endpos, ParseTree.Try (t, p)) }
   | LParen x = term RParen
       { x }
-  | LParen t = term ty = ty_annot(typeExpr) RParen
-      { (loc $startpos $endpos, ParseTree.Annot (t, ty)) }
 
 term:
   | x = termUnclosed { x }
