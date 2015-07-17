@@ -56,3 +56,5 @@ module Eff : sig
 
   val loc : t -> Location.t
 end
+
+module TyClass : module type of Name

@@ -106,3 +106,5 @@ module Eff = struct
 
   let loc (loc, _) = loc
 end
+
+module TyClass = Name

@@ -59,6 +59,9 @@ let upper_name_to_local_type imports (loc, `UpperName name) =
 let upper_name_to_local_exn imports (loc, `UpperName name) =
   transform_name_local imports loc Ident.Exn.local_create Ident.Exn.create name
 
+let upper_name_to_local_typeclass imports (loc, `UpperName name) =
+  transform_name_local imports loc Ident.TyClass.local_create Ident.TyClass.create name
+
 let lower_name_to_local_value imports (loc, `LowerName name) =
   transform_name_local imports loc Ident.Name.local_create Ident.Name.create name
 
@@ -90,7 +93,9 @@ let rec unsugar_ty ~current_module imports =
           let name = new_upper_name_to_type ~current_module name in
           (loc, Forall ((name, unsugar_kind k), aux xs))
       | ParseTree.TyClass (name, args) :: xs ->
-          assert false
+          let name = upper_name_to_local_typeclass imports name in
+          let args = List.map (new_upper_name_to_type ~current_module) args in
+          (loc, ForallTyClass ((name, args), aux xs))
       | [] ->
           unsugar_ty ~current_module imports ty
     in
@@ -220,8 +225,6 @@ and unsugar_args ~current_module imports options args (annot, t) =
           Option.map aux ty_xs
         in
         (ty_xs, (loc, EAbs (name, xs)))
-    | (loc, ParseTree.CArg (name, args)) :: xs ->
-        assert false
     | (loc, ParseTree.Unit) :: xs ->
         let x =
           ParseTree.VArg

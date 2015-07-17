@@ -4,6 +4,7 @@
 
 * Define a proper operational semantics
 * Typeclasses
+* Merge effects in kinds
 
 
 == Medium term ==

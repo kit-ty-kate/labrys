@@ -61,7 +61,6 @@ type arg' =
   | VArg of v_arg
   | TArg of ty_arg
   | EArg of new_upper_name
-  | CArg of tyclass_arg
   | Unit
 
 and arg = (loc * arg')

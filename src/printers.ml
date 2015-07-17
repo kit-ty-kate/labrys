@@ -28,6 +28,7 @@ let dump_name = Ident.Name.to_string
 let dump_exn_name = Ident.Exn.to_string
 let dump_t_name = Ident.Type.to_string
 let dump_eff_name = Ident.Eff.to_string
+let dump_tyclass_name = Ident.TyClass.to_string
 let dump_k = Kinds.to_string
 
 let rec dump_top f doc = function
@@ -124,8 +125,6 @@ module ParseTree = struct
         dump_t_name_ty_opt v
     | (_, EArg name) ->
         dump_eff_arg name
-    | (_, CArg x) ->
-        dump_tyclass x
     | (_, Unit) ->
         "()"
 
@@ -325,6 +324,8 @@ module UnsugaredTree = struct
         fmt "(forall %s : %s, %s)" (dump_t_name name) (dump_k k) (dump_ty res)
     | (_, ForallEff (name, res)) ->
         fmt "(forall %s : φ, %s)" (dump_eff_name name) (dump_ty res)
+    | (_, ForallTyClass ((name, args), res)) ->
+        fmt "(forall (%s %s), %s)" (dump_tyclass_name name) (String.concat " " (List.map dump_t_name args)) (dump_ty res)
     | (_, AbsOnTy ((name, k), res)) ->
         fmt "(λ (%s : %s) -> %s)" (dump_t_name name) (dump_k k) (dump_ty res)
     | (_, AppOnTy (f, x)) ->
