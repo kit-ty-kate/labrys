@@ -12,9 +12,6 @@ metavar typvar, X ::=
 metavar exc, Exc ::=
   {{ tex \mathit{[[exc]]} }} {{ com exception }}
 
-metavar effect, E ::=
-  {{ tex \mathit{[[effect]]} }} {{ com effect }}
-
 indexvar n ::=
 indexvar m ::=
 
@@ -43,11 +40,9 @@ grammar
     | V                                                         ::   :: Variant           {{ com type constructors }}
     | \ ( x : T ) -> t                                          ::   :: Lam               {{ com abstraction }}
     | \ ( X : K ) -> t                                          ::   :: TLam              {{ com type abstraction }}
-    | \ ( E : ! ) -> t                                          ::   :: ELam              {{ com effect abstraction }}
     | \ params -> t                                             :: S :: MultiAbs
     | t t'                                                      ::   :: App               {{ com application }}
     | t [ T ]                                                   ::   :: TApp              {{ com type application }}
-    | t [ [ eff ] ]                                             ::   :: EApp              {{ com effect application }}
     | let x params = t1 in t2                                   ::   :: Let               {{ com let binding }}
     | let rec x params = abs in t                               ::   :: LetRec            {{ com recursive let binding }}
     | match t with p1 -> t1 | .. | pn -> tn end                 ::   :: PatternMatching   {{ com pattern matching }}
@@ -71,7 +66,6 @@ grammar
   abs :: 'abs_' ::=                                        {{ com lambda abstractions }}
     | \ ( x : T ) -> t                    ::   :: Lam             {{ com abstraction }}
     | \ ( X : K ) -> abs                  ::   :: TLam            {{ com type abstraction }}
-    | \ ( E : ! ) -> abs                  ::   :: ELam            {{ com effect abstraction }}
     | let x params = t in abs             ::   :: Let             {{ com let binding }}
     | let rec x params = abs1 in abs2     ::   :: LetRec          {{ com recursive let binding }}
     | abs : annot                         ::   :: Annot           {{ com type annotation }}
@@ -85,7 +79,7 @@ grammar
     | ( eff )                          :: S :: Paren
 
   effelm :: 'effelm_' ::=                                       {{ com effects elements }}
-    | E                                 ::   :: Effect            {{ com effect }}
+    | X                                 ::   :: Effect            {{ com effect }}
     | IO                                ::   :: IOEffect          {{ com IO effect }}
     | Exn [ exn ]                       ::   :: Exn               {{ com exception }}
 
@@ -94,16 +88,17 @@ grammar
 
   K :: 'K_' ::=                                 {{ com kinds }}
     | *                   ::   :: Star            {{ com star }}
+    | !                   ::   :: Eff             {{ com the effect kind }}
     | K -> K'             ::   :: KArrow          {{ com kind arrow }}
 
   T :: T_ ::=                                   {{ com type }}
     | X                       ::   :: var         {{ com variable }}
+    | [ eff ]                 ::   :: Eff         {{ com effects }}
     | Unit                    :: L :: unit        {{ com Unit type (contained in the module opened by default) }}
     | T -> T'                 :: S :: PureArrow   {{ com == T -[]-> T' }}
     | T -[ eff ]-> T'         ::   :: Arrow       {{ com function }}
     | \ ( X : K ) , T         ::   :: abs         {{ com operator abstraction }}
     | forall ( X : K ) , T    ::   :: forall      {{ com forall }}
-    | forall ( E : ! ) , T    ::   :: EForall     {{ com effect forall }}
     | forall tyParams , T     :: S :: MultiForall
     | T T'                    ::   :: app         {{ com operator application }}
     | ( T )                   :: S :: paren
@@ -133,7 +128,6 @@ grammar
   tyLambda :: 'tyLambda_' ::=
     | ( X : K )           ::   :: Type            {{ com type }}
     | X                   :: S :: TypeStar
-    | ( E : ! )           ::   :: Effect          {{ com effect }}
 
   valueParams :: 'valueParams_' ::=
     | valueLambda1 .. valueLambdan      :: S :: Params
@@ -148,7 +142,7 @@ grammar
 
   annot :: 'annot_' ::=
     | T                   :: S :: Annot
-    | [ eff ] T           :: S :: EffAnnot
+    | [ [ eff ] ] T           :: S :: EffAnnot
 
   params :: 'params_' ::=
     | lambda1 .. lambdan            :: S :: Params
@@ -163,7 +157,6 @@ grammar
     | G , X1 : K1 , .. , Xn : Kn                ::   :: tn        {{ com tvars }}
     | G , X : { V1 tyList1 .. Vn tyListn }      ::   :: Vn        {{ com variants }}
     | G , Exc tyList                            ::   :: exn       {{ com exceptions }}
-    | G , E                                     ::   :: eff       {{ com effects }}
     | G1 U .. U Gn                              :: M :: union
 
   D {{ tex \Delta }} :: D_ ::=                                  {{ com runtime environment }}
@@ -200,7 +193,6 @@ grammar
     | X : K isin G                                  ::   :: XG
     | V : T isin G                                  ::   :: VTG
     | T : { Variant } isin G                        ::   :: TVnG
-    | E isin G                                      ::   :: EG
     | Exc tyList isin G                             ::   :: ExcTG
     | set ( eff ) = set ( eff' )                    ::   :: SetEq1
     | set ( exn ) = set ( exn' )                    ::   :: SetEq2
@@ -322,19 +314,10 @@ defns
     -------------------------------------------- :: TAbs
     G |- \(X : K) -> t : [eff] forall (X : K), T
 
-    G, E |- t : [eff] T
-    -------------------------------------------- :: EAbs
-    G |- \(E : !) -> t : [eff] forall (E : !), T
-
     G |- t : [eff] forall (X : K), T2
     G |- T1 : K
     --------------------------------- :: TApp
     G |- t [T1] : [eff] [X |-> T1]T2
-
-    G |- t : [eff] forall (E : !), T
-    G |- eff'
-    ------------------------------------- :: EApp
-    G |- t [[eff']] : [eff] [E |-> eff']T
 
     G |- t : [eff] X
     X == X'
@@ -360,9 +343,9 @@ defns
 
     G |- t : [eff] T
     G |- T : *
-    G |- eff
+    G |- eff : !
     ---------------------------- :: Annot
-    G |- (t : [eff] T) : [eff] T
+    G |- (t : [[eff]] T) : [eff] T
 
     G |- t1 : [eff1] T1 .. G |- tn : [effn] Tn
     G |- T : *
@@ -386,6 +369,10 @@ defns
     ------------ :: TVar
     G |- X : K
 
+    G |- eff : !
+    -------------- :: Eff
+    G |- [eff] : !
+
     G, X : K1 |- T : K2
     ------------------------------ :: Abs
     G |- \(X : K1), T : K1 -> K2
@@ -396,7 +383,7 @@ defns
     G |- T1 T2 : K12
 
     G |- T1 : *
-    G |- eff
+    G |- eff : !
     G |- T2 : *
     ----------------------- :: Arrow
     G |- T1 -[eff]-> T2 : *
@@ -405,37 +392,33 @@ defns
     ----------------------------- :: All
     G |- forall (X : K1), T2 : *
 
-    G, E |- T : *
-    -------------------------- :: EAll
-    G |- forall (E : !), T : *
-
 defns
   JEff :: '' ::=
 
   defn
-    G |- eff :: :: Eff :: Eff_ {{ com Effects typing }} by
+    G |- eff : ! :: :: Eff :: Eff_ {{ com Effects typing }} by
 
-    G |- effelm1 .. G |- effelmn
-    ---------------------------- :: Eff
-    G |- effelm1, .., effelmn
+    G |- effelm1 : ! .. G |- effelmn : !
+    ------------------------------------ :: Eff
+    G |- effelm1, .., effelmn : !
 
 defns
   JEffElm :: '' ::=
 
   defn
-    G |- effelm :: :: EffElm :: EffElm_ {{ com Effects elements typing }} by
+    G |- effelm : ! :: :: EffElm :: EffElm_ {{ com Effects elements typing }} by
 
-    E isin G
-    -------- :: Eff
-    G |- E
+    X : ! isin G
+    ------------ :: Eff
+    G |- X : !
 
 
-    ------- :: IO
-    G |- IO
+    ----------- :: IO
+    G |- IO : !
 
     Exc1 tyList1 isin G .. Excn tyListn isin G
     ------------------------------------------ :: Exn
-    G |- Exn [Exc1 | .. | Excn]
+    G |- Exn [Exc1 | .. | Excn] : !
 
 defns
   JPatternsTyping :: '' ::=
@@ -501,10 +484,6 @@ defns
     T1 == T2
     ---------------------------------------- :: All
     forall (X : K), T1 == forall (X : K), T2
-
-    T1 == T2
-    ---------------------------------------- :: EAll
-    forall (E : !), T1 == forall (E : !), T2
 
     T1 == T2
     -------------------------------- :: Abs
@@ -640,16 +619,8 @@ defns
     D |- \(X : K) -> t --> D |- t
 
 
-    ----------------------------- :: EAbs
-    D |- \(E : !) -> t --> D |- t
-
-
     --------------------- :: TApp
     D |- t [T] --> D |- t
-
-
-    ------------------------- :: EApp
-    D |- t [[eff]] --> D |- t
 
 
     --------------------------------------------------------- :: LetFailure
@@ -689,7 +660,7 @@ defns
 
     D |- t --> D |- t'
     ------------------------------ :: Annot
-    D |- (t : [eff] T) --> D |- t'
+    D |- (t : [[eff]] T) --> D |- t'
 
     D |- t --> D |- t'
     -------------------------------------------------------------------------------- :: FailureArgs
