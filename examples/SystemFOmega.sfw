@@ -38,7 +38,7 @@ let test = match test with
 
 --type alias Test = λX, λX, X
 
-let rec recursiveFun (x : Int) (y : Int) : [IO] Int =
+let rec recursiveFun (x : Int) (y : Int) : [[IO]] Int =
   recursiveFun y (printInt x)
 
 let main =

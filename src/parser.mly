@@ -111,7 +111,7 @@ let_aux:
   | Rec { ParseTree.Rec }
 
 %inline ty_annot(ty):
-  | Colon LBracket eff = eff RBracket ty = ty
+  | Colon LBracket LBracket eff = eff RBracket RBracket ty = ty
       { (ty, Some eff) }
   | Colon ty = ty
       { (ty, None) }
@@ -178,10 +178,6 @@ app:
       { (loc $startpos $endpos, ParseTree.TApp (f, ty)) }
   | f = app LBracket ty = typeExpr RBracket
       { (loc $startpos $endpos, ParseTree.TApp (f, ty)) }
-  | f = termClosed LBracket LBracket eff = eff RBracket RBracket
-      { (loc $startpos $endpos, ParseTree.EApp (f, eff)) }
-  | f = app LBracket LBracket eff = eff RBracket RBracket
-      { (loc $startpos $endpos, ParseTree.EApp (f, eff)) }
   | f = termClosed x = termClosed
       { (loc $startpos $endpos, ParseTree.App (f, x)) }
   | f = app x = termClosed
@@ -192,8 +188,6 @@ arg:
       { ParseTree.VArg (name, ty) }
   | ty = kind_and_name
       { ParseTree.TArg ty }
-  | LParen name = newUpperName Colon Eff RParen
-      { ParseTree.EArg name }
   | LParen RParen
       { ParseTree.Unit }
 
@@ -240,6 +234,8 @@ typeExprUnclosed:
 typeExprClosed:
   | name = upperName
       { (loc $startpos $endpos, ParseTree.Ty name) }
+  | LBracket eff = eff RBracket
+      { (loc $startpos(eff) $endpos(eff), ParseTree.Eff eff) }
   | LParen x = typeExpr RParen
       { x }
 
@@ -264,6 +260,8 @@ kindUnclosed:
 kindClosed:
   | Star
       { Kinds.Star }
+  | Eff
+      { Kinds.Eff }
   | LParen x = kind RParen
       { x }
 
@@ -274,9 +272,9 @@ kind:
 eff: eff = separated_list(Comma, effectName) { (loc $startpos $endpos, eff) }
 
 effectName:
-  | name = newUpperName
+  | name = upperName
       { (name, []) }
-  | name = newUpperName LBracket args = eff_exn RBracket
+  | name = upperName LBracket args = eff_exn RBracket
       { (name, args) }
 
 eff_exn:
@@ -318,8 +316,6 @@ kind_and_name:
 forallItems:
   | k = kind_and_name
       { ParseTree.Typ k }
-  | LParen name = newUpperName Colon Eff RParen
-      { ParseTree.Eff name }
   | LParen name = upperName args = nonempty_list(newUpperName) RParen
       { ParseTree.TyClass (name, args) }
 

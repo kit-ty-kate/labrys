@@ -40,7 +40,7 @@ let plus =
   aux
 
 let mult (n : Nat) (m : Nat) =
-  let rec aux (acc : Nat) (n : Nat.Nat) (m : Nat.Nat) : [IO] Nat.Nat =
+  let rec aux (acc : Nat) (n : Nat.Nat) (m : Nat.Nat) : [[IO]] Nat.Nat =
     match n with
     | Nat.O -> acc
     | Nat.S p -> aux (plus m acc) p m
@@ -49,7 +49,7 @@ let mult (n : Nat) (m : Nat) =
   aux O n m
 
 let fact (n : Nat) =
-  let rec aux (acc : Nat) (n : Nat) : [IO] Nat =
+  let rec aux (acc : Nat) (n : Nat) : [[IO]] Nat =
     match n with
     | O -> acc
     | S x -> aux (mult n acc) x

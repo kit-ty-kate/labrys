@@ -23,16 +23,16 @@ open Monomorphic_containers.Open
 
 open InterfaceTree
 
-let compile gamma =
-  let rec compile gammaT gammaExn gammaE gamma = function
+let compile options gamma =
+  let rec compile gammaT gammaExn gamma = function
     | Val (name, ty) :: xs ->
-        let ty = Types.of_parse_tree ~pure_arrow:`Partial gammaT gammaExn gammaE ty in
+        let ty = Types.of_parse_tree ~pure_arrow:`Partial options gammaT gammaExn ty in
         let gamma = Gamma.add_value name ty gamma in
-        compile gammaT gammaExn gammaE gamma xs
+        compile gammaT gammaExn gamma xs
     | AbstractType (name, k) :: xs ->
         let gamma = Gamma.add_type name (Types.Abstract k) gamma in
         let gammaT = GammaMap.Types.add name (Types.Abstract k) gammaT in
-        compile gammaT gammaExn gammaE gamma xs
+        compile gammaT gammaExn gamma xs
     | Datatype (name, k, args, variants) :: xs ->
         let ty_args = List.map fst args in
         let gamma = Gamma.add_type name (Types.Abstract k) gamma in
@@ -40,33 +40,33 @@ let compile gamma =
         let gamma =
           let gammaT' = List.fold_left (fun gammaT (name, k) -> GammaMap.Types.add name (Types.Abstract k) gammaT) gammaT args in
           let aux ~datatype gamma i (UnsugaredTree.Variant (name, tys, ty)) =
-            let tys = List.map (Types.of_parse_tree ~pure_arrow:`Partial gammaT' gammaExn gammaE) tys in
-            let ty = Types.of_parse_tree ~pure_arrow:`Partial gammaT gammaExn gammaE ty in
+            let tys = List.map (Types.of_parse_tree ~pure_arrow:`Partial options gammaT' gammaExn) tys in
+            let ty = Types.of_parse_tree ~pure_arrow:`Partial options gammaT gammaExn ty in
             let gamma = Gamma.add_value name ty gamma in
             Gamma.add_constr datatype name ty_args (tys, i) gamma
           in
           List.Idx.foldi (aux ~datatype:name) gamma variants
         in
-        compile gammaT gammaExn gammaE gamma xs
+        compile gammaT gammaExn gamma xs
     | TypeAlias (name, ty) :: xs ->
         let ty =
-          Types.of_parse_tree_kind ~pure_arrow:`Forbid gammaT gammaExn gammaE ty
+          Types.of_parse_tree_kind ~pure_arrow:`Forbid options gammaT gammaExn ty
         in
         let gamma = Gamma.add_type name (Types.Alias ty) gamma in
         let gammaT = GammaMap.Types.add name (Types.Alias ty) gammaT in
-        compile gammaT gammaExn gammaE gamma xs
+        compile gammaT gammaExn gamma xs
     | Exception (name, args) :: xs ->
         let args =
-          List.map (Types.of_parse_tree ~pure_arrow:`Forbid gammaT gammaExn gammaE) args
+          List.map (Types.of_parse_tree ~pure_arrow:`Forbid options gammaT gammaExn) args
         in
         let gamma = Gamma.add_exception name args gamma in
         let gammaExn = GammaMap.Exn.add name args gammaExn in
-        compile gammaT gammaExn gammaE gamma xs
+        compile gammaT gammaExn gamma xs
     | Open modul :: xs ->
         let gammaT = GammaMap.Types.open_module modul gammaT in
         let gammaExn = GammaMap.Exn.open_module modul gammaExn in
-        compile gammaT gammaExn gammaE gamma xs
+        compile gammaT gammaExn gamma xs
     | [] ->
         gamma
   in
-  compile gamma.Gamma.types gamma.Gamma.exceptions gamma.Gamma.effects Gamma.empty
+  compile gamma.Gamma.types gamma.Gamma.exceptions (Gamma.empty options)

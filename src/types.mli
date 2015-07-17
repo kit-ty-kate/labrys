@@ -20,33 +20,30 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Type.t
-type eff_name = Ident.Eff.t
 
-type t
+type t = PrivateTypes.t
 
-type visibility =
+type visibility = PrivateTypes.visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
+val empty : <lib_dir : string; ..> -> visibility GammaMap.Types.t
+
 val of_parse_tree_kind :
   pure_arrow:[< `Allow | `Partial | `Forbid] ->
+  <lib_dir : string; ..> ->
   visibility GammaMap.Types.t ->
   _ GammaMap.Exn.t ->
-  GammaSet.Eff.t ->
   UnsugaredTree.ty ->
   (t * Kinds.t)
 
 val of_parse_tree :
   pure_arrow:[< `Allow | `Partial | `Forbid] ->
+  <lib_dir : string; ..> ->
   visibility GammaMap.Types.t ->
   _ GammaMap.Exn.t ->
-  GammaSet.Eff.t ->
   UnsugaredTree.ty ->
   t
-
-val func : param:t -> eff:Effects.t -> res:t -> t
-val forall : param:name -> kind:Kinds.t -> res:t -> t
-val foralleff : param:eff_name -> res:t -> t
 
 val to_string : t -> string
 
@@ -55,8 +52,6 @@ val equal : t -> t -> bool
 val is_subset_of : t -> t -> bool
 
 val replace : from:name -> ty:t -> t -> t
-
-val replace_eff : from:eff_name -> eff:Effects.t -> t -> t
 
 val is_value : t -> bool
 
@@ -81,14 +76,9 @@ val apply_ty :
   t ->
   (name * t)
 
-val apply_eff :
-  loc_f:Location.t ->
-  loc_x:Location.t ->
-  eff:Effects.t ->
-  t ->
-  (eff_name * t)
-
 val has_io : t -> bool
+
+val is_fun : t -> bool
 
 val is_unit : <lib_dir : string; ..> -> t -> bool
 

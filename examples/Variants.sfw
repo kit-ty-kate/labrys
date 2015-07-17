@@ -51,7 +51,7 @@ let printOther : Unit -[IO]-> Unit = begin
   }
 end
 
-let rec f (x : Nat) : [IO] Nat =
+let rec f (x : Nat) : [[IO]] Nat =
   match x with
   | O -> let lol = printZero Unit in O
   | S O -> let lol = printOne Unit in O

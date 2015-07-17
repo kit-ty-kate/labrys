@@ -28,10 +28,10 @@ val underscore_loc : current_module:Module.t -> Location.t -> Ident.Name.t
 
 val unknown_loc : Location.t
 
-val exn : Ident.Eff.t
-val io : Ident.Eff.t
+val exn : <lib_dir : string; ..> -> Ident.Type.t
+val io : <lib_dir : string; ..> -> Ident.Type.t
 
-val effects : Ident.Eff.t list
+val effects : <lib_dir : string; ..> -> Ident.Type.t list
 
 val main : current_module:Module.t -> Ident.Name.t
 

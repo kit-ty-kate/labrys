@@ -23,6 +23,7 @@ open Monomorphic_containers.Open
 
 type t =
   | Star
+  | Eff
   | KFun of (t * t)
 
 let rec from_list = function
@@ -31,14 +32,21 @@ let rec from_list = function
 
 let rec to_string = function
   | Star -> "*"
+  | Eff -> "φ"
   | KFun (p, r) -> to_string p ^ " -> " ^ to_string r
 
 let rec equal x y = match x, y with
+  | Eff, Eff
   | Star, Star -> true
   | KFun (p1, r1), KFun (p2, r2) -> equal p1 p2 && equal r1 r2
-  | Star, KFun _
-  | KFun _, Star -> false
+  | Star, _
+  | KFun _, _
+  | Eff, _ -> false
 
 let not_star = function
   | Star -> false
-  | KFun _ -> true
+  | KFun _ | Eff -> true
+
+let is_effect = function
+  | Eff -> true
+  | Star | KFun _ -> false

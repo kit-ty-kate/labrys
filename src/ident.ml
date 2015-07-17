@@ -29,11 +29,10 @@ module Name = struct
   let equal (_, module_x, x) (_, module_y, y) =
     let module_x = Option.get_lazy (fun () -> assert false) module_x in
     let module_y = Option.get_lazy (fun () -> assert false) module_y in
-    let eq_module = Module.equal module_x module_y in
-    if eq_module then
+    if Module.equal module_x module_y then
       String.equal x y
     else
-      eq_module
+      false
 
   let fill_module ~matches:((_, modul, matches_name) as matches) = function
     | (loc, None, name) ->
@@ -93,18 +92,5 @@ end
 module Type = Name
 
 module Exn = Name
-
-module Eff = struct
-  type t = (Location.t * string)
-
-  let compare (_, x) (_, y) =
-    String.compare x y
-  let equal (_, x) (_, y) = String.equal x y
-
-  let create ~loc name = (loc, name)
-  let to_string (_, name) = name
-
-  let loc (loc, _) = loc
-end
 
 module TyClass = Name

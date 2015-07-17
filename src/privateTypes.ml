@@ -21,6 +21,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open Monomorphic_containers.Open
 
-module Value = struct
-  include Utils.EqSet(Ident.Name)
-end
+module Exn_set = Utils.EqSet(Ident.Exn)
+module Variables = Utils.EqSet(Ident.Type)
+
+type name = Ident.Type.t
+
+type effects =
+  { variables : Variables.t
+  ; exns : Exn_set.t
+  }
+
+type t =
+  | Ty of name
+  | Eff of effects
+  | Fun of (t * effects * t)
+  | Forall of (name * Kinds.t * t)
+  | AbsOnTy of (name * Kinds.t * t)
+  | AppOnTy of (t * t)
+
+type visibility =
+  | Abstract of Kinds.t
+  | Alias of (t * Kinds.t)

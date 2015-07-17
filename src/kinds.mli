@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type t =
   | Star
+  | Eff
   | KFun of (t * t)
 
 val from_list : t list -> t
@@ -30,3 +31,5 @@ val to_string : t -> string
 val equal : t -> t -> bool
 
 val not_star : t -> bool
+
+val is_effect : t -> bool

@@ -22,7 +22,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type name = Ident.Name.t
 type exn_name = Ident.Exn.t
 type t_name = Ident.Type.t
-type eff_name = Ident.Eff.t
 type tyclass_name = Ident.TyClass.t
 type module_name = Module.t
 type loc = Location.t
@@ -30,7 +29,7 @@ type loc = Location.t
 type t_value = (t_name * Kinds.t)
 type tyclass_value = (tyclass_name * t_name list)
 
-type effects = (loc * (Ident.Eff.t * Ident.Exn.t list) list)
+type effects = (loc * (t_name * exn_name list) list)
 
 type is_rec = ParseTree.is_rec =
   | Rec
@@ -39,8 +38,8 @@ type is_rec = ParseTree.is_rec =
 type ty' =
   | Fun of (ty * effects option * ty)
   | Ty of t_name
+  | Eff of effects
   | Forall of (t_value * ty)
-  | ForallEff of (eff_name * ty)
   | ForallTyClass of (tyclass_value * ty)
   | AbsOnTy of (t_value * ty)
   | AppOnTy of (ty * ty)
@@ -57,10 +56,8 @@ type pattern =
 type t' =
   | Abs of (value * t)
   | TAbs of (t_value * t)
-  | EAbs of (eff_name * t)
   | App of (t * t)
   | TApp of (t * ty)
-  | EApp of (t * effects)
   | Val of name
   | PatternMatching of (t * (pattern * t) list)
   | Let of ((name * is_rec * t) * t)

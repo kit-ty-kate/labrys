@@ -27,7 +27,6 @@ let (^^) = PPrint.(^^)
 let dump_name = Ident.Name.to_string
 let dump_exn_name = Ident.Exn.to_string
 let dump_t_name = Ident.Type.to_string
-let dump_eff_name = Ident.Eff.to_string
 let dump_tyclass_name = Ident.TyClass.to_string
 let dump_k = Kinds.to_string
 
@@ -40,12 +39,9 @@ let dump_exn x = String.concat " | " (List.map dump_exn_name x)
 
 let dump_eff (_, x) =
   let aux (name, args) =
-    fmt "%s [%s]" (dump_eff_name name) (dump_exn args)
+    fmt "%s [%s]" (dump_t_name name) (dump_exn args)
   in
   String.concat ", " (List.map aux x)
-
-let dump_eff_arg name =
-  fmt "(%s : φ)" (dump_eff_name name)
 
 let dump_module = Module.to_string
 
@@ -75,9 +71,6 @@ module ParseTree = struct
     in
     String.concat ", " (List.map aux x)
 
-  let dump_eff_arg name =
-    fmt "(%s : φ)" (dump_eff_name name)
-
   let dump_t_name_ty_opt = function
     | (name, Some ty) ->
         fmt "(%s : %s)" (dump_t_name name) (dump_k ty)
@@ -91,7 +84,6 @@ module ParseTree = struct
     fmt "(%s %s)" (dump_name name) args
 
   let dump_forall_arg = function
-    | Eff name -> dump_eff_arg name
     | Typ ty -> dump_t_name_ty_opt ty
     | TyClass x -> dump_tyclass x
 
@@ -103,6 +95,7 @@ module ParseTree = struct
     | (_, Fun (param, Some eff, res)) ->
         fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
     | (_, Ty name) -> dump_t_name name
+    | (_, Eff eff) -> dump_eff eff
     | (_, Forall (names, res)) ->
         fmt "(forall %s, %s)" (dump_forall_arg_list names) (dump_ty res)
     | (_, AbsOnTy (names, res)) ->
@@ -123,8 +116,6 @@ module ParseTree = struct
         fmt "(%s : %s)" (dump_name name) (dump_ty ty)
     | (_, TArg v) ->
         dump_t_name_ty_opt v
-    | (_, EArg name) ->
-        dump_eff_arg name
     | (_, Unit) ->
         "()"
 
@@ -165,13 +156,6 @@ module ParseTree = struct
           (PPrint.lparen
            ^^ dump_t f
            ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
-           ^^ PPrint.rparen
-          )
-    | (_, EApp (f, eff)) ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ dump_t f
-           ^^ PPrint.string (fmt "[[%s]]" (dump_eff eff))
            ^^ PPrint.rparen
           )
     | (_, LowerVal name) ->
@@ -320,10 +304,9 @@ module UnsugaredTree = struct
     | (_, Fun (param, Some eff, res)) ->
         fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
     | (_, Ty name) -> dump_t_name name
+    | (_, Eff eff) -> dump_eff eff
     | (_, Forall ((name, k), res)) ->
         fmt "(forall %s : %s, %s)" (dump_t_name name) (dump_k k) (dump_ty res)
-    | (_, ForallEff (name, res)) ->
-        fmt "(forall %s : φ, %s)" (dump_eff_name name) (dump_ty res)
     | (_, ForallTyClass ((name, args), res)) ->
         fmt "(forall (%s %s), %s)" (dump_tyclass_name name) (String.concat " " (List.map dump_t_name args)) (dump_ty res)
     | (_, AbsOnTy ((name, k), res)) ->
@@ -365,13 +348,6 @@ module UnsugaredTree = struct
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
-    | (_, EAbs (name, t)) ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ PPrint.string (fmt "λ %s ->" (dump_eff_arg name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
-           ^^ PPrint.rparen
-          )
     | (_, App (f, x)) ->
         PPrint.group
           (PPrint.lparen
@@ -384,13 +360,6 @@ module UnsugaredTree = struct
           (PPrint.lparen
            ^^ dump_t f
            ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
-           ^^ PPrint.rparen
-          )
-    | (_, EApp (f, eff)) ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ dump_t f
-           ^^ PPrint.string (fmt "[[%s]]" (dump_eff eff))
            ^^ PPrint.rparen
           )
     | (_, Val name) ->

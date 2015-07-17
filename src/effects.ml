@@ -23,10 +23,10 @@ open Monomorphic_containers.Open
 
 let fmt = Printf.sprintf
 
-module Exn_set = Utils.EqSet(Ident.Exn)
-module Variables = Utils.EqSet(Ident.Eff)
+module Exn_set = PrivateTypes.Exn_set
+module Variables = PrivateTypes.Variables
 
-type t =
+type t = PrivateTypes.effects =
   { variables : Variables.t
   ; exns : Exn_set.t
   }
@@ -43,7 +43,7 @@ let is_empty {variables; exns} =
 let var_eq list_eq x y =
   let aux k =
     let mem k = Variables.mem k y in
-    match List.find_pred (fun (k', _) -> Ident.Eff.equal k k') list_eq with
+    match List.find_pred (fun (k', _) -> Ident.Type.equal k k') list_eq with
     | Some (_, k) -> mem k
     | None -> mem k
   in
@@ -61,44 +61,62 @@ let is_subset_of list_eq x y =
 let has_io {variables; exns = _} =
   not (Variables.is_empty variables)
 
-let add gammaExn gammaE (name, exns) self =
+let rec add options gammaExn gammaT (name, exns) self =
   let exns =
     List.map (fun x -> fst (GammaMap.Exn.fill_module x gammaExn)) exns
   in
-  if GammaSet.Eff.mem name gammaE then begin
-    let has_args = Ident.Eff.equal name Builtins.exn in
-    if has_args && List.is_empty exns then
-      Err.fail
-        ~loc:(Ident.Eff.loc name)
-        "The '%s' effect must have at least one argument"
-        (Ident.Eff.to_string name);
-    if not has_args && not (List.is_empty exns) then
-      Err.fail
-        ~loc:(Ident.Eff.loc name)
-        "The '%s' effect doesn't have any arguments"
-        (Ident.Eff.to_string name);
-    let exns = Exn_set.of_list exns in
-    let exns = Exn_set.union exns self.exns in
-    let variables =
-      if has_args then
-        self.variables
-      else
-        Variables.add name self.variables
-    in
-    {variables; exns}
-  end else
+  let (name, k, self) =
+    match GammaMap.Types.fill_module name gammaT with
+    | (name, PrivateTypes.Abstract k) -> (name, k, self)
+    | (name, PrivateTypes.Alias (ty, k)) -> (name, k, union_ty self ty)
+  in
+  if not (Kinds.is_effect k) then
     Err.fail
-      ~loc:(Ident.Eff.loc name)
-      "Unknown effect '%s'"
-      (Ident.Eff.to_string name)
+      ~loc:(Ident.Type.loc name)
+      "Only kind φ is accepted here";
+  let has_args = Ident.Type.equal name (Builtins.exn options) in
+  if has_args && List.is_empty exns then
+    Err.fail
+      ~loc:(Ident.Type.loc name)
+      "The '%s' effect must have at least one argument"
+      (Ident.Type.to_string name);
+  if not has_args && not (List.is_empty exns) then
+    Err.fail
+      ~loc:(Ident.Type.loc name)
+      "The '%s' effect doesn't have any arguments"
+      (Ident.Type.to_string name);
+  let exns = Exn_set.of_list exns in
+  let exns = Exn_set.union exns self.exns in
+  let variables =
+    if has_args then
+      self.variables
+    else
+      Variables.add name self.variables
+  in
+  {variables; exns}
 
-let add_exn x self =
-  {self with exns = Exn_set.add x self.exns}
+and union_ty ?from self = function
+  | PrivateTypes.Ty name ->
+      let variables = match from with
+        | Some from -> Variables.remove from self.variables
+        | None -> self.variables
+      in
+      let variables = Variables.add name variables in
+      {self with variables}
+  | PrivateTypes.Eff eff ->
+      union self eff
+  | PrivateTypes.Fun _
+  | PrivateTypes.Forall _
+  | PrivateTypes.AbsOnTy _
+  | PrivateTypes.AppOnTy _ -> assert false
 
-let union x y =
+and union x y =
   let variables = Variables.union x.variables y.variables in
   let exns = Exn_set.union x.exns y.exns in
   {variables; exns}
+
+let add_exn x self =
+  {self with exns = Exn_set.add x self.exns}
 
 let union3 x y z =
   union (union x y) z
@@ -114,7 +132,7 @@ let remove_exn x self =
   {self with exns}
 
 let to_string self =
-  let aux name acc = Ident.Eff.to_string name :: acc in
+  let aux name acc = Ident.Type.to_string name :: acc in
   let exns =
     if Exn_set.is_empty self.exns then
       []
@@ -124,19 +142,28 @@ let to_string self =
   in
   fmt "[%s]" (String.concat ", " (exns @ Variables.fold aux self.variables []))
 
-let of_list gammaExn gammaE (_, l) =
-  let aux acc ty = add gammaExn gammaE ty acc in
+let of_list options gammaExn gammaT (_, l) =
+  let aux acc ty = add options gammaExn gammaT ty acc in
   List.fold_left aux empty l
 
-let replace ~from ~eff self =
+let replace ~from ~ty self =
   let aux name self =
-    if Ident.Eff.equal name from then begin
-      union self eff
-    end else
+    if Ident.Type.equal name from then
+      union_ty ~from self ty
+    else
       {self with variables = Variables.add name self.variables}
   in
   Variables.fold aux self.variables empty
 
-let remove_module_aliases self =
-  let exns = Exn_set.map Ident.Exn.remove_aliases self.exns in
-  {self with exns}
+let remove_module_aliases vars {variables; exns} =
+  let variables =
+    let aux name =
+      if not (List.mem name vars) then
+        Ident.Type.remove_aliases name
+      else
+        name
+    in
+    Variables.map aux variables
+  in
+  let exns = Exn_set.map Ident.Exn.remove_aliases exns in
+  {variables; exns}

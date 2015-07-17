@@ -19,17 +19,22 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t
-
-val of_list : _ GammaMap.Exn.t -> GammaSet.Eff.t -> UnsugaredTree.effects -> t
+type t = PrivateTypes.effects
 
 val empty : t
 
+val of_list :
+  <lib_dir : string; ..> ->
+  _ GammaMap.Exn.t ->
+  PrivateTypes.visibility GammaMap.Types.t ->
+  UnsugaredTree.effects ->
+  t
+
 val is_empty : t -> bool
 
-val equal : (Ident.Eff.t * Ident.Eff.t) list -> t -> t -> bool
+val equal : (Ident.Type.t * Ident.Type.t) list -> t -> t -> bool
 
-val is_subset_of : (Ident.Eff.t * Ident.Eff.t) list -> t -> t -> bool
+val is_subset_of : (Ident.Type.t * Ident.Type.t) list -> t -> t -> bool
 
 val has_io : t -> bool
 
@@ -43,6 +48,6 @@ val remove_exn : Ident.Exn.t -> t -> t
 
 val to_string : t -> string
 
-val replace : from:Ident.Eff.t -> eff:t -> t -> t
+val replace : from:Ident.Type.t -> ty:PrivateTypes.t -> t -> t
 
-val remove_module_aliases : t -> t
+val remove_module_aliases : Ident.Type.t list -> t -> t

@@ -45,16 +45,4 @@ module Type : module type of Name
 
 module Exn : module type of Name
 
-module Eff : sig
-  type t
-
-  val compare : t -> t -> int
-  val equal : t -> t -> bool
-
-  val create : loc:Location.t -> string -> t
-  val to_string : t -> string
-
-  val loc : t -> Location.t
-end
-
 module TyClass : module type of Name

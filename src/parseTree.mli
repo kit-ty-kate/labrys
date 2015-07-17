@@ -31,11 +31,10 @@ type ty_arg = (new_upper_name * Kinds.t option)
 type tyclass_arg = (upper_name * new_upper_name list)
 
 type forall_arg =
-  | Eff of new_upper_name
   | Typ of ty_arg
   | TyClass of tyclass_arg
 
-type effects = (loc * (new_upper_name * upper_name list) list)
+type effects = (loc * (upper_name * upper_name list) list)
 
 type is_rec =
   | Rec
@@ -44,6 +43,7 @@ type is_rec =
 type ty' =
   | Fun of (ty * effects option * ty)
   | Ty of upper_name
+  | Eff of effects
   | Forall of (forall_arg list * ty)
   | AbsOnTy of (ty_arg list * ty)
   | AppOnTy of (ty * ty)
@@ -60,7 +60,6 @@ type pattern =
 type arg' =
   | VArg of v_arg
   | TArg of ty_arg
-  | EArg of new_upper_name
   | Unit
 
 and arg = (loc * arg')
@@ -69,7 +68,6 @@ type t' =
   | Abs of (arg list * (ty_annot option * t))
   | App of (t * t)
   | TApp of (t * ty)
-  | EApp of (t * effects)
   | LowerVal of lower_name
   | UpperVal of upper_name
   | PatternMatching of (t * (pattern * t) list)

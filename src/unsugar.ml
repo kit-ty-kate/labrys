@@ -29,8 +29,6 @@ let new_upper_name_to_type ~current_module (loc, `NewUpperName name) =
   Ident.Type.create ~loc current_module name
 let new_upper_name_to_exn ~current_module (loc, `NewUpperName name) =
   Ident.Exn.create ~loc current_module name
-let new_upper_name_to_eff (loc, `NewUpperName name) =
-  Ident.Eff.create ~loc name
 
 let get_module imports loc modul =
   let aux (k, _) = List.equal String.equal k modul in
@@ -77,7 +75,7 @@ let unsugar_kind = Option.get Kinds.Star
 
 let unsugar_eff imports (loc, l) =
   let aux (name, args) =
-    let name = new_upper_name_to_eff name in
+    let name = upper_name_to_local_type imports name in
     let args = List.map (upper_name_to_local_exn imports) args in
     (name, args)
   in
@@ -86,9 +84,6 @@ let unsugar_eff imports (loc, l) =
 let rec unsugar_ty ~current_module imports =
   let unsugar_forall ~loc ty args =
     let rec aux = function
-      | ParseTree.Eff name :: xs ->
-          let name = new_upper_name_to_eff name in
-          (loc, ForallEff (name, aux xs))
       | ParseTree.Typ (name, k) :: xs ->
           let name = new_upper_name_to_type ~current_module name in
           (loc, Forall ((name, unsugar_kind k), aux xs))
@@ -122,6 +117,9 @@ let rec unsugar_ty ~current_module imports =
   | (loc, ParseTree.Ty name) ->
       let name = upper_name_to_local_type imports name in
       (loc, Ty name)
+  | (loc, ParseTree.Eff effects) ->
+      let effects = unsugar_eff imports effects in
+      (loc, Eff effects)
   | (loc, ParseTree.Forall (args, ty)) ->
       unsugar_forall ~loc ty args
   | (loc, ParseTree.AbsOnTy (args, ty)) ->
@@ -162,9 +160,6 @@ and unsugar_t ~current_module imports options = function
       (loc, App (unsugar_t ~current_module imports options f, unsugar_t ~current_module imports options x))
   | (loc, ParseTree.TApp (t, ty)) ->
       (loc, TApp (unsugar_t ~current_module imports options t, unsugar_ty ~current_module imports ty))
-  | (loc, ParseTree.EApp (t, eff)) ->
-      let eff = unsugar_eff imports eff in
-      (loc, EApp (unsugar_t ~current_module imports options t, eff))
   | (loc, ParseTree.LowerVal name) ->
       let name = lower_name_to_local_value imports name in
       (loc, Val name)
@@ -214,17 +209,6 @@ and unsugar_args ~current_module imports options args (annot, t) =
           Option.map aux ty_xs
         in
         (ty_xs, (loc, TAbs (ty, xs)))
-    | (loc, ParseTree.EArg name) :: xs ->
-        let name = new_upper_name_to_eff name in
-        let (ty_xs, xs) = aux xs in
-        let ty_xs =
-          let aux (ty_xs, eff) =
-            let ty_xs = ForallEff (name, ty_xs) in
-            ((loc, ty_xs), eff)
-          in
-          Option.map aux ty_xs
-        in
-        (ty_xs, (loc, EAbs (name, xs)))
     | (loc, ParseTree.Unit) :: xs ->
         let x =
           ParseTree.VArg

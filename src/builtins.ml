@@ -40,10 +40,10 @@ let underscore_loc ~current_module loc =
 let underscore ~current_module =
   underscore_loc ~current_module unknown_loc
 
-let exn = Ident.Eff.create ~loc:unknown_loc "Exn"
-let io = Ident.Eff.create ~loc:unknown_loc "IO"
+let exn options = Ident.Type.create ~loc:unknown_loc (prelude options) "Exn"
+let io options = Ident.Type.create ~loc:unknown_loc (prelude options) "IO"
 
-let effects = [io; exn]
+let effects options = [io options; exn options]
 
 let main ~current_module =
   Ident.Name.create ~loc:unknown_loc current_module "main"

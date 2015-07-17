@@ -54,8 +54,8 @@ let rec build_intf options current_module =
     Unsugar.create_interface ~current_module options imports tree
   in
   let aux acc x = Gamma.union ~imported:(build_intf options x) acc in
-  let gamma = List.fold_left aux Gamma.empty imports in
-  Interface.compile gamma tree
+  let gamma = List.fold_left aux (Gamma.empty options) imports in
+  Interface.compile options gamma tree
 
 let get_parse_tree modul =
   let module P = ParserHandler.Make(struct let get = Module.impl modul end) in
@@ -71,7 +71,7 @@ let get_unsugared_tree options modul =
 
 let build_imports_intf options imports =
   let aux gamma modul = Gamma.union ~imported:(build_intf options modul) gamma in
-  List.fold_left aux Gamma.empty imports
+  List.fold_left aux (Gamma.empty options) imports
 
 let get_typed_tree ~with_main ~interface options modul =
   let (imports, unsugared_tree) = get_unsugared_tree options modul in
@@ -128,7 +128,7 @@ and compile ?(with_main=false) imports_code interface options modul =
 
 let get_code options modul =
   let (imports_code, code) =
-    compile ~with_main:true Module.Map.empty Gamma.empty options modul
+    compile ~with_main:true Module.Map.empty (Gamma.empty options) options modul
   in
   prerr_endline (fmt "Linking %s" (Module.to_string modul));
   Backend.link ~main_module_name:modul ~main_module:code imports_code
@@ -144,7 +144,7 @@ let compile_program options modul =
 let compile_module options modul =
   let modul = Module.from_string options modul in
   let (_, _) =
-    compile Module.Map.empty Gamma.empty options modul
+    compile Module.Map.empty (Gamma.empty options) options modul
   in
   prerr_endline (fmt "Module %s compiled" (Module.to_string modul))
 
@@ -164,7 +164,7 @@ let print_typed_tree options modul =
   let modul = Module.from_string options modul in
   let modul = Module.open_module modul in
   let (_, typed_tree) =
-    get_typed_tree ~with_main:true ~interface:Gamma.empty options modul
+    get_typed_tree ~with_main:true ~interface:(Gamma.empty options) options modul
   in
   print_endline (Printers.TypedTree.dump typed_tree)
 
@@ -172,7 +172,7 @@ let print_untyped_tree options modul =
   let modul = Module.from_string options modul in
   let modul = Module.open_module modul in
   let (_, untyped_tree) =
-    get_untyped_tree ~with_main:true ~interface:Gamma.empty options modul
+    get_untyped_tree ~with_main:true ~interface:(Gamma.empty options) options modul
   in
   print_endline (Printers.UntypedTree.dump untyped_tree)
 
