@@ -103,7 +103,6 @@ grammar
     | T T'                    ::   :: app         {{ com operator application }}
     | ( T )                   :: S :: paren
     | [ X |-> T ] T'          :: M :: sub
-    | [ E |-> eff ] T         :: M :: Esub
     | T1 -> .. -> Tn -> T     :: M :: PureArrowRepeat
     | T T1 .. Tn              :: M :: AppRepeat
 
@@ -141,7 +140,7 @@ grammar
   % Syntaxic sugars
 
   annot :: 'annot_' ::=
-    | T                   :: S :: Annot
+    | T                       :: S :: Annot
     | [ [ eff ] ] T           :: S :: EffAnnot
 
   params :: 'params_' ::=
@@ -183,12 +182,12 @@ grammar
     | <-                  ::   :: leftarrow  {{ tex \leftarrow }}
     | &                   ::   :: and        {{ tex \ \& \  }}
     | empty               ::   :: empty      {{ tex \emptyset }}
+    | notin               ::   :: notin      {{ tex \notin }}
 
   formula :: 'formula_' ::=
     | judgement                                     ::   :: judgement
     | formula1 .. formulan                          ::   :: dots
     | not ( formula )                               ::   :: not
-    | T == T'                                       ::   :: Teqv
     | x : T isin G                                  ::   :: xTG
     | X : K isin G                                  ::   :: XG
     | V : T isin G                                  ::   :: VTG
@@ -202,6 +201,7 @@ grammar
     | { x <- v } isin D                             ::   :: xvD
     | { V <- v } isin D                             ::   :: VvD
     | ( formula ) after applications                ::   :: afterApp % HACK
+    | effelm notin eff                              ::   :: effnotineff
 
   % Metarules
 
@@ -254,11 +254,11 @@ defns
   defn
     G |- top |> G' :: :: TopType :: Top_ {{ com Toplevel typing }} by
 
-    G |- t : [] T
+    G |- t : [[]] T
     -------------------------- :: Let
     G |- let x = t |> G, x : T
 
-    G, x : T |- abs : [] T
+    G, x : T |- abs : [[]] T
     ------------------------------------ :: LetRec
     G |- let rec x : T = abs |> G, x : T
 
@@ -290,74 +290,75 @@ defns
   Jtype :: '' ::=
 
   defn
-    G |- t : [ eff ] T :: :: GtT :: T_ {{ com Typing }} by
+    G |- t : [ [ eff ] ] T :: :: GtT :: T_ {{ com Typing }} by
 
     x : T isin G
-    ------------- :: Var
-    G |- x : [] T
+    --------------- :: Var
+    G |- x : [[]] T
 
     V : T isin G
-    ------------- :: Variant
-    G |- V : [] T
+    --------------- :: Variant
+    G |- V : [[]] T
 
-    G, x1 : T1 |- t : [eff] T
+    G, x1 : T1 |- t : [[eff]] T
     G |- T1 : *
-    --------------------------------------- :: Abs
-    G |- \(x1 : T1) -> t : [] T1 -[eff]-> T
+    ----------------------------------------- :: Abs
+    G |- \(x1 : T1) -> t : [[]] T1 -[eff]-> T
 
-    G |- t : [eff1] T1 -[eff2]-> T2
-    G |- t' : [eff3] T1
-    ----------------------------------- :: App
-    G |- t t' : [eff1 U eff2 U eff3] T2
+    G |- t : [[eff1]] T1 -[eff2]-> T2
+    G |- t' : [[eff3]] T1
+    ------------------------------------- :: App
+    G |- t t' : [[eff1 U eff2 U eff3]] T2
 
-    G, X : K |- t : [eff] T
-    -------------------------------------------- :: TAbs
-    G |- \(X : K) -> t : [eff] forall (X : K), T
+    G, X : K |- t : [[eff]] T
+    IO notin eff
+    ---------------------------------------------- :: TAbs
+    G |- \(X : K) -> t : [[eff]] forall (X : K), T
 
-    G |- t : [eff] forall (X : K), T2
+    G |- t : [[eff]] forall (X : K), T2
     G |- T1 : K
-    --------------------------------- :: TApp
-    G |- t [T1] : [eff] [X |-> T1]T2
+    ----------------------------------- :: TApp
+    G |- t [T1] : [[eff]] [X |-> T1]T2
 
-    G |- t : [eff] X
+    G |- t : [[eff]] X
     X == X'
     G |- X' : *
-    ----------------- :: Eq
-    G |- t : [eff] X'
+    ------------------- :: Eq
+    G |- t : [[eff]] X'
 
-    G, x : T1 |- t2 : [eff2] T2
-    ------------------------------------------------------ :: Let
-    G |- let x = (t1 : [eff1] T1) in t2 : [eff1 U eff2] T2
+    G, x : T1 |- t2 : [[eff2]] T2
+    ---------------------------------------------------------- :: Let
+    G |- let x = (t1 : [[eff1]] T1) in t2 : [[eff1 U eff2]] T2
 
-    G, x : T1 |- abs : [] T1
-    G, x : T1 |- t2 : [eff] T2
-    ------------------------------------------ :: LetRec
-    G |- let rec x = abs : T1 in t2 : [eff] T2
+    G, x : T1 |- abs : [[eff1]] T1
+    G, x : T1 |- t2 : [[eff2]] T2
+    ------------------------------------------------------------- :: LetRec
+    G |- let rec x = abs : [[eff1]] T1 in t2 : [[eff1 U eff2]] T2
 
-    G U G1 |- t1 : [eff1] T2 .. G U Gn |- tn : [effn] T2
+    G U G1 |- t1 : [[eff1]] T2 .. G U Gn |- tn : [[effn]] T2
     T1 : {Variant} isin G
     Variant & G |- p1 .. pn : T1 |> G1 .. Gn
-    G |- t : [eff] T1
-    ---------------------------------------------------------------------------- :: Match
-    G |- match t with p1 -> t1 | .. | pn -> tn end : [eff U eff1 U .. U effn] T2
+    G |- t : [[eff]] T1
+    ------------------------------------------------------------------------------ :: Match
+    G |- match t with p1 -> t1 | .. | pn -> tn end : [[eff U eff1 U .. U effn]] T2
 
-    G |- t : [eff] T
+    G |- t : [[eff]] T
     G |- T : *
     G |- eff : !
-    ---------------------------- :: Annot
-    G |- (t : [[eff]] T) : [eff] T
+    -------------------------------- :: Annot
+    G |- (t : [[eff]] T) : [[eff]] T
 
-    G |- t1 : [eff1] T1 .. G |- tn : [effn] Tn
+    G |- t1 : [[eff1]] T1 .. G |- tn : [[effn]] Tn
     G |- T : *
     Exc T1 .. Tn isin G
-    ------------------------------------------------------------- :: Fail
-    G |- fail [T] Exc t1 .. tn : [Exn [Exc] U eff1 U .. U effn] T
+    --------------------------------------------------------------- :: Fail
+    G |- fail [T] Exc t1 .. tn : [[Exn [Exc] U eff1 U .. U effn]] T
 
-    G1 |- t1 : [eff1] T .. Gn |- tn : [effn] T
+    G1 |- t1 : [[eff1]] T .. Gn |- tn : [[effn]] T
     G |- pe1 |> Exc1 & G1 .. G |- pen |> Excn & Gn
-    G |- t : [eff] T
-    --------------------------------------------------------------------------------------------------- :: Try
-    G |- try t with pe1 -> t1 | .. | pen -> tn end : [(eff \\ [Exc1 | .. | Excn]) U eff1 U .. U effn] T
+    G |- t : [[eff]] T
+    ----------------------------------------------------------------------------------------------------- :: Try
+    G |- try t with pe1 -> t1 | .. | pen -> tn end : [[(eff \\ [Exc1 | .. | Excn]) U eff1 U .. U effn]] T
 
 defns
   Jkind :: '' ::=
@@ -374,7 +375,7 @@ defns
     G |- [eff] : !
 
     G, X : K1 |- T : K2
-    ------------------------------ :: Abs
+    ---------------------------- :: Abs
     G |- \(X : K1), T : K1 -> K2
 
     G |- T1 : K11 -> K12
@@ -389,7 +390,7 @@ defns
     G |- T1 -[eff]-> T2 : *
 
     G, X : K1 |- T2 : *
-    ----------------------------- :: All
+    ---------------------------- :: All
     G |- forall (X : K1), T2 : *
 
 defns
