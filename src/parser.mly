@@ -191,24 +191,16 @@ arg:
   | LParen RParen
       { ParseTree.Unit }
 
-args_aux(rest):
-  | rest = rest
-      { ([], rest) }
-  | x = arg xs = args_aux(rest)
-      { let (xs, rest) = xs in
-        ((loc $startpos $endpos, x) :: xs, rest)
-      }
-
 args(rest):
   | rest = rest
       { ([], rest) }
-  | x = arg xs = args_aux(rest)
+  | x = arg xs = args(rest)
       { let (xs, rest) = xs in
         ((loc $startpos $endpos, x) :: xs, rest)
       }
 
 nonempty_args(rest):
-  | x = arg xs = args_aux(rest)
+  | x = arg xs = args(rest)
       { let (xs, rest) = xs in
         ((loc $startpos $endpos, x) :: xs, rest)
       }
