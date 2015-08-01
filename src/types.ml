@@ -103,7 +103,6 @@ let handle_effects ~loc options (b, _) gammaExn gammaT = function
         "Pure arrows are forbidden here. If you really want one use the \
          explicit syntax '-[]->' instead"
 
-(* TODO: Check if it's really in normal form all the time *)
 let rec of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC = function
   | (loc, UnsugaredTree.Fun (x, eff, y)) ->
       let loc_x = fst x in
@@ -155,15 +154,6 @@ let rec of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC = functio
       let gammaT = GammaMap.Types.add name (Abstract k) gammaT in
       let (ret, kret) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
-  | (_, UnsugaredTree.AppOnTy ((_, UnsugaredTree.AbsOnTy ((name, k), t)), x)) ->
-      let loc_x = fst x in
-      let pa = switch_pure_arrow pure_arrow in
-      let (x, kx) = of_parse_tree_kind ~pure_arrow:pa options gammaT gammaExn gammaTC x in
-      if not (Kinds.equal k kx) then
-        kind_missmatch ~loc_x ~has:kx ~expected:k;
-      let gammaT = GammaMap.Types.add name (Abstract k) gammaT in
-      let (t, kt) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC t in
-      (replace ~from:name ~ty:x t, kt)
   | (loc, UnsugaredTree.AppOnTy (f, x)) ->
       let (f, kf) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC f in
       let pa = switch_pure_arrow pure_arrow in
@@ -182,13 +172,22 @@ let rec of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC = functio
       in
       (AppOnTy (f, x), k)
 
-let of_parse_tree_kind ~pure_arrow =
+let rec reduce = function
+  | AppOnTy (t, ty) ->
+      begin match reduce t with
+      | AbsOnTy (name, _, t) -> reduce (replace ~from:name ~ty t)
+      | Ty _ | Eff _ | Fun _ | Forall _ | TyClass _ | AppOnTy _ as ty -> ty
+      end
+  | Ty _ | Eff _ | Fun _ | Forall _ | TyClass _ | AbsOnTy _ as ty -> ty
+
+let of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC ty =
   let pure_arrow = match pure_arrow with
     | `Allow -> (true, pure_arrow)
     | `Partial -> (true, pure_arrow)
     | `Forbid -> (false, pure_arrow)
   in
-  of_parse_tree_kind ~pure_arrow
+  let (ty, k) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC ty in
+  (reduce ty, k)
 
 let of_parse_tree ~pure_arrow options gammaT gammaExn gammaTC ty =
   let (loc, _) = ty in
