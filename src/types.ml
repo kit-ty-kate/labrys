@@ -212,7 +212,7 @@ let rec to_string =
   | Fun (Ty x, eff, ret) ->
       fmt "%s -%s-> %s" (Ident.Type.to_string x) (Effects.to_string eff) (to_string ret)
   | Fun (x, eff, ret) ->
-      fmt "(%s) %s %s" (to_string x) (Effects.to_string eff) (to_string ret)
+      fmt "(%s) -%s-> %s" (to_string x) (Effects.to_string eff) (to_string ret)
   | Forall (x, k, t) ->
       fmt "forall %s : %s. %s" (Ident.Type.to_string x) (Kinds.to_string k) (to_string t)
   | TyClass ((name, args), eff, t) when Effects.is_empty eff ->
