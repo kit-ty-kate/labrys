@@ -31,14 +31,133 @@ type effects =
   ; exns : Exn_set.t
   }
 
-type t =
+type tyclass_arg =
+  | Param of (name * Kinds.t)
+  | Filled of t
+
+and t =
   | Ty of name
   | Eff of effects
   | Fun of (t * effects * t)
   | Forall of (name * Kinds.t * t)
+  | TyClass of ((Ident.TyClass.t * tyclass_arg list) * effects * t)
   | AbsOnTy of (name * Kinds.t * t)
   | AppOnTy of (t * t)
 
 type visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
+
+let var_eq list_eq x y =
+  let aux k =
+    let mem k = Variables.mem k y in
+    match List.find_pred (fun (k', _) -> Ident.Type.equal k k') list_eq with
+    | Some (_, k) -> mem k
+    | None -> mem k
+  in
+  Variables.for_all aux x
+
+let eff_equal list_eq x y =
+  Int.(Variables.cardinal x.variables = Variables.cardinal y.variables)
+  && var_eq list_eq x.variables y.variables
+  && Exn_set.equal x.exns y.exns
+
+let eff_is_subset_of list_eq x y =
+  var_eq list_eq x.variables y.variables
+  && Exn_set.subset x.exns y.exns
+
+let ty_equal eff_eq x y =
+  let rec aux eq_list = function
+    | Ty x, Ty x' ->
+        let eq = Ident.Type.equal in
+        List.exists (fun (y, y') -> eq x y && eq x' y') eq_list
+        || (eq x x' && List.for_all (fun (y, y') -> eq x y || eq x' y') eq_list)
+    | Eff x, Eff x' ->
+        eff_eq eq_list x x'
+    | Fun (param, eff1, res), Fun (param', eff2, res') ->
+        aux eq_list (param, param')
+        && eff_eq eq_list eff1 eff2
+        && aux eq_list (res, res')
+    | AppOnTy (f, x), AppOnTy (f', x') ->
+        aux eq_list (f, f') && aux eq_list (x, x')
+    | AbsOnTy (name1, k1, t), AbsOnTy (name2, k2, t') when Kinds.equal k1 k2 ->
+        aux ((name1, name2) :: eq_list) (t, t')
+    | Forall (name1, k1, t), Forall (name2, k2, t') when Kinds.equal k1 k2 ->
+        aux ((name1, name2) :: eq_list) (t, t')
+    | TyClass ((name1, args1), eff1, t), TyClass ((name2, args2), eff2, t') ->
+        begin try
+          let l =
+            let aux acc x y = match x, y with
+              | Param (param1, _), Param (param2, _) ->
+                  (param1, param2) :: acc
+              | Filled ty1, Filled ty2 ->
+                  if not (aux eq_list (ty1, ty2)) then
+                    raise Not_found;
+                  acc
+              | Param _, _ | Filled _, _ ->
+                  raise Not_found
+            in
+            List.fold_left2 aux [] args1 args2
+          in
+          (* NOTE: no need to check kinds as it is already checked *)
+          Ident.TyClass.equal name1 name2
+          && eff_eq eq_list eff1 eff2
+          && aux (l @ eq_list) (t, t')
+        with Not_found ->
+          false
+        end
+    | AppOnTy _, _
+    | AbsOnTy _, _
+    | Forall _, _
+    | TyClass _, _
+    | Ty _, _
+    | Eff _, _
+    | Fun _, _ -> false
+  in
+  aux [] (x, y)
+
+let ty_is_subset_of = ty_equal eff_is_subset_of
+
+let ty_equal = ty_equal eff_equal
+
+let eff_remove_module_aliases vars {variables; exns} =
+  let variables =
+    let aux name =
+      if not (List.mem name vars) then
+        Ident.Type.remove_aliases name
+      else
+        name
+    in
+    Variables.map aux variables
+  in
+  let exns = Exn_set.map Ident.Exn.remove_aliases exns in
+  {variables; exns}
+
+let ty_remove_module_aliases =
+  let rec aux vars = function
+    | Ty name when not (List.mem name vars) ->
+        Ty (Ident.Type.remove_aliases name)
+    | Ty name ->
+        Ty name
+    | Eff effects ->
+        Eff (eff_remove_module_aliases vars effects)
+    | Fun (x, eff, y) ->
+        Fun (aux vars x, eff_remove_module_aliases vars eff, aux vars y)
+    | Forall (name, k, t) ->
+        Forall (name, k, aux (name :: vars) t)
+    | TyClass ((name, args), eff, t) ->
+        let var =
+          let aux acc = function
+            | Param (x, _) -> x :: acc
+            | Filled _ -> acc
+          in
+          List.fold_left aux [] args
+        in
+        let eff = eff_remove_module_aliases vars eff in
+        TyClass ((name, args), eff, aux (var @ vars) t)
+    | AbsOnTy (name, k, t) ->
+        AbsOnTy (name, k, aux (name :: vars) t)
+    | AppOnTy (x, y) ->
+        AppOnTy (aux vars x, aux vars y)
+  in
+  aux []

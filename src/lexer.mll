@@ -44,6 +44,8 @@ rule main = parse
   | ')' { Parser.RParen }
   | '[' { Parser.LBracket }
   | ']' { Parser.RBracket }
+  | '{' { Parser.LBrace }
+  | '}' { Parser.RBrace }
   | '|' { Parser.Pipe }
   | '*' { Parser.Star }
   | '!'
@@ -51,8 +53,11 @@ rule main = parse
   | '\\'
   | "λ" { Parser.Lambda }
   | "->" { Parser.Arrow }
+  | "=>" { Parser.DoubleArrow }
   | "-[" { Parser.LArrowEff }
+  | "=[" { Parser.LDoubleArrowEff }
   | "]->" { Parser.RArrowEff }
+  | "]=>" { Parser.RDoubleArrowEff }
   | "let" { Parser.Let }
   | "rec" { Parser.Rec }
   | "in" { Parser.In }

@@ -19,47 +19,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-module type S = sig
-  include Utils.EQMAP
+type t
 
-  val union : ('a -> 'a) -> imported:'a t -> 'a t -> 'a t
-  val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
-  val open_module : Module.t -> 'a t -> 'a t
-end
+val equal : t -> t -> bool
 
-module Value : sig
-  include S with type key = Ident.Name.t
+val remove_module_aliases : t -> t
 
-  val fill_module : key -> 'a t -> (key * 'a)
-end
-
-module Types : sig
-  include S with type key = Ident.Type.t
-
-  val fill_module : key -> 'a t -> (key * 'a)
-end
-
-module Index : sig
-  include S with type key = Ident.Name.t
-
-  val fill_module : head_ty:Ident.Type.t -> key -> 'a t -> (key * 'a)
-end
-
-module Constr : sig
-  include S with type key = Ident.Type.t
-
-  val add : key -> Index.key -> 'a -> 'b -> ('a * 'b Index.t) t -> ('a * 'b Index.t) t
-  val open_module : Module.t -> (Ident.Type.t list * 'a Index.t) t -> (Ident.Type.t list * 'a Index.t) t
-end
-
-module Exn : sig
-  include S with type key = Ident.Exn.t
-
-  val fill_module : key -> 'a t -> (key * 'a)
-end
-
-module TyClass : sig
-  include S with type key = Ident.TyClass.t
-
-  val fill_module : key -> 'a t -> (key * 'a)
-end
+val get_params : loc:Location.t -> int -> t -> PrivateTypes.tyclass_arg list

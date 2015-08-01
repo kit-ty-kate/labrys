@@ -27,7 +27,6 @@ type module_name = Module.t
 type loc = Location.t
 
 type t_value = (t_name * Kinds.t)
-type tyclass_value = (tyclass_name * t_name list)
 
 type effects = (loc * (t_name * exn_name list) list)
 
@@ -35,12 +34,18 @@ type is_rec = ParseTree.is_rec =
   | Rec
   | NonRec
 
-type ty' =
+type tyclass_value = (tyclass_name * tyclass_arg list)
+
+and tyclass_arg =
+  | Param of t_name
+  | Filled of ty
+
+and ty' =
   | Fun of (ty * effects option * ty)
   | Ty of t_name
   | Eff of effects
   | Forall of (t_value * ty)
-  | ForallTyClass of (tyclass_value * ty)
+  | TyClass of (tyclass_value * effects option * ty)
   | AbsOnTy of (t_value * ty)
   | AppOnTy of (ty * ty)
 

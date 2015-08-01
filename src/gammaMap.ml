@@ -156,3 +156,24 @@ module Exn = struct
           "The exception '%s' is not defined in Γ"
           (Ident.Exn.to_string k)
 end
+
+module TyClass = struct
+  include Make(Ident.TyClass)
+
+  let add k x map =
+    if mem k map then
+      Err.fail
+        ~loc:(Ident.TyClass.loc k)
+        "A module cannot contain several times the same class '%s'"
+        (Ident.TyClass.to_string k);
+    add k x map
+
+  let fill_module k self =
+    match fill_module_aux k self with
+    | Some x -> x
+    | None ->
+        Err.fail
+          ~loc:(Ident.TyClass.loc k)
+          "The class '%s' is not defined in Γ"
+          (Ident.TyClass.to_string k)
+end

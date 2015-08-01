@@ -41,8 +41,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Lambda
 %token Dot
 %token Comma
-%token Arrow
+%token Arrow DoubleArrow
 %token LArrowEff RArrowEff
+%token LDoubleArrowEff RDoubleArrowEff
 %token Forall
 %token Match With End
 %token Type
@@ -60,6 +61,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token <string> Binding
 %token LParen RParen
 %token LBracket RBracket
+%token LBrace RBrace
 %token EOF
 
 %start main
@@ -210,8 +212,12 @@ typeExprStrictlyUnclosed:
       { (loc $startpos $endpos, ParseTree.Fun (param, None, ret)) }
   | param = typeExprProtectedPermissive LArrowEff eff = eff RArrowEff ret = typeExpr
       { (loc $startpos $endpos, ParseTree.Fun (param, Some eff, ret)) }
-  | Forall x = nonempty_list(forallItems) Comma ret = typeExpr
+  | Forall x = nonempty_list(kind_and_name) Comma ret = typeExpr
       { (loc $startpos $endpos, ParseTree.Forall (x, ret)) }
+  | LBrace name = upperName args = nonempty_list(tyclass_arg) RBrace DoubleArrow ty = typeExpr
+      { (loc $startpos $endpos, ParseTree.TyClass ((name, args), None, ty)) }
+  | LBrace name = upperName args = nonempty_list(tyclass_arg) RBrace LDoubleArrowEff eff = eff RDoubleArrowEff ty = typeExpr
+      { (loc $startpos $endpos, ParseTree.TyClass ((name, args), Some eff, ty)) }
   | Lambda x = nonempty_list(kind_and_name) Comma ret = typeExpr
       { (loc $startpos $endpos, ParseTree.AbsOnTy (x, ret)) }
 
@@ -305,11 +311,11 @@ kind_and_name:
   | LParen name = newUpperName Colon k = kind RParen
       { (name, Some k) }
 
-forallItems:
-  | k = kind_and_name
-      { ParseTree.Typ k }
-  | LParen name = upperName args = nonempty_list(newUpperName) RParen
-      { ParseTree.TyClass (name, args) }
+tyclass_arg:
+  | name = newUpperName
+      { ParseTree.Param name }
+  | LBracket ty = typeExpr RBracket
+      { ParseTree.Filled ty }
 
 pattern:
   | p = pat Arrow t = term

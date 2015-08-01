@@ -34,6 +34,7 @@ val of_parse_tree_kind :
   <lib_dir : string; ..> ->
   visibility GammaMap.Types.t ->
   _ GammaMap.Exn.t ->
+  Class.t GammaMap.TyClass.t ->
   UnsugaredTree.ty ->
   (t * Kinds.t)
 
@@ -42,6 +43,7 @@ val of_parse_tree :
   <lib_dir : string; ..> ->
   visibility GammaMap.Types.t ->
   _ GammaMap.Exn.t ->
+  Class.t GammaMap.TyClass.t ->
   UnsugaredTree.ty ->
   t
 
@@ -65,8 +67,10 @@ end
 
 val apply :
   loc_f:Location.t ->
+  loc_x:Location.t ->
   t ->
-  (t * Effects.t * t)
+  t ->
+  (Effects.t * t)
 
 val apply_ty :
   loc_f:Location.t ->

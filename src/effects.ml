@@ -40,23 +40,8 @@ let is_empty {variables; exns} =
   Variables.is_empty variables
   && Exn_set.is_empty exns
 
-let var_eq list_eq x y =
-  let aux k =
-    let mem k = Variables.mem k y in
-    match List.find_pred (fun (k', _) -> Ident.Type.equal k k') list_eq with
-    | Some (_, k) -> mem k
-    | None -> mem k
-  in
-  Variables.for_all aux x
-
-let equal list_eq x y =
-  Int.(Variables.cardinal x.variables = Variables.cardinal y.variables)
-  && var_eq list_eq x.variables y.variables
-  && Exn_set.equal x.exns y.exns
-
-let is_subset_of list_eq x y =
-  var_eq list_eq x.variables y.variables
-  && Exn_set.subset x.exns y.exns
+let equal = PrivateTypes.eff_equal
+let is_subset_of = PrivateTypes.eff_is_subset_of
 
 let has_io {variables; exns = _} =
   not (Variables.is_empty variables)
@@ -107,6 +92,7 @@ and union_ty ?from self = function
       union self eff
   | PrivateTypes.Fun _
   | PrivateTypes.Forall _
+  | PrivateTypes.TyClass _
   | PrivateTypes.AbsOnTy _
   | PrivateTypes.AppOnTy _ -> assert false
 
@@ -155,15 +141,4 @@ let replace ~from ~ty self =
   in
   Variables.fold aux self.variables empty
 
-let remove_module_aliases vars {variables; exns} =
-  let variables =
-    let aux name =
-      if not (List.mem name vars) then
-        Ident.Type.remove_aliases name
-      else
-        name
-    in
-    Variables.map aux variables
-  in
-  let exns = Exn_set.map Ident.Exn.remove_aliases exns in
-  {variables; exns}
+let remove_module_aliases = PrivateTypes.eff_remove_module_aliases

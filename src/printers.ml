@@ -79,17 +79,13 @@ module ParseTree = struct
 
   let dump_t_name_ty_list l = String.concat " " (List.map dump_t_name_ty_opt l)
 
-  let dump_tyclass (name, args) =
-    let args = String.concat " " (List.map dump_name args) in
-    fmt "(%s %s)" (dump_name name) args
+  let rec dump_tyclass_arg = function
+    | Param name -> dump_name name
+    | Filled ty -> fmt "[%s]" (dump_ty ty)
 
-  let dump_forall_arg = function
-    | Typ ty -> dump_t_name_ty_opt ty
-    | TyClass x -> dump_tyclass x
+  and dump_forall_arg_list l = String.concat " " (List.map dump_t_name_ty_opt l)
 
-  let dump_forall_arg_list l = String.concat " " (List.map dump_forall_arg l)
-
-  let rec dump_ty = function
+  and dump_ty = function
     | (_, Fun (param, None, res)) ->
         fmt "(%s -> %s)" (dump_ty param) (dump_ty res)
     | (_, Fun (param, Some eff, res)) ->
@@ -98,6 +94,10 @@ module ParseTree = struct
     | (_, Eff eff) -> dump_eff eff
     | (_, Forall (names, res)) ->
         fmt "(forall %s, %s)" (dump_forall_arg_list names) (dump_ty res)
+    | (_, TyClass ((name, args), None, res)) ->
+        fmt "({%s %s} => %s)" (dump_name name) (String.concat " " (List.map dump_tyclass_arg args)) (dump_ty res)
+    | (_, TyClass ((name, args), Some eff, res)) ->
+        fmt "({%s %s} =[%s]=> %s)" (dump_name name) (String.concat " " (List.map dump_tyclass_arg args)) (dump_eff eff) (dump_ty res)
     | (_, AbsOnTy (names, res)) ->
         fmt "(λ %s -> %s)" (dump_t_name_ty_list names) (dump_ty res)
     | (_, AppOnTy (f, x)) ->
@@ -298,7 +298,12 @@ end
 module UnsugaredTree = struct
   open UnsugaredTree
 
-  let rec dump_ty = function
+  let rec dump_ty =
+    let dump_tyclass_arg = function
+      | Param x -> dump_t_name x
+      | Filled ty -> fmt "[%s]" (dump_ty ty)
+    in
+    function
     | (_, Fun (param, None, res)) ->
         fmt "(%s -> %s)" (dump_ty param) (dump_ty res)
     | (_, Fun (param, Some eff, res)) ->
@@ -307,8 +312,10 @@ module UnsugaredTree = struct
     | (_, Eff eff) -> dump_eff eff
     | (_, Forall ((name, k), res)) ->
         fmt "(forall %s : %s, %s)" (dump_t_name name) (dump_k k) (dump_ty res)
-    | (_, ForallTyClass ((name, args), res)) ->
-        fmt "(forall (%s %s), %s)" (dump_tyclass_name name) (String.concat " " (List.map dump_t_name args)) (dump_ty res)
+    | (_, TyClass ((name, args), None, res)) ->
+        fmt "({%s %s} => %s)" (dump_tyclass_name name) (String.concat " " (List.map dump_tyclass_arg args)) (dump_ty res)
+    | (_, TyClass ((name, args), Some eff, res)) ->
+        fmt "({%s %s} =[%s]=> %s)" (dump_tyclass_name name) (String.concat " " (List.map dump_tyclass_arg args)) (dump_eff eff) (dump_ty res)
     | (_, AbsOnTy ((name, k), res)) ->
         fmt "(λ (%s : %s) -> %s)" (dump_t_name name) (dump_k k) (dump_ty res)
     | (_, AppOnTy (f, x)) ->

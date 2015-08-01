@@ -24,6 +24,7 @@ type t = private
   ; types : Types.visibility GammaMap.Types.t
   ; constructors : (Ident.Type.t list * (Types.t list * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : Types.t list GammaMap.Exn.t
+  ; tyclass : Class.t GammaMap.TyClass.t
   }
 
 val empty : <lib_dir : string; ..> -> t

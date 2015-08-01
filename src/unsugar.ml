@@ -82,15 +82,15 @@ let unsugar_eff imports (loc, l) =
   (loc, List.map aux l)
 
 let rec unsugar_ty ~current_module imports =
+  let unsugar_tyclass_arg = function
+    | ParseTree.Param name -> Param (new_upper_name_to_type ~current_module name)
+    | ParseTree.Filled ty -> Filled (unsugar_ty ~current_module imports ty)
+  in
   let unsugar_forall ~loc ty args =
     let rec aux = function
-      | ParseTree.Typ (name, k) :: xs ->
+      | (name, k) :: xs ->
           let name = new_upper_name_to_type ~current_module name in
           (loc, Forall ((name, unsugar_kind k), aux xs))
-      | ParseTree.TyClass (name, args) :: xs ->
-          let name = upper_name_to_local_typeclass imports name in
-          let args = List.map (new_upper_name_to_type ~current_module) args in
-          (loc, ForallTyClass ((name, args), aux xs))
       | [] ->
           unsugar_ty ~current_module imports ty
     in
@@ -122,6 +122,11 @@ let rec unsugar_ty ~current_module imports =
       (loc, Eff effects)
   | (loc, ParseTree.Forall (args, ty)) ->
       unsugar_forall ~loc ty args
+  | (loc, ParseTree.TyClass ((name, args), eff, ty)) ->
+      let name = upper_name_to_local_typeclass imports name in
+      let args = List.map unsugar_tyclass_arg args in
+      let eff = Option.map (unsugar_eff imports) eff in
+      (loc, TyClass ((name, args), eff, unsugar_ty ~current_module imports ty))
   | (loc, ParseTree.AbsOnTy (args, ty)) ->
       unsugar_absOnTy ~loc ty args
   | (loc, ParseTree.AppOnTy (x, y)) ->
