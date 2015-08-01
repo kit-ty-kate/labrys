@@ -70,7 +70,7 @@ val apply :
   loc_x:Location.t ->
   t ->
   t ->
-  (Effects.t * t)
+  (Effects.t * t * (Ident.TyClass.t * PrivateTypes.tyclass_arg list) list)
 
 val apply_ty :
   loc_f:Location.t ->
@@ -87,3 +87,5 @@ val is_fun : t -> bool
 val is_unit : <lib_dir : string; ..> -> t -> bool
 
 val remove_module_aliases : t -> t
+
+val get_tys_filled : PrivateTypes.tyclass_arg list -> t list

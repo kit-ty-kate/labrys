@@ -120,8 +120,24 @@ let rec aux options gamma = function
       let loc_x = fst x in
       let (f, ty_f, effect1) = aux options gamma f in
       let (x, ty_x, effect2) = aux options gamma x in
-      let (effect3, res) = Types.apply ~loc_f ~loc_x ty_f ty_x in
-      (App (f, x), res, Effects.union3 effect1 effect2 effect3)
+      let (effect3, res, tyclasses) = Types.apply ~loc_f ~loc_x ty_f ty_x in
+      let expr =
+        let rec aux f = function
+          | (tyclass, args)::xs ->
+              begin match Types.get_tys_filled args with
+              | [] ->
+                  let name = assert false in
+                  Abs (name, aux (App (f, Val name)) xs)
+              | tys ->
+                  let name = assert false in
+                  aux (App (f, Val name)) xs
+              end
+          | [] ->
+              App (f, x)
+        in
+        aux f tyclasses
+      in
+      (expr, res, Effects.union3 effect1 effect2 effect3)
   | (_, UnsugaredTree.TApp (f, ty_x)) ->
       let loc_f = fst f in
       let loc_x = fst ty_x in

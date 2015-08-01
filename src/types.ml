@@ -299,7 +299,7 @@ let apply ~loc_f ~loc_x ty_f ty_x =
           in
           List.fold_left aux (eff, t) matched_tys
         in
-        let aux (effects, t) ((name, args), eff) =
+        let aux (effects, t, tyclasses) ((name, args), eff) =
           let args =
             let aux = function
               | Param (x, _) as arg ->
@@ -312,9 +312,11 @@ let apply ~loc_f ~loc_x ty_f ty_x =
             in
             List.map aux args
           in
-          (Effects.empty, TyClass ((name, args), Effects.union effects eff, t))
+          let effects = Effects.union effects eff in
+          let tyclass = (name, args) in
+          (Effects.empty, TyClass (tyclass, effects, t), tyclass :: tyclasses)
         in
-        List.fold_left aux (eff, t) tyclasses
+        List.fold_left aux (eff, t, []) tyclasses
     | TyClass (x, eff, t) ->
         aux ((x, eff) :: tyclasses) t
     | (Forall _ as ty)
@@ -362,3 +364,13 @@ let is_unit options = function
   | Ty name when Ident.Type.equal name (Builtins.t_unit options) -> true
   | Ty _ | Fun _ | Forall _ | TyClass _ | AppOnTy _ -> false
   | AbsOnTy _ | Eff _ -> assert false
+
+let get_tys_filled args =
+  let rec aux res = function
+    | Filled ty :: xs -> aux (ty :: res) xs
+    | Param _ :: _ -> []
+    | [] -> res
+  in
+  if List.is_empty args then
+    assert false;
+  List.rev (aux [] args)
