@@ -59,7 +59,16 @@ let kind_missmatch ~loc_x ~has ~expected =
     (Kinds.to_string has)
     (Kinds.to_string expected)
 
-let rec replace ~from ~ty =
+let rec reduce = function
+  | AppOnTy (t, ty) ->
+      begin match reduce t with
+      | AbsOnTy (name, _, t) -> reduce (replace ~from:name ~ty t)
+      | Ty _ | AppOnTy _ as t -> AppOnTy (t, ty)
+      | Eff _ | Fun _ | Forall _ | TyClass _ -> assert false
+      end
+  | Ty _ | Eff _ | Fun _ | Forall _ | TyClass _ | AbsOnTy _ as ty -> ty
+
+and replace ~from ~ty =
   let rec aux = function
     | Ty x when Ident.Type.equal x from -> ty
     | Ty _ as t -> t
@@ -78,14 +87,7 @@ let rec replace ~from ~ty =
         let eff = Effects.replace ~from ~ty eff in
         TyClass ((x, args), eff, aux t)
     | AbsOnTy (x, k, t) -> AbsOnTy (x, k, aux t)
-    | AppOnTy (f, x) ->
-        let x = aux x in
-        begin match aux f with
-        | AbsOnTy (from', _, t) -> replace ~from:from' ~ty:x t
-        | (Ty _ as f)
-        | (AppOnTy _ as f) -> AppOnTy (f, x)
-        | Eff _ | Fun _ | Forall _ | TyClass _ -> assert false
-        end
+    | AppOnTy (f, x) -> reduce (AppOnTy (aux f, aux x))
   in
   aux
 
@@ -171,14 +173,6 @@ let rec of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC = functio
               (Kinds.to_string k)
       in
       (AppOnTy (f, x), k)
-
-let rec reduce = function
-  | AppOnTy (t, ty) ->
-      begin match reduce t with
-      | AbsOnTy (name, _, t) -> reduce (replace ~from:name ~ty t)
-      | Ty _ | Eff _ | Fun _ | Forall _ | TyClass _ | AppOnTy _ as ty -> ty
-      end
-  | Ty _ | Eff _ | Fun _ | Forall _ | TyClass _ | AbsOnTy _ as ty -> ty
 
 let of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC ty =
   let pure_arrow = match pure_arrow with
