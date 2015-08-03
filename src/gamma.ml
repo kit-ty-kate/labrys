@@ -22,16 +22,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open Monomorphic_containers.Open
 
 type t =
-  { values : Types.t GammaMap.Value.t
-  ; types : Types.visibility GammaMap.Types.t
-  ; constructors : (Ident.Type.t list * (Types.t list * int) GammaMap.Index.t) GammaMap.Constr.t
-  ; exceptions : Types.t list GammaMap.Exn.t
+  { values : PrivateTypes.t GammaMap.Value.t
+  ; types : PrivateTypes.visibility GammaMap.Types.t
+  ; constructors : (Ident.Type.t list * (PrivateTypes.t list * int) GammaMap.Index.t) GammaMap.Constr.t
+  ; exceptions : PrivateTypes.t list GammaMap.Exn.t
   ; tyclasses : Class.t GammaMap.TyClass.t
   }
 
 let empty options =
   { values = GammaMap.Value.empty
-  ; types = Types.empty options
+  ; types = PrivateTypes.ty_empty options
   ; constructors = GammaMap.Constr.empty
   ; exceptions = GammaMap.Exn.empty
   ; tyclasses = GammaMap.TyClass.empty
@@ -45,27 +45,27 @@ let add_tyclass k x self = {self with tyclasses = GammaMap.TyClass.add k x self.
 
 let union ~imported b =
   let values =
-    let aux = Types.remove_module_aliases in
+    let aux = PrivateTypes.ty_remove_module_aliases in
     GammaMap.Value.union aux ~imported:imported.values b.values
   in
   let types =
     let aux = function
-      | Types.Alias (ty, k) -> Types.Alias (Types.remove_module_aliases ty, k)
-      | Types.Abstract _ as x -> x
+      | PrivateTypes.Alias (ty, k) -> PrivateTypes.Alias (PrivateTypes.ty_remove_module_aliases ty, k)
+      | PrivateTypes.Abstract _ as x -> x
     in
     GammaMap.Types.union aux ~imported:imported.types b.types
   in
   let constructors =
     let aux (args, idx) =
       let aux (tys, idx) =
-        (List.map Types.remove_module_aliases tys, idx)
+        (List.map PrivateTypes.ty_remove_module_aliases tys, idx)
       in
       (args, GammaMap.Index.union aux ~imported:idx GammaMap.Index.empty)
     in
     GammaMap.Constr.union aux ~imported:imported.constructors b.constructors
   in
   let exceptions =
-    let aux l = List.map Types.remove_module_aliases l in
+    let aux l = List.map PrivateTypes.ty_remove_module_aliases l in
     GammaMap.Exn.union aux ~imported:imported.exceptions b.exceptions
   in
   let tyclasses =
@@ -75,22 +75,22 @@ let union ~imported b =
   {values; types; constructors; exceptions; tyclasses}
 
 let ty_equal x y = match x, y with
-  | (Types.Abstract k1 | Types.Alias (_, k1)), Types.Abstract k2
-  | Types.Abstract k1, Types.Alias (_, k2) ->
+  | (PrivateTypes.Abstract k1 | PrivateTypes.Alias (_, k1)), PrivateTypes.Abstract k2
+  | PrivateTypes.Abstract k1, PrivateTypes.Alias (_, k2) ->
       Kinds.equal k1 k2
-  | Types.Alias (ty1, k1), Types.Alias (ty2, k2) ->
-      Types.equal ty1 ty2 && Kinds.equal k1 k2
+  | PrivateTypes.Alias (ty1, k1), PrivateTypes.Alias (ty2, k2) ->
+      PrivateTypes.ty_equal ty1 ty2 && Kinds.equal k1 k2
 
-let idx_equal (x, y) (x', y') = List.equal Types.equal x x' && Int.equal y y'
+let idx_equal (x, y) (x', y') = List.equal PrivateTypes.ty_equal x x' && Int.equal y y'
 
 let constr_equal (x, y) (x', y') =
   List.equal Ident.Type.equal x x' && GammaMap.Index.equal idx_equal y y'
 
 let is_subset_of a b =
-  GammaMap.Value.diff ~eq:Types.equal a.values b.values
+  GammaMap.Value.diff ~eq:PrivateTypes.ty_equal a.values b.values
   @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
   @ GammaMap.Constr.diff ~eq:constr_equal a.constructors b.constructors
-  @ GammaMap.Exn.diff ~eq:(List.equal Types.equal) a.exceptions b.exceptions
+  @ GammaMap.Exn.diff ~eq:(List.equal PrivateTypes.ty_equal) a.exceptions b.exceptions
   @ GammaMap.TyClass.diff ~eq:Class.equal a.tyclasses b.tyclasses
 
 let open_module modul {values; types; constructors; exceptions; tyclasses} =

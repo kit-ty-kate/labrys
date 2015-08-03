@@ -46,12 +46,12 @@ let is_subset_of = PrivateTypes.eff_is_subset_of
 let has_io {variables; exns = _} =
   not (Variables.is_empty variables)
 
-let rec add options gammaExn gammaT (name, exns) self =
+let rec add options gamma (name, exns) self =
   let exns =
-    List.map (fun x -> fst (GammaMap.Exn.fill_module x gammaExn)) exns
+    List.map (fun x -> fst (GammaMap.Exn.fill_module x gamma.Gamma.exceptions)) exns
   in
   let (name, k, self) =
-    match GammaMap.Types.fill_module name gammaT with
+    match GammaMap.Types.fill_module name gamma.Gamma.types with
     | (name, PrivateTypes.Abstract k) -> (name, k, self)
     | (name, PrivateTypes.Alias (ty, k)) -> (name, k, union_ty self ty)
   in
@@ -128,8 +128,8 @@ let to_string self =
   in
   fmt "[%s]" (String.concat ", " (exns @ Variables.fold aux self.variables []))
 
-let of_list options gammaExn gammaT (_, l) =
-  let aux acc ty = add options gammaExn gammaT ty acc in
+let of_list options gamma (_, l) =
+  let aux acc ty = add options gamma ty acc in
   List.fold_left aux empty l
 
 let replace ~from ~ty self =

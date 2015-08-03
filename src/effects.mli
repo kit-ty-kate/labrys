@@ -25,8 +25,7 @@ val empty : t
 
 val of_list :
   <lib_dir : string; ..> ->
-  _ GammaMap.Exn.t ->
-  PrivateTypes.visibility GammaMap.Types.t ->
+  Gamma.t ->
   UnsugaredTree.effects ->
   t
 

@@ -20,19 +20,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type t = private
-  { values : Types.t GammaMap.Value.t
-  ; types : Types.visibility GammaMap.Types.t
-  ; constructors : (Ident.Type.t list * (Types.t list * int) GammaMap.Index.t) GammaMap.Constr.t
-  ; exceptions : Types.t list GammaMap.Exn.t
+  { values : PrivateTypes.t GammaMap.Value.t
+  ; types : PrivateTypes.visibility GammaMap.Types.t
+  ; constructors : (Ident.Type.t list * (PrivateTypes.t list * int) GammaMap.Index.t) GammaMap.Constr.t
+  ; exceptions : PrivateTypes.t list GammaMap.Exn.t
   ; tyclasses : Class.t GammaMap.TyClass.t
   }
 
 val empty : <lib_dir : string; ..> -> t
 
-val add_value : Ident.Name.t -> Types.t -> t -> t
-val add_type : Ident.Type.t -> Types.visibility -> t -> t
-val add_constr : Ident.Type.t -> Ident.Name.t -> Ident.Type.t list -> (Types.t list * int) -> t -> t
-val add_exception : Ident.Exn.t -> Types.t list -> t -> t
+val add_value : Ident.Name.t -> PrivateTypes.t -> t -> t
+val add_type : Ident.Type.t -> PrivateTypes.visibility -> t -> t
+val add_constr : Ident.Type.t -> Ident.Name.t -> Ident.Type.t list -> (PrivateTypes.t list * int) -> t -> t
+val add_exception : Ident.Exn.t -> PrivateTypes.t list -> t -> t
 val add_tyclass : Ident.TyClass.t -> Class.t -> t -> t
 
 val union : imported:t -> t -> t

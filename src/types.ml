@@ -44,10 +44,6 @@ type visibility = PrivateTypes.visibility =
 
 let fmt = Printf.sprintf
 
-let empty options =
-  let aux gammaT eff = GammaMap.Types.add eff (Abstract Kinds.Eff) gammaT in
-  List.fold_left aux GammaMap.Types.empty (Builtins.effects options)
-
 let fail_not_star ~loc x =
   Err.fail ~loc "The type construct '%s' cannot be used with kind /= '*'" x
 
@@ -95,8 +91,8 @@ let switch_pure_arrow (_, pure_arrow) = match pure_arrow with
   | `Allow -> (true, pure_arrow)
   | `Partial | `Forbid -> (false, pure_arrow)
 
-let handle_effects ~loc options (b, _) gammaExn gammaT = function
-  | Some eff -> Effects.of_list options gammaExn gammaT eff
+let handle_effects ~loc options (b, _) gamma = function
+  | Some eff -> Effects.of_list options gamma eff
   | None when b -> Effects.empty
   | None ->
       (* TODO: Be more precise *)
@@ -105,62 +101,62 @@ let handle_effects ~loc options (b, _) gammaExn gammaT = function
         "Pure arrows are forbidden here. If you really want one use the \
          explicit syntax '-[]->' instead"
 
-let rec of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC = function
+let rec of_parse_tree_kind ~pure_arrow options gamma = function
   | (loc, UnsugaredTree.Fun (x, eff, y)) ->
       let loc_x = fst x in
       let loc_y = fst y in
       let pa = switch_pure_arrow pure_arrow in
-      let (x, k1) = of_parse_tree_kind ~pure_arrow:pa options gammaT gammaExn gammaTC x in
-      let eff = handle_effects ~loc options pure_arrow gammaExn gammaT eff in
-      let (y, k2) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC y in
+      let (x, k1) = of_parse_tree_kind ~pure_arrow:pa options gamma x in
+      let eff = handle_effects ~loc options pure_arrow gamma eff in
+      let (y, k2) = of_parse_tree_kind ~pure_arrow options gamma y in
       if Kinds.not_star k1 then
         fail_not_star ~loc:loc_x "->";
       if Kinds.not_star k2 then
         fail_not_star ~loc:loc_y "->";
       (Fun (x, eff, y), Kinds.Star)
   | (_, UnsugaredTree.Ty name) ->
-      begin match GammaMap.Types.fill_module name gammaT with
+      begin match GammaMap.Types.fill_module name gamma.Gamma.types with
       | (_, Alias (ty, k)) -> (ty, k) (* TODO: Fix variables if already exist *)
       | (name, Abstract k) -> (Ty name, k)
       end
   | (_, UnsugaredTree.Eff effects) ->
-      (Eff (Effects.of_list options gammaExn gammaT effects), Kinds.Eff)
+      (Eff (Effects.of_list options gamma effects), Kinds.Eff)
   | (_, UnsugaredTree.Forall ((name, k), ret)) ->
       let loc_ret = fst ret in
-      let gammaT = GammaMap.Types.add name (Abstract k) gammaT in
-      let (ret, kx) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC ret in
+      let gamma = Gamma.add_type name (Abstract k) gamma in
+      let (ret, kx) = of_parse_tree_kind ~pure_arrow options gamma ret in
       if Kinds.not_star kx then
         fail_not_star ~loc:loc_ret "forall";
       (Forall (name, k, ret), Kinds.Star)
   | (loc, UnsugaredTree.TyClass ((name, args), eff, ret)) -> (* TODO: Handle parameters that appears in several classes *)
       let loc_ret = fst ret in
       let (name, args) =
-        let (name, tyclass) = GammaMap.TyClass.fill_module name gammaTC in
+        let (name, tyclass) = GammaMap.TyClass.fill_module name gamma.Gamma.tyclasses in
         let loc = Ident.TyClass.loc name in
         let args = Class.get_params ~loc (List.length args) tyclass in
         let args = List.map (fun x -> Param x) args in
         (name, args)
       in
-      let gammaT =
-        let aux gammaT = function
-          | Param (x, k) -> GammaMap.Types.add x (Abstract k) gammaT
-          | Filled _ -> gammaT
+      let gamma =
+        let aux gamma = function
+          | Param (x, k) -> Gamma.add_type x (Abstract k) gamma
+          | Filled _ -> gamma
         in
-        List.fold_left aux gammaT args
+        List.fold_left aux gamma args
       in
-      let eff = handle_effects ~loc options pure_arrow gammaExn gammaT eff in
-      let (ret, kx) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC ret in
+      let eff = handle_effects ~loc options pure_arrow gamma eff in
+      let (ret, kx) = of_parse_tree_kind ~pure_arrow options gamma ret in
       if Kinds.not_star kx then
         fail_not_star ~loc:loc_ret "forall";
       (TyClass ((name, args), eff, ret), Kinds.Star)
   | (_, UnsugaredTree.AbsOnTy ((name, k), ret)) ->
-      let gammaT = GammaMap.Types.add name (Abstract k) gammaT in
-      let (ret, kret) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC ret in
+      let gamma = Gamma.add_type name (Abstract k) gamma in
+      let (ret, kret) = of_parse_tree_kind ~pure_arrow options gamma ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
   | (loc, UnsugaredTree.AppOnTy (f, x)) ->
-      let (f, kf) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC f in
+      let (f, kf) = of_parse_tree_kind ~pure_arrow options gamma f in
       let pa = switch_pure_arrow pure_arrow in
-      let (x, kx) = of_parse_tree_kind ~pure_arrow:pa options gammaT gammaExn gammaTC x in
+      let (x, kx) = of_parse_tree_kind ~pure_arrow:pa options gamma x in
       let k =
         match kf with
         | Kinds.KFun (p, r) when Kinds.equal p kx -> r
@@ -175,18 +171,18 @@ let rec of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC = functio
       in
       (AppOnTy (f, x), k)
 
-let of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC ty =
+let of_parse_tree_kind ~pure_arrow options gamma ty =
   let pure_arrow = match pure_arrow with
     | `Allow -> (true, pure_arrow)
     | `Partial -> (true, pure_arrow)
     | `Forbid -> (false, pure_arrow)
   in
-  let (ty, k) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC ty in
+  let (ty, k) = of_parse_tree_kind ~pure_arrow options gamma ty in
   (reduce ty, k)
 
-let of_parse_tree ~pure_arrow options gammaT gammaExn gammaTC ty =
+let of_parse_tree ~pure_arrow options gamma ty =
   let (loc, _) = ty in
-  let (ty, k) = of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC ty in
+  let (ty, k) = of_parse_tree_kind ~pure_arrow options gamma ty in
   if Kinds.not_star k then
     Err.fail ~loc "Values cannot be of kind /= '*'";
   ty

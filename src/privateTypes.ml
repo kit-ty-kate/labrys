@@ -48,6 +48,10 @@ type visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
+let ty_empty options =
+  let aux gammaT eff = GammaMap.Types.add eff (Abstract Kinds.Eff) gammaT in
+  List.fold_left aux GammaMap.Types.empty (Builtins.effects options)
+
 let var_eq list_eq x y =
   let aux k =
     let mem k = Variables.mem k y in

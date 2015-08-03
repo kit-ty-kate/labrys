@@ -27,23 +27,17 @@ type visibility = PrivateTypes.visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
-val empty : <lib_dir : string; ..> -> visibility GammaMap.Types.t
-
 val of_parse_tree_kind :
   pure_arrow:[< `Allow | `Partial | `Forbid] ->
   <lib_dir : string; ..> ->
-  visibility GammaMap.Types.t ->
-  _ GammaMap.Exn.t ->
-  Class.t GammaMap.TyClass.t ->
+  Gamma.t ->
   UnsugaredTree.ty ->
   (t * Kinds.t)
 
 val of_parse_tree :
   pure_arrow:[< `Allow | `Partial | `Forbid] ->
   <lib_dir : string; ..> ->
-  visibility GammaMap.Types.t ->
-  _ GammaMap.Exn.t ->
-  Class.t GammaMap.TyClass.t ->
+  Gamma.t ->
   UnsugaredTree.ty ->
   t
 
