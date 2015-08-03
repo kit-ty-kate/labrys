@@ -447,6 +447,11 @@ module Make (I : I) = struct
         Llvm.build_cond_br cond try_block catch_block builder;
         let builder = Llvm.builder_at_end c next_block in
         (Llvm.build_phi results "" builder, builder)
+    | UntypedTree.RecordGet (t, n) ->
+        let (t, builder) = lambda func ~jmp_buf gamma builder t in
+        let t = Llvm.build_bitcast t (Type.array_ptr (succ n)) "" builder in
+        let t = Llvm.build_load t "" builder in
+        (Llvm.build_extractvalue t n "" builder, builder)
 
   and fold_args func ~jmp_buf gamma builder args =
     let aux (acc, builder) x =

@@ -105,6 +105,9 @@ and of_typed_term mapn = function
         List.fold_left aux ([], Set.empty) args
       in
       (Fail (name, args), used_vars)
+  | TypedTree.RecordGet (t, n) ->
+      let (t, used_vars) = of_typed_term mapn t in
+      (RecordGet (t, n), used_vars)
 
 let get_name_and_linkage name' names mapn =
   match GammaMap.Value.find name' names with

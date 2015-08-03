@@ -325,7 +325,15 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
         in
         List.fold_left aux gamma sigs
       in
-      from_parse_tree ~current_module ~with_main ~has_main options gamma xs
+      let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
+      let (_, xs) =
+        let aux (n, xs) (name, _) =
+          let abs_name = Ident.Name.create ~loc:Builtins.unknown_loc current_module "0" in
+          (succ n, Value (name, Abs (abs_name, RecordGet (Val abs_name, n))) :: xs)
+        in
+        List.fold_left aux (0, xs) sigs
+      in
+      (xs, has_main, gamma)
   | [] ->
       ([], has_main, gamma)
 

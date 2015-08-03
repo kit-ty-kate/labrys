@@ -34,6 +34,7 @@ type t =
   | LetRec of (name * t * t)
   | Fail of (eff_name * t list)
   | Try of (t * ((eff_name * name list) * t) list)
+  | RecordGet of (t * int)
 
 type variant =
   | Variant of (name * ty_size)

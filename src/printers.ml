@@ -620,6 +620,8 @@ module TypedTree = struct
         ^^ dump_exn_branches branches
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
+    | RecordGet (t, n) ->
+        dump_t t ^^ PPrint.string (fmt ".%d" n)
 
   and dump_results results =
     let aux doc i (used_vars, result) =
@@ -809,6 +811,8 @@ module UntypedTree = struct
         ^^ dump_exn_branches branches
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
+    | RecordGet (t, n) ->
+        dump_t t ^^ PPrint.string (fmt ".%d" n)
 
   and dump_results results =
     let aux doc i (vars, result) =

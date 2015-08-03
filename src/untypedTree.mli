@@ -41,6 +41,7 @@ and t =
   | LetRec of (name * t * t)
   | Fail of (eff_name * t list)
   | Try of (t * ((eff_name * name list) * t) list)
+  | RecordGet of (t * index)
 
 type linkage = Public | Private
 
