@@ -266,6 +266,9 @@ module ParseTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_variants x in
     List.fold_left aux PPrint.empty variants
 
+  let dump_sig (name, ty) =
+    PPrint.string (fmt "let %s : %s" (dump_name name) (dump_ty ty))
+
   let dump = function
     | Value (name, is_rec, (args, (ty, t))) ->
         let ty = dump_ty_opt ty in
@@ -289,6 +292,11 @@ module ParseTree = struct
         PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))
     | Open modul ->
         PPrint.string (fmt "open %s" (dump_module modul))
+    | Class (name, params, sigs) ->
+        PPrint.string (fmt "class %s %s =" (dump_name name) (String.concat " " (List.map dump_t_name_ty_opt params)))
+        ^^ PPrint.break 1
+        ^^ PPrint.group (List.fold_left (fun acc x -> acc ^^ dump_sig x ^^ PPrint.break 1) PPrint.empty sigs)
+        ^^ PPrint.string "end"
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
@@ -329,6 +337,9 @@ module UnsugaredTree = struct
     | Rec -> " rec"
     | NonRec -> ""
 
+  let dump_ty_arg (name, k) =
+    fmt "(%s : %s)" (dump_t_name name) (dump_k k)
+
   let rec dump_pattern = function
     | TyConstr (_, name, []) ->
         dump_name name
@@ -348,10 +359,10 @@ module UnsugaredTree = struct
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
-    | (_, TAbs ((name, k), t)) ->
+    | (_, TAbs (arg, t)) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "λ (%s : %s) ->" (dump_t_name name) (dump_k k))
+           ^^ PPrint.string (fmt "λ %s ->" (dump_ty_arg arg))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
@@ -466,6 +477,9 @@ module UnsugaredTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_variants x in
     List.fold_left aux PPrint.empty variants
 
+  let dump_sig (name, ty) =
+    PPrint.string (fmt "let %s : %s" (dump_name name) (dump_ty ty))
+
   let dump = function
     | Value (name, is_rec, t) ->
         let is_rec = dump_rec is_rec in
@@ -488,6 +502,11 @@ module UnsugaredTree = struct
         PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))
     | Open modul ->
         PPrint.string (fmt "open %s" (dump_module modul))
+    | Class (name, params, sigs) ->
+        PPrint.string (fmt "class %s %s =" (dump_tyclass_name name) (String.concat " " (List.map dump_ty_arg params)))
+        ^^ PPrint.break 1
+        ^^ PPrint.nest 2 (List.fold_left (fun acc x -> acc ^^ dump_sig x ^^ PPrint.break 1) PPrint.empty sigs)
+        ^^ PPrint.string "end"
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
