@@ -119,6 +119,7 @@ module type EQMAP = sig
   val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   val filter : (key -> 'a -> bool) -> 'a t -> 'a t
   val remove : key -> 'a t -> 'a t
+  val map_keys : (key -> key) -> 'a t -> 'a t
 end
 
 module EqMap (I : EQ) = struct
@@ -165,6 +166,9 @@ module EqMap (I : EQ) = struct
             (k', x) :: aux self
     in
     aux self
+
+  let map_keys f self =
+    fold (fun k -> add (f k)) self empty
 end
 
 module type EQSET = sig

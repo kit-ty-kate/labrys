@@ -113,7 +113,7 @@ let rec aux options gamma = function
       check_effects_forall ~loc_t:(fst t) ~effect;
       let abs_ty = PrivateTypes.Forall (name, k, ty_expr) in
       (expr, abs_ty, effect)
-  | (_, UnsugaredTree.App (f, x)) ->
+  | (loc, UnsugaredTree.App (f, x)) ->
       let loc_f = fst f in
       let loc_x = fst x in
       let (f, ty_f, effect1) = aux options gamma f in
@@ -130,7 +130,9 @@ let rec aux options gamma = function
                   let name = Ident.Name.unique name n in
                   Abs (name, aux (App (f, Val name)) (succ n) xs)
               | tys ->
-                  let name = assert false in
+                  let tyclass = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
+                  let tyclass = Option.get_lazy (fun () -> assert false) tyclass in
+                  let name = Class.get_instance_name ~loc tys tyclass in
                   aux (App (f, Val name)) n xs
               end
           | [] ->

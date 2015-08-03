@@ -53,6 +53,7 @@ module type EQMAP = sig
   val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   val filter : (key -> 'a -> bool) -> 'a t -> 'a t
   val remove : key -> 'a t -> 'a t
+  val map_keys : (key -> key) -> 'a t -> 'a t
 end
 
 module EqMap (I : EQ) : EQMAP with type key = I.t

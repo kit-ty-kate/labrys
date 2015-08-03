@@ -31,3 +31,9 @@ val equal : t -> t -> bool
 val remove_module_aliases : t -> t
 
 val get_params : loc:Location.t -> int -> t -> (Ident.Type.t * Kinds.t) list
+
+val get_instance_name :
+  loc:Location.t ->
+  PrivateTypes.t list ->
+  t ->
+  Ident.Name.t

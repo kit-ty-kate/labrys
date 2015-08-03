@@ -24,7 +24,7 @@ open Monomorphic_containers.Open
 type name = Ident.Name.t
 type ty_name = Ident.Type.t
 
-module Instances = Utils.EqSet(struct
+module Instances = Utils.EqMap(struct
     type t = PrivateTypes.t list
 
     let equal = List.equal PrivateTypes.ty_equal
@@ -34,7 +34,7 @@ module Instances = Utils.EqSet(struct
 type t =
   { params : (ty_name * Kinds.t) list
   ; signature : (name * PrivateTypes.t) list
-  ; instances : Instances.t
+  ; instances : name Instances.t
   }
 
 let create params signature =
@@ -56,7 +56,7 @@ let remove_module_aliases {params; signature; instances} =
   in
   let instances =
     let aux = List.map PrivateTypes.ty_remove_module_aliases in
-    Instances.map aux instances
+    Instances.map_keys aux instances
   in
   {params; signature; instances}
 
@@ -70,7 +70,7 @@ let signature_equal (name1, ty1) (name2, ty2) =
 let equal a b =
   List.equal params_equal a.params b.params
   && List.equal signature_equal a.signature b.signature
-  && Instances.equal a.instances b.instances
+  && Instances.equal Ident.Name.equal a.instances b.instances
 
 let get_params ~loc n self =
   let n' = List.length self.params in
@@ -79,3 +79,9 @@ let get_params ~loc n self =
       ~loc
       "Wrong number of parameter. Has %d but expected %d" n n';
   self.params
+
+let get_instance_name ~loc tys self =
+  match Instances.find tys self.instances with
+  | Some x -> x
+  | None ->
+      Err.fail ~loc "No instance found for '???'" (* TODO: Fill ??? *)
