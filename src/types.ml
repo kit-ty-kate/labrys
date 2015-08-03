@@ -371,3 +371,7 @@ let get_tys_filled args =
   if List.is_empty args then
     assert false;
   List.rev (aux [] args)
+
+let tyclass_wrap tyclass params ty =
+  let params = List.map (fun x -> Param x) params in
+  TyClass ((tyclass, params), Effects.empty, ty)

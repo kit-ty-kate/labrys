@@ -83,3 +83,5 @@ val is_unit : <lib_dir : string; ..> -> t -> bool
 val remove_module_aliases : t -> t
 
 val get_tys_filled : PrivateTypes.tyclass_arg list -> t list
+
+val tyclass_wrap : Ident.TyClass.t -> (name * Kinds.t) list -> t -> t

@@ -318,6 +318,13 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       in
       let tyclass = Class.create params sigs in
       let gamma = Gamma.add_tyclass name tyclass gamma in
+      let gamma =
+        let aux gamma (name_sig, ty) =
+          let ty = Types.tyclass_wrap name params ty in
+          Gamma.add_value name_sig ty gamma
+        in
+        List.fold_left aux gamma sigs
+      in
       from_parse_tree ~current_module ~with_main ~has_main options gamma xs
   | [] ->
       ([], has_main, gamma)
