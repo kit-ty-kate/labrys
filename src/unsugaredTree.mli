@@ -81,5 +81,6 @@ type top =
   | Datatype of (t_name * Kinds.t * (t_name * Kinds.t) list * variant list)
   | Exception of (exn_name * ty list)
   | Open of module_name
+  | Class of (tyclass_name * t_value list * (name * ty) list)
 
 type imports = module_name list

@@ -90,6 +90,7 @@ type top =
   | Datatype of (new_upper_name * ty_arg list * variant list)
   | Exception of (new_upper_name * ty list)
   | Open of upper_name
+  | Class of (upper_name * ty_arg list * (new_lower_name * ty) list)
 
 type import =
   | Source of upper_name

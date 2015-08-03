@@ -21,8 +21,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type t
 
+val create :
+  (Ident.Type.t * Kinds.t) list ->
+  (Ident.Name.t * PrivateTypes.t) list ->
+  t
+
 val equal : t -> t -> bool
 
 val remove_module_aliases : t -> t
 
-val get_params : loc:Location.t -> int -> t -> PrivateTypes.tyclass_arg list
+val get_params : loc:Location.t -> int -> t -> (Ident.Type.t * Kinds.t) list

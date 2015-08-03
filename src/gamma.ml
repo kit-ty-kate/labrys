@@ -26,7 +26,7 @@ type t =
   ; types : Types.visibility GammaMap.Types.t
   ; constructors : (Ident.Type.t list * (Types.t list * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : Types.t list GammaMap.Exn.t
-  ; tyclass : Class.t GammaMap.TyClass.t
+  ; tyclasses : Class.t GammaMap.TyClass.t
   }
 
 let empty options =
@@ -34,13 +34,14 @@ let empty options =
   ; types = Types.empty options
   ; constructors = GammaMap.Constr.empty
   ; exceptions = GammaMap.Exn.empty
-  ; tyclass = GammaMap.TyClass.empty
+  ; tyclasses = GammaMap.TyClass.empty
   }
 
 let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
 let add_type k x self = {self with types = GammaMap.Types.add k x self.types}
 let add_constr k k2 args x self = {self with constructors = GammaMap.Constr.add k k2 args x self.constructors}
 let add_exception k x self = {self with exceptions = GammaMap.Exn.add k x self.exceptions}
+let add_tyclass k x self = {self with tyclasses = GammaMap.TyClass.add k x self.tyclasses}
 
 let union ~imported b =
   let values =
@@ -67,11 +68,11 @@ let union ~imported b =
     let aux l = List.map Types.remove_module_aliases l in
     GammaMap.Exn.union aux ~imported:imported.exceptions b.exceptions
   in
-  let tyclass =
+  let tyclasses =
     let aux = Class.remove_module_aliases in
-    GammaMap.TyClass.union aux ~imported:imported.tyclass b.tyclass
+    GammaMap.TyClass.union aux ~imported:imported.tyclasses b.tyclasses
   in
-  {values; types; constructors; exceptions; tyclass}
+  {values; types; constructors; exceptions; tyclasses}
 
 let ty_equal x y = match x, y with
   | (Types.Abstract k1 | Types.Alias (_, k1)), Types.Abstract k2
@@ -90,12 +91,12 @@ let is_subset_of a b =
   @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
   @ GammaMap.Constr.diff ~eq:constr_equal a.constructors b.constructors
   @ GammaMap.Exn.diff ~eq:(List.equal Types.equal) a.exceptions b.exceptions
-  @ GammaMap.TyClass.diff ~eq:Class.equal a.tyclass b.tyclass
+  @ GammaMap.TyClass.diff ~eq:Class.equal a.tyclasses b.tyclasses
 
-let open_module modul {values; types; constructors; exceptions; tyclass} =
+let open_module modul {values; types; constructors; exceptions; tyclasses} =
   let values = GammaMap.Value.open_module modul values in
   let types = GammaMap.Types.open_module modul types in
   let constructors = GammaMap.Constr.open_module modul constructors in
   let exceptions = GammaMap.Exn.open_module modul exceptions in
-  let tyclass = GammaMap.TyClass.open_module modul tyclass in
-  {values; types; constructors; exceptions; tyclass}
+  let tyclasses = GammaMap.TyClass.open_module modul tyclasses in
+  {values; types; constructors; exceptions; tyclasses}

@@ -138,6 +138,7 @@ let rec of_parse_tree_kind ~pure_arrow options gammaT gammaExn gammaTC = functio
         let (name, tyclass) = GammaMap.TyClass.fill_module name gammaTC in
         let loc = Ident.TyClass.loc name in
         let args = Class.get_params ~loc (List.length args) tyclass in
+        let args = List.map (fun x -> Param x) args in
         (name, args)
       in
       let gammaT =

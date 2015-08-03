@@ -30,22 +30,22 @@ module Instances = Utils.EqSet(struct
     let equal = List.equal PrivateTypes.ty_equal
   end)
 
-type tyclass_arg = PrivateTypes.tyclass_arg =
-  | Param of (ty_name * Kinds.t)
-  | Filled of PrivateTypes.t
-
+(* TODO: Handle contraints *)
 type t =
-  { params : tyclass_arg list
+  { params : (ty_name * Kinds.t) list
   ; signature : (name * PrivateTypes.t) list
   ; instances : Instances.t
   }
 
+let create params signature =
+  { params
+  ; signature
+  ; instances = Instances.empty
+  }
+
 let remove_module_aliases {params; signature; instances} =
   let params =
-    let aux = function
-      | Param (name, k) -> Param (Ident.Type.remove_aliases name, k)
-      | Filled ty -> Filled (PrivateTypes.ty_remove_module_aliases ty)
-    in
+    let aux (name, k) = (Ident.Type.remove_aliases name, k) in
     List.map aux params
   in
   let signature =
@@ -60,12 +60,8 @@ let remove_module_aliases {params; signature; instances} =
   in
   {params; signature; instances}
 
-let params_equal x y = match x, y with
-  | Param (name1, k1), Param (name2, k2) ->
-      Ident.Type.equal name1 name2 && Kinds.equal k1 k2
-  | Filled ty1, Filled ty2 ->
-      PrivateTypes.ty_equal ty1 ty2
-  | Param _, _ | Filled _, _ -> false
+let params_equal (name1, k1) (name2, k2) =
+  Ident.Type.equal name1 name2 && Kinds.equal k1 k2
 
 let signature_equal (name1, ty1) (name2, ty2) =
   Ident.Name.equal name1 name2

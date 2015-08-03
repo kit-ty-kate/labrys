@@ -69,4 +69,4 @@ let compile options gamma =
     | [] ->
         gamma
   in
-  compile gamma.Gamma.types gamma.Gamma.exceptions (Gamma.empty options) gamma.Gamma.tyclass
+  compile gamma.Gamma.types gamma.Gamma.exceptions (Gamma.empty options) gamma.Gamma.tyclasses

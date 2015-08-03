@@ -54,6 +54,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Fail
 %token Try
 %token Exception
+%token Class
 %token Underscore
 %token Semicolon
 %token <string> LowerName
@@ -94,6 +95,8 @@ body:
       { ParseTree.Exception (name, args) }
   | Open modul = upperName
       { ParseTree.Open modul }
+  | Class name = upperName params = nonempty_list(kind_and_name) Equal sigs = nonempty_list(letSig) End
+      { ParseTree.Class (name, params, sigs) }
 
 exceptionArgs:
   | x = typeExprClosed xs = exceptionArgs
@@ -339,6 +342,9 @@ patProtected:
   | p = patClosed { p }
   | LParen p = patUnclosed RParen { p }
 
+letSig:
+  | Let name = newLowerName Colon ty = typeExpr
+      { (name, ty) }
 
 (********* Names *********)
 
@@ -372,8 +378,8 @@ newUpperName:
 (********* Interface *********)
 
 bodyInterface:
-  | Let name = newLowerName Colon ty = typeExpr
-      { ParseTree.IVal (name, ty) }
+  | x = letSig
+      { ParseTree.IVal x }
   | Type name = newUpperName k = kindopt
       { ParseTree.IAbstractType (name, k) }
   | datatype = datatype

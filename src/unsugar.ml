@@ -136,6 +136,11 @@ let unsugar_annot ~current_module imports (annot, eff) =
   let eff = Option.map (unsugar_eff imports) eff in
   (unsugar_ty ~current_module imports annot, eff)
 
+let unsugar_sig ~current_module imports (name, ty) =
+  let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
+  let ty = unsugar_ty ~current_module imports ty in
+  (name, ty)
+
 let rec unsugar_pattern ~current_module imports = function
   | ParseTree.TyConstr (loc, name, args) ->
       let name = upper_name_to_local_value imports name in
@@ -275,6 +280,16 @@ let create ~current_module imports options = function
   | ParseTree.Open (loc, `UpperName modul) ->
       let modul = get_module imports loc modul in
       Open modul
+  | ParseTree.Class (name, params, sigs) ->
+      let name = upper_name_to_local_typeclass imports name in
+      let params =
+        let aux (name, k) =
+          (new_upper_name_to_type ~current_module name, unsugar_kind k)
+        in
+        List.map aux params
+      in
+      let sigs = List.map (unsugar_sig ~current_module imports) sigs in
+      Class (name, params, sigs)
 
 (* TODO: check "doublons" *)
 let create_imports ~current_module options =
@@ -294,9 +309,8 @@ let create ~no_prelude ~current_module options imports tree =
   (List.map snd imports, tree)
 
 let create_interface ~current_module imports = function
-  | ParseTree.IVal (name, ty) ->
-      let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
-      InterfaceTree.Val (name, unsugar_ty ~current_module imports ty)
+  | ParseTree.IVal signature ->
+      InterfaceTree.Val (unsugar_sig ~current_module imports signature)
   | ParseTree.IAbstractType (name, k) ->
       let name = new_upper_name_to_type ~current_module name in
       InterfaceTree.AbstractType (name, unsugar_kind k)

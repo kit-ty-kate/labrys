@@ -70,6 +70,7 @@ rule main = parse
   | "forall" { Parser.Forall }
   | "type" { Parser.Type }
   | "alias" { Parser.Alias }
+  | "class" { Parser.Class }
   | "open" { Parser.Open }
   | "import" { Parser.Import }
   | "library" { Parser.Library }
