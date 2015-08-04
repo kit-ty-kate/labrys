@@ -68,7 +68,7 @@ and of_typed_term mapn = function
       let (x, used_vars2) = of_typed_term mapn x in
       (App (f, x), Set.union used_vars1 used_vars2)
   | TypedTree.Val name ->
-      let name = match GammaMap.Value.find name mapn with
+      let name = match GammaMap.Value.find_opt name mapn with
         | Some x -> x
         | None -> name
       in
@@ -110,7 +110,7 @@ and of_typed_term mapn = function
       (RecordGet (t, n), used_vars)
 
 let get_name_and_linkage name' names mapn =
-  match GammaMap.Value.find name' names with
+  match GammaMap.Value.find_opt name' names with
   | Some 0
   | None ->
       let mapn = GammaMap.Value.add name' name' mapn in

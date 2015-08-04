@@ -48,10 +48,11 @@ let has_io {variables; exns = _} =
 
 let rec add options gamma (name, exns) self =
   let exns =
-    List.map (fun x -> fst (GammaMap.Exn.fill_module x gamma.Gamma.exceptions)) exns
+    let aux x = fst (GammaMap.Exn.find_binding x gamma.Gamma.exceptions) in
+    List.map aux exns
   in
   let (name, k, self) =
-    match GammaMap.Types.fill_module name gamma.Gamma.types with
+    match GammaMap.Types.find_binding name gamma.Gamma.types with
     | (name, PrivateTypes.Abstract k) -> (name, k, self)
     | (name, PrivateTypes.Alias (ty, k)) -> (name, k, union_ty self ty)
   in

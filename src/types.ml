@@ -115,7 +115,7 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
         fail_not_star ~loc:loc_y "->";
       (Fun (x, eff, y), Kinds.Star)
   | (_, UnsugaredTree.Ty name) ->
-      begin match GammaMap.Types.fill_module name gamma.Gamma.types with
+      begin match GammaMap.Types.find_binding name gamma.Gamma.types with
       | (_, Alias (ty, k)) -> (ty, k) (* TODO: Fix variables if already exist *)
       | (name, Abstract k) -> (Ty name, k)
       end
@@ -131,7 +131,9 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
   | (loc, UnsugaredTree.TyClass ((name, args), eff, ret)) -> (* TODO: Handle parameters that appears in several classes *)
       let loc_ret = fst ret in
       let (name, args) =
-        let (name, tyclass) = GammaMap.TyClass.fill_module name gamma.Gamma.tyclasses in
+        let (name, tyclass) =
+          GammaMap.TyClass.find_binding name gamma.Gamma.tyclasses
+        in
         let loc = Ident.TyClass.loc name in
         let args = Class.get_params ~loc (List.length args) tyclass in
         let args = List.map (fun x -> Param x) args in

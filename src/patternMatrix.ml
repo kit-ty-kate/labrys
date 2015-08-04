@@ -63,7 +63,7 @@ let create =
         let (head_ty, tail_ty) = Types.head ty' in
         let constructors = GammaMap.Constr.find head_ty gamma.Gamma.constructors in
         let (ty_args, constructors) = Option.get_lazy (fun () -> assert false) constructors in
-        let (name, (tys, _)) = GammaMap.Index.fill_module ~head_ty name constructors in
+        let (name, (tys, _)) = GammaMap.Index.find_binding ~head_ty name constructors in
         let aux (args, tys, gamma) p =
           match tys with
           | [] ->

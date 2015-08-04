@@ -120,6 +120,7 @@ module type EQMAP = sig
   val filter : (key -> 'a -> bool) -> 'a t -> 'a t
   val remove : key -> 'a t -> 'a t
   val map_keys : (key -> key) -> 'a t -> 'a t
+  val find_binding : key -> 'a t -> (key * 'a) option
 end
 
 module EqMap (I : EQ) = struct
@@ -136,8 +137,11 @@ module EqMap (I : EQ) = struct
     let self = List.filter (fun (y, _) -> not (I.equal k y)) self in
     (k, x) :: self
 
+  let find_binding x self =
+    List.find_pred (fun (y, _) -> I.equal x y) self
+
   let find x self =
-    Option.map snd (List.find_pred (fun (y, _) -> I.equal x y) self)
+    Option.map snd (find_binding x self)
 
   let modify_def x k f self =
     match find k self with

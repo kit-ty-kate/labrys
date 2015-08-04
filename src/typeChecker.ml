@@ -131,7 +131,6 @@ let rec aux options gamma = function
                   Abs (name, aux (App (f, Val name)) (succ n) xs)
               | tys ->
                   let tyclass = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
-                  let tyclass = Option.get_lazy (fun () -> assert false) tyclass in
                   let name = Class.get_instance_name ~loc tys tyclass in
                   aux (App (f, Val name)) n xs
               end
@@ -150,7 +149,7 @@ let rec aux options gamma = function
       let res = Types.replace ~from:param ~ty:ty_x res in
       (f, res, effect)
   | (_, UnsugaredTree.Val name) ->
-      let (name, ty) = GammaMap.Value.fill_module name gamma.Gamma.values in
+      let (name, ty) = GammaMap.Value.find_binding name gamma.Gamma.values in
       (Val name, ty, Effects.empty)
   | (loc, UnsugaredTree.PatternMatching (t, patterns)) ->
       let loc_t = fst t in
@@ -180,7 +179,7 @@ let rec aux options gamma = function
   | (_, UnsugaredTree.Let ((name, UnsugaredTree.Rec, _), _)) ->
       fail_rec_val ~loc_name:(Ident.Name.loc name)
   | (loc, UnsugaredTree.Fail (ty, (exn, args))) ->
-      let (exn, tys) = GammaMap.Exn.fill_module exn gamma.Gamma.exceptions in
+      let (exn, tys) = GammaMap.Exn.find_binding exn gamma.Gamma.exceptions in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let (args, effects) =
         let aux (acc, effects) ty_exn arg =
@@ -202,7 +201,9 @@ let rec aux options gamma = function
       let (e, ty, effect) = aux options gamma e in
       let (branches, effect) =
         let aux (branches, effect) ((name, args), t) =
-          let (name, _) = GammaMap.Exn.fill_module name gamma.Gamma.exceptions in
+          let (name, tys) = GammaMap.Exn.find_binding name gamma.Gamma.exceptions in
+          if Int.Infix.(List.length args <> List.length tys) then
+            Err.fail ~loc:(Ident.Exn.loc name) "Wrong number of argument";
           (branches @ [((name, args), t)], Effects.remove_exn name effect)
         in
         List.fold_left aux ([], effect) branches

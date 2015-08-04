@@ -359,7 +359,7 @@ module Make (I : I) = struct
         let results = List.map (fun (_, x, _) -> x) results in
         (Llvm.build_phi results "" builder', builder')
     | UntypedTree.Val name ->
-        begin match GammaMap.Value.find name gamma with
+        begin match GammaMap.Value.find_opt name gamma with
         | Some (Global _) ->
             (* Unused for the moment *)
             assert false
@@ -379,7 +379,7 @@ module Make (I : I) = struct
         end
     | UntypedTree.Variant (i, params) ->
         let aux x =
-          match GammaMap.Value.find x gamma with
+          match GammaMap.Value.find_opt x gamma with
           | Some (Value x) -> x
           | Some (Env i) ->
               let env = load_env func builder in
@@ -397,7 +397,7 @@ module Make (I : I) = struct
         (value, builder)
     | UntypedTree.Call (name, args) ->
         let f =
-          match GammaMap.Value.find name gamma with
+          match GammaMap.Value.find_opt name gamma with
           | Some (Global value) -> value
           | Some (Value _) | Some (Env _) | Some RecFun | None -> assert false
         in

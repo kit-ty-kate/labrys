@@ -54,6 +54,7 @@ module type EQMAP = sig
   val filter : (key -> 'a -> bool) -> 'a t -> 'a t
   val remove : key -> 'a t -> 'a t
   val map_keys : (key -> key) -> 'a t -> 'a t
+  val find_binding : key -> 'a t -> (key * 'a) option
 end
 
 module EqMap (I : EQ) : EQMAP with type key = I.t

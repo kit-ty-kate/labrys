@@ -27,6 +27,8 @@ module type S = sig
   val union : ('a -> 'a) -> imported:'a t -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
   val open_module : Module.t -> 'a t -> 'a t
+  val find : key -> 'a t -> 'a
+  val find_opt : key -> 'a t -> 'a option
 end
 
 module Aux
@@ -48,17 +50,6 @@ module Aux
   let open_module modul self =
     let aux k = M.add (Ident.open_module modul k) in
     M.fold aux self M.empty
-
-  let fill_module_aux k self =
-    let rec aux = function
-      | [] -> None
-      | (matches, x)::xs ->
-          begin match Ident.fill_module ~matches k with
-          | Some k -> Some (k, x)
-          | None -> aux xs
-          end
-    in
-    aux (M.bindings self)
 end
 
 module Make (I : module type of Ident.Name) = struct
@@ -66,20 +57,28 @@ module Make (I : module type of Ident.Name) = struct
 
   include Self
   include Aux(Self)(I)
+
+  let find_opt = find
 end
 
 module Value = struct
   include Make(Ident.Name)
 
-  let fill_module k self =
-    match fill_module_aux k self with
-    | Some x ->
-        x
-    | None ->
-        Err.fail
-          ~loc:(Ident.Name.loc k)
-          "The value '%s' was not found in Γ"
-          (Ident.Name.to_string k)
+  let fail k =
+    Err.fail
+      ~loc:(Ident.Name.loc k)
+      "The value '%s' was not found in Γ"
+      (Ident.Name.to_string k)
+
+  let find k self =
+    match find k self with
+    | Some x -> x
+    | None -> fail k
+
+  let find_binding k self =
+    match find_binding k self with
+    | Some x -> x
+    | None -> fail k
 end
 
 module Types = struct
@@ -93,31 +92,42 @@ module Types = struct
         (Ident.Type.to_string k);
     add k x map
 
-  let fill_module k self =
-    match fill_module_aux k self with
-    | Some x ->
-        x
-    | None ->
-        Err.fail
-          ~loc:(Ident.Type.loc k)
-          "The type '%s' was not found in Γ"
-          (Ident.Type.to_string k)
+  let fail k =
+    Err.fail
+      ~loc:(Ident.Type.loc k)
+      "The type '%s' was not found in Γ"
+      (Ident.Type.to_string k)
+
+  let find k self =
+    match find k self with
+    | Some x -> x
+    | None -> fail k
+
+  let find_binding k self =
+    match find_binding k self with
+    | Some x -> x
+    | None -> fail k
 end
 
 module Index = struct
   include Make(Ident.Name)
 
-  let fill_module ~head_ty k self =
-    match fill_module_aux k self with
-    | Some x ->
-        x
-    | None ->
-        Err.fail
-          ~loc:(Ident.Name.loc k)
-          "Constructor '%s' not found in type '%s'"
-          (Ident.Name.to_string k)
-          (Ident.Type.to_string head_ty)
+  let fail ~head_ty k =
+    Err.fail
+      ~loc:(Ident.Name.loc k)
+      "Constructor '%s' not found in type '%s'"
+      (Ident.Name.to_string k)
+      (Ident.Type.to_string head_ty)
 
+  let find ~head_ty k self =
+    match find k self with
+    | Some x -> x
+    | None -> fail ~head_ty k
+
+  let find_binding ~head_ty k self =
+    match find_binding k self with
+    | Some x -> x
+    | None -> fail ~head_ty k
 end
 
 module Constr = struct
@@ -147,14 +157,21 @@ module Exn = struct
         (Ident.Exn.to_string k);
     add k x map
 
-  let fill_module k self =
-    match fill_module_aux k self with
+  let fail k =
+    Err.fail
+      ~loc:(Ident.Exn.loc k)
+      "The exception '%s' is not defined in Γ"
+      (Ident.Exn.to_string k)
+
+  let find k self =
+    match find k self with
     | Some x -> x
-    | None ->
-        Err.fail
-          ~loc:(Ident.Exn.loc k)
-          "The exception '%s' is not defined in Γ"
-          (Ident.Exn.to_string k)
+    | None -> fail k
+
+  let find_binding k self =
+    match find_binding k self with
+    | Some x -> x
+    | None -> fail k
 end
 
 module TyClass = struct
@@ -168,12 +185,19 @@ module TyClass = struct
         (Ident.TyClass.to_string k);
     add k x map
 
-  let fill_module k self =
-    match fill_module_aux k self with
+  let fail k =
+    Err.fail
+      ~loc:(Ident.TyClass.loc k)
+      "The class '%s' is not defined in Γ"
+      (Ident.TyClass.to_string k)
+
+  let find k self =
+    match find k self with
     | Some x -> x
-    | None ->
-        Err.fail
-          ~loc:(Ident.TyClass.loc k)
-          "The class '%s' is not defined in Γ"
-          (Ident.TyClass.to_string k)
+    | None -> fail k
+
+  let find_binding k self =
+    match find_binding k self with
+    | Some x -> x
+    | None -> fail k
 end

@@ -26,26 +26,14 @@ let fmt = Printf.sprintf
 module Name = struct
   type t = (Location.t * Module.t option * string)
 
-  let equal (_, module_x, x) (_, module_y, y) =
-    let module_x = Option.get_lazy (fun () -> assert false) module_x in
-    let module_y = Option.get_lazy (fun () -> assert false) module_y in
-    if Module.equal module_x module_y then
-      String.equal x y
-    else
-      false
-
-  let fill_module ~matches:((_, modul, matches_name) as matches) = function
-    | (loc, None, name) ->
-        let modul = Option.get_lazy (fun () -> assert false) modul in
-        if Module.is_open modul && String.equal matches_name name then
-          Some (loc, Some modul, name)
-        else
-          None
-    | (_, Some _, _) as self ->
-        if equal self matches then
-          Some self
-        else
-          None
+  let equal (_, module_x, x) (_, module_y, y) = match module_x, module_y with
+    | Some module_x, Some module_y ->
+        Module.equal module_x module_y && String.equal x y
+    | Some modul, None
+    | None, Some modul ->
+        Module.is_open modul && String.equal x y
+    | None, None ->
+        String.equal x y
 
   let create ~loc modul name =
     (loc, Some modul, name)
@@ -64,8 +52,7 @@ module Name = struct
   let unique (loc, modul, name) n =
     if n <= 0 then
       assert false;
-    let modul = Option.get_lazy (fun () -> assert false) modul in
-    (loc, Some modul, fmt "%s__%d" name n)
+    (loc, modul, fmt "%s__%d" name n)
 
   let remove_aliases = function
     | (loc, Some modul, name) ->
@@ -82,11 +69,8 @@ module Name = struct
     | (_, None, _) as self ->
         self
 
-  let prepend_empty = function
-    | (loc, Some modul, name) ->
-        (loc, Some modul, "." ^ name)
-    | (_, None, _) ->
-        assert false
+  let prepend_empty (loc, modul, name) =
+    (loc, modul, "." ^ name)
 end
 
 module Type = Name
