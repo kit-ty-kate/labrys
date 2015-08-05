@@ -52,6 +52,8 @@ rule main = parse
   | "φ" { Parser.Eff }
   | '\\'
   | "λ" { Parser.Lambda }
+  | "?[" { Parser.LQMarkBracket }
+  | "?(" { Parser.LQMarkParen }
   | "->" { Parser.Arrow }
   | "=>" { Parser.DoubleArrow }
   | "-[" { Parser.LArrowEff }
@@ -74,6 +76,7 @@ rule main = parse
   | "open" { Parser.Open }
   | "import" { Parser.Import }
   | "library" { Parser.Library }
+  | "instance" { Parser.Instance }
   | "exception" { Parser.Exception }
   | "begin" blank* '\n'
       { let buffer = Buffer.create 4096 in

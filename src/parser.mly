@@ -54,14 +54,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Fail
 %token Try
 %token Exception
-%token Class
+%token Class Instance
 %token Underscore
 %token Semicolon
 %token <string> LowerName
 %token <string> UpperName
 %token <string> Binding
-%token LParen RParen
-%token LBracket RBracket
+%token LQMarkParen LParen RParen
+%token LQMarkBracket LBracket RBracket
 %token LBrace RBrace
 %token EOF
 
@@ -95,8 +95,15 @@ body:
       { ParseTree.Exception (name, args) }
   | Open modul = upperName
       { ParseTree.Open modul }
-  | Class name = upperName params = nonempty_list(kind_and_name) Equal sigs = nonempty_list(letSig) End
+  | Class name = newUpperName params = nonempty_list(kind_and_name) Equal sigs = nonempty_list(letSig) End
       { ParseTree.Class (name, params, sigs) }
+  | Instance name = instanceName x = tyclassInstance Equal values = nonempty_list(let_case) End
+      { ParseTree.Instance (x, name, values) }
+
+instanceName:
+  | { None }
+  | LBracket name = newLowerName RBracket
+      { Some name }
 
 exceptionArgs:
   | x = typeExprClosed xs = exceptionArgs
@@ -187,6 +194,16 @@ app:
       { (loc $startpos $endpos, ParseTree.TApp (f, ty)) }
   | f = appAux x = termClosed
       { (loc $startpos $endpos, ParseTree.App (f, x)) }
+  | f = appAux LQMarkBracket tyclass = tyclassAppArg RBracket
+      { (loc $startpos $endpos, ParseTree.TyClassApp (f, tyclass)) }
+
+tyclassInstance:
+  | name = upperName tys = nonempty_list(typeExprClosed)
+      { (name, tys) }
+
+tyclassAppArg:
+  | x = tyclassInstance { ParseTree.TyClassInstance x }
+  | x = lowerName { ParseTree.TyClassVariable x }
 
 arg:
   | LParen name = newLowerName Colon ty = typeExpr RParen
@@ -195,6 +212,8 @@ arg:
       { ParseTree.TArg ty }
   | LParen RParen
       { ParseTree.Unit }
+  | LQMarkParen name = newLowerName Colon tyclass = tyclass RParen
+      { ParseTree.TyClassArg (name, tyclass) }
 
 args(rest):
   | rest = rest
@@ -210,6 +229,10 @@ nonempty_args(rest):
         ((loc $startpos $endpos, x) :: xs, rest)
       }
 
+tyclass:
+  | name = upperName args = nonempty_list(tyclass_arg)
+      { (name, args) }
+
 typeExprStrictlyUnclosed:
   | param = typeExprProtectedPermissive Arrow ret = typeExpr
       { (loc $startpos $endpos, ParseTree.Fun (param, None, ret)) }
@@ -217,10 +240,10 @@ typeExprStrictlyUnclosed:
       { (loc $startpos $endpos, ParseTree.Fun (param, Some eff, ret)) }
   | Forall x = nonempty_list(kind_and_name) Comma ret = typeExpr
       { (loc $startpos $endpos, ParseTree.Forall (x, ret)) }
-  | LBrace name = upperName args = nonempty_list(tyclass_arg) RBrace DoubleArrow ty = typeExpr
-      { (loc $startpos $endpos, ParseTree.TyClass ((name, args), None, ty)) }
-  | LBrace name = upperName args = nonempty_list(tyclass_arg) RBrace LDoubleArrowEff eff = eff RDoubleArrowEff ty = typeExpr
-      { (loc $startpos $endpos, ParseTree.TyClass ((name, args), Some eff, ty)) }
+  | LBrace tyclass = tyclass RBrace DoubleArrow ty = typeExpr
+      { (loc $startpos $endpos, ParseTree.TyClass (tyclass, None, ty)) }
+  | LBrace tyclass = tyclass RBrace LDoubleArrowEff eff = eff RDoubleArrowEff ty = typeExpr
+      { (loc $startpos $endpos, ParseTree.TyClass (tyclass, Some eff, ty)) }
   | Lambda x = nonempty_list(kind_and_name) Comma ret = typeExpr
       { (loc $startpos $endpos, ParseTree.AbsOnTy (x, ret)) }
 

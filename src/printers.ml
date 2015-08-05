@@ -83,6 +83,8 @@ module ParseTree = struct
     | Param name -> dump_name name
     | Filled ty -> fmt "[%s]" (dump_ty ty)
 
+  and dump_tyclass_args args = String.concat " " (List.map dump_tyclass_arg args)
+
   and dump_forall_arg_list l = String.concat " " (List.map dump_t_name_ty_opt l)
 
   and dump_ty = function
@@ -95,9 +97,9 @@ module ParseTree = struct
     | (_, Forall (names, res)) ->
         fmt "(forall %s, %s)" (dump_forall_arg_list names) (dump_ty res)
     | (_, TyClass ((name, args), None, res)) ->
-        fmt "({%s %s} => %s)" (dump_name name) (String.concat " " (List.map dump_tyclass_arg args)) (dump_ty res)
+        fmt "({%s %s} => %s)" (dump_name name) (dump_tyclass_args args) (dump_ty res)
     | (_, TyClass ((name, args), Some eff, res)) ->
-        fmt "({%s %s} =[%s]=> %s)" (dump_name name) (String.concat " " (List.map dump_tyclass_arg args)) (dump_eff eff) (dump_ty res)
+        fmt "({%s %s} =[%s]=> %s)" (dump_name name) (dump_tyclass_args args) (dump_eff eff) (dump_ty res)
     | (_, AbsOnTy (names, res)) ->
         fmt "(λ %s -> %s)" (dump_t_name_ty_list names) (dump_ty res)
     | (_, AppOnTy (f, x)) ->
@@ -118,6 +120,8 @@ module ParseTree = struct
         dump_t_name_ty_opt v
     | (_, Unit) ->
         "()"
+    | (_, TyClassArg (name, (tyclass, args))) ->
+        fmt "(%s : %s %s)" (dump_name name) (dump_name tyclass) (dump_tyclass_args args)
 
   let dump_args l = String.concat " " (List.map dump_arg l)
 
@@ -135,6 +139,13 @@ module ParseTree = struct
           (String.concat " " (List.map dump_pattern args))
     | Any name ->
         dump_name name
+
+  let dump_tyclass_instance (name, tys) =
+    fmt "%s %s" (dump_name name) (String.concat " " (List.map dump_ty tys))
+
+  let dump_tyclass_app_arg = function
+    | TyClassVariable name -> dump_name name
+    | TyClassInstance instance -> dump_tyclass_instance instance
 
   let rec dump_t = function
     | (_, Abs (args, (ty, t))) ->
@@ -156,6 +167,13 @@ module ParseTree = struct
           (PPrint.lparen
            ^^ dump_t f
            ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
+           ^^ PPrint.rparen
+          )
+    | (_, TyClassApp (f, x)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ dump_t f
+           ^^ PPrint.string (fmt "?[%s]" (dump_tyclass_app_arg x))
            ^^ PPrint.rparen
           )
     | (_, LowerVal name) ->
@@ -269,14 +287,18 @@ module ParseTree = struct
   let dump_sig (name, ty) =
     PPrint.string (fmt "let %s : %s" (dump_name name) (dump_ty ty))
 
-  let dump = function
-    | Value (name, is_rec, (args, (ty, t))) ->
-        let ty = dump_ty_opt ty in
+  let dump_let (name, is_rec, (args, (ty, t))) =
+            let ty = dump_ty_opt ty in
         let is_rec = dump_rec is_rec in
         PPrint.group
           (PPrint.string (fmt "let%s %s %s : %s =" is_rec (dump_name name) (dump_args args) ty)
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
+
+
+  let dump = function
+    | Value x ->
+        dump_let x
     | Type (name, ty) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
     | Binding (name, ty, content) ->
@@ -297,6 +319,13 @@ module ParseTree = struct
         ^^ PPrint.break 1
         ^^ PPrint.group (List.fold_left (fun acc x -> acc ^^ dump_sig x ^^ PPrint.break 1) PPrint.empty sigs)
         ^^ PPrint.string "end"
+    | Instance (tyclass, name, values) ->
+        let name = match name with
+          | Some name -> fmt " [%s] " (dump_name name)
+          | None -> " "
+        in
+        PPrint.string (fmt "instance%s%s =" name (dump_tyclass_instance tyclass))
+        ^^ PPrint.nest 2 (dump_top dump_let PPrint.empty values)
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in

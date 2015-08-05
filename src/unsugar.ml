@@ -29,6 +29,8 @@ let new_upper_name_to_type ~current_module (loc, `NewUpperName name) =
   Ident.Type.create ~loc current_module name
 let new_upper_name_to_exn ~current_module (loc, `NewUpperName name) =
   Ident.Exn.create ~loc current_module name
+let new_upper_name_to_tyclass ~current_module (loc, `NewUpperName name) =
+  Ident.TyClass.create ~loc current_module name
 
 let new_upper_name_to_local_type (loc, `NewUpperName name) =
   Ident.Type.local_create ~loc name
@@ -57,7 +59,7 @@ let upper_name_to_type imports (loc, `UpperName name) =
   transform_name imports loc Ident.Type.local_create Ident.Type.create name
 let upper_name_to_exn imports (loc, `UpperName name) =
   transform_name imports loc Ident.Exn.local_create Ident.Exn.create name
-let upper_name_to_typeclass imports (loc, `UpperName name) =
+let upper_name_to_tyclass imports (loc, `UpperName name) =
   transform_name imports loc Ident.TyClass.local_create Ident.TyClass.create name
 let lower_name_to_value imports (loc, `LowerName name) =
   transform_name imports loc Ident.Name.local_create Ident.Name.create name
@@ -122,7 +124,7 @@ let rec unsugar_ty imports =
   | (loc, ParseTree.Forall (args, ty)) ->
       unsugar_forall ~loc ty args
   | (loc, ParseTree.TyClass ((name, args), eff, ty)) ->
-      let name = upper_name_to_typeclass imports name in
+      let name = upper_name_to_tyclass imports name in
       let args = List.map unsugar_tyclass_arg args in
       let eff = Option.map (unsugar_eff imports) eff in
       (loc, TyClass ((name, args), eff, unsugar_ty imports ty))
@@ -280,7 +282,7 @@ let create ~current_module imports options = function
       let modul = get_module imports loc modul in
       Open modul
   | ParseTree.Class (name, params, sigs) ->
-      let name = upper_name_to_typeclass imports name in
+      let name = new_upper_name_to_tyclass ~current_module name in
       let params =
         let aux (name, k) =
           (new_upper_name_to_local_type name, unsugar_kind k)

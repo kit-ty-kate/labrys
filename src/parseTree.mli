@@ -63,17 +63,27 @@ type arg' =
   | VArg of v_arg
   | TArg of ty_arg
   | Unit
+  | TyClassArg of (new_lower_name * tyclass)
 
 and arg = (loc * arg')
 
-type t' =
+type tyclass_instance = (upper_name * ty list)
+
+type tyclass_app_arg =
+  | TyClassVariable of lower_name
+  | TyClassInstance of tyclass_instance
+
+type value = (new_lower_name * is_rec * (arg list * (ty_annot option * t)))
+
+and t' =
   | Abs of (arg list * (ty_annot option * t))
   | App of (t * t)
   | TApp of (t * ty)
+  | TyClassApp of (t * tyclass_app_arg)
   | LowerVal of lower_name
   | UpperVal of upper_name
   | PatternMatching of (t * (pattern * t) list)
-  | Let of ((new_lower_name * is_rec * (arg list * (ty_annot option * t))) * t)
+  | Let of (value * t)
   | Fail of (ty * (upper_name * t list))
   | Try of (t * ((upper_name * new_lower_name list) * t) list)
   | Seq of (t * t)
@@ -84,13 +94,14 @@ and t = (loc * t')
 type variant = Variant of (new_upper_name * ty list)
 
 type top =
-  | Value of (new_lower_name * is_rec * (arg list * (ty_annot option * t)))
+  | Value of value
   | Type of (new_upper_name * ty)
-  | Binding of (new_lower_name* ty * string)
+  | Binding of (new_lower_name * ty * string)
   | Datatype of (new_upper_name * ty_arg list * variant list)
   | Exception of (new_upper_name * ty list)
   | Open of upper_name
-  | Class of (upper_name * ty_arg list * (new_lower_name * ty) list)
+  | Class of (new_upper_name * ty_arg list * (new_lower_name * ty) list)
+  | Instance of (tyclass_instance * new_lower_name option * value list)
 
 type import =
   | Source of upper_name
