@@ -178,14 +178,14 @@ termProtectedPermissive:
   | x = termNonStrictlyUnclosed { x }
   | x = termClosed { x }
 
+appAux:
+  | f = termClosed { f }
+  | f = app { f }
+
 app:
-  | f = termClosed LBracket ty = typeExpr RBracket
+  | f = appAux LBracket ty = typeExpr RBracket
       { (loc $startpos $endpos, ParseTree.TApp (f, ty)) }
-  | f = app LBracket ty = typeExpr RBracket
-      { (loc $startpos $endpos, ParseTree.TApp (f, ty)) }
-  | f = termClosed x = termClosed
-      { (loc $startpos $endpos, ParseTree.App (f, x)) }
-  | f = app x = termClosed
+  | f = appAux x = termClosed
       { (loc $startpos $endpos, ParseTree.App (f, x)) }
 
 arg:
@@ -248,10 +248,12 @@ typeExprProtectedPermissive:
   | x = typeExprNonStrictlyUnclosed { x }
   | x = typeExprClosed { x }
 
+tyAppAux:
+  | f = typeExprClosed { f }
+  | f = tyApp { f }
+
 tyApp:
-  | f = typeExprClosed x = typeExprClosed
-      { (loc $startpos $endpos, ParseTree.AppOnTy (f, x)) }
-  | f = tyApp x = typeExprClosed
+  | f = tyAppAux x = typeExprClosed
       { (loc $startpos $endpos, ParseTree.AppOnTy (f, x)) }
 
 kindUnclosed:
