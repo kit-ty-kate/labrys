@@ -335,11 +335,17 @@ end
 module UnsugaredTree = struct
   open UnsugaredTree
 
-  let rec dump_ty =
-    let dump_tyclass_arg = function
-      | Param x -> dump_t_name x
-      | Filled ty -> fmt "[%s]" (dump_ty ty)
-    in
+  let rec dump_tyclass_arg = function
+    | Param x -> dump_t_name x
+    | Filled ty -> fmt "[%s]" (dump_ty ty)
+
+  and dump_tyclass_args args =
+    String.concat " " (List.map dump_tyclass_arg args)
+
+  and dump_tyclass_value (tyclass, args) =
+    fmt "%s %s" (dump_tyclass_name tyclass) (dump_tyclass_args args)
+
+  and dump_ty =
     function
     | (_, Fun (param, None, res)) ->
         fmt "(%s -> %s)" (dump_ty param) (dump_ty res)
@@ -349,10 +355,10 @@ module UnsugaredTree = struct
     | (_, Eff eff) -> dump_eff eff
     | (_, Forall ((name, k), res)) ->
         fmt "(forall %s : %s, %s)" (dump_t_name name) (dump_k k) (dump_ty res)
-    | (_, TyClass ((name, args), None, res)) ->
-        fmt "({%s %s} => %s)" (dump_tyclass_name name) (String.concat " " (List.map dump_tyclass_arg args)) (dump_ty res)
-    | (_, TyClass ((name, args), Some eff, res)) ->
-        fmt "({%s %s} =[%s]=> %s)" (dump_tyclass_name name) (String.concat " " (List.map dump_tyclass_arg args)) (dump_eff eff) (dump_ty res)
+    | (_, TyClass (tyclass, None, res)) ->
+        fmt "({%s} => %s)" (dump_tyclass_value tyclass) (dump_ty res)
+    | (_, TyClass (tyclass, Some eff, res)) ->
+        fmt "({%s} =[%s]=> %s)" (dump_tyclass_value tyclass) (dump_eff eff) (dump_ty res)
     | (_, AbsOnTy ((name, k), res)) ->
         fmt "(λ (%s : %s) -> %s)" (dump_t_name name) (dump_k k) (dump_ty res)
     | (_, AppOnTy (f, x)) ->
@@ -392,6 +398,13 @@ module UnsugaredTree = struct
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string (fmt "λ %s ->" (dump_ty_arg arg))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | (_, CAbs ((name, tyclass), t)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "λ (%s : %s) ->" (dump_name name) (dump_tyclass_value tyclass))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
