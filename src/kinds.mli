@@ -33,3 +33,7 @@ val equal : t -> t -> bool
 val not_star : t -> bool
 
 val is_effect : t -> bool
+
+module Err : sig
+  val fail : loc:Location.t -> has:t -> expected:t -> 'a
+end

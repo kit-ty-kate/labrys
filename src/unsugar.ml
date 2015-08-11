@@ -61,6 +61,7 @@ let upper_name_to_exn imports (loc, `UpperName name) =
   transform_name imports loc Ident.Exn.local_create Ident.Exn.create name
 let upper_name_to_tyclass imports (loc, `UpperName name) =
   transform_name imports loc Ident.TyClass.local_create Ident.TyClass.create name
+
 let lower_name_to_value imports (loc, `LowerName name) =
   transform_name imports loc Ident.Name.local_create Ident.Name.create name
 
@@ -82,11 +83,16 @@ let unsugar_eff imports (loc, l) =
   in
   (loc, List.map aux l)
 
-let rec unsugar_ty imports =
-  let unsugar_tyclass_arg = function
-    | ParseTree.Param name -> Param (new_upper_name_to_local_type name)
-    | ParseTree.Filled ty -> Filled (unsugar_ty imports ty)
-  in
+let rec unsugar_tyclass_arg imports = function
+  | ParseTree.Param name -> Param (new_upper_name_to_local_type name)
+  | ParseTree.Filled ty -> Filled (unsugar_ty imports ty)
+
+and unsugar_tyclass imports (name, args) =
+  let name = upper_name_to_tyclass imports name in
+  let args = List.map (unsugar_tyclass_arg imports) args in
+  (name, args)
+
+and unsugar_ty imports =
   let unsugar_forall ~loc ty args =
     let rec aux = function
       | (name, k) :: xs ->
@@ -123,11 +129,10 @@ let rec unsugar_ty imports =
       (loc, Eff effects)
   | (loc, ParseTree.Forall (args, ty)) ->
       unsugar_forall ~loc ty args
-  | (loc, ParseTree.TyClass ((name, args), eff, ty)) ->
-      let name = upper_name_to_tyclass imports name in
-      let args = List.map unsugar_tyclass_arg args in
+  | (loc, ParseTree.TyClass (tyclass, eff, ty)) ->
+      let tyclass = unsugar_tyclass imports tyclass in
       let eff = Option.map (unsugar_eff imports) eff in
-      (loc, TyClass ((name, args), eff, unsugar_ty imports ty))
+      (loc, TyClass (tyclass, eff, unsugar_ty imports ty))
   | (loc, ParseTree.AbsOnTy (args, ty)) ->
       unsugar_absOnTy ~loc ty args
   | (loc, ParseTree.AppOnTy (x, y)) ->
@@ -150,6 +155,12 @@ let rec unsugar_pattern ~current_module imports = function
       let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
       Any name
 
+let unsugar_tyclass_app_arg imports = function
+  | ParseTree.TyClassVariable name ->
+      TyClassVariable (lower_name_to_value imports name)
+  | ParseTree.TyClassInstance (name, tys) ->
+      TyClassInstance (upper_name_to_tyclass imports name, List.map (unsugar_ty imports) tys)
+
 let rec unsugar_pat ~current_module imports options (pattern, t) =
   (unsugar_pattern ~current_module imports pattern, unsugar_t ~current_module imports options t)
 
@@ -171,6 +182,8 @@ and unsugar_t ~current_module imports options = function
       (loc, App (unsugar_t ~current_module imports options f, unsugar_t ~current_module imports options x))
   | (loc, ParseTree.TApp (t, ty)) ->
       (loc, TApp (unsugar_t ~current_module imports options t, unsugar_ty imports ty))
+  | (loc, ParseTree.TyClassApp (t, x)) ->
+      (loc, CApp (unsugar_t ~current_module imports options t, unsugar_tyclass_app_arg imports x))
   | (loc, ParseTree.LowerVal name) ->
       let name = lower_name_to_value imports name in
       (loc, Val name)
@@ -226,6 +239,18 @@ and unsugar_args ~current_module imports options args (annot, t) =
             ((loc, `Underscore), (loc, ParseTree.Ty (loc, Builtins.t_unit_name)))
         in
         aux ((loc, x) :: xs)
+    | (loc, ParseTree.TyClassArg (name, tyclass)) :: xs ->
+        let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
+        let tyclass = unsugar_tyclass imports tyclass in
+        let (ty_xs, xs) = aux xs in
+        let ty_xs =
+          let aux (ty_xs, eff) =
+            let ty_xs = TyClass (tyclass, eff, ty_xs) in
+            ((loc, ty_xs), None)
+          in
+          Option.map aux ty_xs
+        in
+        (ty_xs, (loc, CAbs ((name, tyclass), xs)))
     | [] ->
         begin match annot with
         | Some annot ->

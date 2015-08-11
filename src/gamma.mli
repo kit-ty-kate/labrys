@@ -24,7 +24,8 @@ type t = private
   ; types : PrivateTypes.visibility GammaMap.Types.t
   ; constructors : (Ident.Type.t list * (PrivateTypes.t list * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : PrivateTypes.t list GammaMap.Exn.t
-  ; tyclasses : Class.t GammaMap.TyClass.t
+  ; tyclasses : PrivateTypes.class_t GammaMap.TyClass.t
+  ; named_instances : Ident.TyClass.t GammaMap.Instance.t
   }
 
 val empty : <lib_dir : string; ..> -> t
@@ -33,7 +34,8 @@ val add_value : Ident.Name.t -> PrivateTypes.t -> t -> t
 val add_type : Ident.Type.t -> PrivateTypes.visibility -> t -> t
 val add_constr : Ident.Type.t -> Ident.Name.t -> Ident.Type.t list -> (PrivateTypes.t list * int) -> t -> t
 val add_exception : Ident.Exn.t -> PrivateTypes.t list -> t -> t
-val add_tyclass : Ident.TyClass.t -> Class.t -> t -> t
+val add_tyclass : Ident.TyClass.t -> PrivateTypes.class_t -> t -> t
+val add_named_instance : Ident.Name.t -> Ident.TyClass.t -> t -> t
 
 val union : imported:t -> t -> t
 val open_module : Module.t -> t -> t

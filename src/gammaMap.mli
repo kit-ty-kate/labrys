@@ -68,3 +68,7 @@ module TyClass : sig
 
   val find_binding : key -> 'a t -> (key * 'a)
 end
+
+module Instance : sig
+  include S with type key = Ident.Name.t
+end

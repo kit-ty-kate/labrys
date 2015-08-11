@@ -19,7 +19,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type t
+type ty_name = Ident.Type.t
+
+type t = PrivateTypes.class_t
 
 val create :
   (Ident.Type.t * Kinds.t) list ->
@@ -30,7 +32,13 @@ val equal : t -> t -> bool
 
 val remove_module_aliases : t -> t
 
-val get_params : loc:Location.t -> int -> t -> (Ident.Type.t * Kinds.t) list
+val get_params :
+  loc:Location.t ->
+  (Gamma.t -> UnsugaredTree.ty -> PrivateTypes.t * Kinds.t) ->
+  Gamma.t ->
+  UnsugaredTree.tyclass_arg list ->
+  t ->
+  (Gamma.t * PrivateTypes.tyclass_arg list)
 
 val get_instance_name :
   loc:Location.t ->

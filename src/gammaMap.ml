@@ -201,3 +201,18 @@ module TyClass = struct
     | Some x -> x
     | None -> fail k
 end
+
+module Instance = struct
+  include Make(Ident.Name)
+
+  let fail k =
+    Err.fail
+      ~loc:(Ident.Name.loc k)
+      "The named instance '%s' is not defined in Γ"
+      (Ident.Name.to_string k)
+
+  let find k self =
+    match find k self with
+    | Some x -> x
+    | None -> fail k
+end

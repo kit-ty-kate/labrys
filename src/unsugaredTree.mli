@@ -54,6 +54,12 @@ and ty = (loc * ty')
 type ty_annot = (ty * effects option)
 type value = (name * ty)
 
+type tyclass_instance = (tyclass_name * ty list)
+
+type tyclass_app_arg =
+  | TyClassVariable of name
+  | TyClassInstance of tyclass_instance
+
 type pattern =
   | TyConstr of (loc * name * pattern list)
   | Any of name
@@ -61,8 +67,10 @@ type pattern =
 type t' =
   | Abs of (value * t)
   | TAbs of (t_value * t)
+  | CAbs of ((name * tyclass_value) * t)
   | App of (t * t)
   | TApp of (t * ty)
+  | CApp of (t * tyclass_app_arg)
   | Val of name
   | PatternMatching of (t * (pattern * t) list)
   | Let of ((name * is_rec * t) * t)

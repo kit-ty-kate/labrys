@@ -47,14 +47,6 @@ let fmt = Printf.sprintf
 let fail_not_star ~loc x =
   Err.fail ~loc "The type construct '%s' cannot be used with kind /= '*'" x
 
-let kind_missmatch ~loc_x ~has ~expected =
-  Err.fail
-    ~loc:loc_x
-    "Error: This type has kind '%s' but a \
-     type was expected of kind '%s'"
-    (Kinds.to_string has)
-    (Kinds.to_string expected)
-
 let rec reduce = function
   | AppOnTy (t, ty) ->
       begin match reduce t with
@@ -130,21 +122,16 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
       (Forall (name, k, ret), Kinds.Star)
   | (loc, UnsugaredTree.TyClass ((name, args), eff, ret)) -> (* TODO: Handle parameters that appears in several classes *)
       let loc_ret = fst ret in
-      let (name, args) =
+      let (name, gamma, args) =
         let (name, tyclass) =
           GammaMap.TyClass.find_binding name gamma.Gamma.tyclasses
         in
         let loc = Ident.TyClass.loc name in
-        let args = Class.get_params ~loc (List.length args) tyclass in
-        let args = List.map (fun x -> Param x) args in
-        (name, args)
-      in
-      let gamma =
-        let aux gamma = function
-          | Param (x, k) -> Gamma.add_type x (Abstract k) gamma
-          | Filled _ -> gamma
+        let (gamma, args) =
+          let f = of_parse_tree_kind ~pure_arrow:(false, `Forbid) options in
+          Class.get_params ~loc f gamma args tyclass
         in
-        List.fold_left aux gamma args
+        (name, gamma, args)
       in
       let eff = handle_effects ~loc options pure_arrow gamma eff in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow options gamma ret in
@@ -175,9 +162,9 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
 
 let of_parse_tree_kind ~pure_arrow options gamma ty =
   let pure_arrow = match pure_arrow with
-    | `Allow -> (true, pure_arrow)
-    | `Partial -> (true, pure_arrow)
-    | `Forbid -> (false, pure_arrow)
+    | `Allow -> (true, `Allow)
+    | `Partial -> (true, `Partial)
+    | `Forbid -> (false, `Forbid)
   in
   let (ty, k) = of_parse_tree_kind ~pure_arrow options gamma ty in
   (reduce ty, k)
@@ -268,6 +255,33 @@ module Err = struct
       "Error: This expression has type '%s'. \
        This is not a type abstraction; it cannot be applied by a value."
       (to_string ty)
+
+  let name_tyclass_missmatch ~has ~expected =
+    Err.fail
+      ~loc:(Ident.TyClass.loc has)
+      "Typeclass name missmatch. Has '%s' but expected '%s'"
+      (Ident.TyClass.to_string has)
+      (Ident.TyClass.to_string expected)
+
+  let tyclass_type ~loc ty =
+    Err.fail
+      ~loc
+      "Error: This expression has type '%s'. \
+       This is not a typeclass abstraction; it cannot be applied."
+      (to_string ty)
+
+  let args_tyclass_missmatch tyclass expected has =
+    let param_to_string = function
+      | Param (name, _) -> Ident.Type.to_string name
+      | Filled ty -> to_string ty
+    in
+    Err.fail
+      ~loc:(Ident.TyClass.loc tyclass)
+      "Tyclass arguments missmatch. Has '%s %s' but expected '%s %s'"
+      (Ident.TyClass.to_string tyclass)
+      (String.concat " " (List.map param_to_string has))
+      (Ident.TyClass.to_string tyclass)
+      (String.concat " " (List.map to_string expected))
 end
 
 (* TODO: Improve and finish *)
@@ -333,7 +347,7 @@ let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x =
         let res = replace ~from:ty ~ty:ty_x res in
         (ty, res)
     | Forall (_, k, _) ->
-        kind_missmatch ~loc_x ~has:kind_x ~expected:k
+        Kinds.Err.fail ~loc:loc_x ~has:kind_x ~expected:k
     | TyClass (x, eff, res) ->
         let (ty, res) = aux res in
         (ty, TyClass (x, eff, res))
@@ -345,6 +359,28 @@ let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x =
         assert false
   in
   aux
+
+let apply_tyclass ty tyclass args = match ty with
+  | TyClass ((name, args'), eff, res) ->
+      if not (Ident.TyClass.equal name tyclass) then
+        Err.name_tyclass_missmatch ~has:tyclass ~expected:name;
+      let aux args =
+        try
+          let aux ty1 = function
+            | Param _ -> true
+            | Filled ty2 -> equal ty1 ty2
+          in
+          if not (List.for_all2 aux args args') then
+            Err.args_tyclass_missmatch tyclass args args';
+        with
+        | Invalid_argument _ -> assert false
+      in
+      Option.iter aux args;
+      (res, eff)
+  | Ty _ | Fun _ | Forall _ | AppOnTy _ as ty ->
+      Err.tyclass_type ~loc:(Ident.TyClass.loc tyclass) ty
+  | AbsOnTy _ | Eff _ ->
+      assert false
 
 let rec has_io = function
   | Eff _ | AbsOnTy _ -> assert false

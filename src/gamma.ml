@@ -26,7 +26,8 @@ type t =
   ; types : PrivateTypes.visibility GammaMap.Types.t
   ; constructors : (Ident.Type.t list * (PrivateTypes.t list * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : PrivateTypes.t list GammaMap.Exn.t
-  ; tyclasses : Class.t GammaMap.TyClass.t
+  ; tyclasses : PrivateTypes.class_t GammaMap.TyClass.t
+  ; named_instances : Ident.TyClass.t GammaMap.Instance.t
   }
 
 let empty options =
@@ -35,6 +36,7 @@ let empty options =
   ; constructors = GammaMap.Constr.empty
   ; exceptions = GammaMap.Exn.empty
   ; tyclasses = GammaMap.TyClass.empty
+  ; named_instances = GammaMap.Instance.empty
   }
 
 let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
@@ -42,6 +44,7 @@ let add_type k x self = {self with types = GammaMap.Types.add k x self.types}
 let add_constr k k2 args x self = {self with constructors = GammaMap.Constr.add k k2 args x self.constructors}
 let add_exception k x self = {self with exceptions = GammaMap.Exn.add k x self.exceptions}
 let add_tyclass k x self = {self with tyclasses = GammaMap.TyClass.add k x self.tyclasses}
+let add_named_instance k x self = {self with named_instances = GammaMap.Instance.add k x self.named_instances}
 
 let union ~imported b =
   let values =
@@ -69,10 +72,14 @@ let union ~imported b =
     GammaMap.Exn.union aux ~imported:imported.exceptions b.exceptions
   in
   let tyclasses =
-    let aux = Class.remove_module_aliases in
+    let aux = PrivateTypes.class_remove_module_aliases in
     GammaMap.TyClass.union aux ~imported:imported.tyclasses b.tyclasses
   in
-  {values; types; constructors; exceptions; tyclasses}
+  let named_instances =
+    let aux = Ident.TyClass.remove_aliases in
+    GammaMap.Instance.union aux ~imported:imported.named_instances b.named_instances
+  in
+  {values; types; constructors; exceptions; tyclasses; named_instances}
 
 let ty_equal x y = match x, y with
   | (PrivateTypes.Abstract k1 | PrivateTypes.Alias (_, k1)), PrivateTypes.Abstract k2
@@ -91,12 +98,14 @@ let is_subset_of a b =
   @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
   @ GammaMap.Constr.diff ~eq:constr_equal a.constructors b.constructors
   @ GammaMap.Exn.diff ~eq:(List.equal PrivateTypes.ty_equal) a.exceptions b.exceptions
-  @ GammaMap.TyClass.diff ~eq:Class.equal a.tyclasses b.tyclasses
+  @ GammaMap.TyClass.diff ~eq:PrivateTypes.class_equal a.tyclasses b.tyclasses
+  @ GammaMap.Instance.diff ~eq:Ident.TyClass.equal a.named_instances b.named_instances
 
-let open_module modul {values; types; constructors; exceptions; tyclasses} =
+let open_module modul {values; types; constructors; exceptions; tyclasses; named_instances} =
   let values = GammaMap.Value.open_module modul values in
   let types = GammaMap.Types.open_module modul types in
   let constructors = GammaMap.Constr.open_module modul constructors in
   let exceptions = GammaMap.Exn.open_module modul exceptions in
   let tyclasses = GammaMap.TyClass.open_module modul tyclasses in
-  {values; types; constructors; exceptions; tyclasses}
+  let named_instances = GammaMap.Instance.open_module modul named_instances in
+  {values; types; constructors; exceptions; tyclasses; named_instances}

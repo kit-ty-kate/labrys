@@ -27,6 +27,7 @@ let fail_rec_val ~loc_name =
   Err.fail ~loc:loc_name "Recursive values are not allowed"
 
 let rec well_formed_rec = function
+  | (_, UnsugaredTree.CAbs _)
   | (_, UnsugaredTree.Abs _) ->
       true
   | (_, UnsugaredTree.TAbs (_, t))
@@ -35,6 +36,7 @@ let rec well_formed_rec = function
       well_formed_rec t
   | (_, UnsugaredTree.App _)
   | (_, UnsugaredTree.TApp _)
+  | (_, UnsugaredTree.CApp _)
   | (_, UnsugaredTree.Val _)
   | (_, UnsugaredTree.PatternMatching _)
   | (_, UnsugaredTree.Fail _)
@@ -46,10 +48,12 @@ let rec get_ty_from_let = function
       Some ty
   | (_, UnsugaredTree.Let (_, t)) ->
       get_ty_from_let t
+  | (_, UnsugaredTree.CAbs _)
   | (_, UnsugaredTree.Abs _)
   | (_, UnsugaredTree.TAbs _)
   | (_, UnsugaredTree.App _)
   | (_, UnsugaredTree.TApp _)
+  | (_, UnsugaredTree.CApp _)
   | (_, UnsugaredTree.Val _)
   | (_, UnsugaredTree.PatternMatching _)
   | (_, UnsugaredTree.Fail _)
@@ -113,6 +117,17 @@ let rec aux options gamma = function
       check_effects_forall ~loc_t:(fst t) ~effect;
       let abs_ty = PrivateTypes.Forall (name, k, ty_expr) in
       (expr, abs_ty, effect)
+  | (_, UnsugaredTree.CAbs ((name, (tyclass, args)), t)) ->
+      let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
+      let (gamma, args) =
+        let loc = Ident.TyClass.loc tyclass in
+        let f = Types.of_parse_tree_kind ~pure_arrow:`Forbid options in
+        Class.get_params ~loc f gamma args tyclass'
+      in
+      let gamma = Gamma.add_named_instance name tyclass gamma in
+      let (expr, ty_expr, effect) = aux options gamma t in
+      let abs_ty = PrivateTypes.TyClass ((tyclass, args), effect, ty_expr) in
+      (Abs (name, expr), abs_ty, Effects.empty)
   | (loc, UnsugaredTree.App (f, x)) ->
       let loc_f = fst f in
       let loc_x = fst x in
@@ -148,6 +163,25 @@ let rec aux options gamma = function
       let (param, res) = Types.apply_ty ~loc_f ~loc_x ~ty_x ~kind_x:kx ty_f in
       let res = Types.replace ~from:param ~ty:ty_x res in
       (f, res, effect)
+  | (_, UnsugaredTree.CApp (f, x)) ->
+      let (f, ty_f, effect1) = aux options gamma f in
+      let (name, tyclass, tys) = match x with
+        | UnsugaredTree.TyClassVariable name ->
+            let tyclass =
+              GammaMap.Instance.find name gamma.Gamma.named_instances
+            in
+            (name, tyclass, None)
+        | UnsugaredTree.TyClassInstance (tyclass, tys) ->
+            let aux = Types.of_parse_tree ~pure_arrow:`Allow options gamma in
+            let tys = List.map aux tys in
+            let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
+            let name =
+              Class.get_instance_name ~loc:(Ident.TyClass.loc tyclass) tys tyclass'
+            in
+            (name, tyclass, Some tys)
+      in
+      let (res, effect2) = Types.apply_tyclass ty_f tyclass tys in
+      (App (f, Val name), res, Effects.union effect1 effect2)
   | (_, UnsugaredTree.Val name) ->
       let (name, ty) = GammaMap.Value.find_binding name gamma.Gamma.values in
       (Val name, ty, Effects.empty)

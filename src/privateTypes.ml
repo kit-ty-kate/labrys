@@ -24,7 +24,8 @@ open Monomorphic_containers.Open
 module Exn_set = Utils.EqSet(Ident.Exn)
 module Variables = Utils.EqSet(Ident.Type)
 
-type name = Ident.Type.t
+type name = Ident.Name.t
+type ty_name = Ident.Type.t
 
 type effects =
   { variables : Variables.t
@@ -32,16 +33,16 @@ type effects =
   }
 
 type tyclass_arg =
-  | Param of (name * Kinds.t)
+  | Param of (ty_name * Kinds.t)
   | Filled of t
 
 and t =
-  | Ty of name
+  | Ty of ty_name
   | Eff of effects
   | Fun of (t * effects * t)
-  | Forall of (name * Kinds.t * t)
+  | Forall of (ty_name * Kinds.t * t)
   | TyClass of ((Ident.TyClass.t * tyclass_arg list) * effects * t)
-  | AbsOnTy of (name * Kinds.t * t)
+  | AbsOnTy of (ty_name * Kinds.t * t)
   | AppOnTy of (t * t)
 
 type visibility =
@@ -165,3 +166,47 @@ let ty_remove_module_aliases =
         AppOnTy (aux vars x, aux vars y)
   in
   aux []
+
+type tmp = t
+
+module Instances = Utils.EqMap(struct
+    type t = tmp list
+
+    let equal = List.equal ty_equal
+  end)
+
+(* TODO: Handle contraints *)
+type class_t =
+  { params : (ty_name * Kinds.t) list
+  ; signature : (name * t) list
+  ; instances : name Instances.t
+  }
+
+let class_remove_module_aliases {params; signature; instances} =
+  let params =
+    let aux (name, k) = (Ident.Type.remove_aliases name, k) in
+    List.map aux params
+  in
+  let signature =
+    let aux (name, ty) =
+      (Ident.Name.remove_aliases name, ty_remove_module_aliases ty)
+    in
+    List.map aux signature
+  in
+  let instances =
+    let aux = List.map ty_remove_module_aliases in
+    Instances.map_keys aux instances
+  in
+  {params; signature; instances}
+
+let params_equal (name1, k1) (name2, k2) =
+  Ident.Type.equal name1 name2 && Kinds.equal k1 k2
+
+let signature_equal (name1, ty1) (name2, ty2) =
+  Ident.Name.equal name1 name2
+  && ty_equal ty1 ty2
+
+let class_equal a b =
+  List.equal params_equal a.params b.params
+  && List.equal signature_equal a.signature b.signature
+  && Instances.equal Ident.Name.equal a.instances b.instances

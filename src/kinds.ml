@@ -50,3 +50,13 @@ let not_star = function
 let is_effect = function
   | Eff -> true
   | Star | KFun _ -> false
+
+module Err = struct
+  let fail ~loc ~has ~expected =
+    Err.fail
+      ~loc
+      "Error: This type has kind '%s' but a \
+       type was expected of kind '%s'"
+      (to_string has)
+      (to_string expected)
+end

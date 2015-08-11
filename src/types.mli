@@ -74,6 +74,8 @@ val apply_ty :
   t ->
   (name * t)
 
+val apply_tyclass : t -> Ident.TyClass.t -> t list option -> (t * Effects.t)
+
 val has_io : t -> bool
 
 val is_fun : t -> bool

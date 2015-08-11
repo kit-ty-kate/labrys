@@ -24,14 +24,10 @@ open Monomorphic_containers.Open
 type name = Ident.Name.t
 type ty_name = Ident.Type.t
 
-module Instances = Utils.EqMap(struct
-    type t = PrivateTypes.t list
-
-    let equal = List.equal PrivateTypes.ty_equal
-  end)
+module Instances = PrivateTypes.Instances
 
 (* TODO: Handle contraints *)
-type t =
+type t = PrivateTypes.class_t =
   { params : (ty_name * Kinds.t) list
   ; signature : (name * PrivateTypes.t) list
   ; instances : name Instances.t
@@ -43,42 +39,31 @@ let create params signature =
   ; instances = Instances.empty
   }
 
-let remove_module_aliases {params; signature; instances} =
-  let params =
-    let aux (name, k) = (Ident.Type.remove_aliases name, k) in
-    List.map aux params
-  in
-  let signature =
-    let aux (name, ty) =
-      (Ident.Name.remove_aliases name, PrivateTypes.ty_remove_module_aliases ty)
+let remove_module_aliases = PrivateTypes.class_remove_module_aliases
+let equal = PrivateTypes.class_equal
+
+let get_params ~loc f gamma args self =
+  try
+    let aux (gamma, args) (_, k) = function
+      | UnsugaredTree.Param name ->
+          let gamma = Gamma.add_type name (PrivateTypes.Abstract k) gamma in
+          (gamma, PrivateTypes.Param (name, k) :: args)
+      | UnsugaredTree.Filled ty ->
+          let loc = fst ty in
+          let (ty, k') = f gamma ty in
+          if not (Kinds.equal k k') then
+            Kinds.Err.fail ~loc ~has:k' ~expected:k;
+          (gamma, PrivateTypes.Filled ty :: args)
     in
-    List.map aux signature
-  in
-  let instances =
-    let aux = List.map PrivateTypes.ty_remove_module_aliases in
-    Instances.map_keys aux instances
-  in
-  {params; signature; instances}
-
-let params_equal (name1, k1) (name2, k2) =
-  Ident.Type.equal name1 name2 && Kinds.equal k1 k2
-
-let signature_equal (name1, ty1) (name2, ty2) =
-  Ident.Name.equal name1 name2
-  && PrivateTypes.ty_equal ty1 ty2
-
-let equal a b =
-  List.equal params_equal a.params b.params
-  && List.equal signature_equal a.signature b.signature
-  && Instances.equal Ident.Name.equal a.instances b.instances
-
-let get_params ~loc n self =
-  let n' = List.length self.params in
-  if Int.Infix.(n <> n') then
-    Err.fail
-      ~loc
-      "Wrong number of parameter. Has %d but expected %d" n n';
-  self.params
+    let (gamma, args) = List.fold_left2 aux (gamma, []) self.params args in
+    (gamma, List.rev args)
+  with
+  | Invalid_argument _ ->
+      Err.fail
+        ~loc
+        "Wrong number of parameter. Has %d but expected %d"
+        (List.length args)
+        (List.length self.params)
 
 let get_instance_name ~loc tys self =
   match Instances.find tys self.instances with
