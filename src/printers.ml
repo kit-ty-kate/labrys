@@ -393,7 +393,14 @@ module UnsugaredTree = struct
     | TyClassVariable name -> dump_name name
     | TyClassInstance instance -> dump_tyclass_instance instance
 
-  let rec dump_t = function
+  let rec dump_value (name, is_rec, t) =
+    let is_rec = dump_rec is_rec in
+    PPrint.group
+      (PPrint.string (fmt "let%s %s =" is_rec (dump_name name))
+       ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
+      )
+
+  and dump_t = function
     | (_, Abs ((name, ty), t)) ->
         PPrint.group
           (PPrint.lparen
@@ -449,12 +456,10 @@ module UnsugaredTree = struct
         ^^ dump_cases cases
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | (_, Let ((name, is_rec, t), xs)) ->
-        let is_rec = dump_rec is_rec in
+    | (_, Let (value, xs)) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "let%s %s =" is_rec (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ dump_value value
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
            ^^ PPrint.break 1
@@ -537,12 +542,8 @@ module UnsugaredTree = struct
     PPrint.string (fmt "let %s : %s" (dump_name name) (dump_ty ty))
 
   let dump = function
-    | Value (name, is_rec, t) ->
-        let is_rec = dump_rec is_rec in
-        PPrint.group
-          (PPrint.string (fmt "let%s %s =" is_rec (dump_name name))
-           ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
-          )
+    | Value value ->
+        dump_value value
     | Type (name, ty) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
     | Binding (name, ty, content) ->
@@ -562,6 +563,15 @@ module UnsugaredTree = struct
         PPrint.string (fmt "class %s %s =" (dump_tyclass_name name) (String.concat " " (List.map dump_ty_arg params)))
         ^^ PPrint.break 1
         ^^ PPrint.nest 2 (List.fold_left (fun acc x -> acc ^^ dump_sig x ^^ PPrint.break 1) PPrint.empty sigs)
+        ^^ PPrint.string "end"
+    | Instance (instance, name, values) ->
+        let dump_opt_name = function
+          | Some x -> fmt "[%s]" (dump_name x)
+          | None -> ""
+        in
+        PPrint.string (fmt "instance %s%s =" (dump_opt_name name) (dump_tyclass_instance instance))
+        ^^ PPrint.break 1
+        ^^ PPrint.nest 2 (List.fold_left (fun acc x -> acc ^^ dump_value x ^^ PPrint.break 1) PPrint.empty values)
         ^^ PPrint.string "end"
 
   let dump top =

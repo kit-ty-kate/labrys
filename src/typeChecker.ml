@@ -369,6 +369,8 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
         List.fold_left aux (0, xs) sigs
       in
       (xs, has_main, gamma)
+  | UnsugaredTree.Instance (instance, name, values) :: xs ->
+      assert false
   | [] ->
       ([], has_main, gamma)
 

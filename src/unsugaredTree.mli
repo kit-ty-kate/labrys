@@ -52,7 +52,6 @@ and ty' =
 and ty = (loc * ty')
 
 type ty_annot = (ty * effects option)
-type value = (name * ty)
 
 type tyclass_instance = (tyclass_name * ty list)
 
@@ -64,8 +63,10 @@ type pattern =
   | TyConstr of (loc * name * pattern list)
   | Any of name
 
-type t' =
-  | Abs of (value * t)
+type value = (name * is_rec * t)
+
+and t' =
+  | Abs of ((name * ty) * t)
   | TAbs of (t_value * t)
   | CAbs of ((name * tyclass_value) * t)
   | App of (t * t)
@@ -73,7 +74,7 @@ type t' =
   | CApp of (t * tyclass_app_arg)
   | Val of name
   | PatternMatching of (t * (pattern * t) list)
-  | Let of ((name * is_rec * t) * t)
+  | Let of (value * t)
   | Fail of (ty * (exn_name * t list))
   | Try of (t * ((exn_name * name list) * t) list)
   | Annot of (t * ty_annot)
@@ -83,12 +84,13 @@ and t = (loc * t')
 type variant = Variant of (name * ty list * ty)
 
 type top =
-  | Value of (name * is_rec * t)
+  | Value of value
   | Type of (t_name * ty)
   | Binding of (name * ty * string)
   | Datatype of (t_name * Kinds.t * (t_name * Kinds.t) list * variant list)
   | Exception of (exn_name * ty list)
   | Open of module_name
   | Class of (tyclass_name * t_value list * (name * ty) list)
+  | Instance of (tyclass_instance * name option * value list)
 
 type imports = module_name list
