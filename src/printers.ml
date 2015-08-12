@@ -386,6 +386,13 @@ module UnsugaredTree = struct
     | Any name ->
         dump_name name
 
+  let dump_tyclass_instance (name, tys) =
+    fmt "%s %s" (dump_tyclass_name name) (String.concat " " (List.map dump_ty tys))
+
+  let dump_tyclass_app_arg = function
+    | TyClassVariable name -> dump_name name
+    | TyClassInstance instance -> dump_tyclass_instance instance
+
   let rec dump_t = function
     | (_, Abs ((name, ty), t)) ->
         PPrint.group
@@ -420,6 +427,13 @@ module UnsugaredTree = struct
           (PPrint.lparen
            ^^ dump_t f
            ^^ PPrint.string (fmt "[%s]" (dump_ty ty))
+           ^^ PPrint.rparen
+          )
+    | (_, CApp (f, arg)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ dump_t f
+           ^^ PPrint.string (fmt "?[%s]" (dump_tyclass_app_arg arg))
            ^^ PPrint.rparen
           )
     | (_, Val name) ->
