@@ -364,15 +364,16 @@ let apply_tyclass ty tyclass args = match ty with
   | TyClass ((name, args'), eff, res) ->
       if not (Ident.TyClass.equal name tyclass) then
         Err.name_tyclass_missmatch ~has:tyclass ~expected:name;
+      if not (PrivateTypes.tyclass_args_equal args args') then
+        Err.args_tyclass_missmatch tyclass ~expected:args ~has:args';
       let res =
         try
           let aux res ty1 ty2 = match ty1, ty2 with
             | Param (x1, _), Param (x2, _) -> replace ~from:x2 ~ty:(Ty x1) res
-            | Filled ty1, Filled ty2 when equal ty1 ty2 -> res
-            | Param _, _ | Filled _, _ -> raise Not_found
+            | Filled _, Filled _ -> res
+            | Param _, _ | Filled _, _ -> assert false
           in
-          try List.fold_left2 aux res args args'
-          with Not_found -> Err.args_tyclass_missmatch tyclass ~expected:args ~has:args'
+          List.fold_left2 aux res args args'
         with
         | Invalid_argument _ -> assert false
       in
