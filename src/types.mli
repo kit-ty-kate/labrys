@@ -74,7 +74,7 @@ val apply_ty :
   t ->
   (name * t)
 
-val apply_tyclass : t -> Ident.TyClass.t -> t list option -> (t * Effects.t)
+val apply_tyclass : t -> Ident.TyClass.t -> PrivateTypes.tyclass_arg list -> (t * Effects.t)
 
 val has_io : t -> bool
 

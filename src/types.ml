@@ -270,7 +270,7 @@ module Err = struct
        This is not a typeclass abstraction; it cannot be applied."
       (to_string ty)
 
-  let args_tyclass_missmatch tyclass expected has =
+  let args_tyclass_missmatch tyclass ~expected ~has =
     let param_to_string = function
       | Param (name, _) -> Ident.Type.to_string name
       | Filled ty -> to_string ty
@@ -281,7 +281,7 @@ module Err = struct
       (Ident.TyClass.to_string tyclass)
       (String.concat " " (List.map param_to_string has))
       (Ident.TyClass.to_string tyclass)
-      (String.concat " " (List.map to_string expected))
+      (String.concat " " (List.map param_to_string expected))
 end
 
 (* TODO: Improve and finish *)
@@ -364,18 +364,18 @@ let apply_tyclass ty tyclass args = match ty with
   | TyClass ((name, args'), eff, res) ->
       if not (Ident.TyClass.equal name tyclass) then
         Err.name_tyclass_missmatch ~has:tyclass ~expected:name;
-      let aux args =
+      let res =
         try
-          let aux ty1 = function
-            | Param _ -> true
-            | Filled ty2 -> equal ty1 ty2
+          let aux res ty1 ty2 = match ty1, ty2 with
+            | Param (x1, _), Param (x2, _) -> replace ~from:x2 ~ty:(Ty x1) res
+            | Filled ty1, Filled ty2 when equal ty1 ty2 -> res
+            | Param _, _ | Filled _, _ -> raise Not_found
           in
-          if not (List.for_all2 aux args args') then
-            Err.args_tyclass_missmatch tyclass args args';
+          try List.fold_left2 aux res args args'
+          with Not_found -> Err.args_tyclass_missmatch tyclass ~expected:args ~has:args'
         with
         | Invalid_argument _ -> assert false
       in
-      Option.iter aux args;
       (res, eff)
   | Ty _ | Fun _ | Forall _ | AppOnTy _ as ty ->
       Err.tyclass_type ~loc:(Ident.TyClass.loc tyclass) ty

@@ -125,6 +125,14 @@ let ty_is_subset_of = ty_equal eff_is_subset_of
 
 let ty_equal = ty_equal eff_equal
 
+let tyclass_args_equal args1 args2 =
+  let aux arg1 arg2 = match arg1, arg2 with
+    | Param _, Param _ -> true
+    | Filled ty1, Filled ty2 -> ty_equal ty1 ty2
+    | Param _, _ | Filled _, _ -> false
+  in
+  try List.for_all2 aux args1 args2 with Invalid_argument _ -> assert false
+
 let eff_remove_module_aliases vars {variables; exns} =
   let variables =
     let aux name =
@@ -138,34 +146,39 @@ let eff_remove_module_aliases vars {variables; exns} =
   let exns = Exn_set.map Ident.Exn.remove_aliases exns in
   {variables; exns}
 
-let ty_remove_module_aliases =
-  let rec aux vars = function
-    | Ty name when not (List.mem name vars) ->
-        Ty (Ident.Type.remove_aliases name)
-    | Ty name ->
-        Ty name
-    | Eff effects ->
-        Eff (eff_remove_module_aliases vars effects)
-    | Fun (x, eff, y) ->
-        Fun (aux vars x, eff_remove_module_aliases vars eff, aux vars y)
-    | Forall (name, k, t) ->
-        Forall (name, k, aux (name :: vars) t)
-    | TyClass ((name, args), eff, t) ->
-        let var =
-          let aux acc = function
-            | Param (x, _) -> x :: acc
-            | Filled _ -> acc
-          in
-          List.fold_left aux [] args
+let rec tyclass_arg_remove_module_aliases vars = function
+  | Param _ as arg -> arg
+  | Filled ty -> Filled (ty_remove_module_aliases vars ty)
+
+and ty_remove_module_aliases vars = function
+  | Ty name when not (List.mem name vars) ->
+      Ty (Ident.Type.remove_aliases name)
+  | Ty name ->
+      Ty name
+  | Eff effects ->
+      Eff (eff_remove_module_aliases vars effects)
+  | Fun (x, eff, y) ->
+      Fun (ty_remove_module_aliases vars x, eff_remove_module_aliases vars eff, ty_remove_module_aliases vars y)
+  | Forall (name, k, t) ->
+      Forall (name, k, ty_remove_module_aliases (name :: vars) t)
+  | TyClass ((name, args), eff, t) ->
+      let args = List.map (tyclass_arg_remove_module_aliases vars) args in
+      let var =
+        let aux acc = function
+          | Param (x, _) -> x :: acc
+          | Filled _ -> acc
         in
-        let eff = eff_remove_module_aliases vars eff in
-        TyClass ((name, args), eff, aux (var @ vars) t)
-    | AbsOnTy (name, k, t) ->
-        AbsOnTy (name, k, aux (name :: vars) t)
-    | AppOnTy (x, y) ->
-        AppOnTy (aux vars x, aux vars y)
-  in
-  aux []
+        List.fold_left aux [] args
+      in
+      let eff = eff_remove_module_aliases vars eff in
+      TyClass ((name, args), eff, ty_remove_module_aliases (var @ vars) t)
+  | AbsOnTy (name, k, t) ->
+      AbsOnTy (name, k, ty_remove_module_aliases (name :: vars) t)
+  | AppOnTy (x, y) ->
+      AppOnTy (ty_remove_module_aliases vars x, ty_remove_module_aliases vars y)
+
+let tyclass_args_remove_module_aliases = List.map (tyclass_arg_remove_module_aliases [])
+let ty_remove_module_aliases = ty_remove_module_aliases []
 
 type tmp = t
 

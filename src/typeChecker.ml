@@ -124,7 +124,7 @@ let rec aux options gamma = function
         let f = Types.of_parse_tree_kind ~pure_arrow:`Forbid options in
         Class.get_params ~loc f gamma args tyclass'
       in
-      let gamma = Gamma.add_named_instance name tyclass gamma in
+      let gamma = Gamma.add_named_instance name (tyclass, args) gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
       let abs_ty = PrivateTypes.TyClass ((tyclass, args), effect, ty_expr) in
       (Abs (name, expr), abs_ty, Effects.empty)
@@ -165,12 +165,12 @@ let rec aux options gamma = function
       (f, res, effect)
   | (_, UnsugaredTree.CApp (f, x)) ->
       let (f, ty_f, effect1) = aux options gamma f in
-      let (name, tyclass, tys) = match x with
+      let (name, tyclass, args) = match x with
         | UnsugaredTree.TyClassVariable name ->
-            let tyclass =
+            let (tyclass, args) =
               GammaMap.Instance.find name gamma.Gamma.named_instances
             in
-            (name, tyclass, None)
+            (name, tyclass, args)
         | UnsugaredTree.TyClassInstance (tyclass, tys) ->
             let aux = Types.of_parse_tree ~pure_arrow:`Allow options gamma in
             let tys = List.map aux tys in
@@ -178,9 +178,9 @@ let rec aux options gamma = function
             let name =
               Class.get_instance_name ~loc:(Ident.TyClass.loc tyclass) tys tyclass'
             in
-            (name, tyclass, Some tys)
+            (name, tyclass, List.map (fun x -> PrivateTypes.Filled x) tys)
       in
-      let (res, effect2) = Types.apply_tyclass ty_f tyclass tys in
+      let (res, effect2) = Types.apply_tyclass ty_f tyclass args in
       (App (f, Val name), res, Effects.union effect1 effect2)
   | (_, UnsugaredTree.Val name) ->
       let (name, ty) = GammaMap.Value.find_binding name gamma.Gamma.values in

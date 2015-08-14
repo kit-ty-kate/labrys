@@ -53,6 +53,10 @@ val ty_equal : t -> t -> bool
 
 val ty_is_subset_of : t -> t -> bool
 
+val tyclass_args_remove_module_aliases : tyclass_arg list -> tyclass_arg list
+
+val tyclass_args_equal : tyclass_arg list -> tyclass_arg list -> bool
+
 val ty_remove_module_aliases : t -> t
 
 val eff_equal : (ty_name * ty_name) list -> effects -> effects -> bool
