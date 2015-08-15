@@ -49,6 +49,8 @@ type visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
+let fmt = Printf.sprintf
+
 let ty_empty options =
   let aux gammaT eff = GammaMap.Types.add eff (Abstract Kinds.Eff) gammaT in
   List.fold_left aux GammaMap.Types.empty (Builtins.effects options)
@@ -146,6 +148,21 @@ let eff_remove_module_aliases vars {variables; exns} =
   let exns = Exn_set.map Ident.Exn.remove_aliases exns in
   {variables; exns}
 
+let eff_is_empty {variables; exns} =
+  Variables.is_empty variables
+  && Exn_set.is_empty exns
+
+let eff_to_string self =
+  let aux name acc = Ident.Type.to_string name :: acc in
+  let exns =
+    if Exn_set.is_empty self.exns then
+      []
+    else
+      let aux name acc = Ident.Exn.to_string name :: acc in
+      [fmt "Exn [%s]" (String.concat " | " (Exn_set.fold aux self.exns []))]
+  in
+  fmt "[%s]" (String.concat ", " (exns @ Variables.fold aux self.variables []))
+
 let rec tyclass_arg_remove_module_aliases vars = function
   | Param _ as arg -> arg
   | Filled ty -> Filled (ty_remove_module_aliases vars ty)
@@ -179,6 +196,43 @@ and ty_remove_module_aliases vars = function
 
 let tyclass_args_remove_module_aliases = List.map (tyclass_arg_remove_module_aliases [])
 let ty_remove_module_aliases = ty_remove_module_aliases []
+(*
+let rec ty_to_name = function
+  | Ty name -> Ident.Name.to_string name
+  | Eff eff -> fmt "$%s$" (eff_to_name eff)
+  | Fun (x, eff, y) -> fmt "%s-$%s$-%s" (ty_to_name x) (eff_to_name eff) (ty_to_name y)
+  | Forall (_, k, t) -> fmt "%s$$%s" (kinds_to_name k) (ty_to_name t)
+  | TyClass (
+*)
+let rec ty_to_string =
+  let tyclass_arg_to_string = function
+    | Param (x, _) -> Ident.Type.to_string x
+    | Filled ty -> fmt "[%s]" (ty_to_string ty)
+  in
+  let tyclass_args_to_string args =
+    String.concat " " (List.map tyclass_arg_to_string args)
+  in
+  function
+  | Ty x -> Ident.Type.to_string x
+  | Eff effects -> eff_to_string effects
+  | Fun (Ty x, eff, ret) when eff_is_empty eff ->
+      fmt "%s -> %s" (Ident.Type.to_string x) (ty_to_string ret)
+  | Fun (Ty x, eff, ret) ->
+      fmt "%s -%s-> %s" (Ident.Type.to_string x) (eff_to_string eff) (ty_to_string ret)
+  | Fun (x, eff, ret) ->
+      fmt "(%s) -%s-> %s" (ty_to_string x) (eff_to_string eff) (ty_to_string ret)
+  | Forall (x, k, t) ->
+      fmt "forall %s : %s. %s" (Ident.Type.to_string x) (Kinds.to_string k) (ty_to_string t)
+  | TyClass ((name, args), eff, t) when eff_is_empty eff ->
+      fmt "{%s %s} => %s" (Ident.TyClass.to_string name) (tyclass_args_to_string args) (ty_to_string t)
+  | TyClass ((name, args), eff, t) ->
+      fmt "{%s %s} =%s=> %s" (Ident.TyClass.to_string name) (tyclass_args_to_string args) (eff_to_string eff) (ty_to_string t)
+  | AbsOnTy (name, k, t) ->
+      fmt "λ%s : %s. %s" (Ident.Type.to_string name) (Kinds.to_string k) (ty_to_string t)
+  | AppOnTy (Ty f, Ty x) -> fmt "%s %s" (Ident.Type.to_string f) (Ident.Type.to_string x)
+  | AppOnTy (Ty f, x) -> fmt "%s (%s)" (Ident.Type.to_string f) (ty_to_string x)
+  | AppOnTy (f, Ty x) -> fmt "(%s) %s" (ty_to_string f) (Ident.Type.to_string x)
+  | AppOnTy (f, x) -> fmt "(%s) (%s)" (ty_to_string f) (ty_to_string x)
 
 type tmp = t
 

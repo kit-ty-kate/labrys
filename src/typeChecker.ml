@@ -291,24 +291,28 @@ let check_effects ~current_module ~with_main ~has_main ~name options (t, ty, eff
       (Types.to_string ty);
   (is_main, t, ty)
 
-let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = function
-  | UnsugaredTree.Value (name, UnsugaredTree.NonRec, term) :: xs ->
+let from_value ~current_module ~with_main ~has_main options gamma = function
+  | (name, UnsugaredTree.NonRec, term) ->
       let loc_t = fst term in
       let ty = get_ty_from_let term in
       let (has_main, x, ty_t) = check_effects ~current_module ~with_main ~has_main ~name options (aux options gamma term) in
       check_type_opt options ~loc_t ~ty ~ty_t ~effects:Effects.empty gamma;
       let gamma = Gamma.add_value name ty_t gamma in
-      let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
-      (Value (name, x) :: xs, has_main, gamma)
-  | UnsugaredTree.Value (name, UnsugaredTree.Rec, term) :: xs when well_formed_rec term ->
+      ((name, x), ty_t, has_main, gamma)
+  | (name, UnsugaredTree.Rec, term) when well_formed_rec term ->
       let ty = get_ty_from_let_rec ~loc_name:(Ident.Name.loc name) term in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let gamma = Gamma.add_value name ty gamma in
       let (has_main, x, _) = check_effects ~current_module ~with_main ~has_main ~name options (aux options gamma term) in
-      let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
-      (RecValue (name, x) :: xs, has_main, gamma)
-  | UnsugaredTree.Value (name, UnsugaredTree.Rec, _) :: _ ->
+      ((name, x), ty, has_main, gamma)
+  | (name, UnsugaredTree.Rec, _) ->
       fail_rec_val ~loc_name:(Ident.Name.loc name)
+
+let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = function
+  | UnsugaredTree.Value value :: xs ->
+      let (value, _, has_main, gamma) = from_value ~current_module ~with_main ~has_main options gamma value in
+      let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
+      (Value value :: xs, has_main, gamma)
   | UnsugaredTree.Type (name, ty) :: xs ->
       let ty = Types.of_parse_tree_kind ~pure_arrow:`Forbid options gamma ty in
       let gamma = Gamma.add_type name (Types.Alias ty) gamma in
@@ -369,8 +373,28 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
         List.fold_left aux (0, xs) sigs
       in
       (xs, has_main, gamma)
-  | UnsugaredTree.Instance (instance, name, values) :: xs ->
-      assert false
+  | UnsugaredTree.Instance ((tyclass, tys), name, values) :: xs ->
+      let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
+      let tys = List.map (Types.of_parse_tree_kind ~pure_arrow:`Forbid options gamma) tys in
+      let values =
+        let aux value =
+          let (value, ty, _, _) = from_value ~current_module ~with_main ~has_main options gamma value in
+          (value, ty)
+        in
+        List.map aux values
+      in
+      let (name', tyclass') = Class.add_instance ~tyclass ~current_module tys tyclass' in
+      let gamma = match name with
+        | Some name ->
+            let args = List.map (fun (x, _) -> PrivateTypes.Filled x) tys in
+            Gamma.add_named_instance name (tyclass, args) gamma
+        | None ->
+            gamma
+      in
+      let gamma = Gamma.replace_tyclass tyclass tyclass' gamma in
+      let values = Class.get_values ~loc:(Ident.TyClass.loc tyclass) values tyclass' in
+      let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
+      (Record (name', values) :: xs, has_main, gamma)
   | [] ->
       ([], has_main, gamma)
 

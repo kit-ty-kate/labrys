@@ -70,3 +70,46 @@ let get_instance_name ~loc tys self =
   | Some x -> x
   | None ->
       Err.fail ~loc "No instance found for '???'" (* TODO: Fill ??? *)
+
+(* TODO: Improve loc *)
+let add_instance ~tyclass ~current_module tys self =
+  let aux (ty, k1) (_, k2) =
+    if not (Kinds.equal k1 k2) then
+      Err.fail
+        ~loc:(Ident.TyClass.loc tyclass)
+        "Kinds doesn't match. Has '%s' but expected '%s'"
+        (Kinds.to_string k1)
+        (Kinds.to_string k2);
+    ty
+  in
+  let tys = List.map2 aux tys self.params in
+  let name =
+    let names = List.map PrivateTypes.ty_to_string tys in
+    let names = Ident.TyClass.to_string tyclass :: names in
+    let name = String.concat "." names in
+    Ident.Name.create ~loc:Builtins.unknown_loc current_module name
+  in
+  let instances = Instances.add tys name self.instances in
+  (name, {self with instances})
+
+let get_values ~loc values self =
+  let aux ((name1, t), ty1) (name2, ty2) =
+    if not (Ident.Name.equal name1 name2) then
+      Err.fail
+        ~loc:(Ident.Name.loc name1)
+        "Name missmatch. Has '%s' but expected '%s'"
+        (Ident.Name.to_string name1)
+        (Ident.Name.to_string name2);
+    if not (PrivateTypes.ty_equal ty1 ty2) then
+      Err.fail
+        ~loc:(Ident.Name.loc name1)
+        "Type missmatch. Has '%s' but expected '%s'"
+        (PrivateTypes.ty_to_string ty1)
+        (PrivateTypes.ty_to_string ty2);
+    t
+  in
+  try
+    List.map2 aux values self.signature
+  with
+  | Invalid_argument _ ->
+      Err.fail ~loc "Signatures missmatch"

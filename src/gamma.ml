@@ -46,6 +46,8 @@ let add_exception k x self = {self with exceptions = GammaMap.Exn.add k x self.e
 let add_tyclass k x self = {self with tyclasses = GammaMap.TyClass.add k x self.tyclasses}
 let add_named_instance k x self = {self with named_instances = GammaMap.Instance.add k x self.named_instances}
 
+let replace_tyclass k x self = {self with tyclasses = GammaMap.TyClass.replace k x self.tyclasses}
+
 let union ~imported b =
   let values =
     let aux = PrivateTypes.ty_remove_module_aliases in

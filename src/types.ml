@@ -42,8 +42,6 @@ type visibility = PrivateTypes.visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
-let fmt = Printf.sprintf
-
 let fail_not_star ~loc x =
   Err.fail ~loc "The type construct '%s' cannot be used with kind /= '*'" x
 
@@ -176,35 +174,7 @@ let of_parse_tree ~pure_arrow options gamma ty =
     Err.fail ~loc "Values cannot be of kind /= '*'";
   ty
 
-let rec to_string =
-  let tyclass_arg_to_string = function
-    | Param (x, _) -> Ident.Type.to_string x
-    | Filled ty -> fmt "[%s]" (to_string ty)
-  in
-  let tyclass_args_to_string args =
-    String.concat " " (List.map tyclass_arg_to_string args)
-  in
-  function
-  | Ty x -> Ident.Type.to_string x
-  | Eff effects -> Effects.to_string effects
-  | Fun (Ty x, eff, ret) when Effects.is_empty eff ->
-      fmt "%s -> %s" (Ident.Type.to_string x) (to_string ret)
-  | Fun (Ty x, eff, ret) ->
-      fmt "%s -%s-> %s" (Ident.Type.to_string x) (Effects.to_string eff) (to_string ret)
-  | Fun (x, eff, ret) ->
-      fmt "(%s) -%s-> %s" (to_string x) (Effects.to_string eff) (to_string ret)
-  | Forall (x, k, t) ->
-      fmt "forall %s : %s. %s" (Ident.Type.to_string x) (Kinds.to_string k) (to_string t)
-  | TyClass ((name, args), eff, t) when Effects.is_empty eff ->
-      fmt "{%s %s} => %s" (Ident.TyClass.to_string name) (tyclass_args_to_string args) (to_string t)
-  | TyClass ((name, args), eff, t) ->
-      fmt "{%s %s} =%s=> %s" (Ident.TyClass.to_string name) (tyclass_args_to_string args) (Effects.to_string eff) (to_string t)
-  | AbsOnTy (name, k, t) ->
-      fmt "λ%s : %s. %s" (Ident.Type.to_string name) (Kinds.to_string k) (to_string t)
-  | AppOnTy (Ty f, Ty x) -> fmt "%s %s" (Ident.Type.to_string f) (Ident.Type.to_string x)
-  | AppOnTy (Ty f, x) -> fmt "%s (%s)" (Ident.Type.to_string f) (to_string x)
-  | AppOnTy (f, Ty x) -> fmt "(%s) %s" (to_string f) (Ident.Type.to_string x)
-  | AppOnTy (f, x) -> fmt "(%s) (%s)" (to_string f) (to_string x)
+let to_string = PrivateTypes.ty_to_string
 
 let equal = PrivateTypes.ty_equal
 let is_subset_of = PrivateTypes.ty_is_subset_of

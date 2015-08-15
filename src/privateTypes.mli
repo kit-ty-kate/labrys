@@ -53,6 +53,8 @@ val ty_equal : t -> t -> bool
 
 val ty_is_subset_of : t -> t -> bool
 
+val ty_to_string : t -> string
+
 val tyclass_args_remove_module_aliases : tyclass_arg list -> tyclass_arg list
 
 val tyclass_args_equal : tyclass_arg list -> tyclass_arg list -> bool
@@ -64,6 +66,10 @@ val eff_equal : (ty_name * ty_name) list -> effects -> effects -> bool
 val eff_is_subset_of : (ty_name * ty_name) list -> effects -> effects -> bool
 
 val eff_remove_module_aliases : ty_name list -> effects -> effects
+
+val eff_is_empty : effects -> bool
+
+val eff_to_string : effects -> string
 
 module Instances : Utils.EQMAP with type key = t list
 

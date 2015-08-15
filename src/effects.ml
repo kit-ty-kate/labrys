@@ -36,9 +36,7 @@ let empty =
   ; exns = Exn_set.empty
   }
 
-let is_empty {variables; exns} =
-  Variables.is_empty variables
-  && Exn_set.is_empty exns
+let is_empty = PrivateTypes.eff_is_empty
 
 let equal = PrivateTypes.eff_equal
 let is_subset_of = PrivateTypes.eff_is_subset_of
@@ -118,16 +116,7 @@ let remove_exn x self =
   let exns = Exn_set.remove x self.exns in
   {self with exns}
 
-let to_string self =
-  let aux name acc = Ident.Type.to_string name :: acc in
-  let exns =
-    if Exn_set.is_empty self.exns then
-      []
-    else
-      let aux name acc = Ident.Exn.to_string name :: acc in
-      [fmt "Exn [%s]" (String.concat " | " (Exn_set.fold aux self.exns []))]
-  in
-  fmt "[%s]" (String.concat ", " (exns @ Variables.fold aux self.variables []))
+let to_string = PrivateTypes.eff_to_string
 
 let of_list options gamma (_, l) =
   let aux acc ty = add options gamma ty acc in

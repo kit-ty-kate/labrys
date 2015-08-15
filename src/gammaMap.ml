@@ -177,6 +177,8 @@ end
 module TyClass = struct
   include Make(Ident.TyClass)
 
+  let replace = add
+
   let add k x map =
     if mem k map then
       Err.fail

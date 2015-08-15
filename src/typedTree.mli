@@ -45,3 +45,4 @@ type top =
   | Binding of (name * arity * string)
   | Datatype of variant list
   | Exception of eff_name
+  | Record of (name * t list)

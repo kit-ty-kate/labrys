@@ -37,6 +37,8 @@ val add_exception : Ident.Exn.t -> PrivateTypes.t list -> t -> t
 val add_tyclass : Ident.TyClass.t -> PrivateTypes.class_t -> t -> t
 val add_named_instance : Ident.Name.t -> (Ident.TyClass.t * PrivateTypes.tyclass_arg list) -> t -> t
 
+val replace_tyclass : Ident.TyClass.t -> PrivateTypes.class_t -> t -> t
+
 val union : imported:t -> t -> t
 val open_module : Module.t -> t -> t
 

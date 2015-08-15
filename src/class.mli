@@ -45,3 +45,16 @@ val get_instance_name :
   PrivateTypes.t list ->
   t ->
   Ident.Name.t
+
+val add_instance :
+  tyclass:Ident.TyClass.t ->
+  current_module:Module.t ->
+  (PrivateTypes.t * Kinds.t) list ->
+  t ->
+  (Ident.Name.t * t)
+
+val get_values :
+  loc:Location.t ->
+  ((Ident.Name.t * 'a) * PrivateTypes.t) list ->
+  t ->
+  'a list
