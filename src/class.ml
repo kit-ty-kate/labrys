@@ -90,9 +90,9 @@ let add_instance ~tyclass ~current_module tys self =
     Ident.Name.create ~loc:Builtins.unknown_loc current_module name
   in
   let instances = Instances.add tys name self.instances in
-  (name, {self with instances})
+  (name, tys, {self with instances})
 
-let get_values ~loc ~current_module values self =
+let get_values ~loc ~current_module tys values self =
   let aux ((name1, is_rec, t), ty1) (name2, ty2) =
     if not (Ident.Name.equal name1 name2) then
       Err.fail
@@ -100,6 +100,13 @@ let get_values ~loc ~current_module values self =
         "Name missmatch. Has '%s' but expected '%s'"
         (Ident.Name.to_string name1)
         (Ident.Name.to_string name2);
+    let ty2 =
+      let aux ty2 (from, _) ty = PrivateTypes.ty_replace ~from ~ty ty2 in
+      try
+        List.fold_left2 aux ty2 self.params tys
+      with
+      | Invalid_argument _ -> assert false
+    in
     if not (PrivateTypes.ty_equal ty1 ty2) then
       Err.fail
         ~loc:(Ident.Name.loc name1)

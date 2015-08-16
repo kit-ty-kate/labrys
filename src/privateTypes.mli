@@ -61,6 +61,18 @@ val tyclass_args_equal : tyclass_arg list -> tyclass_arg list -> bool
 
 val ty_remove_module_aliases : t -> t
 
+val ty_reduce : t -> t
+
+val ty_replace : from:Ident.Type.t -> ty:t -> t -> t
+
+val eff_empty : effects
+
+val eff_union : effects -> effects -> effects
+
+val eff_union_ty : ?from:Ident.Type.t -> effects -> t -> effects
+
+val eff_replace : from:Ident.Type.t -> ty:t -> effects -> effects
+
 val eff_equal : (ty_name * ty_name) list -> effects -> effects -> bool
 
 val eff_is_subset_of : (ty_name * ty_name) list -> effects -> effects -> bool

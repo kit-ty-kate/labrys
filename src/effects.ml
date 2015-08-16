@@ -31,10 +31,7 @@ type t = PrivateTypes.effects =
   ; exns : Exn_set.t
   }
 
-let empty =
-  { variables = Variables.empty
-  ; exns = Exn_set.empty
-  }
+let empty = PrivateTypes.eff_empty
 
 let is_empty = PrivateTypes.eff_is_empty
 
@@ -44,7 +41,10 @@ let is_subset_of = PrivateTypes.eff_is_subset_of
 let has_io {variables; exns = _} =
   not (Variables.is_empty variables)
 
-let rec add options gamma (name, exns) self =
+let union_ty = PrivateTypes.eff_union_ty
+let union = PrivateTypes.eff_union
+
+let add options gamma (name, exns) self =
   let exns =
     let aux x = fst (GammaMap.Exn.find_binding x gamma.Gamma.exceptions) in
     List.map aux exns
@@ -79,27 +79,6 @@ let rec add options gamma (name, exns) self =
   in
   {variables; exns}
 
-and union_ty ?from self = function
-  | PrivateTypes.Ty name ->
-      let variables = match from with
-        | Some from -> Variables.remove from self.variables
-        | None -> self.variables
-      in
-      let variables = Variables.add name variables in
-      {self with variables}
-  | PrivateTypes.Eff eff ->
-      union self eff
-  | PrivateTypes.Fun _
-  | PrivateTypes.Forall _
-  | PrivateTypes.TyClass _
-  | PrivateTypes.AbsOnTy _
-  | PrivateTypes.AppOnTy _ -> assert false
-
-and union x y =
-  let variables = Variables.union x.variables y.variables in
-  let exns = Exn_set.union x.exns y.exns in
-  {variables; exns}
-
 let add_exn x self =
   {self with exns = Exn_set.add x self.exns}
 
@@ -122,13 +101,6 @@ let of_list options gamma (_, l) =
   let aux acc ty = add options gamma ty acc in
   List.fold_left aux empty l
 
-let replace ~from ~ty self =
-  let aux name self =
-    if Ident.Type.equal name from then
-      union_ty ~from self ty
-    else
-      {self with variables = Variables.add name self.variables}
-  in
-  Variables.fold aux self.variables empty
+let replace = PrivateTypes.eff_replace
 
 let remove_module_aliases = PrivateTypes.eff_remove_module_aliases

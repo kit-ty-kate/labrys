@@ -73,6 +73,41 @@ let eff_is_subset_of list_eq x y =
   var_eq list_eq x.variables y.variables
   && Exn_set.subset x.exns y.exns
 
+let eff_empty =
+  { variables = Variables.empty
+  ; exns = Exn_set.empty
+  }
+
+let eff_union x y =
+  let variables = Variables.union x.variables y.variables in
+  let exns = Exn_set.union x.exns y.exns in
+  {variables; exns}
+
+let eff_union_ty ?from self = function
+  | Ty name ->
+      let variables = match from with
+        | Some from -> Variables.remove from self.variables
+        | None -> self.variables
+      in
+      let variables = Variables.add name variables in
+      {self with variables}
+  | Eff eff ->
+      eff_union self eff
+  | Fun _
+  | Forall _
+  | TyClass _
+  | AbsOnTy _
+  | AppOnTy _ -> assert false
+
+let eff_replace ~from ~ty self =
+  let aux name self =
+    if Ident.Type.equal name from then
+      eff_union_ty ~from self ty
+    else
+      {self with variables = Variables.add name self.variables}
+  in
+  Variables.fold aux self.variables eff_empty
+
 let ty_equal eff_eq x y =
   let rec aux eq_list = function
     | Ty x, Ty x' ->
@@ -233,6 +268,38 @@ let rec ty_to_string =
   | AppOnTy (Ty f, x) -> fmt "%s (%s)" (Ident.Type.to_string f) (ty_to_string x)
   | AppOnTy (f, Ty x) -> fmt "(%s) %s" (ty_to_string f) (Ident.Type.to_string x)
   | AppOnTy (f, x) -> fmt "(%s) (%s)" (ty_to_string f) (ty_to_string x)
+
+let rec ty_reduce = function
+  | AppOnTy (t, ty) ->
+      begin match ty_reduce t with
+      | AbsOnTy (name, _, t) -> ty_reduce (ty_replace ~from:name ~ty t)
+      | Ty _ | AppOnTy _ as t -> AppOnTy (t, ty)
+      | Eff _ | Fun _ | Forall _ | TyClass _ -> assert false
+      end
+  | Ty _ | Eff _ | Fun _ | Forall _ | TyClass _ | AbsOnTy _ as ty -> ty
+
+and ty_replace ~from ~ty =
+  let rec aux = function
+    | Ty x when Ident.Type.equal x from -> ty
+    | Ty _ as t -> t
+    | Eff effects -> Eff (eff_replace ~from ~ty effects)
+    | Fun (param, eff, ret) ->
+        Fun (aux param, eff_replace ~from ~ty eff, aux ret)
+    | Forall (x, k, t) -> Forall (x, k, aux t)
+    | TyClass ((x, args), eff, t) ->
+        let args =
+          let aux = function
+            | Param _ as arg -> arg
+            | Filled ty -> Filled (aux ty)
+          in
+          List.map aux args
+        in
+        let eff = eff_replace ~from ~ty eff in
+        TyClass ((x, args), eff, aux t)
+    | AbsOnTy (x, k, t) -> AbsOnTy (x, k, aux t)
+    | AppOnTy (f, x) -> ty_reduce (AppOnTy (aux f, aux x))
+  in
+  aux
 
 type tmp = t
 

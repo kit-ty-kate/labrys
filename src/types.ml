@@ -45,37 +45,8 @@ type visibility = PrivateTypes.visibility =
 let fail_not_star ~loc x =
   Err.fail ~loc "The type construct '%s' cannot be used with kind /= '*'" x
 
-let rec reduce = function
-  | AppOnTy (t, ty) ->
-      begin match reduce t with
-      | AbsOnTy (name, _, t) -> reduce (replace ~from:name ~ty t)
-      | Ty _ | AppOnTy _ as t -> AppOnTy (t, ty)
-      | Eff _ | Fun _ | Forall _ | TyClass _ -> assert false
-      end
-  | Ty _ | Eff _ | Fun _ | Forall _ | TyClass _ | AbsOnTy _ as ty -> ty
-
-and replace ~from ~ty =
-  let rec aux = function
-    | Ty x when Ident.Type.equal x from -> ty
-    | Ty _ as t -> t
-    | Eff effects -> Eff (Effects.replace ~from ~ty effects)
-    | Fun (param, eff, ret) ->
-        Fun (aux param, Effects.replace ~from ~ty eff, aux ret)
-    | Forall (x, k, t) -> Forall (x, k, aux t)
-    | TyClass ((x, args), eff, t) ->
-        let args =
-          let aux = function
-            | Param _ as arg -> arg
-            | Filled ty -> Filled (aux ty)
-          in
-          List.map aux args
-        in
-        let eff = Effects.replace ~from ~ty eff in
-        TyClass ((x, args), eff, aux t)
-    | AbsOnTy (x, k, t) -> AbsOnTy (x, k, aux t)
-    | AppOnTy (f, x) -> reduce (AppOnTy (aux f, aux x))
-  in
-  aux
+let reduce = PrivateTypes.ty_reduce
+let replace = PrivateTypes.ty_replace
 
 let switch_pure_arrow (_, pure_arrow) = match pure_arrow with
   | `Allow -> (true, pure_arrow)
