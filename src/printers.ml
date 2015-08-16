@@ -730,7 +730,7 @@ module TypedTree = struct
     | NonRec -> ""
 
   let dump = function
-    | Value (name, (is_rec, t)) ->
+    | Value (name, is_rec, t) ->
         PPrint.group
           (PPrint.string (fmt "let %s%s =" (dump_is_rec is_rec) (dump_name name))
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))

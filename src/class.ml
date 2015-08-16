@@ -92,8 +92,8 @@ let add_instance ~tyclass ~current_module tys self =
   let instances = Instances.add tys name self.instances in
   (name, {self with instances})
 
-let get_values ~loc values self =
-  let aux ((name1, t), ty1) (name2, ty2) =
+let get_values ~loc ~current_module values self =
+  let aux ((name1, is_rec, t), ty1) (name2, ty2) =
     if not (Ident.Name.equal name1 name2) then
       Err.fail
         ~loc:(Ident.Name.loc name1)
@@ -106,7 +106,10 @@ let get_values ~loc values self =
         "Type missmatch. Has '%s' but expected '%s'"
         (PrivateTypes.ty_to_string ty1)
         (PrivateTypes.ty_to_string ty2);
-    t
+    let name =
+      Ident.Name.create ~loc:Builtins.unknown_loc current_module "record$field"
+    in
+    (name, is_rec, t)
   in
   try
     List.map2 aux values self.signature

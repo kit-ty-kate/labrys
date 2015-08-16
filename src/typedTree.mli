@@ -35,6 +35,7 @@ type t =
   | Fail of (eff_name * t list)
   | Try of (t * ((eff_name * name list) * t) list)
   | RecordGet of (t * int)
+  | RecordCreate of t list
 
 type variant =
   | Variant of (name * ty_size)
@@ -44,8 +45,7 @@ type is_rec =
   | NonRec
 
 type top =
-  | Value of (name * (is_rec * t))
+  | Value of (name * is_rec * t)
   | Binding of (name * arity * string)
   | Datatype of variant list
   | Exception of eff_name
-  | Record of (name * (is_rec * t) list)

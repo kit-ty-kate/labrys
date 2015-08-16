@@ -42,6 +42,7 @@ and t =
   | Fail of (eff_name * t list)
   | Try of (t * ((eff_name * name list) * t) list)
   | RecordGet of (t * index)
+  | RecordCreate of t list
 
 type linkage = Public | Private
 

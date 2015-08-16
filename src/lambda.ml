@@ -108,6 +108,13 @@ and of_typed_term mapn = function
   | TypedTree.RecordGet (t, n) ->
       let (t, used_vars) = of_typed_term mapn t in
       (RecordGet (t, n), used_vars)
+  | TypedTree.RecordCreate fields ->
+      let aux t (fields, used_vars_acc) =
+        let (t, used_vars) = of_typed_term mapn t in
+        (t :: fields, Set.union used_vars used_vars_acc)
+      in
+      let (fields, used_vars) = List.fold_right aux fields ([], Set.empty) in
+      (RecordCreate fields, used_vars)
 
 let get_name_and_linkage name' names mapn =
   match GammaMap.Value.find_opt name' names with
@@ -166,27 +173,29 @@ let of_typed_variant ~current_module (acc, names, mapn) i (TypedTree.Variant (na
   in
   (variant :: acc, names, mapn)
 
+let of_value ~current_module names mapn = function
+  | (name, TypedTree.Rec, TypedTree.Abs (name', t)) ->
+      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
+      let (t, _) = of_typed_term mapn t in
+      (Function (name, (name', t), linkage), names, mapn)
+  | (name, TypedTree.NonRec, TypedTree.Abs (name', t)) ->
+      let (t, _) = of_typed_term mapn t in
+      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
+      (Function (name, (name', t), linkage), names, mapn)
+  | (name, TypedTree.Rec, t)  ->
+      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
+      let (t, _) = of_typed_term mapn t in
+      (Value (name, t, linkage), names, mapn)
+  | (name, TypedTree.NonRec, t) ->
+      let (t, _) = of_typed_term mapn t in
+      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
+      (Value (name, t, linkage), names, mapn)
+
 let rec of_typed_tree ~current_module names mapn = function
-  | TypedTree.Value (name, (TypedTree.Rec, TypedTree.Abs (name', t))) :: xs ->
-      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      let (t, _) = of_typed_term mapn t in
+  | TypedTree.Value value :: xs ->
+      let (value, names, mapn) = of_value ~current_module names mapn value in
       let xs = of_typed_tree ~current_module names mapn xs in
-      Function (name, (name', t), linkage) :: xs
-  | TypedTree.Value (name, (TypedTree.NonRec, TypedTree.Abs (name', t))) :: xs ->
-      let (t, _) = of_typed_term mapn t in
-      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      let xs = of_typed_tree ~current_module names mapn xs in
-      Function (name, (name', t), linkage) :: xs
-  | TypedTree.Value (name, (TypedTree.Rec, t)) :: xs  ->
-      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      let (t, _) = of_typed_term mapn t in
-      let xs = of_typed_tree ~current_module names mapn xs in
-      Value (name, t, linkage) :: xs
-  | TypedTree.Value (name, (TypedTree.NonRec, t)) :: xs ->
-      let (t, _) = of_typed_term mapn t in
-      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      let xs = of_typed_tree ~current_module names mapn xs in
-      Value (name, t, linkage) :: xs
+      value :: xs
   | TypedTree.Binding (name, arity, value) :: xs ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let name' = Ident.Name.prepend_empty name in
@@ -213,7 +222,7 @@ let rec of_typed_tree ~current_module names mapn = function
 let of_typed_tree ~current_module top =
   let add name names = GammaMap.Value.modify_def (-1) name succ names in
   let aux names = function
-    | TypedTree.Value (name, _) -> add name names
+    | TypedTree.Value (name, _, _) -> add name names
     | TypedTree.Binding (name, _, _) -> add name names
     | TypedTree.Datatype variants ->
         let aux names (TypedTree.Variant (name, _)) = add name names in

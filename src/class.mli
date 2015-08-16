@@ -55,6 +55,7 @@ val add_instance :
 
 val get_values :
   loc:Location.t ->
-  ((Ident.Name.t * 'a) * PrivateTypes.t) list ->
+  current_module:Module.t ->
+  ((Ident.Name.t * 'a * 'b) * PrivateTypes.t) list ->
   t ->
-  'a list
+  (Ident.Name.t * 'a * 'b) list
