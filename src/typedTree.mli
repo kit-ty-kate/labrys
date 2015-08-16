@@ -39,10 +39,13 @@ type t =
 type variant =
   | Variant of (name * ty_size)
 
+type is_rec =
+  | Rec
+  | NonRec
+
 type top =
-  | Value of (name * t)
-  | RecValue of (name * t)
+  | Value of (name * (is_rec * t))
   | Binding of (name * arity * string)
   | Datatype of variant list
   | Exception of eff_name
-  | Record of (name * t list)
+  | Record of (name * (is_rec * t) list)

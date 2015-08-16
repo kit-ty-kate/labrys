@@ -725,16 +725,15 @@ module TypedTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_variants x in
     List.fold_left aux PPrint.empty variants
 
+  let dump_is_rec = function
+    | Rec -> "rec "
+    | NonRec -> ""
+
   let dump = function
-    | Value (name, t) ->
+    | Value (name, (is_rec, t)) ->
         PPrint.group
-          (PPrint.string (fmt "let %s =" (dump_name name))
+          (PPrint.string (fmt "let %s%s =" (dump_is_rec is_rec) (dump_name name))
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
-          )
-    | RecValue (name, t) ->
-        PPrint.group
-          (PPrint.string (fmt "let rec %s =" (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
     | Binding (name, arity, content) ->
         PPrint.string (fmt "let %s %d = begin" (dump_name name) arity)

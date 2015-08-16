@@ -167,22 +167,22 @@ let of_typed_variant ~current_module (acc, names, mapn) i (TypedTree.Variant (na
   (variant :: acc, names, mapn)
 
 let rec of_typed_tree ~current_module names mapn = function
-  | TypedTree.RecValue (name, TypedTree.Abs (name', t)) :: xs ->
+  | TypedTree.Value (name, (TypedTree.Rec, TypedTree.Abs (name', t))) :: xs ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let (t, _) = of_typed_term mapn t in
       let xs = of_typed_tree ~current_module names mapn xs in
       Function (name, (name', t), linkage) :: xs
-  | TypedTree.Value (name, TypedTree.Abs (name', t)) :: xs ->
+  | TypedTree.Value (name, (TypedTree.NonRec, TypedTree.Abs (name', t))) :: xs ->
       let (t, _) = of_typed_term mapn t in
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let xs = of_typed_tree ~current_module names mapn xs in
       Function (name, (name', t), linkage) :: xs
-  | TypedTree.RecValue (name, t) :: xs  ->
+  | TypedTree.Value (name, (TypedTree.Rec, t)) :: xs  ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let (t, _) = of_typed_term mapn t in
       let xs = of_typed_tree ~current_module names mapn xs in
       Value (name, t, linkage) :: xs
-  | TypedTree.Value (name, t) :: xs ->
+  | TypedTree.Value (name, (TypedTree.NonRec, t)) :: xs ->
       let (t, _) = of_typed_term mapn t in
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let xs = of_typed_tree ~current_module names mapn xs in
@@ -213,7 +213,6 @@ let rec of_typed_tree ~current_module names mapn = function
 let of_typed_tree ~current_module top =
   let add name names = GammaMap.Value.modify_def (-1) name succ names in
   let aux names = function
-    | TypedTree.RecValue (name, _) -> add name names
     | TypedTree.Value (name, _) -> add name names
     | TypedTree.Binding (name, _, _) -> add name names
     | TypedTree.Datatype variants ->

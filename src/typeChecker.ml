@@ -298,13 +298,13 @@ let from_value ~current_module ~with_main ~has_main options gamma = function
       let (has_main, x, ty_t) = check_effects ~current_module ~with_main ~has_main ~name options (aux options gamma term) in
       check_type_opt options ~loc_t ~ty ~ty_t ~effects:Effects.empty gamma;
       let gamma = Gamma.add_value name ty_t gamma in
-      ((name, x), ty_t, has_main, gamma)
+      ((name, (NonRec, x)), ty_t, has_main, gamma)
   | (name, UnsugaredTree.Rec, term) when well_formed_rec term ->
       let ty = get_ty_from_let_rec ~loc_name:(Ident.Name.loc name) term in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let gamma = Gamma.add_value name ty gamma in
       let (has_main, x, _) = check_effects ~current_module ~with_main ~has_main ~name options (aux options gamma term) in
-      ((name, x), ty, has_main, gamma)
+      ((name, (Rec, x)), ty, has_main, gamma)
   | (name, UnsugaredTree.Rec, _) ->
       fail_rec_val ~loc_name:(Ident.Name.loc name)
 
@@ -368,7 +368,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       let (_, xs) =
         let aux (n, xs) (name, _) =
           let abs_name = Ident.Name.create ~loc:Builtins.unknown_loc current_module "0" in
-          (succ n, Value (name, Abs (abs_name, RecordGet (Val abs_name, n))) :: xs)
+          (succ n, Value (name, (NonRec, Abs (abs_name, RecordGet (Val abs_name, n)))) :: xs)
         in
         List.fold_left aux (0, xs) sigs
       in
