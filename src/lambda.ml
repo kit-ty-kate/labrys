@@ -173,7 +173,7 @@ let of_typed_variant ~current_module (acc, names, mapn) i (TypedTree.Variant (na
   in
   (variant :: acc, names, mapn)
 
-let of_value ~current_module names mapn = function
+let of_value names mapn = function
   | (name, TypedTree.Rec, TypedTree.Abs (name', t)) ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let (t, _) = of_typed_term mapn t in
@@ -193,7 +193,7 @@ let of_value ~current_module names mapn = function
 
 let rec of_typed_tree ~current_module names mapn = function
   | TypedTree.Value value :: xs ->
-      let (value, names, mapn) = of_value ~current_module names mapn value in
+      let (value, names, mapn) = of_value names mapn value in
       let xs = of_typed_tree ~current_module names mapn xs in
       value :: xs
   | TypedTree.Binding (name, arity, value) :: xs ->

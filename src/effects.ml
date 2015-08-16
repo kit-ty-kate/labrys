@@ -21,8 +21,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open Monomorphic_containers.Open
 
-let fmt = Printf.sprintf
-
 module Exn_set = PrivateTypes.Exn_set
 module Variables = PrivateTypes.Variables
 

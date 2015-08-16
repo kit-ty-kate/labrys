@@ -688,6 +688,13 @@ module TypedTree = struct
         ^^ PPrint.string "end"
     | RecordGet (t, n) ->
         dump_t t ^^ PPrint.string (fmt ".%d" n)
+    | RecordCreate fields ->
+        let aux doc x = doc ^^ PPrint.semi ^^ PPrint.break 1 ^^ dump_t x in
+        PPrint.group
+          (PPrint.lbrace
+           ^^ List.fold_left aux PPrint.empty fields
+           ^^ PPrint.rbrace
+          )
 
   and dump_results results =
     let aux doc i (used_vars, result) =
@@ -878,6 +885,13 @@ module UntypedTree = struct
         ^^ PPrint.string "end"
     | RecordGet (t, n) ->
         dump_t t ^^ PPrint.string (fmt ".%d" n)
+    | RecordCreate fields ->
+        let aux doc x = doc ^^ PPrint.semi ^^ PPrint.break 1 ^^ dump_t x in
+        PPrint.group
+          (PPrint.lbrace
+           ^^ List.fold_left aux PPrint.empty fields
+           ^^ PPrint.rbrace
+          )
 
   and dump_results results =
     let aux doc i (vars, result) =
