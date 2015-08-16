@@ -392,7 +392,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
             gamma
       in
       let gamma = Gamma.replace_tyclass tyclass tyclass' gamma in
-      let values = Class.get_values ~loc:(Ident.TyClass.loc tyclass) ~current_module tys values tyclass' in
+      let values = Class.get_values ~loc:(Ident.TyClass.loc tyclass) tys values tyclass' in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       let values =
         let aux (name, is_rec, v) t = match is_rec with

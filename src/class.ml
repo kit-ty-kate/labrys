@@ -92,8 +92,8 @@ let add_instance ~tyclass ~current_module tys self =
   let instances = Instances.add tys name self.instances in
   (name, tys, {self with instances})
 
-let get_values ~loc ~current_module tys values self =
-  let aux ((name1, is_rec, t), ty1) (name2, ty2) =
+let get_values ~loc tys values self =
+  let aux (acc, n) ((name1, is_rec, t), ty1) (name2, ty2) =
     if not (Ident.Name.equal name1 name2) then
       Err.fail
         ~loc:(Ident.Name.loc name1)
@@ -114,12 +114,13 @@ let get_values ~loc ~current_module tys values self =
         (PrivateTypes.ty_to_string ty1)
         (PrivateTypes.ty_to_string ty2);
     let name =
-      Ident.Name.create ~loc:Builtins.unknown_loc current_module "record$field"
+      Ident.Name.local_create ~loc:Builtins.unknown_loc "record$field%d"
     in
-    (name, is_rec, t)
+    ((name, is_rec, t) :: acc, succ n)
   in
   try
-    List.map2 aux values self.signature
+    let (values, _) = List.fold_left2 aux ([], 0) values self.signature in
+    List.rev values
   with
   | Invalid_argument _ ->
       Err.fail ~loc "Signatures missmatch"

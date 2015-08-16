@@ -164,9 +164,9 @@ let ty_equal = ty_equal eff_equal
 
 let tyclass_args_equal args1 args2 =
   let aux arg1 arg2 = match arg1, arg2 with
-    | Param _, Param _ -> true
+    | Filled _, Param _ | Param _, Param _ -> true
     | Filled ty1, Filled ty2 -> ty_equal ty1 ty2
-    | Param _, _ | Filled _, _ -> false
+    | Param _, _ -> false
   in
   try List.for_all2 aux args1 args2 with Invalid_argument _ -> assert false
 
