@@ -28,6 +28,7 @@ let dump_name = Ident.Name.to_string
 let dump_exn_name = Ident.Exn.to_string
 let dump_t_name = Ident.Type.to_string
 let dump_tyclass_name = Ident.TyClass.to_string
+let dump_instance_name = Ident.Instance.to_string
 let dump_k = Kinds.to_string
 
 let rec dump_top f doc = function
@@ -390,7 +391,7 @@ module UnsugaredTree = struct
     fmt "%s %s" (dump_tyclass_name name) (String.concat " " (List.map dump_ty tys))
 
   let dump_tyclass_app_arg = function
-    | TyClassVariable name -> dump_name name
+    | TyClassVariable name -> dump_instance_name name
     | TyClassInstance instance -> dump_tyclass_instance instance
 
   let rec dump_value (name, is_rec, t) =
@@ -418,7 +419,7 @@ module UnsugaredTree = struct
     | (_, CAbs ((name, tyclass), t)) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "λ (%s : %s) ->" (dump_name name) (dump_tyclass_value tyclass))
+           ^^ PPrint.string (fmt "λ (%s : %s) ->" (dump_instance_name name) (dump_tyclass_value tyclass))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
@@ -565,11 +566,11 @@ module UnsugaredTree = struct
         ^^ PPrint.nest 2 (List.fold_left (fun acc x -> acc ^^ dump_sig x ^^ PPrint.break 1) PPrint.empty sigs)
         ^^ PPrint.string "end"
     | Instance (instance, name, values) ->
-        let dump_opt_name = function
-          | Some x -> fmt "[%s]" (dump_name x)
+        let dump_opt_instance_name = function
+          | Some x -> fmt "[%s]" (dump_instance_name x)
           | None -> ""
         in
-        PPrint.string (fmt "instance %s%s =" (dump_opt_name name) (dump_tyclass_instance instance))
+        PPrint.string (fmt "instance %s%s =" (dump_opt_instance_name name) (dump_tyclass_instance instance))
         ^^ PPrint.break 1
         ^^ PPrint.nest 2 (List.fold_left (fun acc x -> acc ^^ dump_value x ^^ PPrint.break 1) PPrint.empty values)
         ^^ PPrint.string "end"

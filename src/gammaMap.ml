@@ -205,13 +205,13 @@ module TyClass = struct
 end
 
 module Instance = struct
-  include Make(Ident.Name)
+  include Make(Ident.Instance)
 
   let fail k =
     Err.fail
-      ~loc:(Ident.Name.loc k)
+      ~loc:(Ident.Instance.loc k)
       "The named instance '%s' is not defined in Γ"
-      (Ident.Name.to_string k)
+      (Ident.Instance.to_string k)
 
   let find k self =
     match find k self with

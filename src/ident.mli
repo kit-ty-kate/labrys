@@ -44,3 +44,9 @@ module Type : module type of Name
 module Exn : module type of Name
 
 module TyClass : module type of Name
+
+module Instance : sig
+  include module type of Name
+
+  val to_name : t -> Name.t
+end

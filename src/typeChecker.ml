@@ -127,7 +127,7 @@ let rec aux options gamma = function
       let gamma = Gamma.add_named_instance name (tyclass, args) gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
       let abs_ty = PrivateTypes.TyClass ((tyclass, args), effect, ty_expr) in
-      (Abs (name, expr), abs_ty, Effects.empty)
+      (Abs (Ident.Instance.to_name name, expr), abs_ty, Effects.empty)
   | (loc, UnsugaredTree.App (f, x)) ->
       let loc_f = fst f in
       let loc_x = fst x in
@@ -170,7 +170,7 @@ let rec aux options gamma = function
             let (tyclass, args) =
               GammaMap.Instance.find name gamma.Gamma.named_instances
             in
-            (name, tyclass, args)
+            (Ident.Instance.to_name name, tyclass, args)
         | UnsugaredTree.TyClassInstance (tyclass, tys) ->
             let aux = Types.of_parse_tree ~pure_arrow:`Allow options gamma in
             let tys = List.map aux tys in
@@ -402,6 +402,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
         let fields = List.map (fun (x, _, _) -> Val x) values in
         List.fold_right aux values (RecordCreate fields)
       in
+      let xs = Option.maybe (fun name -> Value (Ident.Instance.to_name name, NonRec, Val name') :: xs) xs name in
       (Value (name', NonRec, values) :: xs, has_main, gamma)
   | [] ->
       ([], has_main, gamma)

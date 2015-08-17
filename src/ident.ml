@@ -78,3 +78,10 @@ module Type = Name
 module Exn = Name
 
 module TyClass = Name
+
+module Instance = struct
+  include Name
+
+  let to_name (loc, modul, name) =
+    (loc, modul, "$named-instance$" ^ name)
+end

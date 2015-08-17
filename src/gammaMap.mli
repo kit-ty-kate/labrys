@@ -71,5 +71,5 @@ module TyClass : sig
 end
 
 module Instance : sig
-  include S with type key = Ident.Name.t
+  include S with type key = Ident.Instance.t
 end

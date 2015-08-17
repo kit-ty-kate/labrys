@@ -35,7 +35,7 @@ val add_type : Ident.Type.t -> PrivateTypes.visibility -> t -> t
 val add_constr : Ident.Type.t -> Ident.Name.t -> Ident.Type.t list -> (PrivateTypes.t list * int) -> t -> t
 val add_exception : Ident.Exn.t -> PrivateTypes.t list -> t -> t
 val add_tyclass : Ident.TyClass.t -> PrivateTypes.class_t -> t -> t
-val add_named_instance : Ident.Name.t -> (Ident.TyClass.t * PrivateTypes.tyclass_arg list) -> t -> t
+val add_named_instance : Ident.Instance.t -> (Ident.TyClass.t * PrivateTypes.tyclass_arg list) -> t -> t
 
 val replace_tyclass : Ident.TyClass.t -> PrivateTypes.class_t -> t -> t
 

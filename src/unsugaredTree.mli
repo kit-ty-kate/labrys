@@ -23,6 +23,7 @@ type name = Ident.Name.t
 type exn_name = Ident.Exn.t
 type t_name = Ident.Type.t
 type tyclass_name = Ident.TyClass.t
+type instance_name = Ident.Instance.t
 type module_name = Module.t
 type loc = Location.t
 
@@ -56,7 +57,7 @@ type ty_annot = (ty * effects option)
 type tyclass_instance = (tyclass_name * ty list)
 
 type tyclass_app_arg =
-  | TyClassVariable of name
+  | TyClassVariable of instance_name
   | TyClassInstance of tyclass_instance
 
 type pattern =
@@ -68,7 +69,7 @@ type value = (name * is_rec * t)
 and t' =
   | Abs of ((name * ty) * t)
   | TAbs of (t_value * t)
-  | CAbs of ((name * tyclass_value) * t)
+  | CAbs of ((instance_name * tyclass_value) * t)
   | App of (t * t)
   | TApp of (t * ty)
   | CApp of (t * tyclass_app_arg)
@@ -91,6 +92,6 @@ type top =
   | Exception of (exn_name * ty list)
   | Open of module_name
   | Class of (tyclass_name * t_value list * (name * ty) list)
-  | Instance of (tyclass_instance * name option * value list)
+  | Instance of (tyclass_instance * instance_name option * value list)
 
 type imports = module_name list

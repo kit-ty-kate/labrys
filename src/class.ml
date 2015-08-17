@@ -39,6 +39,8 @@ let create params signature =
   ; instances = Instances.empty
   }
 
+let fmt = Printf.sprintf
+
 let remove_module_aliases = PrivateTypes.class_remove_module_aliases
 let equal = PrivateTypes.class_equal
 
@@ -86,7 +88,7 @@ let add_instance ~tyclass ~current_module tys self =
   let name =
     let names = List.map PrivateTypes.ty_to_string tys in
     let names = Ident.TyClass.to_string tyclass :: names in
-    let name = String.concat "." names in
+    let name = "$instance$" ^ String.concat "$" names in
     Ident.Name.create ~loc:Builtins.unknown_loc current_module name
   in
   let instances = Instances.add tys name self.instances in
@@ -114,7 +116,7 @@ let get_values ~loc tys values self =
         (PrivateTypes.ty_to_string ty1)
         (PrivateTypes.ty_to_string ty2);
     let name =
-      Ident.Name.local_create ~loc:Builtins.unknown_loc "record$field%d"
+      Ident.Name.local_create ~loc:Builtins.unknown_loc (fmt "$instance-field$%d" n)
     in
     ((name, is_rec, t) :: acc, succ n)
   in

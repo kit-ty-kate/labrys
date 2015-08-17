@@ -64,12 +64,22 @@ let upper_name_to_tyclass imports (loc, `UpperName name) =
 
 let lower_name_to_value imports (loc, `LowerName name) =
   transform_name imports loc Ident.Name.local_create Ident.Name.create name
+let lower_name_to_instance imports (loc, `LowerName name) =
+  transform_name imports loc Ident.Instance.local_create Ident.Instance.create name
 
 let new_lower_name_to_value ~current_module ~allow_underscore = function
   | (loc, `NewLowerName name) ->
       Ident.Name.create ~loc current_module name
   | (loc, `Underscore) when allow_underscore ->
       Builtins.underscore_loc ~current_module loc
+  | (loc, `Underscore) ->
+      Err.fail ~loc "Wildcards are not allowed here"
+
+let new_lower_name_to_instance ~current_module ~allow_underscore = function
+  | (loc, `NewLowerName name) ->
+      Ident.Instance.create ~loc current_module name
+  | (loc, `Underscore) when allow_underscore ->
+      Builtins.underscore_instance_loc ~current_module loc
   | (loc, `Underscore) ->
       Err.fail ~loc "Wildcards are not allowed here"
 
@@ -160,7 +170,7 @@ let unsugar_instance imports (name, tys) =
 
 let unsugar_tyclass_app_arg imports = function
   | ParseTree.TyClassVariable name ->
-      TyClassVariable (lower_name_to_value imports name)
+      TyClassVariable (lower_name_to_instance imports name)
   | ParseTree.TyClassInstance instance ->
       TyClassInstance (unsugar_instance imports instance)
 
@@ -247,7 +257,7 @@ and unsugar_args ~current_module imports options args (annot, t) =
         in
         aux ((loc, x) :: xs)
     | (loc, ParseTree.TyClassArg (name, tyclass)) :: xs ->
-        let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
+        let name = new_lower_name_to_instance ~current_module ~allow_underscore:true name in
         let tyclass = unsugar_tyclass imports tyclass in
         let (ty_xs, xs) = aux xs in
         let ty_xs =
@@ -326,7 +336,7 @@ let create ~current_module imports options = function
       let tyclass = unsugar_instance imports tyclass in
       let name =
         Option.map
-          (new_lower_name_to_value ~current_module ~allow_underscore:false)
+          (new_lower_name_to_instance ~current_module ~allow_underscore:false)
           name
       in
       let values =
