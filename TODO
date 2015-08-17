@@ -4,12 +4,13 @@
 
 * Define a proper operational semantics
 * Typeclasses
- * Avoid non-equality between two types with that uses typeclasses at different places ?
- * Allow recursive use of the typeclass ?
- * Allow tyclass constraints in classes & instances (inheritance)
- * Merge togather typeclasses as constraints not as type variables
  * Finish the tyclass matching function
  * Classes & interfaces in interfaces
+ * Merge togather typeclasses as constraints not as type variables
+ * Allow tyclass constraints in classes & instances (inheritance)
+* Typeclasses (TO THINK)
+ * Avoid non-equality between two types with that uses typeclasses at different places ?
+ * Allow recursive use of the typeclass ?
 
 
 == Medium term ==
