@@ -50,3 +50,9 @@ val to_string : t -> string
 val replace : from:Ident.Type.t -> ty:PrivateTypes.t -> t -> t
 
 val remove_module_aliases : Ident.Type.t list -> t -> t
+
+val match_tyclass :
+  is_tyclass:(Ident.Type.t -> bool) ->
+  t ->
+  eff_x:t ->
+  ((Ident.Type.t * PrivateTypes.t) list * t)

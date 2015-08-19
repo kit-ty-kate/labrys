@@ -102,3 +102,33 @@ let of_list options gamma (_, l) =
 let replace = PrivateTypes.eff_replace
 
 let remove_module_aliases = PrivateTypes.eff_remove_module_aliases
+
+let match_tyclass ~is_tyclass eff ~eff_x =
+  let eff_union =
+    let eff =
+      let variables =
+        let aux name eff =
+          if is_tyclass name then
+            Variables.remove name eff
+          else
+            eff
+        in
+        Variables.fold aux eff.variables eff.variables
+      in
+      {eff with variables}
+    in
+    union eff eff_x
+  in
+  let matched =
+    let aux name acc =
+      if is_tyclass name then
+        (name, PrivateTypes.Eff eff_union) :: acc
+      else
+        acc
+    in
+    Variables.fold aux eff.variables []
+  in
+  if List.is_empty matched then
+    ([], eff)
+  else
+    (matched, eff_union)
