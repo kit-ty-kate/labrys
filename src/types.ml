@@ -174,7 +174,7 @@ let rec head = function
 
 let remove_module_aliases = PrivateTypes.ty_remove_module_aliases
 
-module Err = struct
+module TyErr = struct
   let fail ~loc_t ~has ~expected =
     Err.fail
       ~loc:loc_t
@@ -260,11 +260,29 @@ let match_tyclass ~loc_x ~tyclasses =
     | Forall _, _
     | TyClass _, _
     | AppOnTy _, _ ->
-        Err.fail ~loc_t:loc_x ~has:ty_x ~expected:x
+        TyErr.fail ~loc_t:loc_x ~has:ty_x ~expected:x
     | Eff _, _ | AbsOnTy _, _ ->
         assert false
   in
   aux
+
+let match_tyclass ~loc_x ~tyclasses x ~ty_x =
+  let (matched, ty) = match_tyclass ~loc_x ~tyclasses x ~ty_x in
+  let rec aux = function
+    | (x, ty)::xs ->
+        let (l, xs) =
+          let aux ((y, ty) as pair) =
+            if Ident.Type.equal x y then `Left ty else `Right pair
+          in
+          List.partition_map aux xs
+        in
+        if not (List.for_all (equal ty) l) then
+          Err.fail ~loc:loc_x "Type constraints doesn't match"; (* TODO: Improve error message *)
+        aux xs
+    | [] ->
+        []
+  in
+  (aux matched, ty)
 
 let rec remove_filled_tyclasses = function
   | Ty _ | Fun _ | Forall _ | AppOnTy _ as t ->
@@ -286,9 +304,8 @@ let apply ~loc_f ~loc_x ty_f ty_x =
   let rec aux tyclasses = function
     | Fun (x, eff, t) ->
         let (matched_tys, x) = match_tyclass ~loc_x ~tyclasses ~ty_x x in
-        (* TODO: Check if names matches the same type in matched_tys *)
         if not (is_subset_of ty_x x) then
-          Err.fail ~loc_t:loc_x ~has:ty_x ~expected:x;
+          TyErr.fail ~loc_t:loc_x ~has:ty_x ~expected:x;
         let (eff, t) =
           let aux (eff, t) (from, ty) =
             (Effects.replace ~from ~ty eff, replace ~from ~ty t)
@@ -322,7 +339,7 @@ let apply ~loc_f ~loc_x ty_f ty_x =
     | (Forall _ as ty)
     | (AppOnTy _ as ty)
     | (Ty _ as ty) ->
-        Err.function_type ~loc_f ty
+        TyErr.function_type ~loc_f ty
     | AbsOnTy _ | Eff _ ->
         assert false
   in
@@ -341,7 +358,7 @@ let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x =
     | (Fun _ as ty)
     | (AppOnTy _ as ty)
     | (Ty _ as ty) ->
-        Err.forall_type ~loc_f ty
+        TyErr.forall_type ~loc_f ty
     | AbsOnTy _ | Eff _ ->
         assert false
   in
@@ -350,9 +367,9 @@ let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x =
 let apply_tyclass ty tyclass args = match ty with
   | TyClass ((name, args'), eff, res) ->
       if not (Ident.TyClass.equal name tyclass) then
-        Err.name_tyclass_missmatch ~has:tyclass ~expected:name;
+        TyErr.name_tyclass_missmatch ~has:tyclass ~expected:name;
       if not (PrivateTypes.tyclass_args_equal args args') then
-        Err.args_tyclass_missmatch tyclass ~expected:args ~has:args';
+        TyErr.args_tyclass_missmatch tyclass ~expected:args ~has:args';
       let res =
         try
           let aux res ty1 ty2 = match ty1, ty2 with
@@ -367,7 +384,7 @@ let apply_tyclass ty tyclass args = match ty with
       in
       (res, eff)
   | Ty _ | Fun _ | Forall _ | AppOnTy _ as ty ->
-      Err.tyclass_type ~loc:(Ident.TyClass.loc tyclass) ty
+      TyErr.tyclass_type ~loc:(Ident.TyClass.loc tyclass) ty
   | AbsOnTy _ | Eff _ ->
       assert false
 

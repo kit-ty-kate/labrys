@@ -130,7 +130,7 @@ let create ~loc f gamma ty patterns =
       let (loc_t, _) = t in
       let (t, has, effect) = f gamma t in
       if not (Types.equal has initial_ty) then
-        Types.Err.fail ~loc_t ~has ~expected:initial_ty;
+        Types.TyErr.fail ~loc_t ~has ~expected:initial_ty;
       ((pattern, t) :: patterns, Effects.union effect effects)
     in
     List.fold_left f (initial_pattern, effect) tail

@@ -81,7 +81,7 @@ let get_ty_from_let_rec ~loc_name ty =
 let check_type options ~loc_t ~ty:(ty, eff) ~ty_t ~effects gamma =
   let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
   if not (Types.equal ty ty_t) then
-    Types.Err.fail ~loc_t ~has:ty_t ~expected:ty;
+    Types.TyErr.fail ~loc_t ~has:ty_t ~expected:ty;
   begin match eff with
   | Some eff ->
       let eff = Effects.of_list options gamma eff in
@@ -152,7 +152,7 @@ let rec aux options gamma = function
           | [] ->
               App (f, x)
         in
-        aux f 0 tyclasses
+        aux f 1 tyclasses
       in
       (expr, res, Effects.union3 effect1 effect2 effect3)
   | (_, UnsugaredTree.TApp (f, ty_x)) ->
@@ -220,7 +220,7 @@ let rec aux options gamma = function
           let loc_arg = fst arg in
           let (arg, ty_arg, eff) = aux options gamma arg in
           if not (Types.equal ty_arg ty_exn) then
-            Types.Err.fail ~loc_t:loc_arg ~has:ty_arg ~expected:ty_exn;
+            Types.TyErr.fail ~loc_t:loc_arg ~has:ty_arg ~expected:ty_exn;
           (arg :: acc, Effects.union eff effects)
         in
         try List.fold_left2 aux ([], Effects.empty) tys args with
@@ -245,8 +245,9 @@ let rec aux options gamma = function
       let aux (acc, effect) ((name, args), t) =
         let loc_t = fst t in
         let (t, ty', eff) = aux options gamma t in
+        (* TODO: Replace this pattern by Types.Check.equal *)
         if not (Types.equal ty ty') then
-          Types.Err.fail ~loc_t ~has:ty' ~expected:ty;
+          Types.TyErr.fail ~loc_t ~has:ty' ~expected:ty;
         (((name, args), t) :: acc, Effects.union eff effect)
       in
       let (branches, effect) = List.fold_left aux ([], effect) branches in

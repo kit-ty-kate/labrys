@@ -55,7 +55,7 @@ val size : t -> int
 
 val head : t -> (name * t list)
 
-module Err : sig
+module TyErr : sig
   val fail : loc_t:Location.t -> has:t -> expected:t -> 'a
 end
 
