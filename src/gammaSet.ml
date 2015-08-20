@@ -24,3 +24,7 @@ open Monomorphic_containers.Open
 module Value = struct
   include Utils.EqSet(Ident.Name)
 end
+
+module Type = struct
+  include Utils.EqSet(Ident.Type)
+end

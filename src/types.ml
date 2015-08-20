@@ -226,14 +226,7 @@ module TyErr = struct
 end
 
 let match_tyclass ~loc_x ~tyclasses =
-  let is_tyclass name =
-    let aux = function
-      | Param (x, _) -> Ident.Type.equal name x
-      | Filled _ -> false
-    in
-    let aux ((_, args), _) = List.exists aux args in
-    List.exists aux tyclasses
-  in
+  let is_tyclass name = GammaSet.Type.mem name tyclasses in
   let rec aux x ~ty_x = match x, ty_x with
     | Ty name, _ when is_tyclass name ->
         ([(name, ty_x)], ty_x)
@@ -267,6 +260,16 @@ let match_tyclass ~loc_x ~tyclasses =
   aux
 
 let match_tyclass ~loc_x ~tyclasses x ~ty_x =
+  let tyclasses =
+    let aux tyclasses ((_, args), _) =
+      let aux tyclasses = function
+        | Param (name, _) -> GammaSet.Type.add name tyclasses
+        | Filled _ -> tyclasses
+      in
+      List.fold_left aux tyclasses args
+    in
+    List.fold_left aux GammaSet.Type.empty tyclasses
+  in
   let (matched, ty) = match_tyclass ~loc_x ~tyclasses x ~ty_x in
   let rec aux = function
     | (x, ty)::xs ->

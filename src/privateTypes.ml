@@ -231,14 +231,7 @@ and ty_remove_module_aliases vars = function
 
 let tyclass_args_remove_module_aliases = List.map (tyclass_arg_remove_module_aliases [])
 let ty_remove_module_aliases = ty_remove_module_aliases []
-(*
-let rec ty_to_name = function
-  | Ty name -> Ident.Name.to_string name
-  | Eff eff -> fmt "$%s$" (eff_to_name eff)
-  | Fun (x, eff, y) -> fmt "%s-$%s$-%s" (ty_to_name x) (eff_to_name eff) (ty_to_name y)
-  | Forall (_, k, t) -> fmt "%s$$%s" (kinds_to_name k) (ty_to_name t)
-  | TyClass (
-*)
+
 let rec ty_to_string =
   let tyclass_arg_to_string = function
     | Param (x, _) -> Ident.Type.to_string x

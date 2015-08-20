@@ -218,3 +218,7 @@ module Instance = struct
     | Some x -> x
     | None -> fail k
 end
+
+module TyClassParams = struct
+  include Make(Ident.Type)
+end

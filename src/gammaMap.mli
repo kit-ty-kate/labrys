@@ -73,3 +73,9 @@ end
 module Instance : sig
   include S with type key = Ident.Instance.t
 end
+
+module TyClassParams : sig
+  include S with type key = Ident.Type.t
+
+  val find : key -> 'a t -> 'a option
+end
