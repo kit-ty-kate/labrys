@@ -455,6 +455,7 @@ module Make (I : I) = struct
     | UntypedTree.RecordCreate fields ->
         let (fields, builder) = fold_args func ~jmp_buf gamma builder fields in
         let record = malloc_and_init_array (List.length fields) fields builder in
+        let record = Llvm.build_bitcast record Type.star "" builder in
         (record, builder)
 
   and fold_args func ~jmp_buf gamma builder args =
