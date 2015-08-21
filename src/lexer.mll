@@ -26,9 +26,10 @@ module Make (Filename : sig val get : string end) = struct
   module Parser = Parser.Make(Filename)
 }
 
-let alpha = ['a'-'z' 'A'-'Z']
-let term_name = (['a'-'z'] alpha*)
-let type_name = (['A'-'Z'] alpha*)
+let prime = '\''
+let alpha = ['a'-'z' 'A'-'Z' '0'-'9']
+let term_name = (['a'-'z'] alpha* prime*)
+let type_name = (['A'-'Z'] alpha* prime*)
 let blank = [' ' '\t']
 
 rule main = parse
