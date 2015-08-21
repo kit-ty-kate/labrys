@@ -39,8 +39,6 @@ let create params signature =
   ; instances = Instances.empty
   }
 
-let fmt = Printf.sprintf
-
 let remove_module_aliases = PrivateTypes.class_remove_module_aliases
 let equal = PrivateTypes.class_equal
 
@@ -115,10 +113,7 @@ let get_values ~loc tys values self =
         "Type missmatch. Has '%s' but expected '%s'"
         (PrivateTypes.ty_to_string ty1)
         (PrivateTypes.ty_to_string ty2);
-    let name =
-      Ident.Name.local_create ~loc:Builtins.unknown_loc (fmt "$instance-field$%d" n)
-    in
-    ((name, is_rec, t) :: acc, succ n)
+    ((name1, is_rec, t) :: acc, succ n)
   in
   try
     let (values, _) = List.fold_left2 aux ([], 0) values self.signature in
