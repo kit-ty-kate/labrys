@@ -112,8 +112,7 @@ let ty_equal eff_eq x y =
   let rec aux eq_list = function
     | Ty x, Ty x' ->
         let eq = Ident.Type.equal in
-        List.exists (fun (y, y') -> eq x y && eq x' y') eq_list
-        || (eq x x' && List.for_all (fun (y, y') -> eq x y || eq x' y') eq_list)
+        eq x x' || List.exists (fun (y, y') -> eq x y && eq x' y') eq_list
     | Eff x, Eff x' ->
         eff_eq eq_list x x'
     | Fun (param, eff1, res), Fun (param', eff2, res') ->
