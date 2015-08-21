@@ -82,13 +82,13 @@ and of_typed_term mapn = function
       let (t, used_vars1) = of_typed_term mapn t in
       let (branches, used_vars2) = of_branches mapn branches in
       (Try (t, branches), Set.union used_vars1 used_vars2)
-  | TypedTree.Let (name, t, xs) ->
+  | TypedTree.Let ((name, TypedTree.NonRec, t), xs) ->
       let (t, used_vars1) = of_typed_term mapn t in
       let mapn = GammaMap.Value.remove name mapn in
       let (xs, used_vars2) = of_typed_term mapn xs in
       let used_vars = Set.union used_vars1 (Set.remove name used_vars2) in
       (Let (name, t, xs), used_vars)
-  | TypedTree.LetRec (name, t, xs) ->
+  | TypedTree.Let ((name, TypedTree.Rec, t), xs) ->
       let mapn = GammaMap.Value.remove name mapn in
       let (t, used_vars1) = of_typed_term mapn t in
       let (xs, used_vars2) = of_typed_term mapn xs in

@@ -25,13 +25,18 @@ type ty_size = int
 type used_vars = (Pattern.var * name) list
 type arity = int
 
-type t =
+type is_rec =
+  | Rec
+  | NonRec
+
+type value = (name * is_rec * t)
+
+and t =
   | Abs of (name * t)
   | App of (t * t)
   | Val of name
   | PatternMatching of (t * (used_vars * t) list * Pattern.t)
-  | Let of (name * t * t)
-  | LetRec of (name * t * t)
+  | Let of (value * t)
   | Fail of (eff_name * t list)
   | Try of (t * ((eff_name * name list) * t) list)
   | RecordGet of (t * int)
@@ -40,12 +45,8 @@ type t =
 type variant =
   | Variant of (name * ty_size)
 
-type is_rec =
-  | Rec
-  | NonRec
-
 type top =
-  | Value of (name * is_rec * t)
+  | Value of value
   | Binding of (name * arity * string)
   | Datatype of variant list
   | Exception of eff_name

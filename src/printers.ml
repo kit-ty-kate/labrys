@@ -622,6 +622,10 @@ module TypedTree = struct
     in
     List.fold_left aux "Ø" used_vars
 
+  let dump_is_rec = function
+    | Rec -> "rec "
+    | NonRec -> ""
+
   let rec dump_t = function
     | Abs (name, t) ->
         PPrint.group
@@ -645,21 +649,10 @@ module TypedTree = struct
           (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Let (name, t, xs) ->
+    | Let ((name, is_rec, t), xs) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "let %s =" (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
-           ^^ PPrint.break 1
-           ^^ PPrint.string "in"
-           ^^ PPrint.break 1
-           ^^ dump_t xs
-           ^^ PPrint.rparen
-          )
-    | LetRec (name, t, xs) ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ PPrint.string (fmt "let %s =" (dump_name name))
+           ^^ PPrint.string (fmt "let %s%s =" (dump_is_rec is_rec) (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
@@ -732,10 +725,6 @@ module TypedTree = struct
   let dump_variants variants =
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_variants x in
     List.fold_left aux PPrint.empty variants
-
-  let dump_is_rec = function
-    | Rec -> "rec "
-    | NonRec -> ""
 
   let dump = function
     | Value (name, is_rec, t) ->

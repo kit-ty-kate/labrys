@@ -202,14 +202,14 @@ let rec aux options gamma = function
       check_type_opt options ~loc_t ~ty ~ty_t ~effects:effect1 gamma;
       let gamma = Gamma.add_value name ty_t gamma in
       let (xs, ty_xs, effect2) = aux options gamma xs in
-      (Let (name, t, xs), ty_xs, Effects.union effect1 effect2)
+      (Let ((name, NonRec, t), xs), ty_xs, Effects.union effect1 effect2)
   | (_, UnsugaredTree.Let ((name, UnsugaredTree.Rec, t), xs)) when well_formed_rec t ->
       let ty = get_ty_from_let_rec ~loc_name:(Ident.Name.loc name) t in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let gamma = Gamma.add_value name ty gamma in
       let (t, _, effect1) = aux options gamma t in
       let (xs, ty_xs, effect2) = aux options gamma xs in
-      (LetRec (name, t, xs), ty_xs, Effects.union effect1 effect2)
+      (Let ((name, Rec, t), xs), ty_xs, Effects.union effect1 effect2)
   | (_, UnsugaredTree.Let ((name, UnsugaredTree.Rec, _), _)) ->
       fail_rec_val ~loc_name:(Ident.Name.loc name)
   | (loc, UnsugaredTree.Fail (ty, (exn, args))) ->
@@ -396,10 +396,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       let values = Class.get_values ~loc:(Ident.TyClass.loc tyclass) tys values tyclass' in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       let values =
-        let aux (name, is_rec, v) t = match is_rec with
-          | Rec -> LetRec (name, v, t)
-          | NonRec -> Let (name, v, t)
-        in
+        let aux value t = Let (value, t) in
         let fields = List.map (fun (x, _, _) -> Val x) values in
         List.fold_right aux values (RecordCreate fields)
       in
