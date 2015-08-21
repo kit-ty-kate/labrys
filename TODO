@@ -4,17 +4,22 @@
 
 * Define a proper operational semantics
 * Typeclasses
- * Classes & interfaces in interfaces
- * Merge togather typeclasses as constraints not as type variables
  * Allow tyclass constraints in classes & instances (inheritance)
+ * Apply filled typeclasses after App TApp & CApp
+ * Type: plus 1 (read "1")
 * Typeclasses (TO THINK)
  * Avoid non-equality between two types with that uses typeclasses at different places ?
  * Allow recursive use of the typeclass ?
  * Test: instance Show ({Read A} => A) = …
+ * Mixing instances & records
+ * Merge togather typeclasses as constraints not as type variables => Solved: {C1 A} => {C2 [A]} => T
 
 
 == Medium term ==
 
+* Change the syntax:
+ * λ(a : *), T
+ * {Test a Int} => T     (instead of {Test A [Int]} => T)
 * Add a β-reduction phase in Lambda (or after Lambda)
 * Separate uppercase identifiers to be able to optimize variant calls
 * Records
