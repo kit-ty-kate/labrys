@@ -22,6 +22,7 @@ EXAMPLES="\
     Test \
     UselessEnv \
     Variants \
+    TyClass \
 "
 
 for x in $EXAMPLES; do
