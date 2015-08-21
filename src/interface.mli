@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 val compile :
+  current_module:Module.t ->
   <lib_dir : string; ..> ->
   Gamma.t ->
   InterfaceTree.t list ->

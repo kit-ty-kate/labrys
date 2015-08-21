@@ -9,3 +9,9 @@ let val = id (λ(x:Int) -> x)
 let idprime = id
 
 let main = Unit
+
+class Show A =
+  let show : A -[]-> Unit
+end
+
+let show = show

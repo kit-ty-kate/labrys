@@ -415,6 +415,10 @@ bodyInterface:
       { ParseTree.IException (name, args) }
   | Open modul = upperName
       { ParseTree.IOpen modul }
+  | Class name = newUpperName params = nonempty_list(kind_and_name) Equal sigs = nonempty_list(letSig) End
+      { ParseTree.IClass (name, params, sigs) }
+  | Instance name = instanceName x = tyclassInstance
+      { ParseTree.IInstance (x, name) }
 
 
 (********* Module utils *********)

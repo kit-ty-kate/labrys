@@ -116,3 +116,5 @@ type interface =
   | ITypeAlias of (new_upper_name * ty)
   | IException of (new_upper_name * ty list)
   | IOpen of upper_name
+  | IClass of (new_upper_name * ty_arg list * (new_lower_name * ty) list)
+  | IInstance of (tyclass_instance * new_lower_name option)

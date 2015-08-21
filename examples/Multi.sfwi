@@ -1,5 +1,12 @@
+import library Prelude
+open Prelude
+
 type Int =
   | O
   | S Int
 
 let id : (Int -[]-> Int) -> Int -> Int
+
+class Show A =
+  let show : A -[]-> Unit
+end

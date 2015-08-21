@@ -23,7 +23,7 @@ open Monomorphic_containers.Open
 
 open InterfaceTree
 
-let compile options gamma =
+let compile ~current_module options gamma =
   let rec compile ~gamma ~local_gamma = function
     | Val (name, ty) :: xs ->
         let ty = Types.of_parse_tree ~pure_arrow:`Partial options local_gamma ty in
@@ -62,6 +62,43 @@ let compile options gamma =
         compile ~gamma ~local_gamma xs
     | Open modul :: xs ->
         let local_gamma = Gamma.open_module modul local_gamma in
+        compile ~gamma ~local_gamma xs
+    | Class (name, params, sigs) :: xs ->
+        let sigs =
+          let local_gamma =
+            let aux local_gamma (name, k) =
+              Gamma.add_type name (Types.Abstract k) local_gamma
+            in
+            List.fold_left aux local_gamma params
+          in
+          let aux (name, ty) =
+            (name, Types.of_parse_tree ~pure_arrow:`Forbid options local_gamma ty)
+          in
+          List.map aux sigs
+        in
+        let tyclass = Class.create params sigs in
+        let gamma = Gamma.add_tyclass name tyclass gamma in
+        let local_gamma = Gamma.add_tyclass name tyclass local_gamma in
+        let gamma =
+          let aux gamma (name_sig, ty) =
+            let ty = Types.tyclass_wrap name params ty in
+            Gamma.add_value name_sig ty gamma
+          in
+          List.fold_left aux gamma sigs
+        in
+        compile ~gamma ~local_gamma xs
+    | Instance ((tyclass, tys), name) :: xs ->
+        let tyclass' = GammaMap.TyClass.find tyclass local_gamma.Gamma.tyclasses in
+        let tys = List.map (Types.of_parse_tree_kind ~pure_arrow:`Forbid options local_gamma) tys in
+        let (_, tys, tyclass') = Class.add_instance ~tyclass ~current_module tys tyclass' in
+        let gamma = match name with
+          | Some name ->
+              let args = List.map (fun x -> PrivateTypes.Filled x) tys in
+              Gamma.add_named_instance name (tyclass, args) gamma
+          | None ->
+              gamma
+        in
+        let gamma = Gamma.replace_tyclass tyclass tyclass' gamma in
         compile ~gamma ~local_gamma xs
     | [] ->
         gamma

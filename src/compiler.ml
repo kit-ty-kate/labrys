@@ -55,7 +55,7 @@ let rec build_intf options current_module =
   in
   let aux acc x = Gamma.union ~imported:(build_intf options x) acc in
   let gamma = List.fold_left aux (Gamma.empty options) imports in
-  Interface.compile options gamma tree
+  Interface.compile ~current_module options gamma tree
 
 let get_parse_tree modul =
   let module P = ParserHandler.Make(struct let get = Module.impl modul end) in

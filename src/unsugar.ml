@@ -382,7 +382,24 @@ let create_interface ~current_module imports = function
   | ParseTree.IOpen (loc, `UpperName modul) ->
       let modul = get_module imports loc modul in
       InterfaceTree.Open modul
-(* TODO: Class & Instance *)
+  | ParseTree.IClass (name, params, sigs) ->
+      let name = new_upper_name_to_tyclass ~current_module name in
+      let params =
+        let aux (name, k) =
+          (new_upper_name_to_local_type name, unsugar_kind k)
+        in
+        List.map aux params
+      in
+      let sigs = List.map (unsugar_sig ~current_module imports) sigs in
+      InterfaceTree.Class (name, params, sigs)
+  | ParseTree.IInstance (tyclass, name) ->
+      let tyclass = unsugar_instance imports tyclass in
+      let name =
+        Option.map
+          (new_lower_name_to_instance ~current_module ~allow_underscore:false)
+          name
+      in
+      InterfaceTree.Instance (tyclass, name)
 
 let create_interface ~current_module options imports tree =
   let imports = create_imports ~current_module options imports in

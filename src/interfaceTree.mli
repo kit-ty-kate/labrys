@@ -22,9 +22,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type name = Ident.Name.t
 type t_name = Ident.Type.t
 type exn_name = Ident.Exn.t
+type tyclass_name = Ident.TyClass.t
+type instance_name = Ident.Instance.t
 type ty = UnsugaredTree.ty
 type loc = Location.t
 type variant = UnsugaredTree.variant
+type tyclass_instance = UnsugaredTree.tyclass_instance
 
 type t =
   | Val of (name * ty)
@@ -33,3 +36,5 @@ type t =
   | TypeAlias of (t_name * ty)
   | Exception of (exn_name * ty list)
   | Open of Module.t
+  | Class of (tyclass_name * (t_name * Kinds.t) list * (name * ty) list)
+  | Instance of (tyclass_instance * instance_name option)
