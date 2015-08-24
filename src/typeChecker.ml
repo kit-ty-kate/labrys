@@ -133,7 +133,9 @@ let rec aux options gamma = function
       let loc_x = fst x in
       let (f, ty_f, effect1) = aux options gamma f in
       let (x, ty_x, effect2) = aux options gamma x in
-      let (effect3, res, tyclasses) = Types.apply ~loc_f ~loc_x ty_f ty_x in
+      let (effect3, res, tyclasses, tyclasses_x) =
+        Types.apply ~loc_f ~loc_x ty_f ty_x
+      in
       let expr =
         let rec aux f n = function
           | (tyclass, args)::xs ->
@@ -150,6 +152,18 @@ let rec aux options gamma = function
                   aux (App (f, Val name)) n xs
               end
           | [] ->
+              let x =
+                let aux x (tyclass, args) =
+                  match Types.get_tys_filled args with
+                  | [] ->
+                      assert false
+                  | tys ->
+                      let tyclass = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
+                      let name = Class.get_instance_name ~loc tys tyclass in
+                      App (x, Val name)
+                in
+                List.fold_left aux x tyclasses_x
+              in
               App (f, x)
         in
         aux f 1 tyclasses

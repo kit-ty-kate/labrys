@@ -225,29 +225,39 @@ module TyErr = struct
       (String.concat " " (List.map param_to_string expected))
 end
 
-let match_tyclass ~loc_x ~tyclasses =
+let match_tyclass ~loc_x ~tyclasses ~tyclasses_x =
   let is_tyclass name = GammaSet.Type.mem name tyclasses in
+  let is_tyclass_x name = GammaSet.Type.mem name tyclasses_x in
   let rec aux x ~ty_x = match x, ty_x with
+    | Ty name1, Ty name2 when is_tyclass name1 && is_tyclass_x name2 ->
+        Err.fail
+          ~loc:loc_x
+          "Typeclass identifiers collition with '%s' and '%s'. \
+           Impossible to match an instance"
+          (to_string x)
+          (to_string ty_x)
     | Ty name, _ when is_tyclass name ->
-        ([(name, ty_x)], ty_x)
+        ([(name, ty_x)], ty_x, [], ty_x)
+    | _, Ty name when is_tyclass_x name ->
+        ([], x, [(name, x)], x)
     | Ty _, Ty _ ->
-        ([], x)
+        ([], x, [], ty_x)
     | Fun (x1, eff1, y1), Fun (x2, eff2, y2) ->
-        let (l1, x1) = aux x1 ~ty_x:x2 in
-        let (l2, eff1) = Effects.match_tyclass ~is_tyclass eff1 ~eff_x:eff2 in
-        let (l3, y1) = aux y1 ~ty_x:y2 in
-        (l1 @ l2 @ l3, Fun (x1, eff1, y1))
-    | Forall (name1, k1, t1), Forall (_, _, t2) ->
-        let (l, t1) = aux t1 ~ty_x:t2 in
-        (l, Forall (name1, k1, t1))
-    | TyClass (tyclass1, eff1, t1), TyClass (_, eff2, t2) ->
-        let (l1, eff1) = Effects.match_tyclass ~is_tyclass eff1 ~eff_x:eff2 in
-        let (l2, t1) = aux t1 ~ty_x:t2 in
-        (l1 @ l2, TyClass (tyclass1, eff1, t1))
+        let (l1, x1, l1', x2) = aux x1 ~ty_x:x2 in
+        let (l2, eff1, l2', eff2) = Effects.match_tyclass ~is_tyclass ~is_tyclass_x eff1 ~eff_x:eff2 in
+        let (l3, y1, l3', y2) = aux y1 ~ty_x:y2 in
+        (l1 @ l2 @ l3, Fun (x1, eff1, y1), l1' @ l2' @ l3', Fun (x2, eff2, y2))
+    | Forall (name1, k1, t1), Forall (name2, k2, t2) ->
+        let (l, t1, l', t2) = aux t1 ~ty_x:t2 in
+        (l, Forall (name1, k1, t1), l', Forall (name2, k2, t2))
+    | TyClass (tyclass1, eff1, t1), TyClass (tyclass2, eff2, t2) ->
+        let (l1, eff1, l1', eff2) = Effects.match_tyclass ~is_tyclass ~is_tyclass_x eff1 ~eff_x:eff2 in
+        let (l2, t1, l2', t2) = aux t1 ~ty_x:t2 in
+        (l1 @ l2, TyClass (tyclass1, eff1, t1), l1' @ l2', TyClass (tyclass2, eff2, t2))
     | AppOnTy (f1, x1), AppOnTy (f2, x2) ->
-        let (l1, f1) = aux f1 ~ty_x:f2 in
-        let (l2, x1) = aux x1 ~ty_x:x2 in
-        (l1 @ l2, AppOnTy (f1, x1))
+        let (l1, f1, l1', f2) = aux f1 ~ty_x:f2 in
+        let (l2, x1, l2', x2) = aux x1 ~ty_x:x2 in
+        (l1 @ l2, AppOnTy (f1, x1), l1' @ l2', AppOnTy (f2, x2))
     | Ty _, _
     | Fun _, _
     | Forall _, _
@@ -259,20 +269,35 @@ let match_tyclass ~loc_x ~tyclasses =
   in
   aux
 
-let match_tyclass ~loc_x ~tyclasses x ~ty_x =
-  let tyclasses =
-    let aux tyclasses ((_, args), _) =
-      let aux tyclasses = function
-        | Param (name, _) -> GammaSet.Type.add name tyclasses
-        | Filled _ -> tyclasses
-      in
-      List.fold_left aux tyclasses args
+let extract_tyclasses =
+  let add_to_set tyclasses (_, args) =
+    let aux tyclasses = function
+      | Param (name, _) -> GammaSet.Type.add name tyclasses
+      | Filled _ -> tyclasses
     in
-    List.fold_left aux GammaSet.Type.empty tyclasses
+    List.fold_left aux tyclasses args
   in
-  let (matched, ty) = match_tyclass ~loc_x ~tyclasses x ~ty_x in
-  let rec aux = function
-    | (x, ty)::xs ->
+  let rec aux tyclasses set = function
+    | TyClass (x, eff, t) -> aux ((x, eff) :: tyclasses) (add_to_set set x) t
+    | Ty _ | Fun _ | Forall _ | AppOnTy _ as t -> (tyclasses, set, t)
+    | AbsOnTy _ | Eff _ -> assert false
+  in
+  aux [] GammaSet.Type.empty
+
+let match_tyclass ~loc_x ~tyclasses x ~ty_x =
+  let (tyclasses_x_list, tyclasses_x, ty_x') = extract_tyclasses ty_x in
+  let ((matched, ty, matched_x, ty_x), tyclasses_x_list) =
+    let (_, _, matched_x, _) as res =
+      match_tyclass ~loc_x ~tyclasses ~tyclasses_x x ~ty_x:ty_x'
+    in
+    if Int.Infix.(List.length matched_x = GammaSet.Type.cardinal tyclasses_x) then
+      (res, tyclasses_x_list)
+    else
+      let tyclasses_x = GammaSet.Type.empty in
+      (match_tyclass ~loc_x ~tyclasses ~tyclasses_x x ~ty_x, [])
+  in
+  let rec aux acc = function
+    | ((x, ty) as x')::xs ->
         let (l, xs) =
           let aux ((y, ty) as pair) =
             if Ident.Type.equal x y then `Left ty else `Right pair
@@ -281,11 +306,11 @@ let match_tyclass ~loc_x ~tyclasses x ~ty_x =
         in
         if not (List.for_all (equal ty) l) then
           Err.fail ~loc:loc_x "Type constraints doesn't match"; (* TODO: Improve error message *)
-        aux xs
+        aux (x' :: acc) xs
     | [] ->
-        []
+        acc
   in
-  (aux matched, ty)
+  (aux [] matched, ty, aux [] matched_x, ty_x, tyclasses_x_list)
 
 let rec remove_filled_tyclasses = function
   | Ty _ | Fun _ | Forall _ | AppOnTy _ as t ->
@@ -303,50 +328,58 @@ let rec remove_filled_tyclasses = function
   | AbsOnTy _ | Eff _ ->
       assert false
 
-let apply ~loc_f ~loc_x ty_f ty_x =
-  let rec aux tyclasses = function
-    | Fun (x, eff, t) ->
-        let (matched_tys, x) = match_tyclass ~loc_x ~tyclasses ~ty_x x in
-        if not (is_subset_of ty_x x) then
-          TyErr.fail ~loc_t:loc_x ~has:ty_x ~expected:x;
-        let (eff, t) =
-          let aux (eff, t) (from, ty) =
-            (Effects.replace ~from ~ty eff, replace ~from ~ty t)
-          in
-          List.fold_left aux (eff, t) matched_tys
-        in
-        let (eff, t, tyclasses) =
-          let aux (effects, t, tyclasses) ((name, args), eff) =
-            let args =
-              let aux = function
-                | Param (x, _) as arg ->
-                    let eq (y, _) = Ident.Type.equal x y in
-                    begin match List.find_pred eq matched_tys with
-                    | Some (_, ty) -> Filled ty
-                    | None -> arg
-                    end
-                | Filled _ as arg -> arg
-              in
-              List.map aux args
+let reconstruct_ty_typeclasses matched_tys tyclasses_list t eff =
+  let aux (effects, t, tyclasses_list) ((name, args), eff) =
+    let args =
+      let aux = function
+        | Param (x, _) as arg ->
+            let eq (y, _) = Ident.Type.equal x y in
+            begin match List.find_pred eq matched_tys with
+            | Some (_, ty) -> Filled ty
+            | None -> arg
+            end
+        | Filled ty ->
+            let ty =
+              let aux t (from, ty) = replace ~from ~ty t in
+              List.fold_left aux ty matched_tys
             in
-            let effects = Effects.union effects eff in
-            let tyclass = (name, args) in
-            (Effects.empty, TyClass (tyclass, effects, t), tyclass :: tyclasses)
-          in
-          List.fold_left aux (eff, t, []) tyclasses
-        in
-        let (t, eff') = remove_filled_tyclasses t in
-        (Effects.union eff eff', t, tyclasses)
-    | TyClass (x, eff, t) ->
-        aux ((x, eff) :: tyclasses) t
-    | (Forall _ as ty)
-    | (AppOnTy _ as ty)
-    | (Ty _ as ty) ->
-        TyErr.function_type ~loc_f ty
-    | AbsOnTy _ | Eff _ ->
-        assert false
+            Filled ty
+      in
+      List.map aux args
+    in
+    let effects = Effects.union effects eff in
+    let tyclass = (name, args) in
+    (Effects.empty, TyClass (tyclass, effects, t), tyclass :: tyclasses_list)
   in
-  aux [] ty_f
+  List.fold_left aux (eff, t, []) tyclasses_list
+
+let apply ~loc_f ~loc_x ty_f ty_x =
+  let (tyclasses_list, tyclasses, ty_f) = extract_tyclasses ty_f in
+  match ty_f with
+  | Fun (x, eff, t) ->
+      let (matched_tys, x, matched_tys_x, ty_x, tyclasses_x_list) =
+        match_tyclass ~loc_x ~tyclasses ~ty_x x
+      in
+      if not (is_subset_of ty_x x) then
+        TyErr.fail ~loc_t:loc_x ~has:ty_x ~expected:x;
+      let (eff, t) =
+        let aux (eff, t) (from, ty) =
+          (Effects.replace ~from ~ty eff, replace ~from ~ty t)
+        in
+        List.fold_left aux (eff, t) matched_tys
+      in
+      let (eff, t, tyclasses_list) =
+        reconstruct_ty_typeclasses matched_tys tyclasses_list t eff
+      in
+      let (eff_x, _, tyclasses_x_list) =
+        reconstruct_ty_typeclasses matched_tys_x tyclasses_x_list ty_x Effects.empty
+      in
+      let (t, eff') = remove_filled_tyclasses t in
+      (Effects.union3 eff eff' eff_x, t, tyclasses_list, tyclasses_x_list)
+  | Forall _ | AppOnTy _ | Ty _ as ty ->
+      TyErr.function_type ~loc_f ty
+  | TyClass _ | AbsOnTy _ | Eff _ ->
+      assert false
 
 let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x =
   let rec aux = function

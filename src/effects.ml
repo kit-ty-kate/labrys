@@ -103,32 +103,35 @@ let replace = PrivateTypes.eff_replace
 
 let remove_module_aliases = PrivateTypes.eff_remove_module_aliases
 
-let match_tyclass ~is_tyclass eff ~eff_x =
-  let eff_union =
-    let eff =
-      let variables =
-        let aux name eff =
-          if is_tyclass name then
-            Variables.remove name eff
-          else
-            eff
-        in
-        Variables.fold aux eff.variables eff.variables
-      in
-      {eff with variables}
+let remove_tyclass_variables ~is_tyclass eff =
+  let variables =
+    let aux name eff =
+      if is_tyclass name then
+        Variables.remove name eff
+      else
+        eff
     in
-    union eff eff_x
+    Variables.fold aux eff.variables eff.variables
   in
-  let matched =
+  {eff with variables}
+
+let match_tyclass ~is_tyclass ~is_tyclass_x eff ~eff_x =
+  let eff' = remove_tyclass_variables ~is_tyclass eff in
+  let eff_x' = remove_tyclass_variables ~is_tyclass:is_tyclass_x eff_x in
+  let aux is_tyclass eff eff' =
     let aux name acc =
       if is_tyclass name then
-        (name, PrivateTypes.Eff eff_union) :: acc
+        (name, PrivateTypes.Eff eff') :: acc
       else
         acc
     in
     Variables.fold aux eff.variables []
   in
-  if List.is_empty matched then
-    ([], eff)
-  else
-    (matched, eff_union)
+  let matched = aux is_tyclass eff eff_x' in
+  let matched_x = aux is_tyclass_x eff_x eff' in
+  let eff_union = union eff' eff_x' in
+  match List.is_empty matched, List.is_empty matched_x with
+  | true, true -> ([], eff', [], eff_x')
+  | false, true -> (matched, eff_union, [], eff_x')
+  | true, false -> ([], eff', matched_x, eff_union)
+  | false, false -> (matched, eff_union, matched_x, eff_union)

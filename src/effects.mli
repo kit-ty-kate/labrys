@@ -53,6 +53,7 @@ val remove_module_aliases : Ident.Type.t list -> t -> t
 
 val match_tyclass :
   is_tyclass:(Ident.Type.t -> bool) ->
+  is_tyclass_x:(Ident.Type.t -> bool) ->
   t ->
   eff_x:t ->
-  ((Ident.Type.t * PrivateTypes.t) list * t)
+  ((Ident.Type.t * PrivateTypes.t) list * t * (Ident.Type.t * PrivateTypes.t) list * t)

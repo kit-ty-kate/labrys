@@ -64,7 +64,7 @@ val apply :
   loc_x:Location.t ->
   t ->
   t ->
-  (Effects.t * t * (Ident.TyClass.t * PrivateTypes.tyclass_arg list) list)
+  (Effects.t * t * (Ident.TyClass.t * PrivateTypes.tyclass_arg list) list * (Ident.TyClass.t * PrivateTypes.tyclass_arg list) list)
 
 val apply_ty :
   loc_f:Location.t ->
