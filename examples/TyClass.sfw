@@ -3,10 +3,6 @@ import Multi
 
 open Nat
 
-class Print A =
-  let print : A -[IO]-> Unit
-end
-
 let printInt : Nat -[IO]-> Unit = begin
   @msg = constant [4 x i8] c"%d\0a\00"
 
@@ -35,19 +31,23 @@ let printInt : Nat -[IO]-> Unit = begin
   }
 end
 
+class Print A =
+  let print1 : A -[IO]-> Unit
+end
+
 let printInt2' (n : Nat) = printInt n; Unit
 
-let test ?(z : Print A) (x : A) = print ?[z] x
+let test ?(z : Print A) (x : A) = print1 ?[z] x
 
 instance [x] Print Unit =
-  let print (_ : Unit) = printInt O
+  let print1 (_ : Unit) = printInt O
 end
 
 instance Print Unit =
-  let print (_ : Unit) = printInt (S O)
+  let print1 (_ : Unit) = printInt (S O)
 end
 
-let test () = print ?[x] Unit
+let test () = print1 ?[x] Unit
 
 let lol (f : Unit -[IO]-> Unit) = f
 
@@ -65,4 +65,13 @@ let lol () = print (\(_ : Unit) -> Unit)
 
 let test1 = Multi.show
 
-let main = test Unit
+class ReadLike A =
+  let read : Unit -[]-> A
+end
+
+instance ReadLike Nat =
+  let rec read () : Nat = read Unit
+end
+
+let main =
+  printInt (read Unit)
