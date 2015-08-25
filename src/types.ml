@@ -269,6 +269,7 @@ let match_tyclass ~loc_x ~tyclasses ~tyclasses_x =
   in
   aux
 
+(* NOTE: returns a reversed tyclasses list *)
 let extract_tyclasses =
   let add_to_set tyclasses (_, args) =
     let aux tyclasses = function
@@ -312,24 +313,9 @@ let match_tyclass ~loc_x ~tyclasses x ~ty_x =
   in
   (aux [] matched, ty, aux [] matched_x, ty_x, tyclasses_x_list)
 
-let rec remove_filled_tyclasses = function
-  | Ty _ | Fun _ | Forall _ | AppOnTy _ as t ->
-      (t, Effects.empty)
-  | TyClass ((_, args), eff, t) as t' ->
-      let is_filled = function
-        | Param _ -> false
-        | Filled _ -> true
-      in
-      if List.for_all is_filled args then
-        let (t, eff') = remove_filled_tyclasses t in
-        (t, Effects.union eff eff')
-      else
-        (t', Effects.empty)
-  | AbsOnTy _ | Eff _ ->
-      assert false
-
+(* NOTE: take a reversed tyclasses list *)
 let reconstruct_ty_typeclasses matched_tys tyclasses_list t eff =
-  let aux (effects, t, tyclasses_list) ((name, args), eff) =
+  let aux (effects, t) ((name, args), eff) =
     let args =
       let aux = function
         | Param (x, _) as arg ->
@@ -348,10 +334,15 @@ let reconstruct_ty_typeclasses matched_tys tyclasses_list t eff =
       List.map aux args
     in
     let effects = Effects.union effects eff in
-    let tyclass = (name, args) in
-    (Effects.empty, TyClass (tyclass, effects, t), tyclass :: tyclasses_list)
+    (Effects.empty, TyClass ((name, args), effects, t))
   in
-  List.fold_left aux (eff, t, []) tyclasses_list
+  let (eff, t) =
+    let aux (eff, t) (from, ty) =
+      (Effects.replace ~from ~ty eff, replace ~from ~ty t)
+    in
+    List.fold_left aux (eff, t) matched_tys
+  in
+  List.fold_left aux (eff, t) tyclasses_list
 
 let apply ~loc_f ~loc_x ty_f ty_x =
   let (tyclasses_list, tyclasses, ty_f) = extract_tyclasses ty_f in
@@ -363,19 +354,14 @@ let apply ~loc_f ~loc_x ty_f ty_x =
       if not (is_subset_of ty_x x) then
         TyErr.fail ~loc_t:loc_x ~has:ty_x ~expected:x;
       let (eff, t) =
-        let aux (eff, t) (from, ty) =
-          (Effects.replace ~from ~ty eff, replace ~from ~ty t)
-        in
-        List.fold_left aux (eff, t) matched_tys
-      in
-      let (eff, t, tyclasses_list) =
         reconstruct_ty_typeclasses matched_tys tyclasses_list t eff
       in
-      let (eff_x, _, tyclasses_x_list) =
+      let (eff_x, ty_x) =
         reconstruct_ty_typeclasses matched_tys_x tyclasses_x_list ty_x Effects.empty
       in
-      let (t, eff') = remove_filled_tyclasses t in
-      (Effects.union3 eff eff' eff_x, t, tyclasses_list, tyclasses_x_list)
+      if not (Effects.is_empty eff_x) then
+        assert false;
+      (eff, t, ty_x)
   | Forall _ | AppOnTy _ | Ty _ as ty ->
       TyErr.function_type ~loc_f ty
   | TyClass _ | AbsOnTy _ | Eff _ ->
@@ -384,13 +370,11 @@ let apply ~loc_f ~loc_x ty_f ty_x =
 let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x =
   let rec aux = function
     | Forall (ty, k, res) when Kinds.equal k kind_x ->
-        let res = replace ~from:ty ~ty:ty_x res in
-        (ty, res)
+        replace ~from:ty ~ty:ty_x res
     | Forall (_, k, _) ->
         Kinds.Err.fail ~loc:loc_x ~has:kind_x ~expected:k
     | TyClass (x, eff, res) ->
-        let (ty, res) = aux res in
-        (ty, TyClass (x, eff, res))
+        TyClass (x, eff, aux res)
     | (Fun _ as ty)
     | (AppOnTy _ as ty)
     | (Ty _ as ty) ->
@@ -455,3 +439,15 @@ let get_tys_filled args =
 let tyclass_wrap tyclass params ty =
   let params = List.map (fun x -> Param x) params in
   TyClass ((tyclass, params), Effects.empty, ty)
+
+let rec extract_filled_tyclasses = function
+  | TyClass ((tyclass, args), eff, t') as t ->
+      let (tyclasses, eff', t') = extract_filled_tyclasses t' in
+      begin match get_tys_filled args with
+      | [] ->
+          (None :: tyclasses, eff', t)
+      | tys ->
+          (Some (tyclass, tys) :: tyclasses, Effects.union eff eff', t')
+      end
+  | Ty _ | Fun _ | Forall _ | AppOnTy _ as t -> ([], Effects.empty, t)
+  | Eff _ | AbsOnTy _ -> assert false

@@ -43,6 +43,8 @@ val union : t -> t -> t
 
 val union3 : t -> t -> t -> t
 
+val union5 : t -> t -> t -> t -> t -> t
+
 val remove_exn : Ident.Exn.t -> t -> t
 
 val to_string : t -> string

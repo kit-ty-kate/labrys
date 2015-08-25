@@ -104,6 +104,23 @@ let check_effects_forall ~loc_t ~effect =
   if Effects.has_io effect then
     Err.fail ~loc:loc_t "Cannot have IO effects under a forall"
 
+let wrap_typeclass_apps ~loc gamma ~tyclasses ~f g =
+  let rec aux f n = function
+    | None::xs ->
+        let name =
+          Ident.Name.local_create ~loc:Builtins.unknown_loc "tyclass"
+        in
+        let name = Ident.Name.unique name n in
+        Abs (name, aux (App (f, Val name)) (succ n) xs)
+    | Some (tyclass, tys)::xs ->
+        let tyclass = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
+        let name = Class.get_instance_name ~loc tys tyclass in
+        aux (App (f, Val name)) n xs
+    | [] ->
+        g f
+  in
+  aux f 1 tyclasses
+
 let rec aux options gamma = function
   | (_, UnsugaredTree.Abs ((name, ty), t)) ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
@@ -133,51 +150,37 @@ let rec aux options gamma = function
       let loc_x = fst x in
       let (f, ty_f, effect1) = aux options gamma f in
       let (x, ty_x, effect2) = aux options gamma x in
-      let (effect3, res, tyclasses, tyclasses_x) =
-        Types.apply ~loc_f ~loc_x ty_f ty_x
-      in
-      let expr =
-        let rec aux f n = function
-          | (tyclass, args)::xs ->
-              begin match Types.get_tys_filled args with
-              | [] ->
-                  let name =
-                    Ident.Name.local_create ~loc:Builtins.unknown_loc "tyclass"
-                  in
-                  let name = Ident.Name.unique name n in
-                  Abs (name, aux (App (f, Val name)) (succ n) xs)
-              | tys ->
+      let (effect3, res, ty_x) = Types.apply ~loc_f ~loc_x ty_f ty_x in
+      let (tyclasses, eff_f, res) = Types.extract_filled_tyclasses res in
+      let (tyclasses_x, eff_x, _) = Types.extract_filled_tyclasses ty_x in
+      let f =
+        let aux f =
+          let x =
+            let aux x = function
+              | None ->
+                  assert false
+              | Some (tyclass, tys) ->
                   let tyclass = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
                   let name = Class.get_instance_name ~loc tys tyclass in
-                  aux (App (f, Val name)) n xs
-              end
-          | [] ->
-              let x =
-                let aux x (tyclass, args) =
-                  match Types.get_tys_filled args with
-                  | [] ->
-                      assert false
-                  | tys ->
-                      let tyclass = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
-                      let name = Class.get_instance_name ~loc tys tyclass in
-                      App (x, Val name)
-                in
-                List.fold_left aux x tyclasses_x
-              in
-              App (f, x)
+                  App (x, Val name)
+            in
+            List.fold_left aux x tyclasses_x
+          in
+          App (f, x)
         in
-        aux f 1 tyclasses
+        wrap_typeclass_apps ~loc gamma ~tyclasses ~f aux
       in
-      (expr, res, Effects.union3 effect1 effect2 effect3)
-  | (_, UnsugaredTree.TApp (f, ty_x)) ->
+      (f, res, Effects.union5 effect1 effect2 effect3 eff_f eff_x)
+  | (loc, UnsugaredTree.TApp (f, ty_x)) ->
       let loc_f = fst f in
       let loc_x = fst ty_x in
       let (f, ty_f, effect) = aux options gamma f in
       let (ty_x, kx) = Types.of_parse_tree_kind ~pure_arrow:`Allow options gamma ty_x in
-      let (param, res) = Types.apply_ty ~loc_f ~loc_x ~ty_x ~kind_x:kx ty_f in
-      let res = Types.replace ~from:param ~ty:ty_x res in
-      (f, res, effect)
-  | (_, UnsugaredTree.CApp (f, x)) ->
+      let res = Types.apply_ty ~loc_f ~loc_x ~ty_x ~kind_x:kx ty_f in
+      let (tyclasses, eff_f, res) = Types.extract_filled_tyclasses res in
+      let f = wrap_typeclass_apps ~loc gamma ~tyclasses ~f Fun.id in
+      (f, res, Effects.union effect eff_f)
+  | (loc, UnsugaredTree.CApp (f, x)) ->
       let (f, ty_f, effect1) = aux options gamma f in
       let (name, tyclass, args) = match x with
         | UnsugaredTree.TyClassVariable name ->
@@ -195,7 +198,10 @@ let rec aux options gamma = function
             (name, tyclass, List.map (fun x -> PrivateTypes.Filled x) tys)
       in
       let (res, effect2) = Types.apply_tyclass ty_f tyclass args in
-      (App (f, Val name), res, Effects.union effect1 effect2)
+      let (tyclasses, eff_f, res) = Types.extract_filled_tyclasses res in
+      let f = App (f, Val name) in
+      let f = wrap_typeclass_apps ~loc gamma ~tyclasses ~f Fun.id in
+      (f, res, Effects.union3 effect1 effect2 eff_f)
   | (_, UnsugaredTree.Val name) ->
       let (name, ty) = GammaMap.Value.find_binding name gamma.Gamma.values in
       (Val name, ty, Effects.empty)

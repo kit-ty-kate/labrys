@@ -83,6 +83,9 @@ let add_exn x self =
 let union3 x y z =
   union (union x y) z
 
+let union5 a b c d e =
+  union (union (union (union a b) c) d) e
+
 let remove_exn x self =
   if not (Exn_set.mem x self.exns) then
     Err.fail

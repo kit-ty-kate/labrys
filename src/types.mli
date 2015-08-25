@@ -64,7 +64,7 @@ val apply :
   loc_x:Location.t ->
   t ->
   t ->
-  (Effects.t * t * (Ident.TyClass.t * PrivateTypes.tyclass_arg list) list * (Ident.TyClass.t * PrivateTypes.tyclass_arg list) list)
+  (Effects.t * t * t)
 
 val apply_ty :
   loc_f:Location.t ->
@@ -72,7 +72,7 @@ val apply_ty :
   ty_x:t ->
   kind_x:Kinds.t ->
   t ->
-  (name * t)
+  t
 
 val apply_tyclass : t -> Ident.TyClass.t -> PrivateTypes.tyclass_arg list -> (t * Effects.t)
 
@@ -84,6 +84,8 @@ val is_unit : <lib_dir : string; ..> -> t -> bool
 
 val remove_module_aliases : t -> t
 
-val get_tys_filled : PrivateTypes.tyclass_arg list -> t list
-
 val tyclass_wrap : Ident.TyClass.t -> (name * Kinds.t) list -> t -> t
+
+val extract_filled_tyclasses :
+  t ->
+  ((Ident.TyClass.t * t list) option list * Effects.t * t)
