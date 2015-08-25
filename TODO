@@ -18,7 +18,7 @@
 * Change the syntax:
  * λ(a : *), T
  * {Test a Int} => T     (instead of {Test A [Int]} => T)
-* Add a β-reduction phase in Lambda (or after Lambda)
+* Add a β-reduction phase in Lambda (or after Lambda) + reduce « (λx.(λy.(f x) y)) --> f »
 * Separate uppercase identifiers to be able to optimize variant calls
 * Records
 * Extensible records & extensible variants
