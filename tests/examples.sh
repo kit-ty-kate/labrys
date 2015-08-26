@@ -23,6 +23,8 @@ EXAMPLES="\
     UselessEnv \
     Variants \
     TyClass \
+    Presentation \
+    Hello \
 "
 
 for x in $EXAMPLES; do

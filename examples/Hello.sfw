@@ -1,0 +1,12 @@
+let print : Unit -[IO]-> Unit = begin
+  @msg = constant [12 x i8] c"Hello World\00"
+
+  declare i32 @printf(i8*, ...)
+  
+  define i8* @Hello..print(i8*) {
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([12 x i8]* @msg, i32 0, i32 0))
+    ret i8* null
+  }
+end
+
+let main = print Unit
