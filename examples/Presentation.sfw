@@ -1,0 +1,102 @@
+import library Nat
+open Nat
+
+let printUnit : Unit -[IO]-> Unit = begin
+  @msg = constant [4 x i8] c"()\0a\00"
+
+  declare i32 @printf(i8*, ...)
+  
+  define i8* @Presentation..printUnit(i8*) {
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0))
+    ret i8* null
+  }
+end
+
+let printInt : Nat -[IO]-> Unit = begin
+  @msg = constant [4 x i8] c"%d\0a\00"
+
+  declare i32 @printf(i8*, ...)
+  
+  define i32 @__int_of_nat(i8*) {
+    %var = bitcast i8* %0 to [2 x i8*]*
+    %variant = load [2 x i8*]* %var
+    %keyp = extractvalue [2 x i8*] %variant, 0
+    %key = ptrtoint i8* %keyp to i32
+    %cond = icmp eq i32 %key, 0
+    br i1 %cond, label %end, label %loop
+  loop:
+    %next = extractvalue [2 x i8*] %variant, 1
+    %val = call i32 @__int_of_nat(i8* %next)
+    %res = add i32 1, %val
+    ret i32 %res
+  end:
+    ret i32 0
+  }
+
+  define i8* @Presentation..printInt(i8*) {
+    %i = call i32 @__int_of_nat(i8* %0)
+    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %i)
+    ret i8* null
+  }
+end
+
+class Print A =
+  let print : A -[IO]-> Unit
+end
+
+let test0 = print
+let test1 ?(z : Print A) = print ?[z]
+let test2 ?(z : Print A) (x : A) = print ?[z] x
+
+instance [printInt] Print Unit =
+  let print () = printInt O
+end
+
+instance Print Unit =
+  let print = printUnit
+end
+
+class Read A =
+  let read : Unit -[]-> A
+end
+
+instance Read Nat =
+  let read () = O
+end
+
+let test3 () = printInt (read Unit)
+let test4 () = print ?[printInt] Unit
+let test5 () = print ?[Print Unit] Unit
+
+class Fractional A (E : !) =
+  let div : A -[]-> A -[E]-> A
+end
+
+exception DivByZero
+
+instance Fractional Nat [Exn [DivByZero]] =
+  let div (_ : Nat) (_ : Nat) = fail [Nat] DivByZero -- Sorry, doesn't have real ints
+end
+
+type alias T = λ(X : !), [IO, X]
+type alias T1 = T [Exn [DivByZero]]
+type alias T' = Nat -[T1]-> Nat
+
+let f : T' = λ(x : Nat) -> printUnit Unit; fail [Unit] DivByZero; x
+
+let test6 () =
+  try
+    printInt (div O O ?[Fractional Nat [Exn [DivByZero]]])
+  with
+  | DivByZero -> printUnit Unit
+  end
+
+let main =
+  test0 Unit;
+  test1 Unit;
+  test2 Unit;
+  test3 Unit;
+  test4 Unit;
+  test5 Unit;
+  test6 Unit;
+  Unit
