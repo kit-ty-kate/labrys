@@ -15,3 +15,5 @@ class Show A =
 end
 
 let show = show
+
+let main = Unit
