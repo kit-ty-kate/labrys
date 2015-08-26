@@ -83,21 +83,12 @@ let eff_union x y =
   let exns = Exn_set.union x.exns y.exns in
   {variables; exns}
 
-let eff_union_ty ?from self = function
-  | Ty name ->
-      let variables = match from with
-        | Some from -> Variables.remove from self.variables
-        | None -> self.variables
-      in
-      let variables = Variables.add name variables in
-      {self with variables}
-  | Eff eff ->
-      eff_union self eff
-  | Fun _
-  | Forall _
-  | TyClass _
-  | AbsOnTy _
-  | AppOnTy _ -> assert false
+let eff_union_ty ~from self =
+  let self = {self with variables = Variables.remove from self.variables} in
+  function
+  | Ty name -> {self with variables = Variables.add name self.variables}
+  | Eff eff -> eff_union self eff
+  | Fun _ | Forall _ | TyClass _ | AbsOnTy _ | AppOnTy _ -> assert false
 
 let eff_replace ~from ~ty self =
   let aux name self =

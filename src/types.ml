@@ -117,10 +117,9 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
       let (x, kx) = of_parse_tree_kind ~pure_arrow:pa options gamma x in
       let k =
         match kf with
-        | Kinds.KFun (p, r) when Kinds.equal p kx -> r
-        | (Kinds.KFun _ as k)
-        | (Kinds.Eff as k)
-        | (Kinds.Star as k) ->
+        | Kinds.KFun (p, r) when Kinds.equal p kx ->
+            r
+        | Kinds.KFun _ | Kinds.Eff | Kinds.Star as k ->
             Err.fail
               ~loc
               "Kind '%s' can't be applied on '%s'"
@@ -390,19 +389,22 @@ let apply_tyclass ty tyclass args = match ty with
         TyErr.name_tyclass_missmatch ~has:tyclass ~expected:name;
       if not (PrivateTypes.tyclass_args_equal args args') then
         TyErr.args_tyclass_missmatch tyclass ~expected:args ~has:args';
-      let res =
-        try
-          let aux res ty1 ty2 = match ty1, ty2 with
-            | Param (x1, _), Param (x2, _) -> replace ~from:x2 ~ty:(Ty x1) res
-            | Filled _, Filled _ -> res
-            | Filled ty, Param (from, _) -> replace ~from ~ty res
-            | Param _, _ -> assert false
-          in
-          List.fold_left2 aux res args args'
-        with
-        | Invalid_argument _ -> assert false
-      in
-      (res, eff)
+      begin try
+        let aux (res, eff) ty1 ty2 = match ty1, ty2 with
+          | Param (ty, _), Param (from, _) ->
+              let ty = Ty ty in
+              (replace ~from ~ty res, Effects.replace ~from ~ty eff)
+          | Filled _, Filled _ ->
+              (res, eff)
+          | Filled ty, Param (from, _) ->
+              (replace ~from ~ty res, Effects.replace ~from ~ty eff)
+          | Param _, _ ->
+              assert false
+        in
+        List.fold_left2 aux (res, eff) args args'
+      with
+      | Invalid_argument _ -> assert false
+      end
   | Ty _ | Fun _ | Forall _ | AppOnTy _ as ty ->
       TyErr.tyclass_type ~loc:(Ident.TyClass.loc tyclass) ty
   | AbsOnTy _ | Eff _ ->
@@ -451,3 +453,40 @@ let rec extract_filled_tyclasses = function
       end
   | Ty _ | Fun _ | Forall _ | AppOnTy _ as t -> ([], Effects.empty, t)
   | Eff _ | AbsOnTy _ -> assert false
+
+let rec is_bound_args name args =
+  let aux = function
+    | Param (name', _) -> Ident.Type.equal name name'
+    | Filled ty -> is_bound name ty
+  in
+  List.exists aux args
+
+and is_bound name = function
+  | Ty _ | Eff _ ->
+      false
+  | Fun (x, _, y) | AppOnTy (x, y) ->
+      is_bound name x || is_bound name y
+  | Forall (name', _, t) | AbsOnTy (name', _, t) ->
+      Ident.Type.equal name name' || is_bound name t
+  | TyClass ((_, args), _, t) ->
+      is_bound_args name args || is_bound name t
+
+let check_bound name t =
+  (* TODO: Avoid this *)
+  if is_bound name t then
+    Err.fail
+      ~loc:(Ident.Type.loc name)
+      "TEMPORARY ERROR: Cannot bind this name here as it is already used later \
+       in the type"
+
+let forall (name, k, t) =
+  check_bound name t;
+  Forall (name, k, t)
+
+let tyclass ((tyclass, args), eff, t) =
+  let aux = function
+    | Param (name, _) -> check_bound name t
+    | Filled _ -> ()
+  in
+  List.iter aux args;
+  TyClass ((tyclass, args), eff, t)

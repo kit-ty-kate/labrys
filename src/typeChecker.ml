@@ -132,7 +132,7 @@ let rec aux options gamma = function
       let gamma = Gamma.add_type name (Types.Abstract k) gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
       check_effects_forall ~loc_t:(fst t) ~effect;
-      let abs_ty = PrivateTypes.Forall (name, k, ty_expr) in
+      let abs_ty = Types.forall (name, k, ty_expr) in
       (expr, abs_ty, effect)
   | (_, UnsugaredTree.CAbs ((name, (tyclass, args)), t)) ->
       let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
@@ -143,7 +143,7 @@ let rec aux options gamma = function
       in
       let gamma = Gamma.add_named_instance name (tyclass, args) gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
-      let abs_ty = PrivateTypes.TyClass ((tyclass, args), effect, ty_expr) in
+      let abs_ty = Types.tyclass ((tyclass, args), effect, ty_expr) in
       (Abs (Ident.Instance.to_name name, expr), abs_ty, Effects.empty)
   | (loc, UnsugaredTree.App (f, x)) ->
       let loc_f = fst f in
@@ -189,7 +189,7 @@ let rec aux options gamma = function
             in
             (Ident.Instance.to_name name, tyclass, args)
         | UnsugaredTree.TyClassInstance (tyclass, tys) ->
-            let aux = Types.of_parse_tree ~pure_arrow:`Allow options gamma in
+            let aux x = fst (Types.of_parse_tree_kind ~pure_arrow:`Allow options gamma x) in
             let tys = List.map aux tys in
             let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
             let name =

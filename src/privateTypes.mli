@@ -69,7 +69,7 @@ val eff_empty : effects
 
 val eff_union : effects -> effects -> effects
 
-val eff_union_ty : ?from:Ident.Type.t -> effects -> t -> effects
+val eff_union_ty : from:Ident.Type.t -> effects -> t -> effects
 
 val eff_replace : from:Ident.Type.t -> ty:t -> effects -> effects
 

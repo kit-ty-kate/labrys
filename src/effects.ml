@@ -47,16 +47,20 @@ let add options gamma (name, exns) self =
     let aux x = fst (GammaMap.Exn.find_binding x gamma.Gamma.exceptions) in
     List.map aux exns
   in
-  let (name, k, self) =
+  let (name, k, has_args, self) =
     match GammaMap.Types.find_binding name gamma.Gamma.types with
-    | (name, PrivateTypes.Abstract k) -> (name, k, self)
-    | (name, PrivateTypes.Alias (ty, k)) -> (name, k, union_ty self ty)
+    | (name, PrivateTypes.Abstract k) ->
+        if Ident.Type.equal name (Builtins.exn options) then
+          (name, k, true, self)
+        else
+          (name, k, false, {self with variables = Variables.add name self.variables})
+    | (name, PrivateTypes.Alias (ty, k)) ->
+        (name, k, false, union_ty ~from:name self ty)
   in
   if not (Kinds.is_effect k) then
     Err.fail
       ~loc:(Ident.Type.loc name)
       "Only kind φ is accepted here";
-  let has_args = Ident.Type.equal name (Builtins.exn options) in
   if has_args && List.is_empty exns then
     Err.fail
       ~loc:(Ident.Type.loc name)
@@ -69,13 +73,7 @@ let add options gamma (name, exns) self =
       (Ident.Type.to_string name);
   let exns = Exn_set.of_list exns in
   let exns = Exn_set.union exns self.exns in
-  let variables =
-    if has_args then
-      self.variables
-    else
-      Variables.add name self.variables
-  in
-  {variables; exns}
+  {self with exns}
 
 let add_exn x self =
   {self with exns = Exn_set.add x self.exns}

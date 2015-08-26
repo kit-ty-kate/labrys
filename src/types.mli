@@ -89,3 +89,6 @@ val tyclass_wrap : Ident.TyClass.t -> (name * Kinds.t) list -> t -> t
 val extract_filled_tyclasses :
   t ->
   ((Ident.TyClass.t * t list) option list * Effects.t * t)
+
+val forall : name * Kinds.t * t -> t
+val tyclass : (Ident.TyClass.t * PrivateTypes.tyclass_arg list) * PrivateTypes.effects * t -> t
