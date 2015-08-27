@@ -65,11 +65,15 @@ let get_params ~loc f gamma args self =
         (List.length args)
         (List.length self.params)
 
-let get_instance_name ~loc tys self =
+let get_instance_name ~loc ~tyclass tys self =
   match Instances.find tys self.instances with
   | Some x -> x
   | None ->
-      Err.fail ~loc "No instance found for '???'" (* TODO: Fill ??? *)
+      Err.fail
+        ~loc
+        "No instance found for '%s %s'"
+        (Ident.TyClass.to_string tyclass)
+        (String.concat " " (List.map PrivateTypes.ty_to_string tys))
 
 (* TODO: Improve loc *)
 let add_instance ~tyclass ~current_module tys self =

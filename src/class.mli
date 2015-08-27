@@ -42,6 +42,7 @@ val get_params :
 
 val get_instance_name :
   loc:Location.t ->
+  tyclass:Ident.TyClass.t ->
   PrivateTypes.t list ->
   t ->
   Ident.Name.t

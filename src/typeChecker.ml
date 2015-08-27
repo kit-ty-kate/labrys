@@ -113,8 +113,8 @@ let wrap_typeclass_apps ~loc gamma ~tyclasses ~f g =
         let name = Ident.Name.unique name n in
         Abs (name, aux (App (f, Val name)) (succ n) xs)
     | Some (tyclass, tys)::xs ->
-        let tyclass = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
-        let name = Class.get_instance_name ~loc tys tyclass in
+        let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
+        let name = Class.get_instance_name ~loc ~tyclass tys tyclass' in
         aux (App (f, Val name)) n xs
     | [] ->
         g f
@@ -160,8 +160,8 @@ let rec aux options gamma = function
               | None ->
                   assert false
               | Some (tyclass, tys) ->
-                  let tyclass = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
-                  let name = Class.get_instance_name ~loc tys tyclass in
+                  let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
+                  let name = Class.get_instance_name ~loc ~tyclass tys tyclass' in
                   App (x, Val name)
             in
             List.fold_left aux x tyclasses_x
@@ -193,7 +193,7 @@ let rec aux options gamma = function
             let tys = List.map aux tys in
             let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
             let name =
-              Class.get_instance_name ~loc:(Ident.TyClass.loc tyclass) tys tyclass'
+              Class.get_instance_name ~loc:(Ident.TyClass.loc tyclass) ~tyclass tys tyclass'
             in
             (name, tyclass, List.map (fun x -> PrivateTypes.Filled x) tys)
       in

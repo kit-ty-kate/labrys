@@ -89,7 +89,7 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
       if Kinds.not_star kx then
         fail_not_star ~loc:loc_ret "forall";
       (Forall (name, k, ret), Kinds.Star)
-  | (loc, UnsugaredTree.TyClass ((name, args), eff, ret)) -> (* TODO: Handle parameters that appears in several classes *)
+  | (loc, UnsugaredTree.TyClass ((name, args), eff, ret)) ->
       let loc_ret = fst ret in
       let (name, gamma, args) =
         let (name, tyclass) =
