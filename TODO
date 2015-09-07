@@ -20,6 +20,7 @@
 * Records
 * Split parsers (Interfaces, Common, Implementation, FFI, …)
 * Clean error the handling system: extend an error type (+= ..) for each module that can raise errors and print them in ErrorPrinter
+* Add a builtin « fmt » operator that binds sprintf such as « fmt "%s" » has type « {Show a} => a -> String »
 
 
 == *Stashed* ==
