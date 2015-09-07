@@ -2,6 +2,28 @@
 
 == Short term ==
 
+* Builtin types: Int, Float, String, Char (UTF8)
+* Have a real FFI
+  * let print : String -[IO]-> Unit = begin
+      declare void puts(i8*)
+
+      define print(i8* x) =
+        let y = x in
+        puts(y)
+    end
+* Change the syntax:
+ * λ(a : *), T
+ * {Test a Int} => T     (instead of {Test A [Int]} => T)
+* « exception NotFound » creates now an abstract type of kind φ --> so remove Exn [Things]
+* Add a β-reduction phase in Lambda (or after Lambda) + reduce « (λx.(λy.(f x) y)) --> f »
+* Separate uppercase identifiers to be able to optimize variant calls
+* Records
+* Split parsers (Interfaces, Common, Implementation, FFI, …)
+* Clean error the handling system: extend an error type (+= ..) for each module that can raise errors and print them in ErrorPrinter
+
+
+== *Stashed* ==
+
 * Define a proper operational semantics
 * Typeclasses
  * Allow tyclass constraints in classes & instances (inheritance)
@@ -15,20 +37,12 @@
 
 == Medium term ==
 
-* Change the syntax:
- * λ(a : *), T
- * {Test a Int} => T     (instead of {Test A [Int]} => T)
-* « exception NotFound » creates now an abstract type of kind φ --> so remove Exn [Things]
-* Add a β-reduction phase in Lambda (or after Lambda) + reduce « (λx.(λy.(f x) y)) --> f »
-* Separate uppercase identifiers to be able to optimize variant calls
-* Records
 * Extensible records & extensible variants
 * Clean:
   * Fix TODO
   * Remove names in backend (« %comment = call donothing » or metadata instead) ?
   * Add functions in backend (like access_env …)
   * Add more explicit type names (like « type name = string » instead of just use a string)
-* Clean error the handling system: extend an error type (+= ..) for each module that can raise errors and print them in ErrorPrinter
 * Cleaning (parser, typechecker, backend, printer, …)
 * Unit-tests
 * Handle dynamic exceptions (allocation failures, …)
@@ -47,4 +61,3 @@
 * Do we change for System Fc ? (Recursive type aliases, GADTs, …)
 * Have a real custom GC
 * Type inference
-* Have a real FFI
