@@ -12,6 +12,12 @@ metavar typvar, X ::=
 metavar exc, Exc ::=
   {{ tex \mathit{[[exc]]} }} {{ com exception }}
 
+metavar tyclass, C ::=
+  {{ tex \mathit{[[tyclass]]} }} {{ com typeclass name }}
+
+metavar tyclassvar, z ::=
+  {{ tex \mathit{[[tyclassvar]]} }} {{ com typeclass variable }}
+
 indexvar n ::=
 indexvar m ::=
 
@@ -20,18 +26,23 @@ grammar
     |                                               ::   :: Empty                 {{ com nothing }}
     | top program                                   ::   :: Program               {{ com a piece of the program }}
 
-  top :: 'top_' ::=                                                             {{ com toplevel construct }}
-    | let x params = t                                  ::   :: Let               {{ com let binding }}
-    | let rec x params = abs                            ::   :: LetRec            {{ com recursive let binding }}
-    | type alias X = T                                  ::   :: TypeAlias         {{ com type alias }}
-    | type X variantArgs = V1 tyList1 | .. | Vn tyListn ::   :: Type              {{ com variants }}
-    | exception Exc tyList                              ::   :: Exception         {{ com exception }}
+  top :: 'top_' ::=                                                                   {{ com toplevel construct }}
+    | letBinding                                              ::   :: Val               {{ com let binding }}
+    | type alias X = T                                        ::   :: TypeAlias         {{ com type alias }}
+    | type X variantArgs = V1 tyList1 | .. | Vn tyListn       ::   :: Type              {{ com variants }}
+    | exception Exc tyList                                    ::   :: Exception         {{ com exception }}
+    | class C xList = let x1 : T1 .. let xn : Tn end          ::   :: Class             {{ com typeclass definition }}
+    | instance C TList = letBinding1 .. letBindingn end       ::   :: Instance          {{ com typeclass instance }}
 
   variantArgs :: 'variantArgs_' ::=
     | ( X1 : K1 ) .. ( Xn : Kn )        ::   :: VariantArgs
 
   tyList :: 'tyList_' ::=
     | T1 .. Tn            ::   :: Ty
+
+  letBinding :: 'letBinding_' ::=
+    | let x params = t                                  ::   :: Let               {{ com let binding }}
+    | let rec x params = abs                            ::   :: LetRec            {{ com recursive let binding }}
 
   % Expression
 
@@ -40,9 +51,11 @@ grammar
     | V                                                         ::   :: Variant           {{ com type constructors }}
     | \ ( x : T ) -> t                                          ::   :: Lam               {{ com abstraction }}
     | \ ( X : K ) -> t                                          ::   :: TLam              {{ com type abstraction }}
+    | \ ?( z : C tyclassArgs ) -> t                             ::   :: CLam              {{ com typeclass abstraction }}
     | \ params -> t                                             :: S :: MultiAbs
     | t t'                                                      ::   :: App               {{ com application }}
     | t [ T ]                                                   ::   :: TApp              {{ com type application }}
+    | t ?[ z ]                                                  ::   :: CApp              {{ com typeclass application }}
     | let x params = t1 in t2                                   ::   :: Let               {{ com let binding }}
     | let rec x params = abs in t                               ::   :: LetRec            {{ com recursive let binding }}
     | match t with p1 -> t1 | .. | pn -> tn end                 ::   :: PatternMatching   {{ com pattern matching }}
@@ -91,20 +104,22 @@ grammar
     | !                   ::   :: Eff             {{ com the effect kind }}
     | K -> K'             ::   :: KArrow          {{ com kind arrow }}
 
-  T :: T_ ::=                                   {{ com type }}
-    | X                       ::   :: var         {{ com variable }}
-    | [ eff ]                 ::   :: Eff         {{ com effects }}
-    | Unit                    :: L :: unit        {{ com Unit type (contained in the module opened by default) }}
-    | T -> T'                 :: S :: PureArrow   {{ com == T -[]-> T' }}
-    | T -[ eff ]-> T'         ::   :: Arrow       {{ com function }}
-    | \ ( X : K ) , T         ::   :: abs         {{ com operator abstraction }}
-    | forall ( X : K ) , T    ::   :: forall      {{ com forall }}
-    | forall tyParams , T     :: S :: MultiForall
-    | T T'                    ::   :: app         {{ com operator application }}
-    | ( T )                   :: S :: paren
-    | [ X |-> T ] T'          :: M :: sub
-    | T1 -> .. -> Tn -> T     :: M :: PureArrowRepeat
-    | T T1 .. Tn              :: M :: AppRepeat
+  T :: T_ ::=                                          {{ com type }}
+    | X                              ::   :: var         {{ com variable }}
+    | [ eff ]                        ::   :: Eff         {{ com effects }}
+    | Unit                           :: L :: unit        {{ com Unit type (contained in the module opened by default) }}
+    | T -> T'                        :: S :: PureArrow   {{ com == T -[]-> T' }}
+    | T -[ eff ]-> T'                ::   :: Arrow       {{ com function }}
+    | \ ( X : K ) , T                ::   :: abs         {{ com operator abstraction }}
+    | forall ( X : K ) , T           ::   :: forall      {{ com forall }}
+    | forall tyParams , T            :: S :: MultiForall
+    | { C tyclassArgs } => T         :: S :: PureTyClass {{ com == {C tyclassArgs} =[]=> }}
+    | { C tyclassArgs } =[ eff ]=> T ::   :: TyClass     {{ com typeclass }}
+    | T T'                           ::   :: app         {{ com operator application }}
+    | ( T )                          :: S :: paren
+    | [ X |-> T ] T'                 :: M :: sub
+    | T1 -> .. -> Tn -> T            :: M :: PureArrowRepeat
+    | T T1 .. Tn                     :: M :: AppRepeat
 
   % Patterns
 
@@ -136,6 +151,12 @@ grammar
 
   exnval :: 'exnval_' ::=                       {{ com runtime value of exceptions }}
     | Exc v1 .. vn      ::   :: Exc
+
+  tyclassArgs :: 'tyclassArgs_' ::=                         {{ com typeclass arguments }}
+    | X                                 ::   :: Variable      {{ com type variable }}
+    | [ T ]                             ::   :: Type          {{ com type }}
+    | X tyclassArgs                     ::   :: VariableRec   {{ com type variable + args }}
+    | [ T ] tyclassArgs                 ::   :: TypeRec       {{ com type + args }}
 
   % Syntaxic sugars
 
@@ -217,6 +238,12 @@ grammar
 
   RetVar :: 'RetVar_' ::=
     | X X1 .. Xn                ::   :: RetVar
+
+  xList :: 'xList_' ::=
+    | x1 .. xn                  ::   :: List
+
+  TList :: 'TList_' ::=
+    | T1 .. Tn                  ::   :: List
 
 subrules
   v <:: t
