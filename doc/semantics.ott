@@ -31,7 +31,7 @@ grammar
     | type alias X = T                                        ::   :: TypeAlias         {{ com type alias }}
     | type X variantArgs = V1 tyList1 | .. | Vn tyListn       ::   :: Type              {{ com variants }}
     | exception Exc tyList                                    ::   :: Exception         {{ com exception }}
-    | class C xList = let x1 : T1 .. let xn : Tn end          ::   :: Class             {{ com typeclass definition }}
+    | class C XKList = let x1 : T1 .. let xn : Tn end         ::   :: Class             {{ com typeclass definition }}
     | instance C TList = letBinding1 .. letBindingn end       ::   :: Instance          {{ com typeclass instance }}
 
   variantArgs :: 'variantArgs_' ::=
@@ -118,6 +118,7 @@ grammar
     | T T'                           ::   :: app         {{ com operator application }}
     | ( T )                          :: S :: paren
     | [ X |-> T ] T'                 :: M :: sub
+    | [ X1 |-> T1 .. Xn |-> Tn ] T   :: M :: msub
     | T1 -> .. -> Tn -> T            :: M :: PureArrowRepeat
     | T T1 .. Tn                     :: M :: AppRepeat
 
@@ -152,11 +153,12 @@ grammar
   exnval :: 'exnval_' ::=                       {{ com runtime value of exceptions }}
     | Exc v1 .. vn      ::   :: Exc
 
-  tyclassArgs :: 'tyclassArgs_' ::=                         {{ com typeclass arguments }}
+  tyclassArg :: 'tyclassArg_' ::=                         {{ com typeclass argument }}
     | X                                 ::   :: Variable      {{ com type variable }}
     | [ T ]                             ::   :: Type          {{ com type }}
-    | X tyclassArgs                     ::   :: VariableRec   {{ com type variable + args }}
-    | [ T ] tyclassArgs                 ::   :: TypeRec       {{ com type + args }}
+
+  tyclassArgs :: 'tyclassArgs_' ::=                         {{ com typeclass arguments }}
+    | tyclassArg1 .. tyclassArgn        ::   :: Args          {{ com type variable }}
 
   % Syntaxic sugars
 
@@ -171,19 +173,24 @@ grammar
   % Environments
 
   G {{ tex \Gamma }} :: G_ ::=                                  {{ com type environment }}
-    | empty                                     ::   :: em        {{ com empty }}
-    | G , x1 : T1 , .. , xn : Tn                ::   :: vn        {{ com vars }}
-    | G , V : T                                 :: S :: Vn'       {{ com type constructors (contained in the above values environment) }}
-    | G , X1 : K1 , .. , Xn : Kn                ::   :: tn        {{ com tvars }}
-    | G , X : { V1 tyList1 .. Vn tyListn }      ::   :: Vn        {{ com variants }}
-    | G , Exc tyList                            ::   :: exn       {{ com exceptions }}
-    | G1 U .. U Gn                              :: M :: union
+    | empty                                      ::   :: em        {{ com empty }}
+    | G , x1 : T1 , .. , xn : Tn                 ::   :: vn        {{ com vars }}
+    | G , V : T                                  :: S :: Vn'       {{ com type constructors (contained in the above values environment) }}
+    | G , X1 : K1 , .. , Xn : Kn                 ::   :: tn        {{ com tvars }}
+    | G , X : { V1 tyList1 .. Vn tyListn }       ::   :: Vn        {{ com variants }}
+    | G , Exc tyList                             ::   :: exn       {{ com exceptions }}
+    | G , C XKList tyclassSigs                   ::   :: class     {{ com typeclass }}
+    | G , C TList { letBinding1 .. letBindingn } ::   :: instance  {{ com instance }}
+    | G1 U .. U Gn                               :: M :: union
 
   D {{ tex \Delta }} :: D_ ::=                                  {{ com runtime environment }}
     | empty                                     ::   :: empty     {{ com empty }}
     | D , { x1 <- v1 .. xn <- vn }              ::   :: vars      {{ com vars }}
     | D , { V1 <- v1 .. Vn <- vn }              ::   :: Vvars     {{ com variant vars }}
     | D1 U .. U Dn                              :: M :: union
+
+  tyclassSigs :: 'tyclassSigs_' ::=
+    | { x1 : T1 .. xn : Tn }                    ::   :: Sigs
 
   % Ott rules
 
@@ -214,6 +221,7 @@ grammar
     | V : T isin G                                  ::   :: VTG
     | T : { Variant } isin G                        ::   :: TVnG
     | Exc tyList isin G                             ::   :: ExcTG
+    | C XKList tyclassSigs isin G                   ::   :: CG
     | set ( eff ) = set ( eff' )                    ::   :: SetEq1
     | set ( exn ) = set ( exn' )                    ::   :: SetEq2
     | V isin Variant |> T1 .. Tn                    ::   :: VVariant
@@ -239,8 +247,8 @@ grammar
   RetVar :: 'RetVar_' ::=
     | X X1 .. Xn                ::   :: RetVar
 
-  xList :: 'xList_' ::=
-    | x1 .. xn                  ::   :: List
+  XKList :: 'XKList_' ::=
+    | X1 : K1 .. Xn : Kn        ::   :: List
 
   TList :: 'TList_' ::=
     | T1 .. Tn                  ::   :: List
@@ -281,13 +289,9 @@ defns
   defn
     G |- top |> G' :: :: TopType :: Top_ {{ com Toplevel typing }} by
 
-    G |- t : [[]] T
+    G |- letBinding |> x : T
     -------------------------- :: Let
-    G |- let x = t |> G, x : T
-
-    G, x : T |- abs : [[]] T
-    ------------------------------------ :: LetRec
-    G |- let rec x : T = abs |> G, x : T
+    G |- letBinding |> G, x : T
 
     G |- T : K
     --------------------------------- :: TypeAlias
@@ -302,6 +306,52 @@ defns
     G |- T1 : K1 .. G |- Tn : Kn
     ---------------------------------------------- :: Exception
     G |- exception Exc T1 .. Tn |> G, Exc T1 .. Tn
+
+    G |- T1 : K1 .. G |- Tn : Kn
+    T'1 == {C X1 .. Xn} => T1 .. T'n == {C X1 .. Xn} => Tn
+    --------------------------------------------------------------------------------------------------------------------------------- :: Class
+    G |- class C X1 : K1 .. Xn : Kn  = let x1 : T1 .. let xn : Tn end |> G, C X1 : K1 .. Xn : Kn {x1 : T1 .. xn : Tn} U empty, x1 : T'1 U .. U empty, xn : T'n
+
+    C XKList tyclassSigs isin G
+    G |- TList tyclassSigs matches XKList {letBinding1 .. letBindingn}
+    ------------------------------------------------------------------------------------------------- :: Instance
+    G |- instance C TList = letBinding1 .. letBindingn end |> G, C TList {letBinding1 .. letBindingn}
+
+defns
+  JTyLetBinding :: '' ::=
+
+  defn
+    G |- letBinding |> x : T :: :: TyLetBinding :: TyLetBinding_ {{ com Toplevel let binding typing }} by
+
+    G |- t : [[]] T
+    ----------------------- :: Let
+    G |- let x = t |> x : T
+
+    G, x : T |- abs : [[]] T
+    --------------------------------- :: LetRec
+    G |- let rec x : T = abs |> x : T
+
+defns
+  JTyClassInstanceMatches :: '' ::=
+
+  defn
+    G |- TList tyclassSigs matches XKList { letBinding1 .. letBindingn } :: :: TyClassInstanceMatches :: TyClassInstanceMatches_ {{ com Typeclass instances matching }} by
+
+    G |- letBinding1 |> x1 : T'1 .. G |- letBindingn |> xn : T'n
+    G |- [XKList |-> TList] T1 |> T'1 .. G |- [XKList |-> TList] Tn |> T'n
+    --------------------------------------------------------------------------- :: LetBinding
+    G |- TList {x1 : T1 .. xn : Tn} matches XKList {letBinding1 .. letBindingn}
+
+defns
+  JTySubstituteInstance :: '' ::=
+
+  defn
+    G |- [ XKList |-> TList ] T |> T' :: :: TySubstituteInstance :: TySubstituteInstance_ {{ com Type substitution in instances }} by
+
+    G |- T1 : K1 .. G |- Tn : Kn
+    [X1 |-> T1 .. Xn |-> Tn] T == T'
+    ---------------------------------------------- :: Sub
+    G |- [X1 : K1 .. Xn : Kn |-> T1 .. Tn] T |> T'
 
 defns
   JTypeDecl :: '' ::=
@@ -420,6 +470,27 @@ defns
     ---------------------------- :: All
     G |- forall (X : K1), T2 : *
 
+    C X1 : K1 .. Xn : Kn tyclassSigs isin G
+    G |- tyclassArg1 : K1 .. G |- tyclassArgn : Kn
+    G |- eff : !
+    G |- T : *
+    -------------------------------------------------- :: TyClass
+    G |- {C tyclassArg1 .. tyclassArgn} =[eff]=> T : *
+
+defns
+  JTyClassArgKind :: '' ::=
+
+  defn
+    G |- tyclassArg : K :: :: TyClassArgKind :: TyClassArgKind_ {{ com Typeclass argument kinding }} by
+
+
+    ---------- :: Variable
+    G |- X : K
+
+    G |- T : K
+    ------------ :: Type
+    G |- [T] : K
+
 defns
   JEff :: '' ::=
 
@@ -512,6 +583,11 @@ defns
     T1 == T2
     ---------------------------------------- :: All
     forall (X : K), T1 == forall (X : K), T2
+
+    eff1 == eff2
+    T1 == T2
+    ------------------------------------------------------------ :: TyClass
+    {C tyclassArgs} =[eff1]=> T1 == {C tyclassArgs} =[eff2]=> T2
 
     T1 == T2
     -------------------------------- :: Abs

@@ -26,6 +26,7 @@
 == *Stashed* ==
 
 * Define a proper operational semantics
+  * Do the semantics of Γ
 * Typeclasses
  * Allow tyclass constraints in classes & instances (inheritance)
 * Typeclasses (TO THINK)
