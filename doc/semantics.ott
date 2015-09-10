@@ -24,7 +24,7 @@ indexvar m ::=
 grammar
   program :: 'program_' ::=                                                     {{ com program }}
     |                                               ::   :: Empty                 {{ com nothing }}
-    | top program                                   ::   :: Program               {{ com a piece of the program }}
+    | top1 .. topn program                          ::   :: Program               {{ com program }}
 
   top :: 'top_' ::=                                                                   {{ com toplevel construct }}
     | letBinding                                              ::   :: Val               {{ com let binding }}
@@ -33,6 +33,7 @@ grammar
     | exception Exc tyList                                    ::   :: Exception         {{ com exception }}
     | class C XKList = let x1 : T1 .. let xn : Tn end         ::   :: Class             {{ com typeclass definition }}
     | instance C TList = letBinding1 .. letBindingn end       ::   :: Instance          {{ com typeclass instance }}
+    | instance [ z ] C TList = letBinding1 .. letBindingn end ::   :: NamedInstance     {{ com typeclass named instance }}
 
   variantArgs :: 'variantArgs_' ::=
     | ( X1 : K1 ) .. ( Xn : Kn )        ::   :: VariantArgs
@@ -55,7 +56,8 @@ grammar
     | \ params -> t                                             :: S :: MultiAbs
     | t t'                                                      ::   :: App               {{ com application }}
     | t [ T ]                                                   ::   :: TApp              {{ com type application }}
-    | t ?[ z ]                                                  ::   :: CApp              {{ com typeclass application }}
+    | t ?[ z ]                                                  ::   :: CApp1             {{ com named typeclass application }}
+    | t ?[ C TList ]                                            ::   :: CApp2             {{ com typeclass application }}
     | let x params = t1 in t2                                   ::   :: Let               {{ com let binding }}
     | let rec x params = abs in t                               ::   :: LetRec            {{ com recursive let binding }}
     | match t with p1 -> t1 | .. | pn -> tn end                 ::   :: PatternMatching   {{ com pattern matching }}
@@ -64,11 +66,12 @@ grammar
     | try t with pe1 -> t1 | .. | pen -> tn end                 ::   :: Try               {{ com try }}
     | t ; t'                                                    :: S :: Seq               {{ com == let \_ : Unit = t in t' }}
     | ( t )                                                     :: S :: paren
-    | failure exnval                                            :: M :: Failure
-    | TConstr V v1 .. vn                                        :: M :: TConstr
+    | failure exnval                                            :: I :: Failure
+    | TConstr V v1 .. vn                                        :: I :: TConstr
+    | t . x                                                     :: I :: RecordGet
 
   v :: 'v_' ::=                                                     {{ com value }}
-    | TConstr V v1 .. vn                           :: M :: TConstr    {{ com type constructors }}
+    | TConstr V v1 .. vn                           :: I :: TConstr    {{ com type constructors }}
     | \ ( x : T ) -> t                             ::   :: Lam        {{ com abstraction }}
     | \ valueParams -> v                           :: S :: MultiAbs
     | let rec x params = valAbs1 in valAbs2        ::   :: LetRec     {{ com recursive let binding }}
@@ -119,8 +122,8 @@ grammar
     | ( T )                          :: S :: paren
     | [ X |-> T ] T'                 :: M :: sub
     | [ X1 |-> T1 .. Xn |-> Tn ] T   :: M :: msub
-    | T1 -> .. -> Tn -> T            :: M :: PureArrowRepeat
-    | T T1 .. Tn                     :: M :: AppRepeat
+    | T1 -> .. -> Tn -> T            :: S :: PureArrowRepeat
+    | T T1 .. Tn                     :: S :: AppRepeat
 
   % Patterns
 
@@ -157,8 +160,14 @@ grammar
     | X                                 ::   :: Variable      {{ com type variable }}
     | [ T ]                             ::   :: Type          {{ com type }}
 
+  resolvedTyclassArg :: 'resolvedTyclassArg_' ::=    {{ com Resolved typeclass argument }}
+    | [ T ]                             ::   :: Type   {{ com type }}
+
   tyclassArgs :: 'tyclassArgs_' ::=                         {{ com typeclass arguments }}
-    | tyclassArg1 .. tyclassArgn        ::   :: Args          {{ com type variable }}
+    | tyclassArg1 .. tyclassArgn        ::   :: Args          {{ com arguments }}
+
+  resolvedTyclassArgs :: 'resolvedTyclassArgs_' ::=                         {{ com Resolved typeclass arguments }}
+    | resolvedTyclassArg1 .. resolvedTyclassArgn        ::   :: Args          {{ com arguments }}
 
   % Syntaxic sugars
 
@@ -181,6 +190,7 @@ grammar
     | G , Exc tyList                             ::   :: exn       {{ com exceptions }}
     | G , C XKList tyclassSigs                   ::   :: class     {{ com typeclass }}
     | G , C TList { letBinding1 .. letBindingn } ::   :: instance  {{ com instance }}
+    | G , z : C tyclassArgs                      ::   :: ninstance {{ com named instance }}
     | G1 U .. U Gn                               :: M :: union
 
   D {{ tex \Delta }} :: D_ ::=                                  {{ com runtime environment }}
@@ -222,6 +232,8 @@ grammar
     | T : { Variant } isin G                        ::   :: TVnG
     | Exc tyList isin G                             ::   :: ExcTG
     | C XKList tyclassSigs isin G                   ::   :: CG
+    | C TList { letBinding1 .. letBindingn } isin G ::   :: InstanceG
+    | z : C tyclassArgs isin G                      ::   :: NamedInstanceG
     | set ( eff ) = set ( eff' )                    ::   :: SetEq1
     | set ( exn ) = set ( exn' )                    ::   :: SetEq2
     | V isin Variant |> T1 .. Tn                    ::   :: VVariant
@@ -231,6 +243,7 @@ grammar
     | { V <- v } isin D                             ::   :: VvD
     | ( formula ) after applications                ::   :: afterApp % HACK
     | effelm notin eff                              ::   :: effnotineff
+    | TList == resolvedTyclassArgs                  ::   :: eqTListResolved % TODO: Remove this
 
   % Metarules
 
@@ -259,6 +272,8 @@ subrules
   valAbs <:: abs
   valueLambda <:: lambda
   valueParams <:: params
+  resolvedTyclassArg <:: tyclassArg
+  resolvedTyclassArgs <:: tyclassArgs
 
 freevars
   T X :: ftv
@@ -314,8 +329,14 @@ defns
 
     C XKList tyclassSigs isin G
     G |- TList tyclassSigs matches XKList {letBinding1 .. letBindingn}
-    ------------------------------------------------------------------------------------------------- :: Instance
+    ------------------------------------------------------------------------------------------------- :: Instance1
     G |- instance C TList = letBinding1 .. letBindingn end |> G, C TList {letBinding1 .. letBindingn}
+
+    C XKList tyclassSigs isin G
+    G |- TList tyclassSigs matches XKList {letBinding1 .. letBindingn}
+    TList == resolvedTyclassArgs
+    ---------------------------------------------------------------------------------------------------------------------------------------- :: Instance2
+    G |- instance [z] C TList = letBinding1 .. letBindingn end |> G, C TList {letBinding1 .. letBindingn} U empty, z : C resolvedTyclassArgs
 
 defns
   JTyLetBinding :: '' ::=
@@ -377,6 +398,12 @@ defns
     --------------- :: Variant
     G |- V : [[]] T
 
+% NOTE: Not true (simplification)
+% TODO: Fix soundness bug
+    G |- t : [[eff1]] {C resolvedTyclassArgs} =[eff2]=> T
+    ----------------------------------------------------- :: TyClassElim
+    G |- t : [[eff1 U eff2]] T
+
     G, x1 : T1 |- t : [[eff]] T
     G |- T1 : *
     ----------------------------------------- :: Abs
@@ -396,6 +423,23 @@ defns
     G |- T1 : K
     ----------------------------------- :: TApp
     G |- t [T1] : [[eff]] [X |-> T1]T2
+
+    G, z : C tyclassArgs |- t : [[eff]] T
+    C X1 : K1 .. Xn : Kn tyclassSigs isin G
+    G |- tyclassArg1 : K1 .. G |- tyclassArgn : Kn
+    ----------------------------------------------------------------------------------------------- :: CAbs
+    G |- \?(z : C tyclassArg1 .. tyclassArgn) -> t : [[]] {C tyclassArg1 .. tyclassArgn} =[eff]=> T
+
+    z : C tyclassArgs isin G
+    G |- t : [[eff1]] {C tyclassArgs} =[eff2]=> T
+    --------------------------------------------- :: CApp1
+    G |- t ?[z] : [[eff1 U eff2]] T
+
+    C TList {letBinding1 .. letBindingn} isin G
+    G |- t : [[eff1]] {C tyclassArgs} =[eff2]=> T
+    TList matches tyclassArgs
+    --------------------------------------------- :: CApp2
+    G |- t ?[C TList] : [[eff1 U eff2]] T
 
     G |- t : [[eff]] X
     X == X'
@@ -436,6 +480,24 @@ defns
     G |- t : [[eff]] T
     ----------------------------------------------------------------------------------------------------- :: Try
     G |- try t with pe1 -> t1 | .. | pen -> tn end : [[(eff \\ [Exc1 | .. | Excn]) U eff1 U .. U effn]] T
+
+defns
+  JTListMatchesTyClassArgs :: '' ::=
+
+  defn
+    TList matches tyclassArgs :: :: TListMatchesTyClassArgs :: '' {{ com Type list matches typeclass arguments }} by
+
+
+    ----------- :: MatchAll
+    T matches X
+
+
+    ------------- :: MatchType
+    T matches [T]
+
+    T1 matches tyclassArg1 .. Tn matches tyclassArgn
+    ------------------------------------------------ :: RecRule
+    T1 .. Tn matches tyclassArg1 .. tyclassArgn
 
 defns
   Jkind :: '' ::=
