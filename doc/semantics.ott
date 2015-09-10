@@ -73,15 +73,18 @@ grammar
   v :: 'v_' ::=                                                     {{ com value }}
     | TConstr V v1 .. vn                           :: I :: TConstr    {{ com type constructors }}
     | \ ( x : T ) -> t                             ::   :: Lam        {{ com abstraction }}
+    | \ ?( z : C tyclassArgs ) -> t                ::   :: CLam       {{ com typeclass abstraction }}
     | \ valueParams -> v                           :: S :: MultiAbs
     | let rec x params = valAbs1 in valAbs2        ::   :: LetRec     {{ com recursive let binding }}
 
   valAbs :: 'valAbs_' ::=
     | \ ( x : T ) -> t                             ::   :: Lam        {{ com abstraction }}
+    | \ ?( z : C tyclassArgs ) -> t                ::   :: CLam       {{ com typeclass abstraction }}
 
   abs :: 'abs_' ::=                                        {{ com lambda abstractions }}
     | \ ( x : T ) -> t                    ::   :: Lam             {{ com abstraction }}
     | \ ( X : K ) -> abs                  ::   :: TLam            {{ com type abstraction }}
+    | \ ?( z : C tyclassArgs ) -> t       ::   :: CLam            {{ com typeclass abstraction }}
     | let x params = t in abs             ::   :: Let             {{ com let binding }}
     | let rec x params = abs1 in abs2     ::   :: LetRec          {{ com recursive let binding }}
     | abs : annot                         ::   :: Annot           {{ com type annotation }}
@@ -124,6 +127,7 @@ grammar
     | [ X1 |-> T1 .. Xn |-> Tn ] T   :: M :: msub
     | T1 -> .. -> Tn -> T            :: S :: PureArrowRepeat
     | T T1 .. Tn                     :: S :: AppRepeat
+    | { C1 tyclassArgs1 } =[ eff1 ]=> .. { Cn tyclassArgsn } =[ effn ]=> T    :: M :: TyClassRepeat
 
   % Patterns
 
@@ -242,8 +246,10 @@ grammar
     | { x <- v } isin D                             ::   :: xvD
     | { V <- v } isin D                             ::   :: VvD
     | ( formula ) after applications                ::   :: afterApp % HACK
+    | G from the typing env                         ::   :: hackEnv % HACK
     | effelm notin eff                              ::   :: effnotineff
     | TList == resolvedTyclassArgs                  ::   :: eqTListResolved % TODO: Remove this
+    | unify type variables from tyclassArgs1 .. tyclassArgsn in T1, eff2 and T2 |> eff2'', T2'     ::   :: hackUnify % HACK
 
   % Metarules
 
@@ -409,10 +415,11 @@ defns
     ----------------------------------------- :: Abs
     G |- \(x1 : T1) -> t : [[]] T1 -[eff]-> T
 
-    G |- t : [[eff1]] T1 -[eff2]-> T2
+    G |- t : [[eff1]] {C1 tyclassArgs1} =[eff'1]=> .. {Cn tyclassArgsn} =[eff'n]=> T1 -[eff2]-> T2
+    unify type variables from tyclassArgs1 .. tyclassArgsn in T1, eff2 and T2 |> eff2'', T2'
     G |- t' : [[eff3]] T1
-    ------------------------------------- :: App
-    G |- t t' : [[eff1 U eff2 U eff3]] T2
+    ----------------------------------------------------------------------------------------------------- :: App
+    G |- t t' : [[eff1 U eff2'' U eff3]] {C tyclassArgs'1} =[eff'1]=> .. {C tyclassArgs'n} =[eff'n]=> T2'
 
     G, X : K |- t : [[eff]] T
     IO notin eff
