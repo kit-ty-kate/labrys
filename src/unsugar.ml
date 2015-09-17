@@ -23,8 +23,8 @@ open Monomorphic_containers.Open
 
 open UnsugaredTree
 
-let new_upper_name_to_value ~current_module (loc, `NewUpperName name) =
-  Ident.Name.create ~loc current_module name
+let new_upper_name_to_variant ~current_module (loc, `NewUpperName name) =
+  Ident.Variant.create ~loc current_module name
 let new_upper_name_to_type ~current_module (loc, `NewUpperName name) =
   Ident.Type.create ~loc current_module name
 let new_upper_name_to_exn ~current_module (loc, `NewUpperName name) =
@@ -53,8 +53,8 @@ let transform_name imports loc local_f f = function
       let modul = get_module imports loc modul in
       f ~loc modul name
 
-let upper_name_to_value imports (loc, `UpperName name) =
-  transform_name imports loc Ident.Name.local_create Ident.Name.create name
+let upper_name_to_variant imports (loc, `UpperName name) =
+  transform_name imports loc Ident.Variant.local_create Ident.Variant.create name
 let upper_name_to_type imports (loc, `UpperName name) =
   transform_name imports loc Ident.Type.local_create Ident.Type.create name
 let upper_name_to_exn imports (loc, `UpperName name) =
@@ -159,7 +159,7 @@ let unsugar_sig ~current_module imports (name, ty) =
 
 let rec unsugar_pattern ~current_module imports = function
   | ParseTree.TyConstr (loc, name, args) ->
-      let name = upper_name_to_value imports name in
+      let name = upper_name_to_variant imports name in
       TyConstr (loc, name, List.map (unsugar_pattern ~current_module imports) args)
   | ParseTree.Any name ->
       let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
@@ -205,8 +205,8 @@ and unsugar_t ~current_module imports options = function
       let name = lower_name_to_value imports name in
       (loc, Val name)
   | (loc, ParseTree.UpperVal name) ->
-      let name = upper_name_to_value imports name in
-      (loc, Val name)
+      let name = upper_name_to_variant imports name in
+      (loc, Var name)
   | (loc, ParseTree.PatternMatching (t, patterns)) ->
       (loc, PatternMatching (unsugar_t ~current_module imports options t, List.map (unsugar_pat ~current_module imports options) patterns))
   | (loc, ParseTree.Let (value, t)) ->
@@ -282,7 +282,7 @@ and unsugar_args ~current_module imports options args (annot, t) =
   | (None, t) -> t
 
 let unsugar_variant ~current_module imports ~datatype ~args (ParseTree.Variant (name, tys)) =
-  let name = new_upper_name_to_value ~current_module name in
+  let name = new_upper_name_to_variant ~current_module name in
   let tys = List.map (unsugar_ty imports) tys in
   let uloc = Builtins.unknown_loc in
   let ty =

@@ -22,13 +22,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open Monomorphic_containers.Open
 
 type name = Ident.Name.t
+type variant_name = Ident.Variant.t
 
 type var =
   | VLeaf
   | VNode of (int * var)
 
 type mconstr =
-  | MConstr of ((name * Ident.Type.t) * mconstr list)
+  | MConstr of ((variant_name * Ident.Type.t) * mconstr list)
   | MAny of (name * Ident.Type.t)
 
 type 'a t = (mconstr * 'a) list
@@ -36,7 +37,7 @@ type 'a t = (mconstr * 'a) list
 type code_index = int
 
 type pattern =
-  | Constr of (var * (name * Ident.Type.t) * pattern list)
+  | Constr of (var * (variant_name * Ident.Type.t) * pattern list)
   | Any of (var * (name * Ident.Type.t))
 
 type matrix = (pattern list * code_index) list

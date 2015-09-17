@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Name.t
+type variant_name = Ident.Variant.t
 type exn_name = Ident.Exn.t
 type t_name = Ident.Type.t
 type tyclass_name = Ident.TyClass.t
@@ -61,7 +62,7 @@ type tyclass_app_arg =
   | TyClassInstance of tyclass_instance
 
 type pattern =
-  | TyConstr of (loc * name * pattern list)
+  | TyConstr of (loc * variant_name * pattern list)
   | Any of name
 
 type value = (name * is_rec * t)
@@ -74,6 +75,7 @@ and t' =
   | TApp of (t * ty)
   | CApp of (t * tyclass_app_arg)
   | Val of name
+  | Var of variant_name
   | PatternMatching of (t * (pattern * t) list)
   | Let of (value * t)
   | Fail of (ty * (exn_name * t list))
@@ -82,7 +84,7 @@ and t' =
 
 and t = (loc * t')
 
-type variant = Variant of (name * ty list * ty)
+type variant = Variant of (variant_name * ty list * ty)
 
 type top =
   | Value of value

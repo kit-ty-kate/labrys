@@ -23,7 +23,9 @@ type name = Ident.Name.t
 type eff_name = Ident.Exn.t
 type ty_size = int
 type used_vars = (Pattern.var * name) list
+type index = int
 type arity = int
+type length = int
 
 type is_rec =
   | Rec
@@ -35,6 +37,7 @@ and t =
   | Abs of (name * t)
   | App of (t * t)
   | Val of name
+  | Var of (index * length)
   | PatternMatching of (t * (used_vars * t) list * Pattern.t)
   | Let of (value * t)
   | Fail of (eff_name * t list)
@@ -42,11 +45,7 @@ and t =
   | RecordGet of (t * int)
   | RecordCreate of t list
 
-type variant =
-  | Variant of (name * ty_size)
-
 type top =
   | Value of value
   | Binding of (name * arity * string)
-  | Datatype of variant list
   | Exception of eff_name

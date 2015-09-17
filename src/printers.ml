@@ -25,6 +25,7 @@ let fmt = Printf.sprintf
 let (^^) = PPrint.(^^)
 
 let dump_name = Ident.Name.to_string
+let dump_variant_name = Ident.Variant.to_string
 let dump_exn_name = Ident.Exn.to_string
 let dump_t_name = Ident.Type.to_string
 let dump_tyclass_name = Ident.TyClass.to_string
@@ -378,11 +379,11 @@ module UnsugaredTree = struct
 
   let rec dump_pattern = function
     | TyConstr (_, name, []) ->
-        dump_name name
+        dump_variant_name name
     | TyConstr (_, name, args) ->
         fmt
           "(%s %s)"
-          (dump_name name)
+          (dump_variant_name name)
           (String.concat " " (List.map dump_pattern args))
     | Any name ->
         dump_name name
@@ -446,6 +447,8 @@ module UnsugaredTree = struct
           )
     | (_, Val name) ->
         PPrint.string (dump_name name)
+    | (_, Var name) ->
+        PPrint.string (dump_variant_name name)
     | (_, PatternMatching (t, cases)) ->
         PPrint.group
           (PPrint.string "match"
@@ -533,7 +536,7 @@ module UnsugaredTree = struct
     List.fold_left aux PPrint.empty args
 
   let dump_variants (Variant (name, tys, ty)) =
-    PPrint.string (fmt "| %s %s : %s" (dump_name name) (String.concat " " (List.map dump_ty tys)) (dump_ty ty))
+    PPrint.string (fmt "| %s %s : %s" (dump_variant_name name) (String.concat " " (List.map dump_ty tys)) (dump_ty ty))
 
   let dump_variants variants =
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_variants x in
@@ -602,7 +605,7 @@ module TypedTree = struct
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %s <=> %d ->" (dump_name name) index)
+           (PPrint.string (fmt "| %s <=> %d ->" (dump_variant_name name) index)
             ^^ PPrint.nest 4 (dump_patterns t)
            )
 
@@ -643,6 +646,8 @@ module TypedTree = struct
           )
     | Val name ->
         PPrint.string (dump_name name)
+    | Var (idx, len) ->
+        PPrint.string (fmt "[%d, %d]" idx len)
     | PatternMatching (t, results, patterns) ->
         dump_pattern_matching
           (dump_t t)
@@ -719,13 +724,6 @@ module TypedTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
     List.fold_left aux PPrint.empty args
 
-  let dump_variants (Variant (name, ty_size)) =
-    PPrint.string (fmt "| %s of size %d" (dump_name name) ty_size)
-
-  let dump_variants variants =
-    let aux doc x = doc ^^ PPrint.break 1 ^^ dump_variants x in
-    List.fold_left aux PPrint.empty variants
-
   let dump = function
     | Value (name, is_rec, t) ->
         PPrint.group
@@ -738,9 +736,6 @@ module TypedTree = struct
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Datatype variants ->
-        PPrint.string "type ?? ="
-        ^^ PPrint.nest 2 (dump_variants variants)
     | Exception name ->
         PPrint.string (fmt "exception %s" (dump_exn_name name))
 
@@ -941,8 +936,6 @@ module UntypedTree = struct
         ^^ PPrint.string "end"
     | Exception name ->
         PPrint.string (fmt "exception %s" (dump_exn_name name))
-    | ConstVariant (name, index, linkage) ->
-        PPrint.string (fmt "ConstVariant %s %d : %s" (dump_name name) index (dump_linkage linkage))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in

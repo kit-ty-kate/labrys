@@ -390,11 +390,20 @@ module Make (I : I) = struct
               assert false
         in
         let values = List.map aux params in
-        let size = List.length values in
-        let i = Llvm.build_inttoptr (i32 i) Type.star "" builder in
-        let value = malloc_and_init (Type.variant (succ size)) (i :: values) builder in
-        let value = Llvm.build_bitcast value Type.star "" builder in
-        (value, builder)
+        begin match List.length values with
+        | 0 ->
+            let index = Llvm.const_inttoptr (i32 i) Type.star in
+            let v = Llvm.define_global "" (Llvm.const_array Type.star [|index|]) m in
+            Llvm.set_linkage Llvm.Linkage.Private v;
+            Llvm.set_global_constant true v;
+            let v = Llvm.build_bitcast v Type.star "" builder in
+            (v, builder)
+        | size ->
+            let i = Llvm.build_inttoptr (i32 i) Type.star "" builder in
+            let value = malloc_and_init (Type.variant (succ size)) (i :: values) builder in
+            let value = Llvm.build_bitcast value Type.star "" builder in
+            (value, builder)
+        end
     | UntypedTree.Call (name, args) ->
         let f =
           match GammaMap.Value.find_opt name gamma with
@@ -534,10 +543,6 @@ module Make (I : I) = struct
           let name = Ident.Exn.to_string name in
           let v = Llvm.define_global name (string name) m in
           Llvm.set_global_constant true v;
-          top init_list xs
-      | UntypedTree.ConstVariant (name, index, linkage) :: xs ->
-          let index = Llvm.const_inttoptr (i32 index) Type.star in
-          define_global ~name ~linkage (Llvm.const_array Type.star [|index|]);
           top init_list xs
       | UntypedTree.Function (name, (name', t), linkage) :: xs ->
           let (f, builder) = Llvm.define_function c (".." ^ Ident.Name.to_string name) (Type.lambda ~env_size:0) m in

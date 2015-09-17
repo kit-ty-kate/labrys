@@ -81,6 +81,21 @@ module Value = struct
     | None -> fail k
 end
 
+module Variant = struct
+  include Make(Ident.Variant)
+
+  let fail k =
+    Err.fail
+      ~loc:(Ident.Variant.loc k)
+      "The variant '%s' was not found in Γ"
+      (Ident.Variant.to_string k)
+
+  let find k self =
+    match find k self with
+    | Some x -> x
+    | None -> fail k
+end
+
 module Types = struct
   include Make(Ident.Type)
 
@@ -110,13 +125,13 @@ module Types = struct
 end
 
 module Index = struct
-  include Make(Ident.Name)
+  include Make(Ident.Variant)
 
   let fail ~head_ty k =
     Err.fail
-      ~loc:(Ident.Name.loc k)
+      ~loc:(Ident.Variant.loc k)
       "Constructor '%s' not found in type '%s'"
-      (Ident.Name.to_string k)
+      (Ident.Variant.to_string k)
       (Ident.Type.to_string head_ty)
 
   let find ~head_ty k self =

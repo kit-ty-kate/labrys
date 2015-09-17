@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Name.t
+type variant_name = Ident.Variant.t
 
 type var = private
   | VLeaf
@@ -32,7 +33,7 @@ type 'a t = (mconstr * 'a) list
 type code_index = int
 
 type pattern = private
-  | Constr of (var * (name * Ident.Type.t) * pattern list)
+  | Constr of (var * (variant_name * Ident.Type.t) * pattern list)
   | Any of (var * (name * Ident.Type.t))
 
 type matrix = (pattern list * code_index) list

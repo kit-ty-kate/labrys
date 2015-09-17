@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type t = private
   { values : PrivateTypes.t GammaMap.Value.t
+  ; variants : (int * PrivateTypes.t * int) GammaMap.Variant.t
   ; types : PrivateTypes.visibility GammaMap.Types.t
   ; constructors : (Ident.Type.t list * (PrivateTypes.t list * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : PrivateTypes.t list GammaMap.Exn.t
@@ -31,8 +32,9 @@ type t = private
 val empty : <lib_dir : string; ..> -> t
 
 val add_value : Ident.Name.t -> PrivateTypes.t -> t -> t
+val add_variant : Ident.Variant.t -> (int * PrivateTypes.t * int) -> t -> t
 val add_type : Ident.Type.t -> PrivateTypes.visibility -> t -> t
-val add_constr : Ident.Type.t -> Ident.Name.t -> Ident.Type.t list -> (PrivateTypes.t list * int) -> t -> t
+val add_constr : Ident.Type.t -> Ident.Variant.t -> Ident.Type.t list -> (PrivateTypes.t list * int) -> t -> t
 val add_exception : Ident.Exn.t -> PrivateTypes.t list -> t -> t
 val add_tyclass : Ident.TyClass.t -> PrivateTypes.class_t -> t -> t
 val add_named_instance : Ident.Instance.t -> (Ident.TyClass.t * PrivateTypes.tyclass_arg list) -> t -> t

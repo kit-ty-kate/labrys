@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Name.t
+type variant_name = Ident.Variant.t
 
 type var = PatternMatrix.var = private
   | VLeaf
@@ -27,7 +28,7 @@ type var = PatternMatrix.var = private
 
 type index = int
 
-type constr = (name * index)
+type constr = (variant_name * index)
 
 type t =
   | Node of (var * (constr * t) list)

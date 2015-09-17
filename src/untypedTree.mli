@@ -25,6 +25,7 @@ type used_vars = GammaSet.Value.t
 type index = int
 type constr = int
 type arity = int
+type length = int
 
 type tree =
   | Node of (Pattern.var * (constr * tree) list)
@@ -51,5 +52,4 @@ type top =
   | ValueBinding of (name * name * string * linkage)
   | FunctionBinding of (name * arity * string)
   | Exception of eff_name
-  | ConstVariant of (name * index * linkage)
   | Function of (name * (name * t) * linkage)

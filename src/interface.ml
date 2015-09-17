@@ -42,7 +42,7 @@ let compile ~current_module options gamma =
           let aux ~datatype gamma i (UnsugaredTree.Variant (name, tys, ty)) =
             let tys = List.map (Types.of_parse_tree ~pure_arrow:`Partial options local_gamma') tys in
             let ty = Types.of_parse_tree ~pure_arrow:`Partial options local_gamma ty in
-            let gamma = Gamma.add_value name ty gamma in
+            let gamma = Gamma.add_variant name (i, ty, List.length tys) gamma in
             Gamma.add_constr datatype name ty_args (tys, i) gamma
           in
           List.Idx.foldi (aux ~datatype:name) gamma variants

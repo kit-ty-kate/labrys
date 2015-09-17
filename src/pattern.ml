@@ -24,6 +24,7 @@ open Monomorphic_containers.Open
 module Matrix = PatternMatrix
 
 type name = Ident.Name.t
+type variant_name = Ident.Variant.t
 
 type var = Matrix.var = private
   | VLeaf
@@ -31,7 +32,7 @@ type var = Matrix.var = private
 
 type index = int
 
-type constr = (name * index)
+type constr = (variant_name * index)
 
 type t =
   | Node of (Matrix.var * (constr * t) list)
@@ -45,7 +46,7 @@ let are_any =
   List.for_all aux
 
 let specialize name m =
-  let eq = Ident.Name.equal in
+  let eq = Ident.Variant.equal in
   let size =
     let rec aux = function
       | (Matrix.Constr (_, (x, _), args) :: _, _) :: m when eq name x ->
@@ -93,7 +94,7 @@ let create ~loc gammaD =
                   Err.fail
                     ~loc
                     "Pattern non-exostive on constructor '%s'"
-                    (Ident.Name.to_string name)
+                    (Ident.Variant.to_string name)
               | m -> aux m
             in
             ((name, index), xs) :: acc

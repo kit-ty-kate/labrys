@@ -39,6 +39,8 @@ module Name : sig
   val open_module : Module.t -> t -> t
 end
 
+module Variant : module type of Name
+
 module Type : module type of Name
 
 module Exn : module type of Name

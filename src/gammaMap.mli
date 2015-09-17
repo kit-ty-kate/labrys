@@ -35,6 +35,10 @@ module Value : sig
   val find_binding : key -> 'a t -> (key * 'a)
 end
 
+module Variant : sig
+  include S with type key = Ident.Variant.t
+end
+
 module Types : sig
   include S with type key = Ident.Type.t
 
@@ -42,7 +46,7 @@ module Types : sig
 end
 
 module Index : sig
-  include S with type key = Ident.Name.t
+  include S with type key = Ident.Variant.t
 
   val find : head_ty:Ident.Type.t -> key -> 'a t -> 'a
   val find_binding : head_ty:Ident.Type.t -> key -> 'a t -> (key * 'a)

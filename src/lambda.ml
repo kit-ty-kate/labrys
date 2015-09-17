@@ -33,6 +33,26 @@ let rec of_patterns = function
       let cases = List.map aux cases in
       Node (var, cases)
 
+let create_dyn_functions f n =
+  let rec aux params = function
+    | 0 ->
+        f params
+    | n ->
+        let name =
+          Ident.Name.local_create
+            ~loc:Builtins.unknown_loc
+            (string_of_int n)
+        in
+        let params = name :: params in
+        let (t, used_vars) = aux params (pred n) in
+        let used_vars = Set.remove name used_vars in
+        (Abs (name, used_vars, t), used_vars)
+  in
+  let (t, used_vars) = aux [] n in
+  if Int.(Set.cardinal used_vars <> 0) then
+    assert false;
+  (t, Set.empty)
+
 let rec of_results mapn m =
   let aux (acc, used_vars_acc) (wildcards, t) =
     let remove acc (_, name) = GammaMap.Value.remove name acc in
@@ -73,6 +93,10 @@ and of_typed_term mapn = function
         | None -> name
       in
       (Val name, Set.singleton name)
+  | TypedTree.Var (idx, len) ->
+      create_dyn_functions
+        (fun params -> (Variant (idx, List.rev params), Set.of_list params))
+        len
   | TypedTree.PatternMatching (t, results, patterns) ->
       let (t, used_vars1) = of_typed_term mapn t in
       let (results, used_vars2) = of_results mapn results in
@@ -161,18 +185,6 @@ let create_dyn_functions ~current_module zero_case n_case term_case (n, name, li
         assert false;
       n_case (Function (name, (name_param, t), linkage))
 
-let of_typed_variant ~current_module (acc, names, mapn) i (TypedTree.Variant (name, ty_size)) =
-  let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-  let variant =
-    create_dyn_functions
-      ~current_module
-      (fun () -> ConstVariant (name, i, linkage))
-      Fun.id
-      (fun params -> (Variant (i, List.rev params), Set.of_list params))
-      (ty_size, name, linkage)
-  in
-  (variant :: acc, names, mapn)
-
 let of_value names mapn = function
   | (name, TypedTree.Rec, TypedTree.Abs (name', t)) ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
@@ -206,13 +218,6 @@ let rec of_typed_tree ~current_module names mapn = function
         (fun x -> FunctionBinding (name', arity, value) :: x :: xs)
         (fun params -> (Call (name', List.rev_map (fun x -> Val x) params), Set.of_list params))
         (arity, name, linkage)
-  | TypedTree.Datatype variants :: xs ->
-      let (variants, names, mapn) =
-        List.Idx.foldi (of_typed_variant ~current_module) ([], names, mapn) variants
-      in
-      let variants = List.rev variants in
-      let xs = of_typed_tree ~current_module names mapn xs in
-      variants @ xs
   | TypedTree.Exception name :: xs ->
       let xs = of_typed_tree ~current_module names mapn xs in
       Exception name :: xs
@@ -224,9 +229,6 @@ let of_typed_tree ~current_module top =
   let aux names = function
     | TypedTree.Value (name, _, _) -> add name names
     | TypedTree.Binding (name, _, _) -> add name names
-    | TypedTree.Datatype variants ->
-        let aux names (TypedTree.Variant (name, _)) = add name names in
-        List.fold_left aux names variants
     | TypedTree.Exception _ -> names
   in
   let names = List.fold_left aux GammaMap.Value.empty top in

@@ -23,6 +23,7 @@ open Monomorphic_containers.Open
 
 type t =
   { values : PrivateTypes.t GammaMap.Value.t
+  ; variants : (int * PrivateTypes.t * int) GammaMap.Variant.t
   ; types : PrivateTypes.visibility GammaMap.Types.t
   ; constructors : (Ident.Type.t list * (PrivateTypes.t list * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : PrivateTypes.t list GammaMap.Exn.t
@@ -32,6 +33,7 @@ type t =
 
 let empty options =
   { values = GammaMap.Value.empty
+  ; variants = GammaMap.Variant.empty
   ; types = PrivateTypes.ty_empty options
   ; constructors = GammaMap.Constr.empty
   ; exceptions = GammaMap.Exn.empty
@@ -40,6 +42,7 @@ let empty options =
   }
 
 let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
+let add_variant k x self = {self with variants = GammaMap.Variant.add k x self.variants}
 let add_type k x self = {self with types = GammaMap.Types.add k x self.types}
 let add_constr k k2 args x self = {self with constructors = GammaMap.Constr.add k k2 args x self.constructors}
 let add_exception k x self = {self with exceptions = GammaMap.Exn.add k x self.exceptions}
@@ -52,6 +55,10 @@ let union ~imported b =
   let values =
     let aux = PrivateTypes.ty_remove_module_aliases in
     GammaMap.Value.union aux ~imported:imported.values b.values
+  in
+  let variants =
+    let aux (idx, ty, len) = (idx, PrivateTypes.ty_remove_module_aliases ty, len) in
+    GammaMap.Variant.union aux ~imported:imported.variants b.variants
   in
   let types =
     let aux = function
@@ -85,7 +92,7 @@ let union ~imported b =
     in
     GammaMap.Instance.union aux ~imported:imported.named_instances b.named_instances
   in
-  {values; types; constructors; exceptions; tyclasses; named_instances}
+  {values; variants; types; constructors; exceptions; tyclasses; named_instances}
 
 let ty_equal x y = match x, y with
   | (PrivateTypes.Abstract k1 | PrivateTypes.Alias (_, k1)), PrivateTypes.Abstract k2
@@ -93,6 +100,9 @@ let ty_equal x y = match x, y with
       Kinds.equal k1 k2
   | PrivateTypes.Alias (ty1, k1), PrivateTypes.Alias (ty2, k2) ->
       PrivateTypes.ty_equal ty1 ty2 && Kinds.equal k1 k2
+
+let variant_equal (idx1, ty1, len1) (idx2, ty2, len2) =
+  PrivateTypes.ty_equal ty1 ty2 && Int.equal idx1 idx2 && Int.equal len1 len2
 
 let idx_equal (x, y) (x', y') = List.equal PrivateTypes.ty_equal x x' && Int.equal y y'
 
@@ -105,17 +115,19 @@ let named_instances_equal (name1, args1) (name2, args2) =
 
 let is_subset_of a b =
   GammaMap.Value.diff ~eq:PrivateTypes.ty_equal a.values b.values
+  @ GammaMap.Variant.diff ~eq:variant_equal a.variants b.variants
   @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
   @ GammaMap.Constr.diff ~eq:constr_equal a.constructors b.constructors
   @ GammaMap.Exn.diff ~eq:(List.equal PrivateTypes.ty_equal) a.exceptions b.exceptions
   @ GammaMap.TyClass.diff ~eq:PrivateTypes.class_equal a.tyclasses b.tyclasses
   @ GammaMap.Instance.diff ~eq:named_instances_equal a.named_instances b.named_instances
 
-let open_module modul {values; types; constructors; exceptions; tyclasses; named_instances} =
+let open_module modul {values; variants; types; constructors; exceptions; tyclasses; named_instances} =
   let values = GammaMap.Value.open_module modul values in
+  let variants = GammaMap.Variant.open_module modul variants in
   let types = GammaMap.Types.open_module modul types in
   let constructors = GammaMap.Constr.open_module modul constructors in
   let exceptions = GammaMap.Exn.open_module modul exceptions in
   let tyclasses = GammaMap.TyClass.open_module modul tyclasses in
   let named_instances = GammaMap.Instance.open_module modul named_instances in
-  {values; types; constructors; exceptions; tyclasses; named_instances}
+  {values; variants; types; constructors; exceptions; tyclasses; named_instances}

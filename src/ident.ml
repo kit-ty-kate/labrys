@@ -73,6 +73,8 @@ module Name = struct
     (loc, modul, "." ^ name)
 end
 
+module Variant = Name
+
 module Type = Name
 
 module Exn = Name

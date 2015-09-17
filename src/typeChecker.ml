@@ -38,6 +38,7 @@ let rec well_formed_rec = function
   | (_, UnsugaredTree.TApp _)
   | (_, UnsugaredTree.CApp _)
   | (_, UnsugaredTree.Val _)
+  | (_, UnsugaredTree.Var _)
   | (_, UnsugaredTree.PatternMatching _)
   | (_, UnsugaredTree.Fail _)
   | (_, UnsugaredTree.Try _) ->
@@ -55,6 +56,7 @@ let rec get_ty_from_let = function
   | (_, UnsugaredTree.TApp _)
   | (_, UnsugaredTree.CApp _)
   | (_, UnsugaredTree.Val _)
+  | (_, UnsugaredTree.Var _)
   | (_, UnsugaredTree.PatternMatching _)
   | (_, UnsugaredTree.Fail _)
   | (_, UnsugaredTree.Try _) ->
@@ -205,6 +207,11 @@ let rec aux options gamma = function
   | (_, UnsugaredTree.Val name) ->
       let (name, ty) = GammaMap.Value.find_binding name gamma.Gamma.values in
       (Val name, ty, Effects.empty)
+  | (_, UnsugaredTree.Var name) ->
+      let (idx, ty, len) =
+        GammaMap.Variant.find name gamma.Gamma.variants
+      in
+      (Var (idx, len), ty, Effects.empty)
   | (loc, UnsugaredTree.PatternMatching (t, patterns)) ->
       let loc_t = fst t in
       let (t, ty, effect1) = aux options gamma t in
@@ -285,12 +292,11 @@ let transform_variants options ~datatype ~ty_args ~args gamma =
     | UnsugaredTree.Variant (name, tys, ty) :: xs ->
         let tys = List.map (Types.of_parse_tree ~pure_arrow:`Allow options gamma') tys in
         let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
-        let (xs, gamma) = aux (succ index) xs in
-        let gamma = Gamma.add_value name ty gamma in
-        let gamma = Gamma.add_constr datatype name ty_args (tys, index) gamma in
-        (Variant (name, Types.size ty) :: xs, gamma)
+        let gamma = aux (succ index) xs in
+        let gamma = Gamma.add_variant name (index, ty, List.length tys) gamma in
+        Gamma.add_constr datatype name ty_args (tys, index) gamma
     | [] ->
-        ([], gamma)
+        gamma
   in
   aux 0
 
@@ -352,9 +358,8 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
   | UnsugaredTree.Datatype (name, kind, args, variants) :: xs ->
       let ty_args = List.map fst args in
       let gamma = Gamma.add_type name (Types.Abstract kind) gamma in
-      let (variants, gamma) = transform_variants options ~datatype:name ~ty_args ~args gamma variants in
-      let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
-      (Datatype variants :: xs, has_main, gamma)
+      let gamma = transform_variants options ~datatype:name ~ty_args ~args gamma variants in
+      from_parse_tree ~current_module ~with_main ~has_main options gamma xs
   | UnsugaredTree.Exception (name, args) :: xs ->
       let args = List.map (Types.of_parse_tree ~pure_arrow:`Forbid options gamma) args in
       let gamma = Gamma.add_exception name args gamma in
