@@ -95,7 +95,11 @@ and of_typed_term mapn = function
       (Val name, Set.singleton name)
   | TypedTree.Var (idx, len) ->
       create_dyn_functions
-        (fun params -> (Variant (idx, List.rev params), Set.of_list params))
+        (fun params ->
+           ( Variant (idx, List.rev_map (fun x -> Val x) params)
+           , Set.of_list params
+           )
+        )
         len
   | TypedTree.PatternMatching (t, results, patterns) ->
       let (t, used_vars1) = of_typed_term mapn t in
@@ -216,7 +220,7 @@ let rec of_typed_tree ~current_module names mapn = function
         ~current_module
         (fun () -> ValueBinding (name, name', value, linkage) :: xs)
         (fun x -> FunctionBinding (name', arity, value) :: x :: xs)
-        (fun params -> (Call (name', List.rev_map (fun x -> Val x) params), Set.of_list params))
+        (fun params -> (Call (Val name', List.rev_map (fun x -> Val x) params), Set.of_list params))
         (arity, name, linkage)
   | TypedTree.Exception name :: xs ->
       let xs = of_typed_tree ~current_module names mapn xs in

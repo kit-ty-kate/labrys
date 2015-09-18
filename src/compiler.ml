@@ -88,6 +88,13 @@ let get_untyped_tree ~with_main ~interface options modul =
   let untyped_tree = Lambda.of_typed_tree ~current_module:modul typed_tree in
   (imports, untyped_tree)
 
+let get_reduced_tree ~with_main ~interface options modul =
+  let (imports, untyped_tree) =
+    get_untyped_tree ~with_main ~interface options modul
+  in
+  let reduced_tree = Beta.reduce untyped_tree in
+  (imports, reduced_tree)
+
 let rec build_imports ~imports_code options imports =
   let aux imports_code modul =
     if Module.Map.mem modul imports_code then begin
@@ -117,11 +124,11 @@ and compile ?(with_main=false) imports_code interface options modul =
           "The library %s cannot be collected"
           (Module.to_string modul);
       prerr_endline (fmt "Compiling %s" (Module.to_string modul));
-      let (imports, untyped_tree) =
-        get_untyped_tree ~with_main ~interface options modul
+      let (imports, reduced_tree) =
+        get_reduced_tree ~with_main ~interface options modul
       in
       let imports_code = build_imports ~imports_code options imports in
-      let code = Backend.make ~modul ~imports options untyped_tree in
+      let code = Backend.make ~modul ~imports options reduced_tree in
       Backend.write_bitcode ~o:cimpl code;
       BuildSystem.write_impl_infos imports modul;
       (imports_code, code)
@@ -175,6 +182,14 @@ let print_untyped_tree options modul =
     get_untyped_tree ~with_main:true ~interface:(Gamma.empty options) options modul
   in
   print_endline (Printers.UntypedTree.dump untyped_tree)
+
+let print_reduced_tree options modul =
+  let modul = Module.from_string options modul in
+  let modul = Module.open_module modul in
+  let (_, reduced_tree) =
+    get_reduced_tree ~with_main:true ~interface:(Gamma.empty options) options modul
+  in
+  print_endline (Printers.UntypedTree.dump reduced_tree)
 
 let print_early_llvm options modul =
   let modul = Module.from_string options modul in

@@ -360,10 +360,7 @@ module Make (I : I) = struct
         (Llvm.build_phi results "" builder', builder')
     | UntypedTree.Val name ->
         begin match GammaMap.Value.find_opt name gamma with
-        | Some (Global _) ->
-            (* Unused for the moment *)
-            assert false
-        | Some (Value value) ->
+        | Some (Global value) | Some (Value value) ->
             (value, builder)
         | Some (Env i) ->
             let env = load_env func builder in
@@ -378,18 +375,12 @@ module Make (I : I) = struct
             (Llvm.build_load extern "" builder, builder)
         end
     | UntypedTree.Variant (i, params) ->
-        let aux x =
-          match GammaMap.Value.find_opt x gamma with
-          | Some (Value x) -> x
-          | Some (Env i) ->
-              let env = load_env func builder in
-              Llvm.build_extractvalue env i "" builder
-          | Some RecFun
-          | Some (Global _)
-          | None ->
-              assert false
+        let aux (acc, builder) t =
+          let (t, builder) = lambda func ~jmp_buf gamma builder t in
+          (t :: acc, builder)
         in
-        let values = List.map aux params in
+        let (values, builder) = List.fold_left aux ([], builder) params in
+        let values = List.rev values in
         begin match List.length values with
         | 0 ->
             let index = Llvm.const_inttoptr (i32 i) Type.star in
@@ -404,12 +395,8 @@ module Make (I : I) = struct
             let value = Llvm.build_bitcast value Type.star "" builder in
             (value, builder)
         end
-    | UntypedTree.Call (name, args) ->
-        let f =
-          match GammaMap.Value.find_opt name gamma with
-          | Some (Global value) -> value
-          | Some (Value _) | Some (Env _) | Some RecFun | None -> assert false
-        in
+    | UntypedTree.Call (f, args) ->
+        let (f, builder) = lambda func ~jmp_buf gamma builder f in
         let (args, builder) = fold_args func ~jmp_buf gamma builder args in
         let args = Array.of_list args in
         let ty = Llvm.function_type Type.star (Array.map (fun _ -> Type.star) args) in

@@ -19,14 +19,4 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type module_name = string
-
-val compile_program : Options.program -> module_name -> unit
-val compile_module : Options.modul -> module_name -> unit
-val print_parse_tree : Options.print_parse_tree -> module_name -> unit
-val print_unsugared_tree : Options.print_unsugared_tree -> module_name -> unit
-val print_typed_tree : Options.print_typed_tree -> module_name -> unit
-val print_untyped_tree : Options.print_untyped_tree -> module_name -> unit
-val print_reduced_tree : Options.print_untyped_tree -> module_name -> unit
-val print_early_llvm : Options.print_early_llvm -> module_name -> unit
-val print_llvm : Options.print_llvm -> module_name -> unit
+val reduce : UntypedTree.top list -> UntypedTree.top list

@@ -35,8 +35,8 @@ and t =
   | Abs of (name * used_vars * t)
   | App of (t * t)
   | Val of name
-  | Variant of (index * name list)
-  | Call of (name * t list)
+  | Variant of (index * t list)
+  | Call of (t * t list)
   | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)

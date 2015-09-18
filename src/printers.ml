@@ -812,11 +812,20 @@ module UntypedTree = struct
     | Val name ->
         PPrint.string (dump_name name)
     | Variant (index, params) ->
-        let params = String.concat " " (List.map dump_name params) in
-        PPrint.string (fmt "[%d | %s]" index params)
-    | Call (name, params) ->
+        let params = List.fold_left (fun acc x -> dump_t x ^^ PPrint.break 1 ^^ acc) PPrint.empty params in
+        PPrint.group
+          (PPrint.lbracket
+           ^^ PPrint.break 1
+           ^^ PPrint.string (string_of_int index)
+           ^^ PPrint.break 1
+           ^^ PPrint.bar
+           ^^ PPrint.break 1
+           ^^ params
+           ^^ PPrint.rbracket
+          )
+    | Call (t, params) ->
         let params = List.fold_left (fun acc x -> acc ^^ PPrint.comma ^^ PPrint.space ^^ dump_t x) PPrint.empty params in
-        PPrint.string (dump_name name)
+        dump_t t
         ^^ PPrint.lparen
         ^^ params
         ^^ PPrint.rparen
