@@ -256,10 +256,22 @@ let rec ty_reduce = function
   | AppOnTy (t, ty) ->
       begin match ty_reduce t with
       | AbsOnTy (name, _, t) -> ty_reduce (ty_replace ~from:name ~ty t)
-      | Ty _ | AppOnTy _ as t -> AppOnTy (t, ty)
+      | Ty _ | AppOnTy _ as t -> AppOnTy (t, ty_reduce ty)
       | Eff _ | Fun _ | Forall _ | TyClass _ -> assert false
       end
-  | Ty _ | Eff _ | Fun _ | Forall _ | TyClass _ | AbsOnTy _ as ty -> ty
+  | Ty _ | Eff _ as ty -> ty
+  | Fun (x, eff, y) -> Fun (ty_reduce x, eff, ty_reduce y)
+  | Forall (x, k, t) -> Forall (x, k, ty_reduce t)
+  | TyClass ((x, args), eff, t) ->
+      let args =
+        let aux = function
+          | Param _ as arg -> arg
+          | Filled ty -> Filled (ty_reduce ty)
+        in
+        List.map aux args
+      in
+      TyClass ((x, args), eff, ty_reduce t)
+  | AbsOnTy (name, k, ty) -> AbsOnTy (name, k, ty_reduce ty)
 
 and ty_replace ~from ~ty =
   let rec aux = function
