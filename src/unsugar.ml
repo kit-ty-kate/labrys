@@ -312,6 +312,10 @@ let create ~current_module imports options = function
   | ParseTree.Binding (name, ty, content) ->
       let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
       Binding (name, unsugar_ty imports ty, content)
+  | ParseTree.AbstractType (name, kind) ->
+      let name = new_upper_name_to_type ~current_module name in
+      let kind = unsugar_kind kind in
+      Datatype (name, kind, [], [])
   | ParseTree.Datatype (name, args, variants) ->
       let kind = Kinds.from_list (List.map (fun (_, k) -> unsugar_kind k) args) in
       let name = new_upper_name_to_type ~current_module name in

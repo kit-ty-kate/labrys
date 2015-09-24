@@ -55,6 +55,10 @@ let string_of_doc doc =
 module ParseTree = struct
   open ParseTree
 
+  let dump_kind_opt = function
+    | Some k -> dump_k k
+    | None -> ""
+
   let dump_name = function
     | (_, `Underscore) -> "_"
     | (_, `NewLowerName name) | (_, `NewUpperName name) -> name
@@ -311,6 +315,8 @@ module ParseTree = struct
         ^^ PPrint.group (PPrint.string content)
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
+    | AbstractType (name, k) ->
+        PPrint.string (fmt "type %s %s" (dump_t_name name) (dump_kind_opt k))
     | Datatype (name, args, variants) ->
         PPrint.string (fmt "type %s %s =" (dump_t_name name) (String.concat " " (List.map dump_t_name_ty_opt args)))
         ^^ PPrint.nest 2 (dump_variants variants)

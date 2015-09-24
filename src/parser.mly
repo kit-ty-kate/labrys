@@ -90,6 +90,8 @@ body:
       { ParseTree.Type typeAlias }
   | Let name = newLowerName Colon ty = typeExpr Equal binding = Binding
       { ParseTree.Binding (name, ty, binding) }
+  | Type name = newUpperName k = kindopt
+      { ParseTree.AbstractType (name, k) }
   | datatype = datatype
       { ParseTree.Datatype datatype }
   | Exception name = newUpperName args = exceptionArgs

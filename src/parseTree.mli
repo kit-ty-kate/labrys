@@ -97,6 +97,7 @@ type variant = Variant of (new_upper_name * ty list)
 type top =
   | Value of value
   | Type of (new_upper_name * ty)
+  | AbstractType of (new_upper_name * Kinds.t option)
   | Binding of (new_lower_name * ty * string)
   | Datatype of (new_upper_name * ty_arg list * variant list)
   | Exception of (new_upper_name * ty list)
