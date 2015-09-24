@@ -81,6 +81,7 @@ and t' =
   | Fail of (ty * (exn_name * t list))
   | Try of (t * ((exn_name * name list) * t) list)
   | Annot of (t * ty_annot)
+  | Int of int
 
 and t = (loc * t')
 

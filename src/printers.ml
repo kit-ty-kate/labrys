@@ -249,6 +249,8 @@ module ParseTree = struct
            ^^ PPrint.string (dump_annot ty)
            ^^ PPrint.rparen
           )
+    | (_, Int n) ->
+        PPrint.string n
 
   and dump_cases cases =
     let aux doc (pattern, t) =
@@ -505,6 +507,8 @@ module UnsugaredTree = struct
            ^^ PPrint.string (dump_annot ty)
            ^^ PPrint.rparen
           )
+    | (_, Int n) ->
+        PPrint.string (fmt "%d" n)
 
   and dump_cases cases =
     let aux doc (pattern, t) =
@@ -694,6 +698,8 @@ module TypedTree = struct
            ^^ List.fold_left aux PPrint.empty fields
            ^^ PPrint.rbrace
           )
+    | Int n ->
+        PPrint.string (fmt "%d" n)
 
   and dump_results results =
     let aux doc i (used_vars, result) =
@@ -886,6 +892,8 @@ module UntypedTree = struct
            ^^ List.fold_left aux PPrint.empty fields
            ^^ PPrint.rbrace
           )
+    | Int n ->
+        PPrint.string (fmt "%d" n)
 
   and dump_results results =
     let aux doc i (vars, result) =

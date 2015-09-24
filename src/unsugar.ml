@@ -223,6 +223,8 @@ and unsugar_t ~current_module imports options = function
       (loc, Let ((name, NonRec, (fst x, Annot (unsugar_t ~current_module imports options x, ty))), unsugar_t ~current_module imports options y))
   | (loc, ParseTree.Annot (t, ty)) ->
       (loc, Annot (unsugar_t ~current_module imports options t, unsugar_annot imports ty))
+  | (loc, ParseTree.Int n) ->
+      (loc, Int (int_of_string n))
 
 and unsugar_args ~current_module imports options args (annot, t) =
   let rec aux = function

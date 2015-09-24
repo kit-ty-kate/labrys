@@ -39,6 +39,7 @@ let rec well_formed_rec = function
   | (_, UnsugaredTree.CApp _)
   | (_, UnsugaredTree.Val _)
   | (_, UnsugaredTree.Var _)
+  | (_, UnsugaredTree.Int _)
   | (_, UnsugaredTree.PatternMatching _)
   | (_, UnsugaredTree.Fail _)
   | (_, UnsugaredTree.Try _) ->
@@ -57,6 +58,7 @@ let rec get_ty_from_let = function
   | (_, UnsugaredTree.CApp _)
   | (_, UnsugaredTree.Val _)
   | (_, UnsugaredTree.Var _)
+  | (_, UnsugaredTree.Int _)
   | (_, UnsugaredTree.PatternMatching _)
   | (_, UnsugaredTree.Fail _)
   | (_, UnsugaredTree.Try _) ->
@@ -285,6 +287,8 @@ let rec aux options gamma = function
       let (_, ty_t, effects) as res = aux options gamma t in
       check_type options ~loc_t ~ty ~ty_t ~effects gamma;
       res
+  | (loc, UnsugaredTree.Int n) ->
+      (Int n, Types.ty ~loc gamma (Builtins.int options), Effects.empty)
 
 let transform_variants options ~datatype ~ty_args ~args gamma =
   let gamma' = List.fold_left (fun gamma (name, k) -> Gamma.add_type name (Types.Abstract k) gamma) gamma args in

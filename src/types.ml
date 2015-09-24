@@ -490,3 +490,8 @@ let tyclass ((tyclass, args), eff, t) =
   in
   List.iter aux args;
   TyClass ((tyclass, args), eff, t)
+
+let ty ~loc gamma name =
+  if not (GammaMap.Types.mem name gamma.Gamma.types) then
+    Err.fail ~loc "Type '%s' is not defined yet" (Ident.Type.to_string name);
+  Ty name

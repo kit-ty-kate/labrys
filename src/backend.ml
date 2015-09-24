@@ -453,6 +453,12 @@ module Make (I : I) = struct
         let record = malloc_and_init_array (List.length fields) fields builder in
         let record = Llvm.build_bitcast record Type.star "" builder in
         (record, builder)
+    | UntypedTree.Int n ->
+        let v = Llvm.define_global "" (Llvm.const_int Type.i32 n) m in
+        Llvm.set_linkage Llvm.Linkage.Private v;
+        Llvm.set_global_constant true v;
+        let v = Llvm.build_bitcast v Type.star "" builder in
+        (v, builder)
 
   and fold_args func ~jmp_buf gamma builder args =
     let aux (acc, builder) x =

@@ -92,3 +92,4 @@ val extract_filled_tyclasses :
 
 val forall : name * Kinds.t * t -> t
 val tyclass : (Ident.TyClass.t * PrivateTypes.tyclass_arg list) * PrivateTypes.effects * t -> t
+val ty : loc:Location.t -> Gamma.t -> Ident.Type.t -> t

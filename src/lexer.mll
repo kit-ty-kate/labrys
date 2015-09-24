@@ -28,6 +28,7 @@ module Make (Filename : sig val get : string end) = struct
 
 let prime = '\''
 let alpha = ['a'-'z' 'A'-'Z' '0'-'9']
+let num = ['0'-'9']
 let term_name = (['a'-'z'] alpha* prime*)
 let type_name = (['A'-'Z'] alpha* prime*)
 let blank = [' ' '\t']
@@ -88,6 +89,7 @@ rule main = parse
   | "--" { simple_comment lexbuf; main lexbuf }
   | term_name as name { Parser.LowerName name }
   | type_name as name { Parser.UpperName name }
+  | num+ as n { Parser.Int n }
   | eof { Parser.EOF }
   | _ { raise Error }
 

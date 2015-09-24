@@ -44,6 +44,7 @@ and t =
   | Try of (t * ((eff_name * name list) * t) list)
   | RecordGet of (t * int)
   | RecordCreate of t list
+  | Int of int
 
 type top =
   | Value of value

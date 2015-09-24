@@ -143,6 +143,8 @@ and of_typed_term mapn = function
       in
       let (fields, used_vars) = List.fold_right aux fields ([], Set.empty) in
       (RecordCreate fields, used_vars)
+  | TypedTree.Int n ->
+      (Int n, Set.empty)
 
 let get_name_and_linkage name' names mapn =
   match GammaMap.Value.find_opt name' names with

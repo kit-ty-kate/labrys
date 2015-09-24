@@ -35,6 +35,9 @@ let t_unit options =
 
 let t_unit_name = `UpperName ["Prelude"; "Unit"]
 
+let int options =
+  Ident.Type.create ~loc:unknown_loc (prelude options) "Int"
+
 let underscore_loc ~current_module loc =
   Ident.Name.create ~loc current_module "_"
 let underscore_instance_loc ~current_module loc =

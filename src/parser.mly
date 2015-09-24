@@ -59,6 +59,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Semicolon
 %token <string> LowerName
 %token <string> UpperName
+%token <string> Int
 %token <string> Binding
 %token LQMarkParen LParen RParen
 %token LQMarkBracket LBracket RBracket
@@ -174,6 +175,8 @@ termClosed:
       { (loc $startpos $endpos, ParseTree.PatternMatching (t, p)) }
   | Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
       { (loc $startpos $endpos, ParseTree.Try (t, p)) }
+  | n = Int
+      { (loc $startpos $endpos, ParseTree.Int n) }
   | LParen x = term RParen
       { x }
 

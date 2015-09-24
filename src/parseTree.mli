@@ -88,6 +88,7 @@ and t' =
   | Try of (t * ((upper_name * new_lower_name list) * t) list)
   | Seq of (t * t)
   | Annot of (t * ty_annot)
+  | Int of string
 
 and t = (loc * t')
 

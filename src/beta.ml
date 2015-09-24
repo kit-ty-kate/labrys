@@ -32,7 +32,7 @@ let replace ~from ~by =
     | Abs (name, _, _) as t when eq name -> t
     | Abs (name, used_vars, t) -> Abs (name, used_vars, aux t)
     | Val name when eq name -> by
-    | Val _ as t -> t
+    | Val _ | Int _ as t -> t
     | Variant (idx, fields) -> Variant (idx, List.map aux fields)
     | Call (t, args) -> Call (aux t, List.map aux args)
     | LetRec (name, _, _) as t when eq name -> t
@@ -52,7 +52,7 @@ let replace ~from ~by =
 let rec reduce = function
   | Let (name, t, xs) ->
       begin match reduce t with
-      | Val _ | Variant _ as by -> reduce (replace ~from:name ~by xs)
+      | Val _ | Variant _ | Int _ as by -> reduce (replace ~from:name ~by xs)
       | Let _ | App _ | Abs _
       | PatternMatching _ | Try _ | Fail _ | Call _
       | LetRec _ | RecordGet _ | RecordCreate _ as t -> Let (name, t, reduce xs)
@@ -60,12 +60,12 @@ let rec reduce = function
   | App (f, x) ->
       begin match reduce f with
       | Abs (name, _, t) -> reduce (Let (name, x, t))
-      | Let _ | App _ | Val _ | Variant _
+      | Let _ | App _ | Val _ | Variant _ | Int _
       | PatternMatching _ | Try _ | Fail _ | Call _
       | LetRec _ | RecordGet _ | RecordCreate _ as f -> App (f, reduce x)
       end
   | Abs (name, used_vars, t) -> Abs (name, used_vars, reduce t)
-  | Val _ | Variant _ as t -> t
+  | Val _ | Variant _ | Int _ as t -> t
   | Call (t, args) -> Call (reduce t, List.map reduce args)
   | LetRec (name, t, xs) -> LetRec (name, reduce t, reduce xs)
   | PatternMatching (t, results, patterns) ->
