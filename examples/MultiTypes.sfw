@@ -1,12 +1,12 @@
-type Int =
+type Nat =
   | O
-  | S Int
+  | S Nat
 
-type alias Id = Int -[]-> Int
+type alias Id = Nat -[]-> Nat
 
 let id (x:Id) = x
 
-let val = id (λ(x:Int) -> x)
+let val = id (λ(x:Nat) -> x)
 
 let idprime = id
 

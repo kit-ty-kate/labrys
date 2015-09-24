@@ -1,10 +1,10 @@
-type Int =
+type Nat =
   | O
-  | S Int
+  | S Nat
 
-let id = \(x:Int->Int) -> x
+let id = \(x:Nat->Nat) -> x
 
-let val = id (λ(x:Int) -> x)
+let val = id (λ(x:Nat) -> x)
 
 let idprime = id
 

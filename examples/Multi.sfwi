@@ -1,11 +1,11 @@
 import library Prelude
 open Prelude
 
-type Int =
+type Nat =
   | O
-  | S Int
+  | S Nat
 
-let id : (Int -[]-> Int) -> Int -> Int
+let id : (Nat -[]-> Nat) -> Nat -> Nat
 
 class Show A =
   let show : A -[]-> Unit

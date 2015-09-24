@@ -1,11 +1,11 @@
-type Int =
+type Nat =
   | O
-  | S Int
+  | S Nat
 
-let printInt : Int -[IO]-> Int = begin
+let printNat : Nat -[IO]-> Nat = begin
   @msg = constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
-  define i8* @LetRecIn..printInt(i8* %i) {
+  define i8* @LetRecIn..printNat(i8* %i) {
     %access_prim = load i8* %i
     %access = zext i8 %access_prim to i32
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
@@ -17,8 +17,8 @@ end
 let id (f:Unit -> Unit) = f Unit
 
 let f =
-  let rec g (x : Int) (y : Int) (k : Unit -[IO]-> Unit) : Unit =
-    g y x (λ(u : Unit) -> let unused = printInt x in k Unit)
+  let rec g (x : Nat) (y : Nat) (k : Unit -[IO]-> Unit) : Unit =
+    g y x (λ(u : Unit) -> let unused = printNat x in k Unit)
   in
   g
 

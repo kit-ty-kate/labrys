@@ -1,11 +1,11 @@
-type Int =
+type Nat =
   | O
-  | S Int
+  | S Nat
 
-let printInt : Int -[IO]-> Unit = begin
+let printNat : Nat -[IO]-> Unit = begin
   @msg = constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
-  define i8* @Bug..printInt(i8* %i) {
+  define i8* @Bug..printNat(i8* %i) {
     %access_prim = load i8* %i
     %access = zext i8 %access_prim to i32
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
@@ -14,25 +14,25 @@ let printInt : Int -[IO]-> Unit = begin
   }
 end
 
-let zero : Int = begin
+let zero : Nat = begin
   @Bug..zero = constant i8 0
 end
 
 let id X (x:X) = (x : X)
 
-let test = id [Int] zero
+let test = id [Nat] zero
 
 exception A
 
-let test () = try fail [Int] A with A -> O end
+let test () = try fail [Nat] A with A -> O end
 
-let test (_ : Unit) = fail [Int] A : Int
+let test (_ : Unit) = fail [Nat] A : Nat
 
 let test = try test Unit with A -> O end
 
 let apply X Y (E : φ) (f : X -[E]-> Y) (x : X) = f x
 
-let test () : Int = apply [Int] [Int] [[]] (λ(x : Int) -> x) O
-let test () : [[IO]] Int = apply [Int] [Int] [[IO]] (λ(x : Int) -> printInt x; x) O
+let test () : Nat = apply [Nat] [Nat] [[]] (λ(x : Nat) -> x) O
+let test () : [[IO]] Nat = apply [Nat] [Nat] [[IO]] (λ(x : Nat) -> printNat x; x) O
 
 let main = Unit

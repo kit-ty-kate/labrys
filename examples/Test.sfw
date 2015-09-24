@@ -1,11 +1,11 @@
-type Int =
+type Nat =
   | O
-  | S Int
+  | S Nat
 
-let printInt : Int -[IO]-> Int = begin
+let printNat : Nat -[IO]-> Nat = begin
   @msg = constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
-  define i8* @Test..printInt(i8* %i) {
+  define i8* @Test..printNat(i8* %i) {
     %access_prim = load i8* %i
     %access = zext i8 %access_prim to i32
     %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
@@ -14,19 +14,19 @@ let printInt : Int -[IO]-> Int = begin
   }
 end
 
-let zero : Int = begin
+let zero : Nat = begin
   @Test..zero = constant i8 0
 end
 
-let app (x:Int->Int) (f:Int->Int->Int) = f
+let app (x:Nat->Nat) (f:Nat->Nat->Nat) = f
 
-let id (x:Int) = x
-let const (x:Int) (y:Int) = x
+let id (x:Nat) = x
+let const (x:Nat) (y:Nat) = x
 
 let curry = app id
 
 let test = curry const
 
 let main =
-  let segfault = printInt (test zero zero) in
+  let segfault = printNat (test zero zero) in
   Unit

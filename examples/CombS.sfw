@@ -1,7 +1,7 @@
-type Int =
+type Nat =
   | O
-  | S Int
+  | S Nat
 
-let s (x:Int->Int->Int) (y:Int->Int) (z:Int) = x z (y z)
+let s (x:Nat->Nat->Nat) (y:Nat->Nat) (z:Nat) = x z (y z)
 
 let main = Unit

@@ -1,5 +1,7 @@
 type Unit = Unit
 
+type Int
+
 --notation-expr () = Unit
 --notation-param () = (_ : Unit)
 --notation-pattern () = Unit
