@@ -77,6 +77,8 @@ module Variant = Name
 
 module Type = Name
 
+module TypeVar = Name
+
 module Exn = Name
 
 module TyClass = Name

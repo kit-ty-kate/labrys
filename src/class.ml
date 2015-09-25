@@ -22,13 +22,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open Monomorphic_containers.Open
 
 type name = Ident.Name.t
-type ty_name = Ident.Type.t
+type tyvar_name = Ident.TypeVar.t
 
 module Instances = PrivateTypes.Instances
 
 (* TODO: Handle contraints *)
 type t = PrivateTypes.class_t =
-  { params : (ty_name * Kinds.t) list
+  { params : (tyvar_name * Kinds.t) list
   ; signature : (name * PrivateTypes.t) list
   ; instances : name Instances.t
   }
@@ -46,7 +46,7 @@ let get_params ~loc f gamma args self =
   try
     let aux (gamma, args) (_, k) = function
       | UnsugaredTree.Param name ->
-          let gamma = Gamma.add_type name (PrivateTypes.Abstract k) gamma in
+          let gamma = Gamma.add_type_var name k gamma in
           (gamma, PrivateTypes.Param (name, k) :: args)
       | UnsugaredTree.Filled ty ->
           let loc = fst ty in

@@ -43,6 +43,7 @@ module type EQMAP = sig
   type 'a t
 
   val empty : 'a t
+  val is_empty : 'a t -> bool
   val mem : key -> 'a t -> bool
   val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
   val add : key -> 'a -> 'a t -> 'a t

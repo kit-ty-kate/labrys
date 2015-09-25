@@ -124,6 +124,21 @@ module Types = struct
     | None -> fail k
 end
 
+module TypeVar = struct
+  include Make(Ident.TypeVar)
+
+  let fail k =
+    Err.fail
+      ~loc:(Ident.TypeVar.loc k)
+      "The type variable '%s' was not found in Γ"
+      (Ident.TypeVar.to_string k)
+
+  let find k self =
+    match find k self with
+    | Some x -> x
+    | None -> fail k
+end
+
 module Index = struct
   include Make(Ident.Variant)
 
@@ -150,7 +165,6 @@ module Constr = struct
 
   let open_module modul self =
     let aux k (args, idx) =
-      let args = List.map (Ident.Type.open_module modul) args in
       add (Ident.Type.open_module modul k) (args, Index.open_module modul idx)
     in
     fold aux self empty

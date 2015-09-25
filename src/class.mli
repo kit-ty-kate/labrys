@@ -19,12 +19,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type ty_name = Ident.Type.t
+type tyvar_name = Ident.TypeVar.t
 
 type t = PrivateTypes.class_t
 
 val create :
-  (Ident.Type.t * Kinds.t) list ->
+  (Ident.TypeVar.t * Kinds.t) list ->
   (Ident.Name.t * PrivateTypes.t) list ->
   t
 

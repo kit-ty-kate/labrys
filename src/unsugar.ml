@@ -32,9 +32,6 @@ let new_upper_name_to_exn ~current_module (loc, `NewUpperName name) =
 let new_upper_name_to_tyclass ~current_module (loc, `NewUpperName name) =
   Ident.TyClass.create ~loc current_module name
 
-let new_upper_name_to_local_type (loc, `NewUpperName name) =
-  Ident.Type.local_create ~loc name
-
 let get_module imports loc modul =
   let aux (k, _) = List.equal String.equal k modul in
   match List.find_pred aux imports with
@@ -83,18 +80,26 @@ let new_lower_name_to_instance ~current_module ~allow_underscore = function
   | (loc, `Underscore) ->
       Err.fail ~loc "Wildcards are not allowed here"
 
+let new_lower_name_to_type_var = function
+  | (loc, `NewLowerName name) ->
+      Ident.TypeVar.local_create ~loc name
+  | (loc, `Underscore) ->
+      Builtins.underscore_type_var_loc loc
+
 let unsugar_kind = Option.get Kinds.Star
 
 let unsugar_eff imports (loc, l) =
-  let aux (name, args) =
-    let name = upper_name_to_type imports name in
-    let args = List.map (upper_name_to_exn imports) args in
-    (name, args)
+  let aux = function
+    | ParseTree.EffTy (name, args) ->
+        let args = List.map (upper_name_to_exn imports) args in
+        EffTy (upper_name_to_type imports name, args)
+    | ParseTree.EffTyVar name ->
+        EffTyVar (new_lower_name_to_type_var name)
   in
   (loc, List.map aux l)
 
 let rec unsugar_tyclass_arg imports = function
-  | ParseTree.Param name -> Param (new_upper_name_to_local_type name)
+  | ParseTree.Param name -> Param (new_lower_name_to_type_var name)
   | ParseTree.Filled ty -> Filled (unsugar_ty imports ty)
 
 and unsugar_tyclass imports (name, args) =
@@ -106,7 +111,7 @@ and unsugar_ty imports =
   let unsugar_forall ~loc ty args =
     let rec aux = function
       | (name, k) :: xs ->
-          let name = new_upper_name_to_local_type name in
+          let name = new_lower_name_to_type_var name in
           (loc, Forall ((name, unsugar_kind k), aux xs))
       | [] ->
           unsugar_ty imports ty
@@ -118,7 +123,7 @@ and unsugar_ty imports =
   let unsugar_absOnTy ~loc ty args =
     let rec aux = function
       | (name, k) :: xs ->
-          let name = new_upper_name_to_local_type name in
+          let name = new_lower_name_to_type_var name in
           (loc, AbsOnTy ((name, unsugar_kind k), aux xs))
       | [] ->
           unsugar_ty imports ty
@@ -134,6 +139,9 @@ and unsugar_ty imports =
   | (loc, ParseTree.Ty name) ->
       let name = upper_name_to_type imports name in
       (loc, Ty name)
+  | (loc, ParseTree.TyVar name) ->
+      let name = new_lower_name_to_type_var name in
+      (loc, TyVar name)
   | (loc, ParseTree.Eff effects) ->
       let effects = unsugar_eff imports effects in
       (loc, Eff effects)
@@ -239,7 +247,7 @@ and unsugar_args ~current_module imports options args (annot, t) =
         in
         (ty_xs, (loc, Abs ((name, ty), xs)))
     | (loc, ParseTree.TArg (name, k)) :: xs ->
-        let name = new_upper_name_to_local_type name in
+        let name = new_lower_name_to_type_var name in
         let ty = (name, unsugar_kind k) in
         let (ty_xs, xs) = aux xs in
         let ty_xs =
@@ -287,7 +295,7 @@ let unsugar_variant ~current_module imports ~datatype ~args (ParseTree.Variant (
   let uloc = Builtins.unknown_loc in
   let ty =
     let rec aux = function
-      | [] -> List.fold_left (fun ty (x, _) -> AppOnTy ((uloc, ty), (uloc, Ty x))) (Ty datatype) args
+      | [] -> List.fold_left (fun ty (x, _) -> AppOnTy ((uloc, ty), (uloc, TyVar x))) (Ty datatype) args
       | x::xs -> Fun (x, None, (uloc, aux xs))
     in
     List.fold_left (fun ty x -> Forall (x, (uloc, ty))) (aux tys) args
@@ -298,7 +306,7 @@ let unsugar_variants ~current_module imports ~datatype ~args =
   List.map (unsugar_variant ~current_module imports ~datatype ~args)
 
 let unsugar_variant_args args =
-  let aux (x, k) = (new_upper_name_to_local_type x, unsugar_kind k) in
+  let aux (x, k) = (new_lower_name_to_type_var x, unsugar_kind k) in
   List.map aux args
 
 let create ~current_module imports options = function
@@ -326,7 +334,7 @@ let create ~current_module imports options = function
       let name = new_upper_name_to_tyclass ~current_module name in
       let params =
         let aux (name, k) =
-          (new_upper_name_to_local_type name, unsugar_kind k)
+          (new_lower_name_to_type_var name, unsugar_kind k)
         in
         List.map aux params
       in
@@ -386,7 +394,7 @@ let create_interface ~current_module imports = function
       let name = new_upper_name_to_tyclass ~current_module name in
       let params =
         let aux (name, k) =
-          (new_upper_name_to_local_type name, unsugar_kind k)
+          (new_lower_name_to_type_var name, unsugar_kind k)
         in
         List.map aux params
       in

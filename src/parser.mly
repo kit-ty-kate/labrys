@@ -208,7 +208,7 @@ tyclassAppArg:
 arg:
   | LParen name = newLowerName Colon ty = typeExpr RParen
       { ParseTree.VArg (name, ty) }
-  | ty = kind_and_name
+  | ty = kind_and_name_in_value
       { ParseTree.TArg ty }
   | LParen RParen
       { ParseTree.Unit }
@@ -258,6 +258,8 @@ typeExprUnclosed:
 typeExprClosed:
   | name = upperName
       { (loc $startpos $endpos, ParseTree.Ty name) }
+  | name = newLowerName
+      { (loc $startpos $endpos, ParseTree.TyVar name) }
   | LBracket eff = eff RBracket
       { (loc $startpos(eff) $endpos(eff), ParseTree.Eff eff) }
   | LParen x = typeExpr RParen
@@ -299,9 +301,11 @@ eff: eff = separated_list(Comma, effectName) { (loc $startpos $endpos, eff) }
 
 effectName:
   | name = upperName
-      { (name, []) }
+      { ParseTree.EffTy (name, []) }
+  | name = newLowerName
+      { ParseTree.EffTyVar name }
   | name = upperName LBracket args = eff_exn RBracket
-      { (name, args) }
+      { ParseTree.EffTy (name, args) }
 
 eff_exn:
   | name = upperName
@@ -334,13 +338,19 @@ kindopt:
   | Colon k = kind { Some k }
 
 kind_and_name:
-  | name = newUpperName
+  | name = newLowerName
       { (name, None) }
-  | LParen name = newUpperName Colon k = kind RParen
+  | LParen name = newLowerName Colon k = kind RParen
+      { (name, Some k) }
+
+kind_and_name_in_value:
+  | LBracket name = newLowerName RBracket
+      { (name, None) }
+  | LBracket name = newLowerName Colon k = kind RBracket
       { (name, Some k) }
 
 tyclass_arg:
-  | name = newUpperName
+  | name = newLowerName
       { ParseTree.Param name }
   | LBracket ty = typeExpr RBracket
       { ParseTree.Filled ty }

@@ -43,6 +43,8 @@ module Variant : module type of Name
 
 module Type : module type of Name
 
+module TypeVar : module type of Name
+
 module Exn : module type of Name
 
 module TyClass : module type of Name

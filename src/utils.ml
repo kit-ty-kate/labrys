@@ -109,6 +109,7 @@ module type EQMAP = sig
   type 'a t
 
   val empty : 'a t
+  val is_empty : 'a t -> bool
   val mem : key -> 'a t -> bool
   val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
   val add : key -> 'a -> 'a t -> 'a t
@@ -128,6 +129,8 @@ module EqMap (I : EQ) = struct
   type 'a t = (key * 'a) list
 
   let empty = []
+
+  let is_empty = List.is_empty
 
   let mem x self = List.exists (fun (y, _) -> I.equal x y) self
 

@@ -25,6 +25,7 @@ val t_unit_name : [`UpperName of string list]
 
 val underscore : current_module:Module.t -> Ident.Name.t
 val underscore_loc : current_module:Module.t -> Location.t -> Ident.Name.t
+val underscore_type_var_loc : Location.t -> Ident.TypeVar.t
 val underscore_instance_loc : current_module:Module.t -> Location.t -> Ident.Instance.t
 
 val unknown_loc : Location.t

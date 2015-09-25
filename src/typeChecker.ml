@@ -100,10 +100,10 @@ let check_type options ~loc_t ~ty:(ty, eff) ~ty_t ~effects gamma =
 let check_type_opt options ~loc_t ~ty ~ty_t ~effects gamma =
   Option.iter (fun ty -> check_type options ~loc_t ~ty ~ty_t ~effects gamma) ty
 
-let check_effects_forall ~loc_t ~effect =
+let check_effects_forall ~loc_t options ~effect =
   (* TODO: Do I need only that to ensure type soundness with side effects ?
      Do I also need to check for exceptions ? *)
-  if Effects.has_io effect then
+  if Effects.has_io options effect then
     Err.fail ~loc:loc_t "Cannot have IO effects under a forall"
 
 let wrap_typeclass_apps ~loc gamma ~tyclasses ~f g =
@@ -131,9 +131,9 @@ let rec aux options gamma = function
       let abs_ty = PrivateTypes.Fun (ty, effect, ty_expr) in
       (Abs (name, expr), abs_ty, Effects.empty)
   | (_, UnsugaredTree.TAbs ((name, k), t)) ->
-      let gamma = Gamma.add_type name (Types.Abstract k) gamma in
+      let gamma = Gamma.add_type_var name k gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
-      check_effects_forall ~loc_t:(fst t) ~effect;
+      check_effects_forall ~loc_t:(fst t) options ~effect;
       let abs_ty = Types.forall (name, k, ty_expr) in
       (expr, abs_ty, effect)
   | (_, UnsugaredTree.CAbs ((name, (tyclass, args)), t)) ->
@@ -287,7 +287,7 @@ let rec aux options gamma = function
       res
 
 let transform_variants options ~datatype ~ty_args ~args gamma =
-  let gamma' = List.fold_left (fun gamma (name, k) -> Gamma.add_type name (Types.Abstract k) gamma) gamma args in
+  let gamma' = List.fold_left (fun gamma (name, k) -> Gamma.add_type_var name k gamma) gamma args in
   let rec aux index = function
     | UnsugaredTree.Variant (name, tys, ty) :: xs ->
         let tys = List.map (Types.of_parse_tree ~pure_arrow:`Allow options gamma') tys in
@@ -346,7 +346,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       from_parse_tree ~current_module ~with_main ~has_main options gamma xs
   | UnsugaredTree.Binding (name, ty, binding) :: xs ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
-      if not (Types.has_io ty) && Types.is_fun ty then
+      if not (Types.has_io options ty) && Types.is_fun ty then
         Err.fail
           ~loc:(Ident.Name.loc name)
           "The binding '%s' cannot be pure. \
@@ -371,9 +371,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
   | UnsugaredTree.Class (name, params, sigs) :: xs ->
       let sigs =
         let gamma =
-          let aux gamma (name, k) =
-            Gamma.add_type name (Types.Abstract k) gamma
-          in
+          let aux gamma (name, k) = Gamma.add_type_var name k gamma in
           List.fold_left aux gamma params
         in
         let aux (name, ty) =

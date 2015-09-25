@@ -45,6 +45,10 @@ module Types : sig
   val find_binding : key -> 'a t -> (key * 'a)
 end
 
+module TypeVar : sig
+  include S with type key = Ident.TypeVar.t
+end
+
 module Index : sig
   include S with type key = Ident.Variant.t
 
@@ -56,7 +60,7 @@ module Constr : sig
   include S with type key = Ident.Type.t
 
   val add : key -> Index.key -> 'a -> 'b -> ('a * 'b Index.t) t -> ('a * 'b Index.t) t
-  val open_module : Module.t -> (Ident.Type.t list * 'a Index.t) t -> (Ident.Type.t list * 'a Index.t) t
+  val open_module : Module.t -> ('b * 'a Index.t) t -> ('b * 'a Index.t) t
 
   val find : key -> 'a t -> 'a option
 end

@@ -28,6 +28,7 @@ let dump_name = Ident.Name.to_string
 let dump_variant_name = Ident.Variant.to_string
 let dump_exn_name = Ident.Exn.to_string
 let dump_t_name = Ident.Type.to_string
+let dump_tyvar_name = Ident.TypeVar.to_string
 let dump_tyclass_name = Ident.TyClass.to_string
 let dump_instance_name = Ident.Instance.to_string
 let dump_k = Kinds.to_string
@@ -38,12 +39,6 @@ let rec dump_top f doc = function
   | x::xs -> dump_top f (doc ^^ f x ^^ PPrint.hardline ^^ PPrint.hardline) xs
 
 let dump_exn x = String.concat " | " (List.map dump_exn_name x)
-
-let dump_eff (_, x) =
-  let aux (name, args) =
-    fmt "%s [%s]" (dump_t_name name) (dump_exn args)
-  in
-  String.concat ", " (List.map aux x)
 
 let dump_module = Module.to_string
 
@@ -62,14 +57,16 @@ module ParseTree = struct
 
   let dump_exn_name = dump_name
   let dump_t_name = dump_name
-  let dump_eff_name = dump_name
   let dump_module = dump_name
 
   let dump_exn x = String.concat " | " (List.map dump_exn_name x)
 
   let dump_eff (_, x) =
-    let aux (name, args) =
-      fmt "%s [%s]" (dump_eff_name name) (dump_exn args)
+    let aux = function
+      | EffTy (name, args) ->
+          fmt "%s [%s]" (dump_name name) (dump_exn args)
+      | EffTyVar name ->
+          dump_name name
     in
     String.concat ", " (List.map aux x)
 
@@ -95,6 +92,7 @@ module ParseTree = struct
     | (_, Fun (param, Some eff, res)) ->
         fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
     | (_, Ty name) -> dump_t_name name
+    | (_, TyVar name) -> dump_name name
     | (_, Eff eff) -> dump_eff eff
     | (_, Forall (names, res)) ->
         fmt "(forall %s, %s)" (dump_forall_arg_list names) (dump_ty res)
@@ -337,8 +335,17 @@ end
 module UnsugaredTree = struct
   open UnsugaredTree
 
+  let dump_eff (_, x) =
+    let aux = function
+      | EffTy (name, args) ->
+          fmt "%s [%s]" (dump_t_name name) (dump_exn args)
+      | EffTyVar name ->
+          dump_tyvar_name name
+    in
+    String.concat ", " (List.map aux x)
+
   let rec dump_tyclass_arg = function
-    | Param x -> dump_t_name x
+    | Param x -> dump_tyvar_name x
     | Filled ty -> fmt "[%s]" (dump_ty ty)
 
   and dump_tyclass_args args =
@@ -354,15 +361,16 @@ module UnsugaredTree = struct
     | (_, Fun (param, Some eff, res)) ->
         fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
     | (_, Ty name) -> dump_t_name name
+    | (_, TyVar name) -> dump_tyvar_name name
     | (_, Eff eff) -> dump_eff eff
     | (_, Forall ((name, k), res)) ->
-        fmt "(forall %s : %s, %s)" (dump_t_name name) (dump_k k) (dump_ty res)
+        fmt "(forall %s : %s, %s)" (dump_tyvar_name name) (dump_k k) (dump_ty res)
     | (_, TyClass (tyclass, None, res)) ->
         fmt "({%s} => %s)" (dump_tyclass_value tyclass) (dump_ty res)
     | (_, TyClass (tyclass, Some eff, res)) ->
         fmt "({%s} =[%s]=> %s)" (dump_tyclass_value tyclass) (dump_eff eff) (dump_ty res)
     | (_, AbsOnTy ((name, k), res)) ->
-        fmt "(λ (%s : %s) -> %s)" (dump_t_name name) (dump_k k) (dump_ty res)
+        fmt "(λ (%s : %s) -> %s)" (dump_tyvar_name name) (dump_k k) (dump_ty res)
     | (_, AppOnTy (f, x)) ->
         fmt "(%s [%s])" (dump_ty f) (dump_ty x)
 
@@ -375,7 +383,7 @@ module UnsugaredTree = struct
     | NonRec -> ""
 
   let dump_ty_arg (name, k) =
-    fmt "(%s : %s)" (dump_t_name name) (dump_k k)
+    fmt "(%s : %s)" (dump_tyvar_name name) (dump_k k)
 
   let rec dump_pattern = function
     | TyConstr (_, name, []) ->
@@ -557,7 +565,7 @@ module UnsugaredTree = struct
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
     | Datatype (name, k, args, variants) ->
-        PPrint.string (fmt "type %s %s : %s =" (dump_t_name name) (String.concat " " (List.map (fun (name, k) -> fmt "(%s : %s)" (dump_t_name name) (dump_k k)) args)) (dump_k k))
+        PPrint.string (fmt "type %s %s : %s =" (dump_t_name name) (String.concat " " (List.map (fun (name, k) -> fmt "(%s : %s)" (dump_tyvar_name name) (dump_k k)) args)) (dump_k k))
         ^^ PPrint.nest 2 (dump_variants variants)
     | Exception (name, args) ->
         PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))
