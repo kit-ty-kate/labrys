@@ -79,12 +79,6 @@ let eff_is_subset_of list_eq x y =
   && Effects.subset x.effects y.effects
   && Exn_set.subset x.exns y.exns
 
-let eff_empty =
-  { variables = Variables.empty
-  ; effects = Effects.empty
-  ; exns = Exn_set.empty
-  }
-
 let eff_union x y =
   let variables = Variables.union x.variables y.variables in
   let effects = Effects.union x.effects y.effects in
@@ -104,11 +98,12 @@ let eff_union_ty ~from self =
 let eff_replace ~from ~ty self =
   let aux name self =
     if Ident.TypeVar.equal name from then
+      let self = {self with variables = Variables.remove name self.variables} in
       eff_union_ty ~from self ty
     else
-      {self with variables = Variables.add name self.variables}
+      self
   in
-  Variables.fold aux self.variables eff_empty
+  Variables.fold aux self.variables self
 
 let ty_equal eff_eq x y =
   let rec aux eq_list = function

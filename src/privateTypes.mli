@@ -69,8 +69,6 @@ val ty_reduce : t -> t
 
 val ty_replace : from:Ident.TypeVar.t -> ty:t -> t -> t
 
-val eff_empty : effects
-
 val eff_union : effects -> effects -> effects
 
 val eff_union_ty' : effects -> t -> effects

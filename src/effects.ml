@@ -31,7 +31,11 @@ type t = PrivateTypes.effects =
   ; exns : Exn_set.t
   }
 
-let empty = PrivateTypes.eff_empty
+let empty =
+  { variables = Variables.empty
+  ; effects = Effects.empty
+  ; exns = Exn_set.empty
+  }
 
 let is_empty = PrivateTypes.eff_is_empty
 
@@ -80,7 +84,11 @@ let add options gamma eff self =
       let exns = Exn_set.union exns self.exns in
       {self with exns}
   | UnsugaredTree.EffTyVar name ->
-      ignore (GammaMap.TypeVar.find name gamma.Gamma.type_vars);
+      let k = GammaMap.TypeVar.find name gamma.Gamma.type_vars in
+      if not (Kinds.is_effect k) then
+        Err.fail
+          ~loc:(Ident.TypeVar.loc name)
+          "Only kind φ is accepted here";
       let variables = Variables.add name self.variables in
       {self with variables}
 
