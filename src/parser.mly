@@ -344,9 +344,9 @@ kind_and_name:
       { (name, Some k) }
 
 kind_and_name_in_value:
-  | LBracket name = newLowerName RBracket
+  | LBrace name = newLowerName RBrace
       { (name, None) }
-  | LBracket name = newLowerName Colon k = kind RBracket
+  | LBrace name = newLowerName Colon k = kind RBrace
       { (name, Some k) }
 
 tyclass_arg:
