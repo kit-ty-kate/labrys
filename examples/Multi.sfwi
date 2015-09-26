@@ -7,6 +7,6 @@ type Int =
 
 let id : (Int -[]-> Int) -> Int -> Int
 
-class Show A =
-  let show : A -[]-> Unit
+class Show a =
+  let show : a -[]-> Unit
 end

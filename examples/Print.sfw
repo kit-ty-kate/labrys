@@ -2,7 +2,7 @@ type Int =
   | O
   | S Int
 
-let printInt : forall X, X -[IO]-> Int = begin
+let printInt : forall x, x -[IO]-> Int = begin
   @msg = constant [4 x i8] c"%d\0a\00"
   declare i32 @printf(i8*, ...)
   define i8* @Print..printInt(i8* %i) {

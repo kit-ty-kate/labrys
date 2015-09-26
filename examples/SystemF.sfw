@@ -18,7 +18,7 @@ let zero : Int = begin
   @SystemF..zero = constant i8 0
 end
 
-let id X (x:X) (x:X) = x
+let id {x} (x:x) (x:x) = x
 
 let test = id [Int]
 

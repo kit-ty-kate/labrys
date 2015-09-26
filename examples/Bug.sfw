@@ -18,7 +18,7 @@ let zero : Int = begin
   @Bug..zero = constant i8 0
 end
 
-let id X (x:X) = (x : X)
+let id {x} (x:x) = (x : x)
 
 let test = id [Int] zero
 
@@ -30,7 +30,7 @@ let test (_ : Unit) = fail [Int] A : Int
 
 let test = try test Unit with A -> O end
 
-let apply X Y (E : φ) (f : X -[E]-> Y) (x : X) = f x
+let apply {x} {y} {e : φ} (f : x -[e]-> y) (x : x) = f x
 
 let test () : Int = apply [Int] [Int] [[]] (λ(x : Int) -> x) O
 let test () : [[IO]] Int = apply [Int] [Int] [[IO]] (λ(x : Int) -> printInt x; x) O
