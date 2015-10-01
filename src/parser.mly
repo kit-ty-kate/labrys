@@ -98,9 +98,9 @@ body:
       { ParseTree.Exception (name, args) }
   | Open modul = upperName
       { ParseTree.Open modul }
-  | Class name = newUpperName params = nonempty_list(kind_and_name) Equal sigs = nonempty_list(letSig) End
+  | Class name = newUpperName params = kind_and_name+ Equal sigs = letSig+ End
       { ParseTree.Class (name, params, sigs) }
-  | Instance name = instanceName x = tyclassInstance Equal values = nonempty_list(let_case) End
+  | Instance name = instanceName x = tyclassInstance Equal values = let_case+ End
       { ParseTree.Instance (x, name, values) }
 
 instanceName:
@@ -137,7 +137,7 @@ let_aux:
       { Some ty }
 
 datatype:
-  | Type name = newUpperName args = list(kind_and_name) Equal option(Pipe) variants = separated_nonempty_list(Pipe, variant)
+  | Type name = newUpperName args = kind_and_name* Equal Pipe? variants = separated_nonempty_list(Pipe, variant)
       { (name, args, variants) }
 
 typeAlias:
@@ -173,9 +173,9 @@ termClosed:
       { (loc $startpos $endpos, ParseTree.LowerVal name) }
   | name = upperName
       { (loc $startpos $endpos, ParseTree.UpperVal name) }
-  | Match t = term With option(Pipe) p = separated_nonempty_list(Pipe, pattern) End
+  | Match t = term With Pipe? p = separated_nonempty_list(Pipe, pattern) End
       { (loc $startpos $endpos, ParseTree.PatternMatching (t, p)) }
-  | Try t = term With option(Pipe) p = separated_nonempty_list(Pipe, exn_pattern) End
+  | Try t = term With Pipe? p = separated_nonempty_list(Pipe, exn_pattern) End
       { (loc $startpos $endpos, ParseTree.Try (t, p)) }
   | n = Int
       { (loc $startpos $endpos, ParseTree.Int n) }
@@ -203,7 +203,7 @@ app:
       { (loc $startpos $endpos, ParseTree.TyClassApp (f, tyclass)) }
 
 tyclassInstance:
-  | name = upperName tys = nonempty_list(typeExprClosed)
+  | name = upperName tys = typeExprClosed+
       { (name, tys) }
 
 tyclassAppArg:
@@ -235,7 +235,7 @@ nonempty_args(rest):
       }
 
 tyclass:
-  | name = upperName args = nonempty_list(tyclass_arg)
+  | name = upperName args = tyclass_arg+
       { (name, args) }
 
 typeExprStrictlyUnclosed:
@@ -243,13 +243,13 @@ typeExprStrictlyUnclosed:
       { (loc $startpos $endpos, ParseTree.Fun (param, None, ret)) }
   | param = typeExprProtectedPermissive LArrowEff eff = eff RArrowEff ret = typeExpr
       { (loc $startpos $endpos, ParseTree.Fun (param, Some eff, ret)) }
-  | Forall x = nonempty_list(kind_and_name) Comma ret = typeExpr
+  | Forall x = kind_and_name+ Comma ret = typeExpr
       { (loc $startpos $endpos, ParseTree.Forall (x, ret)) }
   | LBrace tyclass = tyclass RBrace DoubleArrow ty = typeExpr
       { (loc $startpos $endpos, ParseTree.TyClass (tyclass, None, ty)) }
   | LBrace tyclass = tyclass RBrace LDoubleArrowEff eff = eff RDoubleArrowEff ty = typeExpr
       { (loc $startpos $endpos, ParseTree.TyClass (tyclass, Some eff, ty)) }
-  | Lambda x = nonempty_list(kind_and_name) Comma ret = typeExpr
+  | Lambda x = kind_and_name+ Comma ret = typeExpr
       { (loc $startpos $endpos, ParseTree.AbsOnTy (x, ret)) }
 
 typeExprNonStrictlyUnclosed:
@@ -327,11 +327,11 @@ exceptionValueArgs:
       { [x] }
 
 exn_pattern:
-  | exn = upperName args = list(newLowerName) Arrow t = term
+  | exn = upperName args = newLowerName* Arrow t = term
       { ((exn, args), t) }
 
 variant:
-  | name = newUpperName tys = list(typeExprClosed)
+  | name = newUpperName tys = typeExprClosed*
       { ParseTree.Variant (name, tys) }
 
 kindopt:
@@ -361,7 +361,7 @@ patClosed:
       { ParseTree.TyConstr (loc $startpos $endpos, name, []) }
 
 patUnclosed:
-  | name = upperName args = nonempty_list(patProtected)
+  | name = upperName args = patProtected+
       { ParseTree.TyConstr (loc $startpos $endpos, name, args) }
 
 pat:
@@ -420,7 +420,7 @@ bodyInterface:
       { ParseTree.IException (name, args) }
   | Open modul = upperName
       { ParseTree.IOpen modul }
-  | Class name = newUpperName params = nonempty_list(kind_and_name) Equal sigs = nonempty_list(letSig) End
+  | Class name = newUpperName params = kind_and_name+ Equal sigs = letSig+ End
       { ParseTree.IClass (name, params, sigs) }
   | Instance name = instanceName x = tyclassInstance
       { ParseTree.IInstance (x, name) }
@@ -438,7 +438,7 @@ import:
 (********* Functions ***********)
 
 entry(body):
-  | imports = list(import) body = body_list(body)
+  | imports = import* body = body_list(body)
       { (imports, body) }
 
 body_list(body):
