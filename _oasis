@@ -19,6 +19,7 @@ Executable cervoise
     pprint,
     re,
     msgpack,
+    uutf,
     llvm,
     llvm.irreader,
     llvm.passmgr_builder,

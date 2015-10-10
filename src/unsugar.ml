@@ -174,6 +174,38 @@ let unsugar_tyclass_app_arg imports = function
   | ParseTree.TyClassInstance instance ->
       TyClassInstance (unsugar_instance imports instance)
 
+let unsugar_string ~loc s =
+  let s = String.of_list s in
+  let d = Uutf.decoder ~encoding:`UTF_8 (`String s) in
+  let rec aux acc = match Uutf.decode d with
+    | `Uchar c -> aux (c :: acc)
+    | `End -> List.rev acc
+    | `Malformed _ -> Err.fail ~loc "Malformed UTF-8 string"
+    | `Await -> assert false
+  in
+  aux []
+
+let unsugar_string ~loc s =
+  let rec aux acc = function
+    | [] -> List.rev acc
+    | 0x5C::0x5C::xs -> aux (int_of_char '\\' :: acc) xs
+    | 0x5C::0x22::xs -> aux (int_of_char '"' :: acc) xs
+    | 0x5C::0x27::xs -> aux (int_of_char '\'' :: acc) xs
+    | 0x5C::0x6E::xs -> aux (int_of_char '\n' :: acc) xs
+    | 0x5C::0x72::xs -> aux (int_of_char '\r' :: acc) xs
+    | 0x5C::0x74::xs -> aux (int_of_char '\t' :: acc) xs
+    (*  | '\\' (num as n1) (num as n2) (num as n3)
+        | "\\x" hexa hexa *) (* TODO *)
+    | x::xs -> aux (x :: acc) xs
+  in
+  aux [] (unsugar_string ~loc s)
+
+let unsugar_char ~loc s =
+  match unsugar_string ~loc s with
+  | [] -> Err.fail ~loc "A character cannot be empty"
+  | [c] -> c
+  | _ -> Err.fail ~loc "A character cannot contain several characters"
+
 let rec unsugar_value ~current_module imports options (name, is_rec, (args, x)) =
   let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
   (name, is_rec, unsugar_args ~current_module imports options args x)
@@ -228,9 +260,13 @@ and unsugar_t ~current_module imports options = function
   | (loc, ParseTree.Const (ParseTree.Float n)) ->
       (loc, Const (Float (float_of_string n)))
   | (loc, ParseTree.Const (ParseTree.Char c)) ->
+      let c = unsugar_char ~loc c in
       (loc, Const (Char c))
   | (loc, ParseTree.Const (ParseTree.String s)) ->
-      (loc, Const (String (String.of_list s)))
+      let s = unsugar_string ~loc s in
+      let buf = Buffer.create 64 in
+      List.iter (Uutf.Buffer.add_utf_8 buf) s;
+      (loc, Const (String (Buffer.contents buf)))
 
 and unsugar_args ~current_module imports options args (annot, t) =
   let rec aux = function

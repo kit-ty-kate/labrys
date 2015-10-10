@@ -30,7 +30,7 @@ type length = int
 type const = TypedTree.const =
   | Int of int
   | Float of float
-  | Char of char
+  | Char of int
   | String of string
 
 type tree =

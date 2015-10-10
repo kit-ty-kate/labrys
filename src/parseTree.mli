@@ -76,7 +76,7 @@ type tyclass_app_arg =
 type const =
   | Int of string
   | Float of string
-  | Char of char
+  | Char of char list
   | String of char list
 
 type value = (new_lower_name * is_rec * (arg list * (ty_annot option * t)))

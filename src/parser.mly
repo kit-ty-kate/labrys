@@ -61,7 +61,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token <string> UpperName
 %token <string> Int
 %token <string> Float
-%token <char> Char
+%token <char list> Char
 %token <char list> String
 %token <string> Binding
 %token LQMarkParen LParen RParen

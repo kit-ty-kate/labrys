@@ -34,7 +34,7 @@ type is_rec =
 type const =
   | Int of int
   | Float of float
-  | Char of char
+  | Char of int
   | String of string
 
 type value = (name * is_rec * t)

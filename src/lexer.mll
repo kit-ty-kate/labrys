@@ -29,11 +29,11 @@ module Make (Filename : sig val get : string end) = struct
 let prime = '\''
 let alpha = ['a'-'z' 'A'-'Z' '0'-'9']
 let num = ['0'-'9']
+(*let hexa = [num 'a'-'f' 'A'-'F']*)
 let term_name = (['a'-'z'] alpha* prime*)
 let type_name = (['A'-'Z'] alpha* prime*)
 let int = num+
 let float = (num+ '.' num+)
-let char = _
 let blank = [' ' '\t']
 
 rule main = parse
@@ -94,7 +94,7 @@ rule main = parse
   | type_name as name { Parser.UpperName name }
   | int as n { Parser.Int n }
   | float as n { Parser.Float n }
-  | '\'' (char as c) '\'' { Parser.Char c }
+  | '\'' { Parser.Char (get_char lexbuf) }
   | '"' { Parser.String (get_string lexbuf) }
   | eof { Parser.EOF }
   | _ { raise Error }
@@ -116,9 +116,16 @@ and simple_comment = parse
   | eof { () }
   | _ { simple_comment lexbuf }
 
+and get_char = parse
+  | "\\'" { '\'' :: get_char lexbuf }
+  | '\'' { [] }
+  | _ as c { c :: get_char lexbuf }
+  | eof { raise Error }
+
 and get_string = parse
+  | "\\\"" { '\"' :: get_string lexbuf }
   | '"' { [] }
-  | char as c { c :: get_string lexbuf }
-  | eof | _ { raise Error }
+  | _ as c { c :: get_string lexbuf }
+  | eof { raise Error }
 
 { end }

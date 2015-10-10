@@ -249,10 +249,9 @@ module Make (I : I) = struct
         (value, Map.add var value vars)
 
   let get_const = function
-    | UntypedTree.Int n -> Llvm.const_int Type.i32 n
+    | UntypedTree.Int n | UntypedTree.Char n -> Llvm.const_int Type.i32 n
     | UntypedTree.Float n -> Llvm.const_float Type.float n
-    | UntypedTree.Char c -> Llvm.const_int Type.i8 (int_of_char c)
-    | UntypedTree.String s -> Llvm.const_string c s
+    | UntypedTree.String s -> Llvm.const_string c (s ^ "\x00")
 
   let rec create_branch func ~default vars gamma value results tree =
     let block = Llvm.append_block c "" func in

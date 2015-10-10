@@ -258,9 +258,9 @@ module ParseTree = struct
     | (_, Const (Float n)) ->
         PPrint.string n
     | (_, Const (Char c)) ->
-        PPrint.char c
+        PPrint.string (fmt "'%s'" (String.of_list c))
     | (_, Const (String s)) ->
-        PPrint.string (String.of_list s)
+        PPrint.string (fmt "\"%s\"" (String.of_list s))
 
   and dump_cases cases =
     let aux doc (pattern, t) =
@@ -524,9 +524,9 @@ module UnsugaredTree = struct
     | (_, Const (Float n)) ->
         PPrint.string (fmt "%f" n)
     | (_, Const (Char c)) ->
-        PPrint.char c
+        PPrint.string (fmt "'%lc'" c)
     | (_, Const (String s)) ->
-        PPrint.string s
+        PPrint.string (fmt "\"%s\"" s)
 
   and dump_cases cases =
     let aux doc (pattern, t) =
@@ -721,9 +721,9 @@ module TypedTree = struct
     | Const (Float n) ->
         PPrint.string (fmt "%f" n)
     | Const (Char c) ->
-        PPrint.char c
+        PPrint.string (fmt "'%lc'" c)
     | Const (String s) ->
-        PPrint.string s
+        PPrint.string (fmt "\"%s\"" s)
 
   and dump_results results =
     let aux doc i (used_vars, result) =
@@ -921,9 +921,9 @@ module UntypedTree = struct
     | Const (Float n) ->
         PPrint.string (fmt "%f" n)
     | Const (Char c) ->
-        PPrint.char c
+        PPrint.string (fmt "'%lc'" c)
     | Const (String s) ->
-        PPrint.string s
+        PPrint.string (fmt "\"%s\"" s)
 
   and dump_results results =
     let aux doc i (vars, result) =

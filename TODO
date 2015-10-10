@@ -2,7 +2,6 @@
 
 == Short term ==
 
-* Switch to UTF-8 Char
 * Have a real FFI
   * let print : String -[IO]-> Unit = begin
       declare void puts(i8*)
