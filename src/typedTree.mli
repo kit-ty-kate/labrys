@@ -31,6 +31,12 @@ type is_rec =
   | Rec
   | NonRec
 
+type const =
+  | Int of int
+  | Float of float
+  | Char of char
+  | String of string
+
 type value = (name * is_rec * t)
 
 and t =
@@ -44,7 +50,7 @@ and t =
   | Try of (t * ((eff_name * name list) * t) list)
   | RecordGet of (t * int)
   | RecordCreate of t list
-  | Int of int
+  | Const of const
 
 type top =
   | Value of value

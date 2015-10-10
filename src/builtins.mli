@@ -24,6 +24,9 @@ val t_unit : <lib_dir : string; ..> -> Ident.Type.t
 val t_unit_name : [`UpperName of string list]
 
 val int : <lib_dir : string; ..> -> Ident.Type.t
+val float : <lib_dir : string; ..> -> Ident.Type.t
+val char : <lib_dir : string; ..> -> Ident.Type.t
+val string : <lib_dir : string; ..> -> Ident.Type.t
 
 val underscore : current_module:Module.t -> Ident.Name.t
 val underscore_loc : current_module:Module.t -> Location.t -> Ident.Name.t

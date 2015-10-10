@@ -60,6 +60,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token <string> LowerName
 %token <string> UpperName
 %token <string> Int
+%token <string> Float
+%token <char> Char
+%token <char list> String
 %token <string> Binding
 %token LQMarkParen LParen RParen
 %token LQMarkBracket LBracket RBracket
@@ -178,7 +181,13 @@ termClosed:
   | Try t = term With Pipe? p = separated_nonempty_list(Pipe, exn_pattern) End
       { (loc $startpos $endpos, ParseTree.Try (t, p)) }
   | n = Int
-      { (loc $startpos $endpos, ParseTree.Int n) }
+      { (loc $startpos $endpos, ParseTree.Const (ParseTree.Int n)) }
+  | n = Float
+      { (loc $startpos $endpos, ParseTree.Const (ParseTree.Float n)) }
+  | c = Char
+      { (loc $startpos $endpos, ParseTree.Const (ParseTree.Char c)) }
+  | s = String
+      { (loc $startpos $endpos, ParseTree.Const (ParseTree.String s)) }
   | LParen x = term RParen
       { x }
 

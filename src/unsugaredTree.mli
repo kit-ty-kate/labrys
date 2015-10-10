@@ -65,6 +65,12 @@ type pattern =
   | TyConstr of (loc * variant_name * pattern list)
   | Any of name
 
+type const =
+  | Int of int
+  | Float of float
+  | Char of char
+  | String of string
+
 type value = (name * is_rec * t)
 
 and t' =
@@ -81,7 +87,7 @@ and t' =
   | Fail of (ty * (exn_name * t list))
   | Try of (t * ((exn_name * name list) * t) list)
   | Annot of (t * ty_annot)
-  | Int of int
+  | Const of const
 
 and t = (loc * t')
 

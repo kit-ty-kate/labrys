@@ -73,6 +73,12 @@ type tyclass_app_arg =
   | TyClassVariable of lower_name
   | TyClassInstance of tyclass_instance
 
+type const =
+  | Int of string
+  | Float of string
+  | Char of char
+  | String of char list
+
 type value = (new_lower_name * is_rec * (arg list * (ty_annot option * t)))
 
 and t' =
@@ -88,7 +94,7 @@ and t' =
   | Try of (t * ((upper_name * new_lower_name list) * t) list)
   | Seq of (t * t)
   | Annot of (t * ty_annot)
-  | Int of string
+  | Const of const
 
 and t = (loc * t')
 

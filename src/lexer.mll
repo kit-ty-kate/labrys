@@ -31,6 +31,9 @@ let alpha = ['a'-'z' 'A'-'Z' '0'-'9']
 let num = ['0'-'9']
 let term_name = (['a'-'z'] alpha* prime*)
 let type_name = (['A'-'Z'] alpha* prime*)
+let int = num+
+let float = (num+ '.' num+)
+let char = _
 let blank = [' ' '\t']
 
 rule main = parse
@@ -89,7 +92,10 @@ rule main = parse
   | "--" { simple_comment lexbuf; main lexbuf }
   | term_name as name { Parser.LowerName name }
   | type_name as name { Parser.UpperName name }
-  | num+ as n { Parser.Int n }
+  | int as n { Parser.Int n }
+  | float as n { Parser.Float n }
+  | '\'' (char as c) '\'' { Parser.Char c }
+  | '"' { Parser.String (get_string lexbuf) }
   | eof { Parser.EOF }
   | _ { raise Error }
 
@@ -109,5 +115,10 @@ and simple_comment = parse
   | '\n' { Lexing.new_line lexbuf }
   | eof { () }
   | _ { simple_comment lexbuf }
+
+and get_string = parse
+  | char as c { c :: get_string lexbuf }
+  | '"' { [] }
+  | eof | _ { raise Error }
 
 { end }

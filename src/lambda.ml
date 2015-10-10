@@ -143,8 +143,8 @@ and of_typed_term mapn = function
       in
       let (fields, used_vars) = List.fold_right aux fields ([], Set.empty) in
       (RecordCreate fields, used_vars)
-  | TypedTree.Int n ->
-      (Int n, Set.empty)
+  | TypedTree.Const const ->
+      (Const const, Set.empty)
 
 let get_name_and_linkage name' names mapn =
   match GammaMap.Value.find_opt name' names with
@@ -215,8 +215,8 @@ let rec of_typed_tree ~current_module names mapn = function
       let xs = of_typed_tree ~current_module names mapn xs in
       value :: xs
   | TypedTree.Binding (name, arity, value) :: xs ->
-      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let name' = Ident.Name.prepend_empty name in
+      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let xs = of_typed_tree ~current_module names mapn xs in
       create_dyn_functions
         ~current_module

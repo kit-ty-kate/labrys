@@ -1,3 +1,6 @@
 type Unit = Unit
 
 type Int
+type Float
+type Char
+type String

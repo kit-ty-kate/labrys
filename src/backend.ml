@@ -49,6 +49,7 @@ module Type = struct
   let void = Llvm.void_type c
   let i8 = Llvm.i8_type c
   let i32 = Llvm.i32_type c
+  let float = Llvm.float_type c
   let star = Llvm.pointer_type i8
   let array = Llvm.array_type star
   let array_ptr size = Llvm.pointer_type (array size)
@@ -246,6 +247,12 @@ module Make (I : I) = struct
               (Llvm.build_extractvalue value i "" builder, vars)
         in
         (value, Map.add var value vars)
+
+  let get_const = function
+    | UntypedTree.Int n -> Llvm.const_int Type.i32 n
+    | UntypedTree.Float n -> Llvm.const_float Type.float n
+    | UntypedTree.Char c -> Llvm.const_int Type.i8 (int_of_char c)
+    | UntypedTree.String s -> Llvm.const_string c s
 
   let rec create_branch func ~default vars gamma value results tree =
     let block = Llvm.append_block c "" func in
@@ -453,8 +460,8 @@ module Make (I : I) = struct
         let record = malloc_and_init_array (List.length fields) fields builder in
         let record = Llvm.build_bitcast record Type.star "" builder in
         (record, builder)
-    | UntypedTree.Int n ->
-        let v = Llvm.define_global "" (Llvm.const_int Type.i32 n) m in
+    | UntypedTree.Const const ->
+        let v = Llvm.define_global "" (get_const const) m in
         Llvm.set_linkage Llvm.Linkage.Private v;
         Llvm.set_global_constant true v;
         let v = Llvm.build_bitcast v Type.star "" builder in

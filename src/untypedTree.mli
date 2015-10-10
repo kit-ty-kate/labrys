@@ -27,6 +27,12 @@ type constr = int
 type arity = int
 type length = int
 
+type const = TypedTree.const =
+  | Int of int
+  | Float of float
+  | Char of char
+  | String of string
+
 type tree =
   | Node of (Pattern.var * (constr * tree) list)
   | Leaf of int
@@ -44,7 +50,7 @@ and t =
   | Try of (t * ((eff_name * name list) * t) list)
   | RecordGet of (t * index)
   | RecordCreate of t list
-  | Int of int
+  | Const of const
 
 type linkage = Public | Private
 

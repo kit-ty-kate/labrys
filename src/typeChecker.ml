@@ -39,7 +39,7 @@ let rec well_formed_rec = function
   | (_, UnsugaredTree.CApp _)
   | (_, UnsugaredTree.Val _)
   | (_, UnsugaredTree.Var _)
-  | (_, UnsugaredTree.Int _)
+  | (_, UnsugaredTree.Const _)
   | (_, UnsugaredTree.PatternMatching _)
   | (_, UnsugaredTree.Fail _)
   | (_, UnsugaredTree.Try _) ->
@@ -58,7 +58,7 @@ let rec get_ty_from_let = function
   | (_, UnsugaredTree.CApp _)
   | (_, UnsugaredTree.Val _)
   | (_, UnsugaredTree.Var _)
-  | (_, UnsugaredTree.Int _)
+  | (_, UnsugaredTree.Const _)
   | (_, UnsugaredTree.PatternMatching _)
   | (_, UnsugaredTree.Fail _)
   | (_, UnsugaredTree.Try _) ->
@@ -107,6 +107,12 @@ let check_effects_forall ~loc_t ~effect =
      Do I also need to check for exceptions ? *)
   if Effects.has_io effect then
     Err.fail ~loc:loc_t "Cannot have IO effects under a forall"
+
+let get_const options = function
+  | UnsugaredTree.Int n -> (Int n, Builtins.int options)
+  | UnsugaredTree.Float n -> (Float n, Builtins.float options)
+  | UnsugaredTree.Char c -> (Char c, Builtins.char options)
+  | UnsugaredTree.String s -> (String s, Builtins.string options)
 
 let wrap_typeclass_apps ~loc gamma ~tyclasses ~f g =
   let rec aux f n = function
@@ -287,8 +293,9 @@ let rec aux options gamma = function
       let (_, ty_t, effects) as res = aux options gamma t in
       check_type options ~loc_t ~ty ~ty_t ~effects gamma;
       res
-  | (loc, UnsugaredTree.Int n) ->
-      (Int n, Types.ty ~loc gamma (Builtins.int options), Effects.empty)
+  | (loc, UnsugaredTree.Const const) ->
+      let (const, ty) = get_const options const in
+      (Const const, Types.ty ~loc gamma ty, Effects.empty)
 
 let transform_variants options ~datatype ~ty_args ~args gamma =
   let gamma' = List.fold_left (fun gamma (name, k) -> Gamma.add_type name (Types.Abstract k) gamma) gamma args in
