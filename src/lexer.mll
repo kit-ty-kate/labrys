@@ -117,8 +117,8 @@ and simple_comment = parse
   | _ { simple_comment lexbuf }
 
 and get_string = parse
-  | char as c { c :: get_string lexbuf }
   | '"' { [] }
+  | char as c { c :: get_string lexbuf }
   | eof | _ { raise Error }
 
 { end }
