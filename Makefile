@@ -47,7 +47,13 @@ setup.exe: setup.ml
 
 DOC = doc
 
-build-semantics: $(DOC)/semantics.ott
+semantics: $(DOC)/semantics.ott
 	ott -i $< -o $(<:.ott=.tex) \
 	    && rubber --pdf --into $(DOC) $(<:.ott=.tex) \
 	    && $(RM) $(<:.ott=.aux) $(<:.ott=.log) $(<:.ott=.tex)
+
+stdlib:
+	./main.native build-module --no-prelude --src-dir stdlib --build-dir . Prelude
+	./main.native build-module --src-dir stdlib --build-dir . Nat
+
+.PHONY: semantics stdlib
