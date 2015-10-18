@@ -309,14 +309,13 @@ module ParseTree = struct
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
 
-
   let dump = function
     | Value x ->
         dump_let x
     | Type (name, ty) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
-    | Foreign _ ->
-        assert false (* TODO *)
+    | Foreign (cname, name, ty) ->
+        PPrint.string (fmt "foreign \"%s\" %s : %s" (String.of_list cname) (dump_name name) (dump_ty ty))
     | AbstractType (name, k) ->
         PPrint.string (fmt "type %s %s" (dump_t_name name) (dump_kind_opt k))
     | Datatype (name, args, variants) ->
@@ -568,8 +567,8 @@ module UnsugaredTree = struct
         dump_value value
     | Type (name, ty) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
-    | Foreign _ ->
-        assert false (* TODO *)
+    | Foreign (cname, name, ty) ->
+        PPrint.string (fmt "foreign \"%s\" %s : %s" cname (dump_name name) (dump_ty ty))
     | Datatype (name, k, args, variants) ->
         PPrint.string (fmt "type %s %s : %s =" (dump_t_name name) (String.concat " " (List.map (fun (name, k) -> fmt "(%s : %s)" (dump_t_name name) (dump_k k)) args)) (dump_k k))
         ^^ PPrint.nest 2 (dump_variants variants)
@@ -746,14 +745,26 @@ module TypedTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
     List.fold_left aux PPrint.empty args
 
+  let dump_ret_ty = function
+    | Void t -> fmt "Void %s" (string_of_doc (dump_t t))
+
+  let dump_args_ty l =
+    let aux = function
+      | TyInt -> "Int"
+      | TyFloat -> "Float"
+      | TyChar -> "Char"
+      | TyString -> "String"
+    in
+    fmt "(%s)" (String.concat ", " (List.map aux l))
+
   let dump = function
     | Value (name, is_rec, t) ->
         PPrint.group
           (PPrint.string (fmt "let %s%s =" (dump_is_rec is_rec) (dump_name name))
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
-    | Foreign _ ->
-        assert false (* TODO *)
+    | Foreign (cname, name, (ret, args)) ->
+        PPrint.string (fmt "foreign \"%s\" %s : (%s, %s)" cname (dump_name name) (dump_ret_ty ret) (dump_args_ty args))
     | Exception name ->
         PPrint.string (fmt "exception %s" (dump_exn_name name))
 
@@ -810,7 +821,19 @@ module UntypedTree = struct
     in
     GammaSet.Value.fold aux used_vars "Ø"
 
-  let rec dump_t = function
+  let dump_args_ty l =
+    let aux = function
+      | (TyInt, name) -> fmt "Int %s" (dump_name name)
+      | (TyFloat, name) -> fmt "Float %s" (dump_name name)
+      | (TyChar, name) -> fmt "Char %s" (dump_name name)
+      | (TyString, name) -> fmt "String %s" (dump_name name)
+    in
+    String.concat ", " (List.map aux l)
+
+  let rec dump_ret_ty = function
+    | Void t -> fmt "Void %s" (string_of_doc (dump_t t))
+
+  and dump_t = function
     | Abs (name, used_vars, t) ->
         PPrint.group
           (PPrint.lparen
@@ -841,8 +864,8 @@ module UntypedTree = struct
            ^^ params
            ^^ PPrint.rbracket
           )
-    | CallForeign _ ->
-        assert false (* TODO *)
+    | CallForeign (name, ret, args) ->
+        PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_ret_ty ret))
     | PatternMatching (t, results, patterns) ->
         dump_pattern_matching
           (dump_t t)

@@ -159,15 +159,16 @@ let get_name_and_linkage name' names mapn =
       (name, names, mapn, Private)
 
 let of_ret_type mapn = function
-  | TypedTree.Void t -> Void (fst (of_typed_term mapn t)) (* TODO: Clean fst *)
+  | TypedTree.Void t ->
+      let (t, used_vars) = of_typed_term mapn t in
+      (Void t, used_vars)
 
 let create_dyn_functions mapn cname (ret, args) =
-  let ret = of_ret_type mapn ret in
   let create_name n =
     Ident.Name.local_create ~loc:Builtins.unknown_loc (string_of_int n)
   in
   let name = create_name 0 in
-  let (t, used_vars) =
+  let t =
     let rec aux name args n = function
       | ty::xs ->
           let (t, used_vars) =
@@ -176,12 +177,14 @@ let create_dyn_functions mapn cname (ret, args) =
           let used_vars = Set.remove name used_vars in
           (Abs (name, used_vars, t), used_vars)
       | [] ->
-          (CallForeign (cname, ret, List.rev args), Set.empty)
+          let (ret, used_vars) = of_ret_type mapn ret in
+          (CallForeign (cname, ret, List.rev args), used_vars)
     in
-    aux name [] 1 args
+    let (t, used_vars) = aux name [] 1 args in
+    if Int.(Set.cardinal used_vars <> 0) then
+      assert false;
+    t
   in
-  if Int.(Set.cardinal used_vars <> 0) then
-    assert false;
   (name, t)
 
 let of_value names mapn = function

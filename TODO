@@ -2,14 +2,7 @@
 
 == Short term ==
 
-* Have a real FFI
-  * let print : String -[IO]-> Unit = begin
-      declare void puts(i8*)
-
-      define print(i8* x) =
-        let y = x in
-        puts(y)
-    end
+* Improve the FFI
 * Change the syntax:
  * λ(a : *), T
  * {Test a Int} => T     (instead of {Test A [Int]} => T)
