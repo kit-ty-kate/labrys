@@ -96,7 +96,7 @@ type variant = Variant of (variant_name * ty list * ty)
 type top =
   | Value of value
   | Type of (t_name * ty)
-  | Binding of (name * ty * string)
+  | Foreign of (string * name * ty)
   | Datatype of (t_name * Kinds.t * (t_name * Kinds.t) list * variant list)
   | Exception of (exn_name * ty list)
   | Open of module_name

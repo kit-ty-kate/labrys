@@ -158,38 +158,31 @@ let get_name_and_linkage name' names mapn =
       let mapn = GammaMap.Value.add name' name mapn in
       (name, names, mapn, Private)
 
-let create_dyn_functions ~current_module zero_case n_case term_case (n, name, linkage) =
-  let rec aux params = function
-    | 0 ->
-        term_case params
-    | n ->
-        let name =
-          Ident.Name.create
-            ~loc:Builtins.unknown_loc
-            current_module
-            (string_of_int n)
-        in
-        let params = name :: params in
-        let (t, used_vars) = aux params (pred n) in
-        let used_vars = Set.remove name used_vars in
-        (Abs (name, used_vars, t), used_vars)
+let of_ret_type mapn = function
+  | TypedTree.Void t -> Void (fst (of_typed_term mapn t)) (* TODO: Clean fst *)
+
+let create_dyn_functions mapn cname (ret, args) =
+  let ret = of_ret_type mapn ret in
+  let create_name n =
+    Ident.Name.local_create ~loc:Builtins.unknown_loc (string_of_int n)
   in
-  match n with
-  | 0 ->
-      zero_case ()
-  | n ->
-      let name_param =
-        Ident.Name.create
-          ~loc:Builtins.unknown_loc
-          current_module
-          (string_of_int n)
-      in
-      let params = [name_param] in
-      let (t, used_vars) = aux params (pred n) in
-      let used_vars = Set.remove name_param used_vars in
-      if Int.(Set.cardinal used_vars <> 0) then
-        assert false;
-      n_case (Function (name, (name_param, t), linkage))
+  let name = create_name 0 in
+  let (t, used_vars) =
+    let rec aux name args n = function
+      | ty::xs ->
+          let (t, used_vars) =
+            aux (create_name n) ((ty, name) :: args) (succ n) xs
+          in
+          let used_vars = Set.remove name used_vars in
+          (Abs (name, used_vars, t), used_vars)
+      | [] ->
+          (CallForeign (cname, ret, List.rev args), Set.empty)
+    in
+    aux name [] 1 args
+  in
+  if Int.(Set.cardinal used_vars <> 0) then
+    assert false;
+  (name, t)
 
 let of_value names mapn = function
   | (name, TypedTree.Rec, TypedTree.Abs (name', t)) ->
@@ -214,16 +207,10 @@ let rec of_typed_tree ~current_module names mapn = function
       let (value, names, mapn) = of_value names mapn value in
       let xs = of_typed_tree ~current_module names mapn xs in
       value :: xs
-  | TypedTree.Binding (name, arity, value) :: xs ->
-      let name' = Ident.Name.prepend_empty name in
+  | TypedTree.Foreign (cname, name, ty) :: xs ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let xs = of_typed_tree ~current_module names mapn xs in
-      create_dyn_functions
-        ~current_module
-        (fun () -> ValueBinding (name, name', value, linkage) :: xs)
-        (fun x -> FunctionBinding (name', arity, value) :: x :: xs)
-        (fun params -> (Call (Val name', List.rev_map (fun x -> Val x) params), Set.of_list params))
-        (arity, name, linkage)
+      Function (name, create_dyn_functions mapn cname ty, linkage) :: xs
   | TypedTree.Exception name :: xs ->
       let xs = of_typed_tree ~current_module names mapn xs in
       Exception name :: xs
@@ -234,7 +221,7 @@ let of_typed_tree ~current_module top =
   let add name names = GammaMap.Value.modify_def (-1) name succ names in
   let aux names = function
     | TypedTree.Value (name, _, _) -> add name names
-    | TypedTree.Binding (name, _, _) -> add name names
+    | TypedTree.Foreign (_, name, _) -> add name names
     | TypedTree.Exception _ -> names
   in
   let names = List.fold_left aux GammaMap.Value.empty top in

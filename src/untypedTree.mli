@@ -33,7 +33,16 @@ type const = TypedTree.const =
   | Char of int
   | String of string
 
-type tree =
+type foreign_arg_type = TypedTree.foreign_arg_type =
+  | TyInt
+  | TyFloat
+  | TyChar
+  | TyString
+
+type foreign_ret_type =
+  | Void of t
+
+and tree =
   | Node of (Pattern.var * (constr * tree) list)
   | Leaf of int
 
@@ -42,7 +51,7 @@ and t =
   | App of (t * t)
   | Val of name
   | Variant of (index * t list)
-  | Call of (t * t list)
+  | CallForeign of (string * foreign_ret_type * (foreign_arg_type * name) list)
   | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
@@ -56,7 +65,5 @@ type linkage = Public | Private
 
 type top =
   | Value of (name * t * linkage)
-  | ValueBinding of (name * name * string * linkage)
-  | FunctionBinding of (name * arity * string)
   | Exception of eff_name
   | Function of (name * (name * t) * linkage)

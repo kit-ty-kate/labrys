@@ -55,6 +55,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token Try
 %token Exception
 %token Class Instance
+%token Foreign
 %token Underscore
 %token Semicolon
 %token <string> LowerName
@@ -63,7 +64,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %token <string> Float
 %token <char list> Char
 %token <char list> String
-%token <string> Binding
 %token LQMarkParen LParen RParen
 %token LQMarkBracket LBracket RBracket
 %token LBrace RBrace
@@ -91,8 +91,8 @@ body:
       { ParseTree.Value x }
   | typeAlias = typeAlias
       { ParseTree.Type typeAlias }
-  | Let name = newLowerName Colon ty = typeExpr Equal binding = Binding
-      { ParseTree.Binding (name, ty, binding) }
+  | Foreign cname = String name = newLowerName Colon ty = typeExpr
+      { ParseTree.Foreign (cname, name, ty) }
   | Type name = newUpperName k = kindopt
       { ParseTree.AbstractType (name, k) }
   | datatype = datatype

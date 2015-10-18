@@ -424,7 +424,7 @@ let rec is_fun = function
   | AbsOnTy _ | Eff _ -> assert false
 
 let is_unit options = function
-  | Ty name when Ident.Type.equal name (Builtins.t_unit options) -> true
+  | Ty name when Ident.Type.equal name (Builtins.unit options) -> true
   | Ty _ | Fun _ | Forall _ | TyClass _ | AppOnTy _ -> false
   | AbsOnTy _ | Eff _ -> assert false
 

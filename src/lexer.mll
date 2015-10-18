@@ -81,14 +81,9 @@ rule main = parse
   | "open" { Parser.Open }
   | "import" { Parser.Import }
   | "library" { Parser.Library }
+  | "foreign" { Parser.Foreign }
   | "instance" { Parser.Instance }
   | "exception" { Parser.Exception }
-  | "begin" blank* '\n'
-      { let buffer = Buffer.create 4096 in
-        Lexing.new_line lexbuf;
-        get_binding buffer lexbuf;
-        Parser.Binding (Buffer.contents buffer)
-      }
   | "--" { simple_comment lexbuf; main lexbuf }
   | term_name as name { Parser.LowerName name }
   | type_name as name { Parser.UpperName name }
@@ -98,18 +93,6 @@ rule main = parse
   | '"' { Parser.String (get_string lexbuf) }
   | eof { Parser.EOF }
   | _ { raise Error }
-
-and get_binding buffer = parse
-  | '\n' blank* "end" blank* '\n'
-      { Lexing.new_line lexbuf; Lexing.new_line lexbuf }
-  | '\n' as lxm { Buffer.add_char buffer lxm;
-                  Lexing.new_line lexbuf;
-                  get_binding buffer lexbuf
-                }
-  | eof { raise Error }
-  | _ as lxm { Buffer.add_char buffer lxm;
-               get_binding buffer lexbuf
-             }
 
 and simple_comment = parse
   | '\n' { Lexing.new_line lexbuf }

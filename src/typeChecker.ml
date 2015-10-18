@@ -325,7 +325,7 @@ let check_effects ~current_module ~with_main ~has_main ~name options (t, ty, eff
     Err.fail
       ~loc:(Ident.Name.loc name)
       "The main must have type '%s' but has type '%s'"
-      (Ident.Type.to_string (Builtins.t_unit options))
+      (Ident.Type.to_string (Builtins.unit options))
       (Types.to_string ty);
   (is_main, t, ty)
 
@@ -346,6 +346,70 @@ let from_value ~current_module ~with_main ~has_main options gamma = function
   | (name, UnsugaredTree.Rec, _) ->
       fail_rec_val ~loc_name:(Ident.Name.loc name)
 
+let get_foreign_type ~loc options =
+  let fail loc =
+    Err.fail ~loc "Such type is not handle in foreign declarations"
+  in
+  let fail_complex ty =
+    Err.fail
+      ~loc
+      "Foreign declaration doesn't handle complexe types '%s'"
+      (PrivateTypes.ty_to_string ty)
+  in
+  let arg_ty_map =
+    [ (Builtins.int options, TyInt)
+    ; (Builtins.float options, TyFloat)
+    ; (Builtins.char options, TyChar)
+    ; (Builtins.string options, TyString)
+    ]
+  in
+  let ret_ty_map =
+    [ (Builtins.unit options, Void (Var (0, 0))) (* TODO: Clean the magic numbers *)
+    ]
+  in
+  let rec aux acc = function
+    | PrivateTypes.Fun (PrivateTypes.Ty name, eff, t) ->
+        let x =
+          match List.Assoc.get ~eq:Ident.Type.equal arg_ty_map name with
+          | Some x -> x
+          | None -> fail (Ident.Type.loc name)
+        in
+        begin match t with
+        | PrivateTypes.Fun _ ->
+            if not (Effects.is_empty eff) then
+              Err.fail
+                ~loc
+                "Only empty effects are allowed on a non-final arrow";
+            aux (x :: acc) t
+        | PrivateTypes.Ty name ->
+            if not (Effects.has_io eff) then
+              Err.fail
+                ~loc
+                "Bindings cannot be pure. \
+                 All bindings have to use the IO effect on the final arrow";
+            begin match List.Assoc.get ~eq:Ident.Type.equal ret_ty_map name with
+            | Some x -> (x, List.rev acc)
+            | None -> fail (Ident.Type.loc name)
+            end
+        | PrivateTypes.Eff _
+        | PrivateTypes.Forall _
+        | PrivateTypes.TyClass _
+        | PrivateTypes.AbsOnTy _
+        | PrivateTypes.AppOnTy _ ->
+            fail_complex t
+        end
+    | PrivateTypes.Ty _ ->
+        Err.fail ~loc "Cannot bind a global variable. Too unsafe."
+    | PrivateTypes.Fun _
+    | PrivateTypes.Eff _
+    | PrivateTypes.Forall _
+    | PrivateTypes.TyClass _
+    | PrivateTypes.AbsOnTy _
+    | PrivateTypes.AppOnTy _ as ty ->
+        fail_complex ty
+  in
+  aux []
+
 let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = function
   | UnsugaredTree.Value value :: xs ->
       let (value, _, has_main, gamma) = from_value ~current_module ~with_main ~has_main options gamma value in
@@ -355,17 +419,12 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       let ty = Types.of_parse_tree_kind ~pure_arrow:`Forbid options gamma ty in
       let gamma = Gamma.add_type name (Types.Alias ty) gamma in
       from_parse_tree ~current_module ~with_main ~has_main options gamma xs
-  | UnsugaredTree.Binding (name, ty, binding) :: xs ->
+  | UnsugaredTree.Foreign (cname, name, ty) :: xs ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
-      if not (Types.has_io ty) && Types.is_fun ty then
-        Err.fail
-          ~loc:(Ident.Name.loc name)
-          "The binding '%s' cannot be pure. \
-           All bindings have to use the IO effect"
-          (Ident.Name.to_string name);
       let gamma = Gamma.add_value name ty gamma in
+      let ty = get_foreign_type ~loc:(Ident.Name.loc name) options ty in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
-      (Binding (name, Types.size ty, binding) :: xs, has_main, gamma)
+      (Foreign (cname, name, ty) :: xs, has_main, gamma)
   | UnsugaredTree.Datatype (name, kind, args, variants) :: xs ->
       let ty_args = List.map fst args in
       let gamma = Gamma.add_type name (Types.Abstract kind) gamma in

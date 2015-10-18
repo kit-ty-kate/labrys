@@ -315,12 +315,8 @@ module ParseTree = struct
         dump_let x
     | Type (name, ty) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
-    | Binding (name, ty, content) ->
-        PPrint.string (fmt "let %s : %s = begin" (dump_name name) (dump_ty ty))
-        ^^ PPrint.break 1
-        ^^ PPrint.group (PPrint.string content)
-        ^^ PPrint.break 1
-        ^^ PPrint.string "end"
+    | Foreign _ ->
+        assert false (* TODO *)
     | AbstractType (name, k) ->
         PPrint.string (fmt "type %s %s" (dump_t_name name) (dump_kind_opt k))
     | Datatype (name, args, variants) ->
@@ -572,12 +568,8 @@ module UnsugaredTree = struct
         dump_value value
     | Type (name, ty) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
-    | Binding (name, ty, content) ->
-        PPrint.string (fmt "let %s : %s = begin" (dump_name name) (dump_ty ty))
-        ^^ PPrint.break 1
-        ^^ PPrint.group (PPrint.string content)
-        ^^ PPrint.break 1
-        ^^ PPrint.string "end"
+    | Foreign _ ->
+        assert false (* TODO *)
     | Datatype (name, k, args, variants) ->
         PPrint.string (fmt "type %s %s : %s =" (dump_t_name name) (String.concat " " (List.map (fun (name, k) -> fmt "(%s : %s)" (dump_t_name name) (dump_k k)) args)) (dump_k k))
         ^^ PPrint.nest 2 (dump_variants variants)
@@ -760,12 +752,8 @@ module TypedTree = struct
           (PPrint.string (fmt "let %s%s =" (dump_is_rec is_rec) (dump_name name))
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
-    | Binding (name, arity, content) ->
-        PPrint.string (fmt "let %s %d = begin" (dump_name name) arity)
-        ^^ PPrint.break 1
-        ^^ PPrint.group (PPrint.string content)
-        ^^ PPrint.break 1
-        ^^ PPrint.string "end"
+    | Foreign _ ->
+        assert false (* TODO *)
     | Exception name ->
         PPrint.string (fmt "exception %s" (dump_exn_name name))
 
@@ -853,12 +841,8 @@ module UntypedTree = struct
            ^^ params
            ^^ PPrint.rbracket
           )
-    | Call (t, params) ->
-        let params = List.fold_left (fun acc x -> acc ^^ PPrint.comma ^^ PPrint.space ^^ dump_t x) PPrint.empty params in
-        dump_t t
-        ^^ PPrint.lparen
-        ^^ params
-        ^^ PPrint.rparen
+    | CallForeign _ ->
+        assert false (* TODO *)
     | PatternMatching (t, results, patterns) ->
         dump_pattern_matching
           (dump_t t)
@@ -969,18 +953,6 @@ module UntypedTree = struct
           (PPrint.string (fmt "function %s %s : %s =" (dump_name name) (dump_name name') (dump_linkage linkage))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
-    | ValueBinding (name, name', content, linkage) ->
-        PPrint.string (fmt "ValueBinding %s %s : %s = begin" (dump_name name) (dump_name name') (dump_linkage linkage))
-        ^^ PPrint.break 1
-        ^^ PPrint.group (PPrint.string content)
-        ^^ PPrint.break 1
-        ^^ PPrint.string "end"
-    | FunctionBinding (name, arity, content) ->
-        PPrint.string (fmt "let %s : %d = begin" (dump_name name) arity)
-        ^^ PPrint.break 1
-        ^^ PPrint.group (PPrint.string content)
-        ^^ PPrint.break 1
-        ^^ PPrint.string "end"
     | Exception name ->
         PPrint.string (fmt "exception %s" (dump_exn_name name))
 

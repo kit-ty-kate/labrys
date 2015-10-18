@@ -28,13 +28,10 @@ let unknown_loc =
 let prelude options =
   Module.library_create options ["Prelude"]
 
-let unit options =
-  Ident.Name.create ~loc:unknown_loc (prelude options) "Unit"
-let t_unit options =
-  Ident.Type.create ~loc:unknown_loc (prelude options) "Unit"
-
 let t_unit_name = `UpperName ["Prelude"; "Unit"]
 
+let unit options =
+  Ident.Type.create ~loc:unknown_loc (prelude options) "Unit"
 let int options =
   Ident.Type.create ~loc:unknown_loc (prelude options) "Int"
 let float options =

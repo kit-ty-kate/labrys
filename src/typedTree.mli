@@ -52,7 +52,18 @@ and t =
   | RecordCreate of t list
   | Const of const
 
+and foreign_ret_type =
+  | Void of t
+
+type foreign_arg_type =
+  | TyInt
+  | TyFloat
+  | TyChar
+  | TyString
+
+type foreign_fun_type = (foreign_ret_type * foreign_arg_type list)
+
 type top =
   | Value of value
-  | Binding of (name * arity * string)
+  | Foreign of (string * name * foreign_fun_type)
   | Exception of eff_name

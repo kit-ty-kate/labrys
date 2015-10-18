@@ -251,7 +251,7 @@ and unsugar_t ~current_module imports options = function
       (loc, Try (unsugar_t ~current_module imports options t, List.map (unsugar_try_pattern ~current_module imports options) patterns))
   | (loc, ParseTree.Seq (x, y)) ->
       let name = Builtins.underscore ~current_module in
-      let ty = ((loc, Ty (Builtins.t_unit options)), None) in
+      let ty = ((loc, Ty (Builtins.unit options)), None) in
       (loc, Let ((name, NonRec, (fst x, Annot (unsugar_t ~current_module imports options x, ty))), unsugar_t ~current_module imports options y))
   | (loc, ParseTree.Annot (t, ty)) ->
       (loc, Annot (unsugar_t ~current_module imports options t, unsugar_annot imports ty))
@@ -351,9 +351,15 @@ let create ~current_module imports options = function
   | ParseTree.Type (name, ty) ->
       let name = new_upper_name_to_type ~current_module name in
       Type (name, unsugar_ty imports ty)
-  | ParseTree.Binding (name, ty, content) ->
+  | ParseTree.Foreign (cname, name, ty) ->
+      let cname = unsugar_string ~loc:(fst name) cname in
+      let cname =
+        let buf = Buffer.create 32 in
+        List.iter (Uutf.Buffer.add_utf_8 buf) cname;
+        Buffer.contents buf
+      in
       let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
-      Binding (name, unsugar_ty imports ty, content)
+      Foreign (cname, name, unsugar_ty imports ty)
   | ParseTree.AbstractType (name, kind) ->
       let name = new_upper_name_to_type ~current_module name in
       let kind = unsugar_kind kind in

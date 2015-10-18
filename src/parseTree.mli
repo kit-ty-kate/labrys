@@ -104,7 +104,7 @@ type top =
   | Value of value
   | Type of (new_upper_name * ty)
   | AbstractType of (new_upper_name * Kinds.t option)
-  | Binding of (new_lower_name * ty * string)
+  | Foreign of (char list * new_lower_name * ty)
   | Datatype of (new_upper_name * ty_arg list * variant list)
   | Exception of (new_upper_name * ty list)
   | Open of upper_name
