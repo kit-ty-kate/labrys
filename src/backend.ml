@@ -50,8 +50,6 @@ module Type = struct
   let i8 = Llvm.i8_type c
   let i32 = Llvm.i32_type c
   let float = Llvm.float_type c
-  let ptr_i32 = Llvm.pointer_type i32
-  let ptr_float = Llvm.pointer_type float
   let star = Llvm.pointer_type i8
   let array = Llvm.array_type star
   let array_ptr size = Llvm.pointer_type (array size)
@@ -290,21 +288,16 @@ module Make (I : I) = struct
     | [] ->
         [||]
     | args ->
-        let rec aux =
-          let aux' ty name xs =
-            let v = get_value func gamma builder name in
-            let v = Llvm.build_bitcast v ty "" builder in
-            let v = Llvm.build_load v "" builder in
-            v :: aux xs
-          in
-          function
-          | (UntypedTree.Int (), name)::xs -> aux' Type.ptr_i32 name xs
-          | (UntypedTree.Float (), name)::xs -> aux' Type.ptr_float name xs
-          | (UntypedTree.Char (), name)::xs -> aux' Type.ptr_i32 name xs
-          | (UntypedTree.String (), name)::xs -> get_value func gamma builder name :: aux xs
-          | [] -> []
+        let aux = function
+          | (UntypedTree.String (), name) ->
+              get_value func gamma builder name
+          | (ty, name) ->
+              let ty = Llvm.pointer_type (llvm_ty_of_ty ty) in
+              let v = get_value func gamma builder name in
+              let v = Llvm.build_bitcast v ty "" builder in
+              Llvm.build_load v "" builder
         in
-        Array.of_list (aux args)
+        Array.of_list (List.map aux args)
 
   let rec map_ret func ~jmp_buf gamma builder t = function
     | UntypedTree.Void t ->
