@@ -745,17 +745,18 @@ module TypedTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
     List.fold_left aux PPrint.empty args
 
+  let dump_tag_ty = function
+    | Int () -> "Int"
+    | Float () -> "Float"
+    | Char () -> "Char"
+    | String () -> "String"
+
   let dump_ret_ty = function
     | Void t -> fmt "Void %s" (string_of_doc (dump_t t))
+    | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
 
   let dump_args_ty l =
-    let aux = function
-      | TyInt -> "Int"
-      | TyFloat -> "Float"
-      | TyChar -> "Char"
-      | TyString -> "String"
-    in
-    fmt "(%s)" (String.concat ", " (List.map aux l))
+    fmt "(%s)" (String.concat ", " (List.map dump_tag_ty l))
 
   let dump = function
     | Value (name, is_rec, t) ->
@@ -823,15 +824,22 @@ module UntypedTree = struct
 
   let dump_args_ty l =
     let aux = function
-      | (TyInt, name) -> fmt "Int %s" (dump_name name)
-      | (TyFloat, name) -> fmt "Float %s" (dump_name name)
-      | (TyChar, name) -> fmt "Char %s" (dump_name name)
-      | (TyString, name) -> fmt "String %s" (dump_name name)
+      | (Int (), name) -> fmt "Int %s" (dump_name name)
+      | (Float (), name) -> fmt "Float %s" (dump_name name)
+      | (Char (), name) -> fmt "Char %s" (dump_name name)
+      | (String (), name) -> fmt "String %s" (dump_name name)
     in
     String.concat ", " (List.map aux l)
 
+  let dump_tag_ty = function
+    | Int () -> "Int"
+    | Float () -> "Float"
+    | Char () -> "Char"
+    | String () -> "String"
+
   let rec dump_ret_ty = function
     | Void t -> fmt "Void %s" (string_of_doc (dump_t t))
+    | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
 
   and dump_t = function
     | Abs (name, used_vars, t) ->

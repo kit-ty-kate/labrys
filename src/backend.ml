@@ -251,20 +251,23 @@ module Make (I : I) = struct
         (value, Map.add var value vars)
 
   let get_const = function
-    | UntypedTree.Int n | UntypedTree.Char n -> Llvm.const_int Type.i32 n
+    | UntypedTree.Int n -> Llvm.const_int Type.i32 n
     | UntypedTree.Float n -> Llvm.const_float Type.float n
+    | UntypedTree.Char n -> Llvm.const_int Type.i32 n
     | UntypedTree.String s -> Llvm.const_string c (s ^ "\x00")
+
+  let llvm_ty_of_ty = function
+    | UntypedTree.Int () -> Type.i32
+    | UntypedTree.Float () -> Type.float
+    | UntypedTree.Char () -> Type.i32
+    | UntypedTree.String () -> Type.star
 
   let ret_type = function
     | UntypedTree.Void _ -> Type.void
+    | UntypedTree.Alloc ty -> llvm_ty_of_ty ty
 
   let args_type args =
-    let aux = function
-      | (UntypedTree.TyInt, _)
-      | (UntypedTree.TyChar, _) -> Type.i32
-      | (UntypedTree.TyFloat, _) -> Type.float
-      | (UntypedTree.TyString, _) -> Type.star
-    in
+    let aux (ty, _) = llvm_ty_of_ty ty in
     Array.of_list (List.map aux args)
 
   let get_value func gamma builder name =
@@ -288,23 +291,32 @@ module Make (I : I) = struct
         [||]
     | args ->
         let rec aux =
-          let aux ty name xs =
+          let aux' ty name xs =
             let v = get_value func gamma builder name in
             let v = Llvm.build_bitcast v ty "" builder in
             let v = Llvm.build_load v "" builder in
             v :: aux xs
           in
           function
-          | (UntypedTree.TyInt, name)::xs -> aux Type.ptr_i32 name xs
-          | (UntypedTree.TyFloat, name)::xs -> aux Type.ptr_float name xs
-          | (UntypedTree.TyChar, name)::xs -> aux Type.ptr_i32 name xs
-          | (UntypedTree.TyString, name)::xs -> aux Type.star name xs
+          | (UntypedTree.Int (), name)::xs -> aux' Type.ptr_i32 name xs
+          | (UntypedTree.Float (), name)::xs -> aux' Type.ptr_float name xs
+          | (UntypedTree.Char (), name)::xs -> aux' Type.ptr_i32 name xs
+          | (UntypedTree.String (), name)::xs -> get_value func gamma builder name :: aux xs
           | [] -> []
         in
         Array.of_list (aux args)
 
-  let rec map_ret func ~jmp_buf gamma builder _ = function
-    | UntypedTree.Void t -> lambda func ~jmp_buf gamma builder t
+  let rec map_ret func ~jmp_buf gamma builder t = function
+    | UntypedTree.Void t ->
+        lambda func ~jmp_buf gamma builder t
+    | UntypedTree.Alloc (UntypedTree.String ()) ->
+        (t, builder)
+    | UntypedTree.Alloc ty ->
+        let ty = llvm_ty_of_ty ty in
+        let value = Llvm.build_malloc ty "" builder in
+        Llvm.build_store t value builder;
+        let value = Llvm.build_bitcast value Type.star "" builder in
+        (value, builder)
 
   and create_branch func ~default vars gamma value results tree =
     let block = Llvm.append_block c "" func in

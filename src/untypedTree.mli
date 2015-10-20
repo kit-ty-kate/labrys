@@ -27,20 +27,19 @@ type constr = int
 type arity = int
 type length = int
 
-type const = TypedTree.const =
-  | Int of int
-  | Float of float
-  | Char of int
-  | String of string
+type ('int, 'float, 'char, 'string) ty =
+  ('int, 'float, 'char, 'string) TypedTree.ty =
+  | Int of 'int
+  | Float of 'float
+  | Char of 'char
+  | String of 'string
 
-type foreign_arg_type = TypedTree.foreign_arg_type =
-  | TyInt
-  | TyFloat
-  | TyChar
-  | TyString
+type tag_ty = (unit, unit, unit, unit) ty
+type const = (int, float, int, string) ty
 
 type foreign_ret_type =
   | Void of t
+  | Alloc of tag_ty
 
 and tree =
   | Node of (Pattern.var * (constr * tree) list)
@@ -51,7 +50,7 @@ and t =
   | App of (t * t)
   | Val of name
   | Variant of (index * t list)
-  | CallForeign of (string * foreign_ret_type * (foreign_arg_type * name) list)
+  | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
   | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)

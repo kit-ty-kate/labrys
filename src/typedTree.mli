@@ -31,11 +31,15 @@ type is_rec =
   | Rec
   | NonRec
 
-type const =
-  | Int of int
-  | Float of float
-  | Char of int
-  | String of string
+type ('int, 'float, 'char, 'string) ty =
+  | Int of 'int
+  | Float of 'float
+  | Char of 'char
+  | String of 'string
+
+type tag_ty = (unit, unit, unit, unit) ty
+
+type const = (int, float, int, string) ty
 
 type value = (name * is_rec * t)
 
@@ -54,14 +58,9 @@ and t =
 
 and foreign_ret_type =
   | Void of t
+  | Alloc of tag_ty
 
-type foreign_arg_type =
-  | TyInt
-  | TyFloat
-  | TyChar
-  | TyString
-
-type foreign_fun_type = (foreign_ret_type * foreign_arg_type list)
+type foreign_fun_type = (foreign_ret_type * tag_ty list)
 
 type top =
   | Value of value

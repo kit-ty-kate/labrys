@@ -162,30 +162,39 @@ let of_ret_type mapn = function
   | TypedTree.Void t ->
       let (t, used_vars) = of_typed_term mapn t in
       (Void t, used_vars)
+  | TypedTree.Alloc ty ->
+      (Alloc ty, Set.empty)
 
 let create_dyn_functions mapn cname (ret, args) =
   let create_name n =
     Ident.Name.local_create ~loc:Builtins.unknown_loc (string_of_int n)
   in
-  let name = create_name 0 in
-  let t =
-    let rec aux name args n = function
-      | ty::xs ->
-          let (t, used_vars) =
-            aux (create_name n) ((ty, name) :: args) (succ n) xs
-          in
-          let used_vars = Set.remove name used_vars in
-          (Abs (name, used_vars, t), used_vars)
-      | [] ->
-          let (ret, used_vars) = of_ret_type mapn ret in
-          (CallForeign (cname, ret, List.rev args), used_vars)
-    in
-    let (t, used_vars) = aux name [] 1 args in
-    if Int.(Set.cardinal used_vars <> 0) then
-      assert false;
-    t
-  in
-  (name, t)
+  match args with
+  | [] ->
+      (* TODO: See TypeChecker.get_foreign_type *)
+      assert false
+  | ty::args ->
+      let rec aux args n = function
+        | ty::xs ->
+            let name = create_name n in
+            let (t, used_vars) =
+              aux ((ty, name) :: args) (succ n) xs
+            in
+            let used_vars = Set.remove name used_vars in
+            (Abs (name, used_vars, t), used_vars)
+        | [] ->
+            let (ret, used_vars) = of_ret_type mapn ret in
+            let used_vars =
+              List.fold_right (fun (_, name) -> Set.add name) args used_vars
+            in
+            (CallForeign (cname, ret, List.rev args), used_vars)
+      in
+      let name = create_name 0 in
+      let (t, used_vars) = aux [(ty, name)] 1 args in
+      let used_vars = Set.remove name used_vars in
+      if Int.(Set.cardinal used_vars <> 0) then
+        assert false;
+      (name, t)
 
 let of_value names mapn = function
   | (name, TypedTree.Rec, TypedTree.Abs (name', t)) ->

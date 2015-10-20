@@ -347,6 +347,7 @@ let from_value ~current_module ~with_main ~has_main options gamma = function
       fail_rec_val ~loc_name:(Ident.Name.loc name)
 
 let get_foreign_type ~loc options =
+  (* TODO: Unit -> X   -->   args = [] *)
   let fail loc =
     Err.fail ~loc "Such type is not handle in foreign declarations"
   in
@@ -357,15 +358,16 @@ let get_foreign_type ~loc options =
       (PrivateTypes.ty_to_string ty)
   in
   let arg_ty_map =
-    [ (Builtins.int options, TyInt)
-    ; (Builtins.float options, TyFloat)
-    ; (Builtins.char options, TyChar)
-    ; (Builtins.string options, TyString)
+    [ (Builtins.int options, Int ())
+    ; (Builtins.float options, Float ())
+    ; (Builtins.char options, Char ())
+    ; (Builtins.string options, String ())
     ]
   in
   let ret_ty_map =
     [ (Builtins.unit options, Void (Var (0, 0))) (* TODO: Clean the magic numbers *)
     ]
+    @ List.map (fun (k, x) -> (k, Alloc x)) arg_ty_map
   in
   let rec aux acc = function
     | PrivateTypes.Fun (PrivateTypes.Ty name, eff, t) ->
@@ -388,7 +390,7 @@ let get_foreign_type ~loc options =
                 "Bindings cannot be pure. \
                  All bindings have to use the IO effect on the final arrow";
             begin match List.Assoc.get ~eq:Ident.Type.equal ret_ty_map name with
-            | Some x -> (x, List.rev acc)
+            | Some y -> (y, List.rev (x :: acc))
             | None -> fail (Ident.Type.loc name)
             end
         | PrivateTypes.Eff _
