@@ -29,7 +29,15 @@ val build_cond_br : llvalue -> llbasicblock -> llbasicblock -> llbuilder -> unit
 val build_unreachable : llbuilder -> unit
 val build_call_void : llvalue -> llvalue array -> llbuilder -> unit
 
-val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * llbuilder)
+val define_function :
+  [`External | `Private] ->
+  llcontext ->
+  string ->
+  lltype ->
+  llmodule ->
+  (llvalue * llbuilder)
+
+val define_constant : string -> llvalue -> llmodule -> llvalue
 
 val optimize :
   lto:bool ->

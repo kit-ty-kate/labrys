@@ -33,9 +33,22 @@ let build_cond_br cond tbb fbb b = ignore (build_cond_br cond tbb fbb b)
 let build_unreachable b = ignore (build_unreachable b)
 let build_call_void f params b = ignore (build_call f params "" b)
 
-let define_function c s ty m =
+let define_function linkage c s ty m =
+  let linkage = match linkage with
+    | `External -> Linkage.External
+    | `Private -> Linkage.Private
+  in
   let f = define_function s ty m in
+(*  Llvm.set_unnamed_addr true f; *)
+  Llvm.set_linkage linkage f;
   f, builder_at_end c (entry_block f)
+
+let define_constant name v m =
+  let v = define_global name v m in
+(*  Llvm.set_unnamed_addr true v; *)
+  Llvm.set_linkage Llvm.Linkage.Private v;
+  Llvm.set_global_constant true v;
+  v
 
 let optimize ~lto ~opt layout m =
   let pm = PassManager.create () in

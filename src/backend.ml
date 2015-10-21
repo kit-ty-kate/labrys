@@ -111,7 +111,9 @@ module Main (I : sig val main_module : Module.t end) = struct
     Llvm.build_call_void gc_init [||] builder
 
   let make () =
-    let (_, builder) = Llvm.define_function c "main" Type.main_function m in
+    let (_, builder) =
+      Llvm.define_function `External c "main" Type.main_function m
+    in
     init_gc builder;
     let jmp_buf = Llvm.build_alloca Type.jmp_buf "" builder in
     Generic.init_jmp_buf jmp_buf builder;
@@ -220,7 +222,7 @@ module Make (I : I) = struct
           gamma
     in
     let env_size = succ env_size in
-    let (f, builder') = Llvm.define_function c "__lambda" (Type.lambda ~env_size) m in
+    let (f, builder') = Llvm.define_function `Private c "__lambda" (Type.lambda ~env_size) m in
     Llvm.set_linkage Llvm.Linkage.Private f;
     let f' = Llvm.build_bitcast f Type.star "" builder in
     let closure = malloc_and_init (Type.closure env_size) (f' :: values) builder in
@@ -434,9 +436,7 @@ module Make (I : I) = struct
         begin match List.length values with
         | 0 ->
             let index = Llvm.const_inttoptr (i32 i) Type.star in
-            let v = Llvm.define_global "" (Llvm.const_array Type.star [|index|]) m in
-            Llvm.set_linkage Llvm.Linkage.Private v;
-            Llvm.set_global_constant true v;
+            let v = Llvm.define_constant "" (Llvm.const_array Type.star [|index|]) m in
             let v = Llvm.build_bitcast v Type.star "" builder in
             (v, builder)
         | size ->
@@ -502,9 +502,7 @@ module Make (I : I) = struct
         let record = Llvm.build_bitcast record Type.star "" builder in
         (record, builder)
     | UntypedTree.Const const ->
-        let v = Llvm.define_global "" (get_const const) m in
-        Llvm.set_linkage Llvm.Linkage.Private v;
-        Llvm.set_global_constant true v;
+        let v = Llvm.define_constant "" (get_const const) m in
         let v = Llvm.build_bitcast v Type.star "" builder in
         (v, builder)
 
@@ -523,12 +521,9 @@ module Make (I : I) = struct
   let define_global ~name ~linkage value =
     let name = Ident.Name.to_string name in
     let name' = "." ^ name in
-    let v = Llvm.define_global name' value m in
-    Llvm.set_linkage Llvm.Linkage.Private v;
-    Llvm.set_global_constant true v;
-    let v = Llvm.define_global name (Llvm.const_bitcast v Type.star) m in
-    set_linkage v linkage;
-    Llvm.set_global_constant true v
+    let v = Llvm.define_constant name' value m in
+    let v = Llvm.define_constant name (Llvm.const_bitcast v Type.star) m in
+    set_linkage v linkage
 
   let rec init func ~jmp_buf bindings builder = function
     | `Val (global, t) :: xs ->
@@ -550,9 +545,8 @@ module Make (I : I) = struct
     init func ~jmp_buf GammaMap.Value.empty builder
 
   let () =
-    let malloc_type = (Llvm.function_type Type.star [|Type.i32|]) in
-    let (malloc, builder) = Llvm.define_function c "malloc" malloc_type m in
-    Llvm.set_linkage Llvm.Linkage.Private malloc;
+    let malloc_type = Llvm.function_type Type.star [|Type.i32|] in
+    let (malloc, builder) = Llvm.define_function `Private c "malloc" malloc_type m in
     let gc_malloc = Llvm.declare_function "GC_malloc" malloc_type m in
     Llvm.build_ret (Llvm.build_call gc_malloc (Llvm.params malloc) "" builder) builder
 
@@ -576,14 +570,13 @@ module Make (I : I) = struct
           Llvm.set_global_constant true v;
           top init_list xs
       | UntypedTree.Function (name, (name', t), linkage) :: xs ->
-          let (f, builder) = Llvm.define_function c (".." ^ Ident.Name.to_string name) (Type.lambda ~env_size:0) m in
-          Llvm.set_linkage Llvm.Linkage.Private f;
+          let (f, builder) = Llvm.define_function `Private c (".." ^ Ident.Name.to_string name) (Type.lambda ~env_size:0) m in
           define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]);
           let g bindings = abs ~f ~name:name' t bindings builder in
           top (`Const g :: init_list) xs
       | [] ->
           let (f, builder) =
-            Llvm.define_function c (Generic.init_name I.name) Type.init m
+            Llvm.define_function `External c (Generic.init_name I.name) Type.init m
           in
           let jmp_buf = Llvm.param f 0 in
           init_imports ~jmp_buf imports builder;
@@ -610,12 +603,23 @@ let main main_module =
 let link ~main_module_name ~main_module imports =
   let aux _ x dst =
     Llvm_linker.link_modules dst x Llvm_linker.Mode.DestroySource;
+(*    Llvm.dispose_module x; *)
     dst
   in
   let dst = main_module in
-  let src = main main_module_name in
-  Llvm_linker.link_modules dst src Llvm_linker.Mode.DestroySource;
-  Module.Map.fold aux imports dst
+  let () =
+    let src = main main_module_name in
+    Llvm_linker.link_modules dst src Llvm_linker.Mode.DestroySource;
+(*    Llvm.dispose_module src; *)
+  in
+  let dst = Module.Map.fold aux imports dst in
+  Llvm.iter_globals (Llvm.set_linkage Llvm.Linkage.Private) dst;
+  let aux v =
+    if not (Llvm.is_declaration v || String.equal (Llvm.value_name v) "main") then
+      Llvm.set_linkage Llvm.Linkage.Private v;
+  in
+  Llvm.iter_functions aux dst;
+  dst
 
 let init = lazy (Llvm_all_backends.initialize ())
 
