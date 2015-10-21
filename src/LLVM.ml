@@ -37,41 +37,6 @@ let define_function c s ty m =
   let f = define_function s ty m in
   f, builder_at_end c (entry_block f)
 
-let bind c ~name ~arity s m =
-  let loc_name = Ident.Name.loc name in
-  let membuffer = MemoryBuffer.of_string s in
-  let m' = Llvm_irreader.parse_ir c membuffer in
-  let name = Ident.Name.to_string name in
-  let set_link_priv v =
-    if not (is_declaration v || String.equal (value_name v) name) then
-      set_linkage Linkage.Private v
-  in
-  iter_globals set_link_priv m';
-  iter_functions set_link_priv m';
-  Llvm_linker.link_modules m m' Llvm_linker.Mode.DestroySource;
-  dispose_module m';
-  let lookup = if Int.(arity = 0) then lookup_global else lookup_function in
-  match lookup name m with
-  | Some v ->
-      set_linkage Linkage.Private v;
-      if Int.(arity > 0) then begin
-        let len = Array.length (params v) in
-        if Int.(len <> arity) then
-          Err.fail
-            ~loc:loc_name
-            "Arity doesn't match for the LLVM binding '%s'. \
-             Expected %d, got %d"
-            name
-            arity
-            len;
-      end;
-      v
-  | None ->
-      Err.fail
-        ~loc:loc_name
-        "Cannot found the LLVM binding '%s'"
-        name
-
 let optimize ~lto ~opt layout m =
   let pm = PassManager.create () in
   Llvm_target.DataLayout.add_to_pass_manager pm layout;

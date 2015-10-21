@@ -31,7 +31,6 @@ let start f options modul =
   | Err.Exn x -> Some (Err.dump x)
   | ParserHandler.ParseError x -> Some x
   | Sys_error x -> Some x
-  | Llvm_irreader.Error x -> Some x
   | Module.Error x -> Some x
 
 let start_program modul src_dir build_dir lib_dir no_prelude debug lto opt o =

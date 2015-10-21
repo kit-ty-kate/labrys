@@ -31,8 +31,6 @@ val build_call_void : llvalue -> llvalue array -> llbuilder -> unit
 
 val define_function : llcontext -> string -> lltype -> llmodule -> (llvalue * llbuilder)
 
-val bind : llcontext -> name:Ident.Name.t -> arity:int -> string -> llmodule -> llvalue
-
 val optimize :
   lto:bool ->
   opt:int ->

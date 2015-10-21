@@ -21,7 +21,6 @@ Executable cervoise
     msgpack,
     uutf,
     llvm,
-    llvm.irreader,
     llvm.passmgr_builder,
     llvm.target,
     llvm.bitwriter,
