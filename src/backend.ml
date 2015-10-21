@@ -102,6 +102,12 @@ module Main (I : sig val main_module : Module.t end) = struct
 
   module Generic = Generic (struct let m = m end)
 
+  let () =
+    let malloc_type = Llvm.function_type Type.star [|Type.i32|] in
+    let (malloc, builder) = Llvm.define_function `External c "malloc" malloc_type m in
+    let gc_malloc = Llvm.declare_function "GC_malloc" malloc_type m in
+    Llvm.build_ret (Llvm.build_call gc_malloc (Llvm.params malloc) "" builder) builder
+
   let main_init =
     let ty = Llvm.function_type Type.void [|Type.jmp_buf_ptr|] in
     Llvm.declare_function (Generic.init_name I.main_module) ty m
@@ -543,12 +549,6 @@ module Make (I : I) = struct
     let jmp_buf = Llvm.build_alloca Type.jmp_buf "" builder in
     Generic.init_jmp_buf jmp_buf builder;
     init func ~jmp_buf GammaMap.Value.empty builder
-
-  let () =
-    let malloc_type = Llvm.function_type Type.star [|Type.i32|] in
-    let (malloc, builder) = Llvm.define_function `Private c "malloc" malloc_type m in
-    let gc_malloc = Llvm.declare_function "GC_malloc" malloc_type m in
-    Llvm.build_ret (Llvm.build_call gc_malloc (Llvm.params malloc) "" builder) builder
 
   let init_imports ~jmp_buf imports builder =
     let aux import =
