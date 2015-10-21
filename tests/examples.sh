@@ -40,5 +40,5 @@ echo Test compiling printed llvm code
 echo
 
 for x in $EXAMPLES; do
-    ./main.native print-early-llvm --src-dir examples $x | llc-3.5 - -o /dev/null
+    ./main.native print-early-llvm --src-dir examples $x | llc-3.7 - -o /dev/null
 done
