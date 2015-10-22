@@ -522,7 +522,7 @@ module Make (I : I) = struct
 
   let set_linkage v = function
     | UntypedTree.Private -> Llvm.set_linkage Llvm.Linkage.Private v
-    | UntypedTree.Public -> ()
+    | UntypedTree.Public -> Llvm.set_linkage Llvm.Linkage.External v
 
   let define_global ~name ~linkage value =
     let name = Ident.Name.to_string name in
@@ -612,14 +612,7 @@ let link ~main_module_name ~main_module imports =
     Llvm_linker.link_modules dst src Llvm_linker.Mode.DestroySource;
 (*    Llvm.dispose_module src; *)
   in
-  let dst = Module.Map.fold aux imports dst in
-  Llvm.iter_globals (Llvm.set_linkage Llvm.Linkage.Private) dst;
-  let aux v =
-    if not (Llvm.is_declaration v || String.equal (Llvm.value_name v) "main") then
-      Llvm.set_linkage Llvm.Linkage.Private v;
-  in
-  Llvm.iter_functions aux dst;
-  dst
+  Module.Map.fold aux imports dst
 
 let init = lazy (Llvm_all_backends.initialize ())
 
@@ -631,7 +624,16 @@ let get_target ~triple =
   let target = Llvm_target.Target.by_triple triple in
   Llvm_target.TargetMachine.create ~triple target
 
+let privatize_identifiers m =
+  let aux f v =
+    if not (Llvm.is_declaration v || f (Llvm.value_name v)) then
+      Llvm.set_linkage Llvm.Linkage.Private v;
+  in
+  Llvm.iter_globals (aux (fun _ -> false)) m;
+  Llvm.iter_functions (aux (String.equal "main")) m
+
 let optimize options m =
+  privatize_identifiers m;
   let lto = options#lto in
   let opt = options#opt in
   let triple = get_triple () in
