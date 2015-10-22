@@ -25,6 +25,9 @@ EXAMPLES="\
     Variants \
     TyClass \
     Presentation \
+    ExOne \
+    ExnVar \
+    Lol \
     Hello \
 "
 

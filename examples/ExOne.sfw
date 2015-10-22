@@ -1,0 +1,59 @@
+import library Nat
+
+open Nat
+
+foreign "GC_malloc" alloc : Int -[IO]-> String
+
+foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
+
+foreign "puts" println : String -[IO]-> Unit
+
+foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
+
+let natToInt =
+  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+    match n with
+    | O -> acc
+    | S n -> aux (add 1 acc) n
+    end
+  in
+  aux 0
+
+let printNat (n : Nat) =
+  let n = natToInt n in
+  let buf = alloc 512 in
+  fmt buf "%d" n;
+  println buf
+
+let printUnit () = println "()"
+
+class Fractional A (E : !) =
+  let div : A -[]-> A -[E]-> A
+end
+
+exception DivByZero
+
+instance Fractional Nat [Exn [DivByZero]] =
+  let div (_ : Nat) (_ : Nat) = fail [Nat] DivByZero -- Sorry, doesn't have real ints
+end
+
+class Print A =
+  let print : A -[IO]-> Unit
+end
+
+instance Print Nat =
+  let print = printNat
+end
+
+instance Print Unit =
+  let print = printUnit
+end
+
+let test () =
+  try
+    print (div O O ?[Fractional Nat [Exn [DivByZero]]])
+  with
+  | DivByZero -> print Unit
+  end
+
+let main = test Unit

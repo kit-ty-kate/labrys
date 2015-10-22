@@ -1,0 +1,7 @@
+import library Nat
+
+open Nat
+
+let main =
+  let _ = S O in
+  Unit
