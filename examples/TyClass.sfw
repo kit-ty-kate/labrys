@@ -26,13 +26,13 @@ let printNat (n : Nat) =
   fmt buf "%d" n;
   println buf
 
-class Print A =
-  let print1 : A -[IO]-> Unit
+class Print a =
+  let print1 : a -[IO]-> Unit
 end
 
 let printInt2' (n : Nat) = printNat n; Unit
 
-let test ?(z : Print A) (x : A) = print1 ?[z] x
+let test ?(z : Print a) (x : a) = print1 ?[z] x
 
 instance [x] Print Unit =
   let print1 (_ : Unit) = printNat O
@@ -48,8 +48,8 @@ let lol (f : Unit -[IO]-> Unit) = f
 
 let lol = lol (\(_ : Unit) -> Unit)
 
-class PrintLol (A : !) =
-  let print : (Unit -[A]-> Unit) -[IO]-> Unit
+class PrintLol (a : !) =
+  let print : (Unit -[a]-> Unit) -[IO]-> Unit
 end
 
 instance PrintLol [] =
@@ -60,13 +60,19 @@ let lol () = print (\(_ : Unit) -> Unit)
 
 let test1 = Multi.show
 
-class ReadLike A =
-  let read : Unit -[]-> A
+class ReadLike a =
+  let read : Unit -[]-> a
 end
 
 instance ReadLike Nat =
   let rec read () : Nat = read Unit
 end
+
+class Test a b =
+  let test : a -[]-> b -[]-> Unit
+end
+
+let wat {x} = (\{y} ?(z : Test [x] [y]) -> test ?[z]) [Unit]
 
 let main =
   printNat (read Unit)

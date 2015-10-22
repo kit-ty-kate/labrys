@@ -38,7 +38,7 @@ let compile ~current_module options gamma =
         let gamma = Gamma.add_type name (Types.Abstract k) gamma in
         let local_gamma = Gamma.add_type name (Types.Abstract k) local_gamma in
         let gamma =
-          let local_gamma' = List.fold_left (fun local_gamma (name, k) -> Gamma.add_type name (Types.Abstract k) local_gamma) local_gamma args in
+          let local_gamma' = List.fold_left (fun local_gamma (name, k) -> Gamma.add_type_var name k local_gamma) local_gamma args in
           let aux ~datatype gamma i (UnsugaredTree.Variant (name, tys, ty)) =
             let tys = List.map (Types.of_parse_tree ~pure_arrow:`Partial options local_gamma') tys in
             let ty = Types.of_parse_tree ~pure_arrow:`Partial options local_gamma ty in
@@ -67,7 +67,7 @@ let compile ~current_module options gamma =
         let sigs =
           let local_gamma =
             let aux local_gamma (name, k) =
-              Gamma.add_type name (Types.Abstract k) local_gamma
+              Gamma.add_type_var name k local_gamma
             in
             List.fold_left aux local_gamma params
           in

@@ -7,6 +7,6 @@ type Nat =
 
 let id : (Nat -[]-> Nat) -> Nat -> Nat
 
-class Show A =
-  let show : A -[]-> Unit
+class Show a =
+  let show : a -[]-> Unit
 end

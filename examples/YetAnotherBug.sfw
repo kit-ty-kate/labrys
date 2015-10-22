@@ -1,5 +1,5 @@
-let f (X : * -> * -> *) (x : X Unit Unit) = x
+let f {x : * -> * -> *} (x : x Unit Unit) = x
 
-let test = f [λX Y, Y] Unit
+let test = f [λx y, y] Unit
 
 let main = Unit

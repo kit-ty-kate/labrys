@@ -26,13 +26,13 @@ let printNat (n : Nat) =
 
 let printUnit () = println "()"
 
-class Print A =
-  let print : A -[IO]-> Unit
+class Print a =
+  let print : a -[IO]-> Unit
 end
 
 let test0 = print
-let test1 ?(z : Print A) = print ?[z]
-let test2 ?(z : Print A) (x : A) = print ?[z] x
+let test1 ?(z : Print a) = print ?[z]
+let test2 ?(z : Print a) (x : a) = print ?[z] x
 
 instance [printNat] Print Unit =
   let print () = printNat O
@@ -42,8 +42,8 @@ instance Print Unit =
   let print = printUnit
 end
 
-class Read A =
-  let read : Unit -[]-> A
+class Read a =
+  let read : Unit -[]-> a
 end
 
 instance Read Nat =
@@ -54,8 +54,8 @@ let test3 () = printNat (read Unit)
 let test4 () = print ?[printNat] Unit
 let test5 () = print ?[Print Unit] Unit
 
-class Fractional A (E : !) =
-  let div : A -[]-> A -[E]-> A
+class Fractional a(e : !) =
+  let div : a -[]-> a -[e]-> a
 end
 
 exception DivByZero
@@ -64,7 +64,7 @@ instance Fractional Nat [Exn [DivByZero]] =
   let div (_ : Nat) (_ : Nat) = fail [Nat] DivByZero -- Sorry, doesn't have real ints
 end
 
-type alias T = λ(X : !), [IO, X]
+type alias T = λ(x : !), [IO, x]
 type alias T1 = T [Exn [DivByZero]]
 type alias T' = Nat -[T1]-> Nat
 

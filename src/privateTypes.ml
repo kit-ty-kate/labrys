@@ -22,27 +22,31 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open Monomorphic_containers.Open
 
 module Exn_set = Utils.EqSet(Ident.Exn)
-module Variables = Utils.EqSet(Ident.Type)
+module Variables = Utils.EqSet(Ident.TypeVar)
+module Effects = Utils.EqSet(Ident.Type)
 
 type name = Ident.Name.t
 type ty_name = Ident.Type.t
+type tyvar_name = Ident.TypeVar.t
 
 type effects =
   { variables : Variables.t
+  ; effects : Effects.t
   ; exns : Exn_set.t
   }
 
 type tyclass_arg =
-  | Param of (ty_name * Kinds.t)
+  | Param of (tyvar_name * Kinds.t)
   | Filled of t
 
 and t =
   | Ty of ty_name
+  | TyVar of tyvar_name
   | Eff of effects
   | Fun of (t * effects * t)
-  | Forall of (ty_name * Kinds.t * t)
+  | Forall of (tyvar_name * Kinds.t * t)
   | TyClass of ((Ident.TyClass.t * tyclass_arg list) * effects * t)
-  | AbsOnTy of (ty_name * Kinds.t * t)
+  | AbsOnTy of (tyvar_name * Kinds.t * t)
   | AppOnTy of (t * t)
 
 type visibility =
@@ -58,51 +62,56 @@ let ty_empty options =
 let var_eq list_eq x y =
   let aux k =
     let mem k = Variables.mem k y in
-    match List.find_pred (fun (k', _) -> Ident.Type.equal k k') list_eq with
+    match List.find_pred (fun (k', _) -> Ident.TypeVar.equal k k') list_eq with
     | Some (_, k) -> mem k
     | None -> mem k
   in
   Variables.for_all aux x
 
 let eff_equal list_eq x y =
-  Int.(Variables.cardinal x.variables = Variables.cardinal y.variables)
+  Int.equal (Variables.cardinal x.variables) (Variables.cardinal y.variables)
   && var_eq list_eq x.variables y.variables
+  && Effects.equal x.effects y.effects
   && Exn_set.equal x.exns y.exns
 
 let eff_is_subset_of list_eq x y =
   var_eq list_eq x.variables y.variables
+  && Effects.subset x.effects y.effects
   && Exn_set.subset x.exns y.exns
-
-let eff_empty =
-  { variables = Variables.empty
-  ; exns = Exn_set.empty
-  }
 
 let eff_union x y =
   let variables = Variables.union x.variables y.variables in
+  let effects = Effects.union x.effects y.effects in
   let exns = Exn_set.union x.exns y.exns in
-  {variables; exns}
+  {variables; effects; exns}
 
-let eff_union_ty ~from self =
-  let self = {self with variables = Variables.remove from self.variables} in
-  function
-  | Ty name -> {self with variables = Variables.add name self.variables}
+let eff_union_ty' self = function
+  | Ty name -> {self with effects = Effects.add name self.effects}
+  | TyVar name -> {self with variables = Variables.add name self.variables}
   | Eff eff -> eff_union self eff
   | Fun _ | Forall _ | TyClass _ | AbsOnTy _ | AppOnTy _ -> assert false
 
+let eff_union_ty ~from self =
+  let self = {self with variables = Variables.remove from self.variables} in
+  eff_union_ty' self
+
 let eff_replace ~from ~ty self =
   let aux name self =
-    if Ident.Type.equal name from then
+    if Ident.TypeVar.equal name from then
+      let self = {self with variables = Variables.remove name self.variables} in
       eff_union_ty ~from self ty
     else
-      {self with variables = Variables.add name self.variables}
+      self
   in
-  Variables.fold aux self.variables eff_empty
+  Variables.fold aux self.variables self
 
 let ty_equal eff_eq x y =
   let rec aux eq_list = function
     | Ty x, Ty x' ->
         let eq = Ident.Type.equal in
+        eq x x'
+    | TyVar x, TyVar x' ->
+        let eq = Ident.TypeVar.equal in
         eq x x' || List.exists (fun (y, y') -> eq x y && eq x' y') eq_list
     | Eff x, Eff x' ->
         eff_eq eq_list x x'
@@ -143,6 +152,7 @@ let ty_equal eff_eq x y =
     | Forall _, _
     | TyClass _, _
     | Ty _, _
+    | TyVar _, _
     | Eff _, _
     | Fun _, _ -> false
   in
@@ -160,25 +170,27 @@ let tyclass_args_equal args1 args2 =
   in
   try List.for_all2 aux args1 args2 with Invalid_argument _ -> assert false
 
-let eff_remove_module_aliases vars {variables; exns} =
-  let variables =
-    let aux name =
-      if not (List.mem name vars) then
-        Ident.Type.remove_aliases name
-      else
-        name
-    in
-    Variables.map aux variables
+let eff_remove_module_aliases {variables; effects; exns} =
+  let effects =
+    Effects.map Ident.Type.remove_aliases effects
   in
   let exns = Exn_set.map Ident.Exn.remove_aliases exns in
-  {variables; exns}
+  {variables; effects; exns}
 
-let eff_is_empty {variables; exns} =
+let eff_is_empty {variables; effects; exns} =
   Variables.is_empty variables
+  && Effects.is_empty effects
   && Exn_set.is_empty exns
 
 let eff_to_string self =
-  let aux name acc = Ident.Type.to_string name :: acc in
+  let variables =
+    let aux name acc = Ident.TypeVar.to_string name :: acc in
+    Variables.fold aux self.variables []
+  in
+  let effects =
+    let aux name acc = Ident.Type.to_string name :: acc in
+    Effects.fold aux self.effects []
+  in
   let exns =
     if Exn_set.is_empty self.exns then
       []
@@ -186,45 +198,38 @@ let eff_to_string self =
       let aux name acc = Ident.Exn.to_string name :: acc in
       [fmt "Exn [%s]" (String.concat " | " (Exn_set.fold aux self.exns []))]
   in
-  fmt "[%s]" (String.concat ", " (exns @ Variables.fold aux self.variables []))
+  fmt "[%s]" (String.concat ", " (variables @ effects @ exns))
 
-let rec tyclass_arg_remove_module_aliases vars = function
+let rec tyclass_arg_remove_module_aliases = function
   | Param _ as arg -> arg
-  | Filled ty -> Filled (ty_remove_module_aliases vars ty)
+  | Filled ty -> Filled (ty_remove_module_aliases ty)
 
-and ty_remove_module_aliases vars = function
-  | Ty name when not (List.mem name vars) ->
-      Ty (Ident.Type.remove_aliases name)
+and ty_remove_module_aliases = function
   | Ty name ->
-      Ty name
+      Ty (Ident.Type.remove_aliases name)
+  | TyVar _ as ty ->
+      ty
   | Eff effects ->
-      Eff (eff_remove_module_aliases vars effects)
+      Eff (eff_remove_module_aliases effects)
   | Fun (x, eff, y) ->
-      Fun (ty_remove_module_aliases vars x, eff_remove_module_aliases vars eff, ty_remove_module_aliases vars y)
+      Fun (ty_remove_module_aliases x, eff_remove_module_aliases eff, ty_remove_module_aliases y)
   | Forall (name, k, t) ->
-      Forall (name, k, ty_remove_module_aliases (name :: vars) t)
+      Forall (name, k, ty_remove_module_aliases t)
   | TyClass ((name, args), eff, t) ->
-      let args = List.map (tyclass_arg_remove_module_aliases vars) args in
-      let var =
-        let aux acc = function
-          | Param (x, _) -> x :: acc
-          | Filled _ -> acc
-        in
-        List.fold_left aux [] args
-      in
-      let eff = eff_remove_module_aliases vars eff in
-      TyClass ((name, args), eff, ty_remove_module_aliases (var @ vars) t)
+      let args = List.map tyclass_arg_remove_module_aliases args in
+      let eff = eff_remove_module_aliases eff in
+      TyClass ((name, args), eff, ty_remove_module_aliases t)
   | AbsOnTy (name, k, t) ->
-      AbsOnTy (name, k, ty_remove_module_aliases (name :: vars) t)
+      AbsOnTy (name, k, ty_remove_module_aliases t)
   | AppOnTy (x, y) ->
-      AppOnTy (ty_remove_module_aliases vars x, ty_remove_module_aliases vars y)
+      AppOnTy (ty_remove_module_aliases x, ty_remove_module_aliases y)
 
-let tyclass_args_remove_module_aliases = List.map (tyclass_arg_remove_module_aliases [])
-let ty_remove_module_aliases = ty_remove_module_aliases []
+let tyclass_args_remove_module_aliases = List.map tyclass_arg_remove_module_aliases
+let ty_remove_module_aliases = ty_remove_module_aliases
 
 let rec ty_to_string =
   let tyclass_arg_to_string = function
-    | Param (x, _) -> Ident.Type.to_string x
+    | Param (x, _) -> Ident.TypeVar.to_string x
     | Filled ty -> fmt "[%s]" (ty_to_string ty)
   in
   let tyclass_args_to_string args =
@@ -232,6 +237,7 @@ let rec ty_to_string =
   in
   function
   | Ty x -> Ident.Type.to_string x
+  | TyVar x -> Ident.TypeVar.to_string x
   | Eff effects -> eff_to_string effects
   | Fun (Ty x, eff, ret) when eff_is_empty eff ->
       fmt "%s -> %s" (Ident.Type.to_string x) (ty_to_string ret)
@@ -240,13 +246,13 @@ let rec ty_to_string =
   | Fun (x, eff, ret) ->
       fmt "(%s) -%s-> %s" (ty_to_string x) (eff_to_string eff) (ty_to_string ret)
   | Forall (x, k, t) ->
-      fmt "forall %s : %s. %s" (Ident.Type.to_string x) (Kinds.to_string k) (ty_to_string t)
+      fmt "forall %s : %s. %s" (Ident.TypeVar.to_string x) (Kinds.to_string k) (ty_to_string t)
   | TyClass ((name, args), eff, t) when eff_is_empty eff ->
       fmt "{%s %s} => %s" (Ident.TyClass.to_string name) (tyclass_args_to_string args) (ty_to_string t)
   | TyClass ((name, args), eff, t) ->
       fmt "{%s %s} =%s=> %s" (Ident.TyClass.to_string name) (tyclass_args_to_string args) (eff_to_string eff) (ty_to_string t)
   | AbsOnTy (name, k, t) ->
-      fmt "λ%s : %s. %s" (Ident.Type.to_string name) (Kinds.to_string k) (ty_to_string t)
+      fmt "λ%s : %s. %s" (Ident.TypeVar.to_string name) (Kinds.to_string k) (ty_to_string t)
   | AppOnTy (Ty f, Ty x) -> fmt "%s %s" (Ident.Type.to_string f) (Ident.Type.to_string x)
   | AppOnTy (Ty f, x) -> fmt "%s (%s)" (Ident.Type.to_string f) (ty_to_string x)
   | AppOnTy (f, Ty x) -> fmt "(%s) %s" (ty_to_string f) (Ident.Type.to_string x)
@@ -256,10 +262,10 @@ let rec ty_reduce = function
   | AppOnTy (t, ty) ->
       begin match ty_reduce t with
       | AbsOnTy (name, _, t) -> ty_reduce (ty_replace ~from:name ~ty t)
-      | Ty _ | AppOnTy _ as t -> AppOnTy (t, ty_reduce ty)
+      | Ty _ | TyVar _ | AppOnTy _ as t -> AppOnTy (t, ty_reduce ty)
       | Eff _ | Fun _ | Forall _ | TyClass _ -> assert false
       end
-  | Ty _ | Eff _ as ty -> ty
+  | Ty _ | TyVar _ | Eff _ as ty -> ty
   | Fun (x, eff, y) -> Fun (ty_reduce x, eff, ty_reduce y)
   | Forall (x, k, t) -> Forall (x, k, ty_reduce t)
   | TyClass ((x, args), eff, t) ->
@@ -275,8 +281,8 @@ let rec ty_reduce = function
 
 and ty_replace ~from ~ty =
   let rec aux = function
-    | Ty x when Ident.Type.equal x from -> ty
-    | Ty _ as t -> t
+    | TyVar x when Ident.TypeVar.equal x from -> ty
+    | TyVar _ | Ty _ as t -> t
     | Eff effects -> Eff (eff_replace ~from ~ty effects)
     | Fun (param, eff, ret) ->
         Fun (aux param, eff_replace ~from ~ty eff, aux ret)
@@ -306,16 +312,12 @@ module Instances = Utils.EqMap(struct
 
 (* TODO: Handle contraints *)
 type class_t =
-  { params : (ty_name * Kinds.t) list
+  { params : (tyvar_name * Kinds.t) list
   ; signature : (name * t) list
   ; instances : name Instances.t
   }
 
 let class_remove_module_aliases {params; signature; instances} =
-  let params =
-    let aux (name, k) = (Ident.Type.remove_aliases name, k) in
-    List.map aux params
-  in
   let signature =
     let aux (name, ty) =
       (Ident.Name.remove_aliases name, ty_remove_module_aliases ty)
@@ -329,7 +331,8 @@ let class_remove_module_aliases {params; signature; instances} =
   {params; signature; instances}
 
 let params_equal (name1, k1) (name2, k2) =
-  Ident.Type.equal name1 name2 && Kinds.equal k1 k2
+  (* TODO: Do not test typevar equality *)
+  Ident.TypeVar.equal name1 name2 && Kinds.equal k1 k2
 
 let signature_equal (name1, ty1) (name2, ty2) =
   Ident.Name.equal name1 name2

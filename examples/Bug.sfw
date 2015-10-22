@@ -25,7 +25,7 @@ let printNat (n : Nat) =
   fmt buf "%d" n;
   println buf
 
-let id X (x:X) = (x : X)
+let id {x} (x:x) = (x : x)
 
 let test = id [Nat] O
 
@@ -37,7 +37,7 @@ let test (_ : Unit) = fail [Nat] A : Nat
 
 let test = try test Unit with A -> O end
 
-let apply X Y (E : φ) (f : X -[E]-> Y) (x : X) = f x
+let apply {x} {y} {e : φ} (f : x -[e]-> y) (x : x) = f x
 
 let test () : Nat = apply [Nat] [Nat] [[]] (λ(x : Nat) -> x) O
 let test () : [[IO]] Nat = apply [Nat] [Nat] [[IO]] (λ(x : Nat) -> printNat x; x) O

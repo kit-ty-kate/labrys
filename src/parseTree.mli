@@ -27,16 +27,20 @@ type new_upper_name = (loc * [`NewUpperName of string])
 type lower_name = (loc * [`LowerName of string list])
 type upper_name = (loc * [`UpperName of string list])
 
-type ty_arg = (new_upper_name * Kinds.t option)
+type ty_arg = (new_lower_name * Kinds.t option)
 
-type effects = (loc * (upper_name * upper_name list) list)
+type effect_name =
+  | EffTy of (upper_name * upper_name list)
+  | EffTyVar of new_lower_name
+
+type effects = (loc * effect_name list)
 
 type is_rec =
   | Rec
   | NonRec
 
 type tyclass_arg =
-  | Param of new_upper_name
+  | Param of new_lower_name
   | Filled of ty
 
 and tyclass = (upper_name * tyclass_arg list)
@@ -44,6 +48,7 @@ and tyclass = (upper_name * tyclass_arg list)
 and ty' =
   | Fun of (ty * effects option * ty)
   | Ty of upper_name
+  | TyVar of new_lower_name
   | Eff of effects
   | Forall of (ty_arg list * ty)
   | TyClass of (tyclass * effects option * ty)

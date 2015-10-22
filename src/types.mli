@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Type.t
+type tyvar_name = Ident.TypeVar.t
 
 type t = PrivateTypes.t
 
@@ -47,7 +48,7 @@ val equal : t -> t -> bool
 
 val is_subset_of : t -> t -> bool
 
-val replace : from:name -> ty:t -> t -> t
+val replace : from:tyvar_name -> ty:t -> t -> t
 
 val is_value : t -> bool
 
@@ -76,7 +77,7 @@ val apply_ty :
 
 val apply_tyclass : t -> Ident.TyClass.t -> PrivateTypes.tyclass_arg list -> (t * Effects.t)
 
-val has_io : t -> bool
+val has_io : <lib_dir : string; ..> -> t -> bool
 
 val is_fun : t -> bool
 
@@ -84,12 +85,12 @@ val is_unit : <lib_dir : string; ..> -> t -> bool
 
 val remove_module_aliases : t -> t
 
-val tyclass_wrap : Ident.TyClass.t -> (name * Kinds.t) list -> t -> t
+val tyclass_wrap : Ident.TyClass.t -> (tyvar_name * Kinds.t) list -> t -> t
 
 val extract_filled_tyclasses :
   t ->
   ((Ident.TyClass.t * t list) option list * Effects.t * t)
 
-val forall : name * Kinds.t * t -> t
+val forall : tyvar_name * Kinds.t * t -> t
 val tyclass : (Ident.TyClass.t * PrivateTypes.tyclass_arg list) * PrivateTypes.effects * t -> t
 val ty : loc:Location.t -> Gamma.t -> Ident.Type.t -> t

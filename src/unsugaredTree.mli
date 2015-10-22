@@ -23,31 +23,37 @@ type name = Ident.Name.t
 type variant_name = Ident.Variant.t
 type exn_name = Ident.Exn.t
 type t_name = Ident.Type.t
+type tyvar_name = Ident.TypeVar.t
 type tyclass_name = Ident.TyClass.t
 type instance_name = Ident.Instance.t
 type module_name = Module.t
 type loc = Location.t
 
-type t_value = (t_name * Kinds.t)
+type t_value = (tyvar_name * Kinds.t)
 
-type effects = (loc * (t_name * exn_name list) list)
+type effect_name =
+  | EffTy of (t_name * exn_name list)
+  | EffTyVar of tyvar_name
+
+type effects = (loc * effect_name list)
 
 type is_rec = ParseTree.is_rec =
   | Rec
   | NonRec
 
-type tyclass_value = (tyclass_name * tyclass_arg list)
-
-and tyclass_arg =
-  | Param of t_name
+type tyclass_arg =
+  | Param of tyvar_name
   | Filled of ty
+
+and tyclass = (tyclass_name * tyclass_arg list)
 
 and ty' =
   | Fun of (ty * effects option * ty)
   | Ty of t_name
+  | TyVar of tyvar_name
   | Eff of effects
   | Forall of (t_value * ty)
-  | TyClass of (tyclass_value * effects option * ty)
+  | TyClass of (tyclass * effects option * ty)
   | AbsOnTy of (t_value * ty)
   | AppOnTy of (ty * ty)
 
@@ -76,7 +82,7 @@ type value = (name * is_rec * t)
 and t' =
   | Abs of ((name * ty) * t)
   | TAbs of (t_value * t)
-  | CAbs of ((instance_name * tyclass_value) * t)
+  | CAbs of ((instance_name * tyclass) * t)
   | App of (t * t)
   | TApp of (t * ty)
   | CApp of (t * tyclass_app_arg)
@@ -97,7 +103,7 @@ type top =
   | Value of value
   | Type of (t_name * ty)
   | Foreign of (string * name * ty)
-  | Datatype of (t_name * Kinds.t * (t_name * Kinds.t) list * variant list)
+  | Datatype of (t_name * Kinds.t * (tyvar_name * Kinds.t) list * variant list)
   | Exception of (exn_name * ty list)
   | Open of module_name
   | Class of (tyclass_name * t_value list * (name * ty) list)

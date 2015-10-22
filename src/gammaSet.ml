@@ -25,6 +25,6 @@ module Value = struct
   include Utils.EqSet(Ident.Name)
 end
 
-module Type = struct
-  include Utils.EqSet(Ident.Type)
+module TypeVar = struct
+  include Utils.EqSet(Ident.TypeVar)
 end

@@ -43,6 +43,8 @@ let string options =
 
 let underscore_loc ~current_module loc =
   Ident.Name.create ~loc current_module "_"
+let underscore_type_var_loc loc =
+  Ident.TypeVar.local_create ~loc "_"
 let underscore_instance_loc ~current_module loc =
   Ident.Instance.create ~loc current_module "_"
 let underscore ~current_module =

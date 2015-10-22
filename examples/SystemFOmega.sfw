@@ -26,13 +26,13 @@ let printNat (n : Nat) =
   println buf;
   n
 
-let id X (x:X) (x:X) = x
+let id {x} (x:x) (x:x) = x
 
 let test = id [Nat]
 
 let testdeux (x : Nat) = printNat (test O O)
 
-type alias Id = λX, X
+type alias Id = λx, x
 
 type alias I = Id
 
@@ -40,7 +40,7 @@ type alias Ip = Id
 
 type alias II = Ip Nat
 
-type Pair X Y = Pair X Y
+type Pair x y = Pair x y
 
 let test = Pair [Nat] [Nat] O O
 
@@ -49,7 +49,7 @@ let test = match test with
   | x -> Unit
   end
 
---type alias Test = λX, λX, X
+--type alias Test = λx, λx, x
 
 let rec recursiveFun (x : Nat) (y : Nat) : [[IO]] Nat =
   recursiveFun y (printNat x)

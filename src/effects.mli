@@ -31,11 +31,11 @@ val of_list :
 
 val is_empty : t -> bool
 
-val equal : (Ident.Type.t * Ident.Type.t) list -> t -> t -> bool
+val equal : (Ident.TypeVar.t * Ident.TypeVar.t) list -> t -> t -> bool
 
-val is_subset_of : (Ident.Type.t * Ident.Type.t) list -> t -> t -> bool
+val is_subset_of : (Ident.TypeVar.t * Ident.TypeVar.t) list -> t -> t -> bool
 
-val has_io : t -> bool
+val has_io : <lib_dir : string; ..> -> t -> bool
 
 val add_exn : Ident.Exn.t -> t -> t
 
@@ -49,13 +49,13 @@ val remove_exn : Ident.Exn.t -> t -> t
 
 val to_string : t -> string
 
-val replace : from:Ident.Type.t -> ty:PrivateTypes.t -> t -> t
+val replace : from:Ident.TypeVar.t -> ty:PrivateTypes.t -> t -> t
 
-val remove_module_aliases : Ident.Type.t list -> t -> t
+val remove_module_aliases : t -> t
 
 val match_tyclass :
-  is_tyclass:(Ident.Type.t -> bool) ->
-  is_tyclass_x:(Ident.Type.t -> bool) ->
+  is_tyclass:(Ident.TypeVar.t -> bool) ->
+  is_tyclass_x:(Ident.TypeVar.t -> bool) ->
   t ->
   eff_x:t ->
-  ((Ident.Type.t * PrivateTypes.t) list * t * (Ident.Type.t * PrivateTypes.t) list * t)
+  ((Ident.TypeVar.t * PrivateTypes.t) list * t * (Ident.TypeVar.t * PrivateTypes.t) list * t)

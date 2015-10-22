@@ -23,57 +23,74 @@ open Monomorphic_containers.Open
 
 module Exn_set = PrivateTypes.Exn_set
 module Variables = PrivateTypes.Variables
+module Effects = PrivateTypes.Effects
 
 type t = PrivateTypes.effects =
   { variables : Variables.t
+  ; effects : Effects.t
   ; exns : Exn_set.t
   }
 
-let empty = PrivateTypes.eff_empty
+let empty =
+  { variables = Variables.empty
+  ; effects = Effects.empty
+  ; exns = Exn_set.empty
+  }
 
 let is_empty = PrivateTypes.eff_is_empty
 
 let equal = PrivateTypes.eff_equal
 let is_subset_of = PrivateTypes.eff_is_subset_of
 
-let has_io {variables; exns = _} =
+let has_io options {variables; effects; exns = _} =
   not (Variables.is_empty variables)
+  || Effects.mem (Builtins.io options) effects
 
-let union_ty = PrivateTypes.eff_union_ty
+let union_ty = PrivateTypes.eff_union_ty'
 let union = PrivateTypes.eff_union
 
-let add options gamma (name, exns) self =
-  let exns =
-    let aux x = fst (GammaMap.Exn.find_binding x gamma.Gamma.exceptions) in
-    List.map aux exns
-  in
-  let (name, k, has_args, self) =
-    match GammaMap.Types.find_binding name gamma.Gamma.types with
-    | (name, PrivateTypes.Abstract k) ->
-        if Ident.Type.equal name (Builtins.exn options) then
-          (name, k, true, self)
-        else
-          (name, k, false, {self with variables = Variables.add name self.variables})
-    | (name, PrivateTypes.Alias (ty, k)) ->
-        (name, k, false, union_ty ~from:name self ty)
-  in
-  if not (Kinds.is_effect k) then
-    Err.fail
-      ~loc:(Ident.Type.loc name)
-      "Only kind φ is accepted here";
-  if has_args && List.is_empty exns then
-    Err.fail
-      ~loc:(Ident.Type.loc name)
-      "The '%s' effect must have at least one argument"
-      (Ident.Type.to_string name);
-  if not has_args && not (List.is_empty exns) then
-    Err.fail
-      ~loc:(Ident.Type.loc name)
-      "The '%s' effect doesn't have any arguments"
-      (Ident.Type.to_string name);
-  let exns = Exn_set.of_list exns in
-  let exns = Exn_set.union exns self.exns in
-  {self with exns}
+let add options gamma eff self =
+  match eff with
+  | UnsugaredTree.EffTy (name, exns) ->
+      let exns =
+        let aux x = fst (GammaMap.Exn.find_binding x gamma.Gamma.exceptions) in
+        List.map aux exns
+      in
+      let (name, k, has_args, self) =
+        match GammaMap.Types.find_binding name gamma.Gamma.types with
+        | (name, PrivateTypes.Abstract k) ->
+            if Ident.Type.equal name (Builtins.exn options) then
+              (name, k, true, self)
+            else
+              (name, k, false, {self with effects = Effects.add name self.effects})
+        | (name, PrivateTypes.Alias (ty, k)) ->
+            (name, k, false, union_ty self ty)
+      in
+      if not (Kinds.is_effect k) then
+        Err.fail
+          ~loc:(Ident.Type.loc name)
+          "Only kind φ is accepted here";
+      if has_args && List.is_empty exns then
+        Err.fail
+          ~loc:(Ident.Type.loc name)
+          "The '%s' effect must have at least one argument"
+          (Ident.Type.to_string name);
+      if not has_args && not (List.is_empty exns) then
+        Err.fail
+          ~loc:(Ident.Type.loc name)
+          "The '%s' effect doesn't have any arguments"
+          (Ident.Type.to_string name);
+      let exns = Exn_set.of_list exns in
+      let exns = Exn_set.union exns self.exns in
+      {self with exns}
+  | UnsugaredTree.EffTyVar name ->
+      let k = GammaMap.TypeVar.find name gamma.Gamma.type_vars in
+      if not (Kinds.is_effect k) then
+        Err.fail
+          ~loc:(Ident.TypeVar.loc name)
+          "Only kind φ is accepted here";
+      let variables = Variables.add name self.variables in
+      {self with variables}
 
 let add_exn x self =
   {self with exns = Exn_set.add x self.exns}
