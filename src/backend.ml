@@ -108,6 +108,17 @@ module Main (I : sig val main_module : Module.t end) = struct
     let gc_malloc = Llvm.declare_function "GC_malloc" malloc_type m in
     Llvm.build_ret (Llvm.build_call gc_malloc (Llvm.params malloc) "" builder) builder
 
+  let create_builtin_instruction ty name g =
+    let ty = Llvm.function_type ty [|ty; ty|] in
+    let (f, builder) = Llvm.define_function `External c (fmt ".cervoise.%s" name) ty m in
+    let v = g (Llvm.param f 0) (Llvm.param f 1) "" builder in
+    Llvm.build_ret v builder
+
+  let () = begin
+    create_builtin_instruction Type.i32 "add" Llvm.build_add;
+    create_builtin_instruction Type.i32 "mul" Llvm.build_mul;
+  end
+
   let main_init =
     let ty = Llvm.function_type Type.void [|Type.jmp_buf_ptr|] in
     Llvm.declare_function (Generic.init_name I.main_module) ty m
