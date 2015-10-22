@@ -1,44 +1,30 @@
 import library Nat
 open Nat
 
-let printUnit : Unit -[IO]-> Unit = begin
-  @msg = constant [4 x i8] c"()\0a\00"
+foreign "GC_malloc" alloc : Int -[IO]-> String
 
-  declare i32 @printf(i8*, ...)
-  
-  define i8* @Presentation..printUnit(i8*) {
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0))
-    ret i8* null
-  }
-end
+foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
 
-let printInt : Nat -[IO]-> Unit = begin
-  @msg = constant [4 x i8] c"%d\0a\00"
+foreign "puts" println : String -[IO]-> Unit
 
-  declare i32 @printf(i8*, ...)
-  
-  define i32 @__int_of_nat(i8*) {
-    %var = bitcast i8* %0 to [2 x i8*]*
-    %variant = load [2 x i8*]* %var
-    %keyp = extractvalue [2 x i8*] %variant, 0
-    %key = ptrtoint i8* %keyp to i32
-    %cond = icmp eq i32 %key, 0
-    br i1 %cond, label %end, label %loop
-  loop:
-    %next = extractvalue [2 x i8*] %variant, 1
-    %val = call i32 @__int_of_nat(i8* %next)
-    %res = add i32 1, %val
-    ret i32 %res
-  end:
-    ret i32 0
-  }
+foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
 
-  define i8* @Presentation..printInt(i8*) {
-    %i = call i32 @__int_of_nat(i8* %0)
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %i)
-    ret i8* null
-  }
-end
+let natToInt =
+  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+    match n with
+    | O -> acc
+    | S n -> aux (add 1 acc) n
+    end
+  in
+  aux 0
+
+let printNat (n : Nat) =
+  let n = natToInt n in
+  let buf = alloc 512 in
+  fmt buf "%d" n;
+  println buf
+
+let printUnit () = println "()"
 
 class Print A =
   let print : A -[IO]-> Unit
@@ -48,8 +34,8 @@ let test0 = print
 let test1 ?(z : Print A) = print ?[z]
 let test2 ?(z : Print A) (x : A) = print ?[z] x
 
-instance [printInt] Print Unit =
-  let print () = printInt O
+instance [printNat] Print Unit =
+  let print () = printNat O
 end
 
 instance Print Unit =
@@ -64,8 +50,8 @@ instance Read Nat =
   let read () = O
 end
 
-let test3 () = printInt (read Unit)
-let test4 () = print ?[printInt] Unit
+let test3 () = printNat (read Unit)
+let test4 () = print ?[printNat] Unit
 let test5 () = print ?[Print Unit] Unit
 
 class Fractional A (E : !) =
@@ -86,7 +72,7 @@ let f : T' = λ(x : Nat) -> printUnit Unit; fail [Unit] DivByZero; x
 
 let test6 () =
   try
-    printInt (div O O ?[Fractional Nat [Exn [DivByZero]]])
+    printNat (div O O ?[Fractional Nat [Exn [DivByZero]]])
   with
   | DivByZero -> printUnit Unit
   end

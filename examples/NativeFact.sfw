@@ -1,61 +1,45 @@
-let printInt : Int -[IO]-> Unit = begin
-  @msg = constant [4 x i8] c"%d\0a\00"
+import library Nat
 
-  declare i32 @printf(i8*, ...)
-  
-  define i8* @NativeFact..printInt(i8*) {
-    %var = bitcast i8* %0 to i32*
-    %i = load i32* %var
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %i)
-    ret i8* null
-  }
-end
+open Nat
 
-let plus : Int -> Int -[IO]-> Int = begin
-  declare i8* @GC_malloc(i32)
+foreign "puts" println : String -[IO]-> Unit
+foreign "GC_malloc" alloc : Int -[IO]-> String
+foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
 
-  define i8* @NativeFact..plus(i8*, i8*) {
-    %var0 = bitcast i8* %0 to i32*
-    %var1 = bitcast i8* %1 to i32*
-    %i0 = load i32* %var0
-    %i1 = load i32* %var1
-    %res = add i32 %i0, %i1
-    %var = call i8* @GC_malloc(i32 32)
-    %varRes = bitcast i8* %var to i32*
-    store i32 %res, i32* %varRes
-    ret i8* %var
-  }
-end
+let printInt (n : Int) =
+  let buf = alloc 512 in
+  fmt buf "%d" n;
+  println buf
 
-let mult : Int -> Int -[IO]-> Int = begin
-  declare i8* @GC_malloc(i32)
+foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
+foreign ".cervoise.mul" mul : Int -> Int -[IO]-> Int
 
-  define i8* @NativeFact..mult(i8*, i8*) {
-    %var0 = bitcast i8* %0 to i32*
-    %var1 = bitcast i8* %1 to i32*
-    %i0 = load i32* %var0
-    %i1 = load i32* %var1
-    %res = mul i32 %i0, %i1
-    %var = call i8* @GC_malloc(i32 32)
-    %varRes = bitcast i8* %var to i32*
-    store i32 %res, i32* %varRes
-    ret i8* %var
-  }
-end
+let natToInt =
+  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+    match n with
+    | O -> acc
+    | S n -> aux (add 1 acc) n
+    end
+  in
+  aux 0
 
---let rec fact (n : Int) : [[IO]] Int =
---  match n with
---  | O -> 1
---  | Nat.S x -> mult (Nat.S x) (fact x)
---  end
+let rec fact (n : Nat) : [[IO]] Int =
+  match n with
+  | O -> 1
+  | S x -> mul (add 1 (natToInt x)) (fact x)
+  end
 
 let main =
-  printInt (plus 3 3);
-  printInt (mult 3 3)
---  printInt (fact O); -- 1
---  printInt (fact (S O)); -- 1
---  printInt (fact (S (S O))); -- 2
---  printInt (fact (S (S (S O)))); -- 6
---  printInt (fact (S (S (S (S O))))); -- 24
---  printInt (fact (S (S (S (S (S O)))))); -- 120
---  printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))) -- 362880
+  printInt (fact O); -- 1
+  printInt (fact (S O)); -- 1
+  printInt (fact (S (S O))); -- 2
+  printInt (fact (S (S (S O)))); -- 6
+  printInt (fact (S (S (S (S O))))); -- 24
+  printInt (fact (S (S (S (S (S O)))))); -- 120
+  printInt (fact (S (S (S (S (S (S O))))))); -- 720
+  printInt (fact (S (S (S (S (S (S (S O)))))))); -- 5040
+  printInt (fact (S (S (S (S (S (S (S (S O))))))))); -- 40320
+  printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))); -- 362880
+  printInt (fact (S (S (S (S (S (S (S (S (S (S O))))))))))); -- 3628800
+  printInt (fact (S (S (S (S (S (S (S (S (S (S (S O)))))))))))); -- 29916800
+  Unit

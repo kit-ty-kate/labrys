@@ -3,48 +3,43 @@ import Multi
 
 open Nat
 
-let printInt : Nat -[IO]-> Unit = begin
-  @msg = constant [4 x i8] c"%d\0a\00"
+foreign "GC_malloc" alloc : Int -[IO]-> String
 
-  declare i32 @printf(i8*, ...)
-  
-  define i32 @__int_of_nat(i8*) {
-    %var = bitcast i8* %0 to [2 x i8*]*
-    %variant = load [2 x i8*]* %var
-    %keyp = extractvalue [2 x i8*] %variant, 0
-    %key = ptrtoint i8* %keyp to i32
-    %cond = icmp eq i32 %key, 0
-    br i1 %cond, label %end, label %loop
-  loop:
-    %next = extractvalue [2 x i8*] %variant, 1
-    %val = call i32 @__int_of_nat(i8* %next)
-    %res = add i32 1, %val
-    ret i32 %res
-  end:
-    ret i32 0
-  }
+foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
 
-  define i8* @TyClass..printInt(i8*) {
-    %i = call i32 @__int_of_nat(i8* %0)
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %i)
-    ret i8* null
-  }
-end
+foreign "puts" println : String -[IO]-> Unit
+
+foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
+
+let natToInt =
+  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+    match n with
+    | O -> acc
+    | S n -> aux (add 1 acc) n
+    end
+  in
+  aux 0
+
+let printNat (n : Nat) =
+  let n = natToInt n in
+  let buf = alloc 512 in
+  fmt buf "%d" n;
+  println buf
 
 class Print A =
   let print1 : A -[IO]-> Unit
 end
 
-let printInt2' (n : Nat) = printInt n; Unit
+let printInt2' (n : Nat) = printNat n; Unit
 
 let test ?(z : Print A) (x : A) = print1 ?[z] x
 
 instance [x] Print Unit =
-  let print1 (_ : Unit) = printInt O
+  let print1 (_ : Unit) = printNat O
 end
 
 instance Print Unit =
-  let print1 (_ : Unit) = printInt (S O)
+  let print1 (_ : Unit) = printNat (S O)
 end
 
 let test () = print1 ?[x] Unit
@@ -58,7 +53,7 @@ class PrintLol (A : !) =
 end
 
 instance PrintLol [] =
-  let print (_ : Unit -> Unit) = printInt (S (S O))
+  let print (_ : Unit -> Unit) = printNat (S (S O))
 end
 
 let lol () = print (\(_ : Unit) -> Unit)
@@ -74,4 +69,4 @@ instance ReadLike Nat =
 end
 
 let main =
-  printInt (read Unit)
+  printNat (read Unit)

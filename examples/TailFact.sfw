@@ -2,33 +2,28 @@ import library Nat
 
 open Nat
 
-let printInt : Nat -[IO]-> Unit = begin
-  @msg = constant [4 x i8] c"%d\0a\00"
+foreign "GC_malloc" alloc : Int -[IO]-> String
 
-  declare i32 @printf(i8*, ...)
+foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
 
-  define i32 @__int_of_nat(i8*) {
-    %var = bitcast i8* %0 to [2 x i8*]*
-    %variant = load [2 x i8*]* %var
-    %keyp = extractvalue [2 x i8*] %variant, 0
-    %key = ptrtoint i8* %keyp to i32
-    %cond = icmp eq i32 %key, 0
-    br i1 %cond, label %end, label %loop
-  loop:
-    %next = extractvalue [2 x i8*] %variant, 1
-    %val = call i32 @__int_of_nat(i8* %next)
-    %res = add i32 1, %val
-    ret i32 %res
-  end:
-    ret i32 0
-  }
+foreign "puts" println : String -[IO]-> Unit
 
-  define i8* @TailFact..printInt(i8*) {
-    %i = call i32 @__int_of_nat(i8* %0)
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %i)
-    ret i8* null
-  }
-end
+foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
+
+let natToInt =
+  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+    match n with
+    | O -> acc
+    | S n -> aux (add 1 acc) n
+    end
+  in
+  aux 0
+
+let printNat (n : Nat) =
+  let n = natToInt n in
+  let buf = alloc 512 in
+  fmt buf "%d" n;
+  println buf
 
 exception Lol
 
@@ -56,18 +51,18 @@ let fact = fact (S O)
 
 let main =
   try
-    printInt (fact O); -- 1
-    printInt (fact (S O)); -- 1
-    printInt (fact (S (S O))); -- 2
-    printInt (fact (S (S (S O)))); -- 6
-    printInt (fact (S (S (S (S O))))); -- 24
-    printInt (fact (S (S (S (S (S O)))))); -- 120
-    printInt (fact (S (S (S (S (S (S O))))))); -- 720
-    printInt (fact (S (S (S (S (S (S (S O)))))))); -- 5040
-    printInt (fact (S (S (S (S (S (S (S (S O))))))))); -- 40320
-    printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))); -- 362880
-    printInt (fact (S (S (S (S (S (S (S (S (S (S O))))))))))) -- 3628800
---    printInt (fact (S (S (S (S (S (S (S (S (S (S (S O)))))))))))) -- 29916800 (Too much RAM but works)
+    printNat (fact O); -- 1
+    printNat (fact (S O)); -- 1
+    printNat (fact (S (S O))); -- 2
+    printNat (fact (S (S (S O)))); -- 6
+    printNat (fact (S (S (S (S O))))); -- 24
+    printNat (fact (S (S (S (S (S O)))))); -- 120
+    printNat (fact (S (S (S (S (S (S O))))))); -- 720
+    printNat (fact (S (S (S (S (S (S (S O)))))))); -- 5040
+    printNat (fact (S (S (S (S (S (S (S (S O))))))))); -- 40320
+    printNat (fact (S (S (S (S (S (S (S (S (S O)))))))))); -- 362880
+    printNat (fact (S (S (S (S (S (S (S (S (S (S O))))))))))) -- 3628800
+--    printNat (fact (S (S (S (S (S (S (S (S (S (S (S O)))))))))))) -- 29916800 (Too much RAM but works)
   with
   | Lol -> Unit
   end

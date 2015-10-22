@@ -3,53 +3,12 @@ type Nat =
   | S Nat
   | D Nat Nat
 
-let printZero : Unit -[IO]-> Unit = begin
-  @msg = constant [3 x i8] c"0\0a\00"
+foreign "puts" println : String -[IO]-> Unit
 
-  declare i32 @printf(i8*, ...)
-
-  define i8* @Variants..printZero(i8*) {
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
-    %r = inttoptr i32 %r1 to i8*
-    ret i8* %r
-  }
-end
-
-let printOne : Unit -[IO]-> Unit = begin
-  @msg = constant [3 x i8] c"1\0a\00"
-
-  declare i32 @printf(i8*, ...)
-
-  define i8* @Variants..printOne(i8*) {
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
-    %r = inttoptr i32 %r1 to i8*
-    ret i8* %r
-  }
-end
-
-let printTwo : Unit -[IO]-> Unit = begin
-  @msg = constant [3 x i8] c"2\0a\00"
-
-  declare i32 @printf(i8*, ...)
-
-  define i8* @Variants..printTwo(i8*) {
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @msg, i32 0, i32 0))
-    %r = inttoptr i32 %r1 to i8*
-    ret i8* %r
-  }
-end
-
-let printOther : Unit -[IO]-> Unit = begin
-  @msg = constant [7 x i8] c"other\0a\00"
-
-  declare i32 @printf(i8*, ...)
-
-  define i8* @Variants..printOther(i8*) {
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([7 x i8]* @msg, i32 0, i32 0))
-    %r = inttoptr i32 %r1 to i8*
-    ret i8* %r
-  }
-end
+let printZero () = println "0"
+let printOne () = println "1"
+let printTwo () = println "2"
+let printOther () = println "other"
 
 let rec f (x : Nat) : [[IO]] Nat =
   match x with

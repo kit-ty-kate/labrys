@@ -2,26 +2,33 @@ type Nat =
   | O
   | S Nat
 
-let printNat : Nat -[IO]-> Nat = begin
-  @msg = constant [4 x i8] c"%d\0a\00"
-  declare i32 @printf(i8*, ...)
-  define i8* @SystemF..printNat(i8* %i) {
-    %access_prim = load i8* %i
-    %access = zext i8 %access_prim to i32
-    %r1 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @msg, i32 0, i32 0), i32 %access)
-    %r = inttoptr i32 %r1 to i8*
-    ret i8* %r
-  }
-end
+foreign "GC_malloc" alloc : Int -[IO]-> String
 
-let zero : Nat = begin
-  @SystemF..zero = constant i8 0
-end
+foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
+
+foreign "puts" println : String -[IO]-> Unit
+
+foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
+
+let natToInt =
+  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+    match n with
+    | O -> acc
+    | S n -> aux (add 1 acc) n
+    end
+  in
+  aux 0
+
+let printNat (n : Nat) =
+  let n = natToInt n in
+  let buf = alloc 512 in
+  fmt buf "%d" n;
+  println buf
 
 let id X (x:X) (x:X) = x
 
 let test = id [Nat]
 
 let main =
-  let testdeux = printNat (test zero zero) in
+  let testdeux = printNat (test O O) in
   Unit
