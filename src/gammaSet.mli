@@ -21,4 +21,4 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 module Value : Utils.EQSET with type elt = Ident.Name.t
 
-module TypeVar : Utils.EQSET with type elt = Ident.TypeVar.t
+module TypeVar = GammaMap.TypeVar.Set

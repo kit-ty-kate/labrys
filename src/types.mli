@@ -75,7 +75,12 @@ val apply_ty :
   t ->
   t
 
-val apply_tyclass : t -> Ident.TyClass.t -> PrivateTypes.tyclass_arg list -> (t * Effects.t)
+val apply_tyclass :
+  loc_x:Location.t ->
+  t ->
+  Ident.TyClass.t ->
+  PrivateTypes.t list ->
+  (t * Effects.t)
 
 val has_io : <lib_dir : string; ..> -> t -> bool
 
@@ -92,5 +97,7 @@ val extract_filled_tyclasses :
   ((Ident.TyClass.t * t list) option list * Effects.t * t)
 
 val forall : tyvar_name * Kinds.t * t -> t
-val tyclass : (Ident.TyClass.t * PrivateTypes.tyclass_arg list) * PrivateTypes.effects * t -> t
+val tyclass :
+  (Ident.TyClass.t * Kinds.t GammaMap.TypeVar.t * PrivateTypes.t list) * PrivateTypes.effects * t ->
+  t
 val ty : loc:Location.t -> Gamma.t -> Ident.Type.t -> t

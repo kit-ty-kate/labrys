@@ -244,8 +244,8 @@ nonempty_args(rest):
       }
 
 tyclass:
-  | name = upperName args = tyclass_arg+
-      { (name, args) }
+  | name = upperName tyvars = kind_and_name_in_value* args = typeExprClosed+
+      { (name, tyvars, args) }
 
 typeExprStrictlyUnclosed:
   | param = typeExprProtectedPermissive Arrow ret = typeExpr
@@ -362,12 +362,6 @@ kind_and_name_in_value:
       { (name, None) }
   | LBrace name = newLowerName Colon k = kind RBrace
       { (name, Some k) }
-
-tyclass_arg:
-  | name = newLowerName
-      { ParseTree.Param name }
-  | LBracket ty = typeExpr RBracket
-      { ParseTree.Filled ty }
 
 pattern:
   | p = pat Arrow t = term

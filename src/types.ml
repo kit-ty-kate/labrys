@@ -26,17 +26,13 @@ open Monomorphic_containers.Open
 type name = Ident.Type.t
 type tyvar_name = Ident.TypeVar.t
 
-type tyclass_arg = PrivateTypes.tyclass_arg =
-  | Param of (tyvar_name * Kinds.t)
-  | Filled of t
-
-and t = PrivateTypes.t =
+type t = PrivateTypes.t =
   | Ty of name
   | TyVar of tyvar_name
   | Eff of PrivateTypes.effects
   | Fun of (t * PrivateTypes.effects * t)
   | Forall of (tyvar_name * Kinds.t * t)
-  | TyClass of ((Ident.TyClass.t * tyclass_arg list) * PrivateTypes.effects * t)
+  | TyClass of ((Ident.TyClass.t * Kinds.t GammaMap.TypeVar.t * t list) * Effects.t * t)
   | AbsOnTy of (tyvar_name * Kinds.t * t)
   | AppOnTy of (t * t)
 
@@ -94,24 +90,28 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
       if Kinds.not_star kx then
         fail_not_star ~loc:loc_ret "forall";
       (Forall (name, k, ret), Kinds.Star)
-  | (loc, UnsugaredTree.TyClass ((name, args), eff, ret)) ->
+  | (loc, UnsugaredTree.TyClass ((name, tyvars, args), eff, ret)) ->
       let loc_ret = fst ret in
-      let (name, gamma, args) =
+      let (name, gamma, tyvars, args) =
         let (name, tyclass) =
           GammaMap.TyClass.find_binding name gamma.Gamma.tyclasses
+        in
+        let tyvars =
+          let aux acc (name, k) = GammaMap.TypeVar.add name k acc in
+          List.fold_left aux GammaMap.TypeVar.empty tyvars
         in
         let loc = Ident.TyClass.loc name in
         let (gamma, args) =
           let f = of_parse_tree_kind ~pure_arrow:(false, `Forbid) options in
-          Class.get_params ~loc f gamma args tyclass
+          Class.get_params ~loc f gamma tyvars args tyclass
         in
-        (name, gamma, args)
+        (name, gamma, tyvars, args)
       in
       let eff = handle_effects ~loc options pure_arrow gamma eff in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow options gamma ret in
       if Kinds.not_star kx then
         fail_not_star ~loc:loc_ret "forall";
-      (TyClass ((name, args), eff, ret), Kinds.Star)
+      (TyClass ((name, tyvars, args), eff, ret), Kinds.Star)
   | (_, UnsugaredTree.AbsOnTy ((name, k), ret)) ->
       let gamma = Gamma.add_type_var name k gamma in
       let (ret, kret) = of_parse_tree_kind ~pure_arrow options gamma ret in
@@ -219,19 +219,6 @@ module TyErr = struct
       "Error: This expression has type '%s'. \
        This is not a typeclass abstraction; it cannot be applied."
       (to_string ty)
-
-  let args_tyclass_missmatch tyclass ~expected ~has =
-    let param_to_string = function
-      | Param (name, _) -> Ident.TypeVar.to_string name
-      | Filled ty -> to_string ty
-    in
-    Err.fail
-      ~loc:(Ident.TyClass.loc tyclass)
-      "Tyclass arguments missmatch. Has '%s %s' but expected '%s %s'"
-      (Ident.TyClass.to_string tyclass)
-      (String.concat " " (List.map param_to_string has))
-      (Ident.TyClass.to_string tyclass)
-      (String.concat " " (List.map param_to_string expected))
 end
 
 let match_tyclass ~loc_x ~tyclasses ~tyclasses_x =
@@ -281,12 +268,8 @@ let match_tyclass ~loc_x ~tyclasses ~tyclasses_x =
 
 (* NOTE: returns a reversed tyclasses list *)
 let extract_tyclasses =
-  let add_to_set tyclasses (_, args) =
-    let aux tyclasses = function
-      | Param (name, _) -> GammaSet.TypeVar.add name tyclasses
-      | Filled _ -> tyclasses
-    in
-    List.fold_left aux tyclasses args
+  let add_to_set tyclasses (_, tyvars, _) =
+    GammaMap.TypeVar.fold (fun k _ -> GammaSet.TypeVar.add k) tyvars tyclasses
   in
   let rec aux tyclasses set = function
     | TyClass (x, eff, t) -> aux ((x, eff) :: tyclasses) (add_to_set set x) t
@@ -325,26 +308,26 @@ let match_tyclass ~loc_x ~tyclasses x ~ty_x =
 
 (* NOTE: take a reversed tyclasses list *)
 let reconstruct_ty_typeclasses matched_tys tyclasses_list t eff =
-  let aux (effects, t) ((name, args), eff) =
+  let aux (effects, t) ((name, tyvars, args), eff) =
+    let tyvars =
+      let aux x k tyvars =
+        let eq (y, _) = Ident.TypeVar.equal x y in
+        if List.exists eq matched_tys then
+          tyvars
+        else
+          GammaMap.TypeVar.add x k tyvars
+      in
+      GammaMap.TypeVar.fold aux tyvars GammaMap.TypeVar.empty
+    in
     let args =
-      let aux = function
-        | Param (x, _) as arg ->
-            let eq (y, _) = Ident.TypeVar.equal x y in
-            begin match List.find_pred eq matched_tys with
-            | Some (_, ty) -> Filled ty
-            | None -> arg
-            end
-        | Filled ty ->
-            let ty =
-              let aux t (from, ty) = replace ~from ~ty t in
-              List.fold_left aux ty matched_tys
-            in
-            Filled ty
+      let aux t =
+        let aux t (from, ty) = replace ~from ~ty t in
+        List.fold_left aux t matched_tys
       in
       List.map aux args
     in
     let effects = Effects.union effects eff in
-    (Effects.empty, TyClass ((name, args), effects, t))
+    (Effects.empty, TyClass ((name, tyvars, args), effects, t))
   in
   let (eff, t) =
     let aux (eff, t) (from, ty) =
@@ -392,28 +375,61 @@ let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x =
   in
   aux
 
-let apply_tyclass ty tyclass args = match ty with
-  | TyClass ((name, args'), eff, res) ->
+let unify_tyclass_one ~loc_x ~is_new_tyvar =
+  let rec aux x ~ty_x = match x, ty_x with
+    | TyVar name, _ when is_new_tyvar name ->
+        [(name, ty_x)]
+    | Ty _, Ty _ | TyVar _, TyVar _ ->
+        []
+    | Eff eff1, Eff eff2 ->
+        Effects.unify_tyclass ~is_new_tyvar eff1 ~eff_x:eff2
+    | Fun (x1, eff1, y1), Fun (x2, eff2, y2) ->
+        let l1 = aux x1 ~ty_x:x2 in
+        let l2 = Effects.unify_tyclass ~is_new_tyvar eff1 ~eff_x:eff2 in
+        let l3 = aux y1 ~ty_x:y2 in
+        l1 @ l2 @ l3
+    | Forall (name1, k1, t1), Forall (name2, k2, t2) ->
+        aux t1 ~ty_x:t2
+    | TyClass (tyclass1, eff1, t1), TyClass (tyclass2, eff2, t2) ->
+        let l1 = Effects.unify_tyclass ~is_new_tyvar eff1 ~eff_x:eff2 in
+        let l2 = aux t1 ~ty_x:t2 in
+        l1 @ l2
+    | AppOnTy (f1, x1), AppOnTy (f2, x2) ->
+        let l1 = aux f1 ~ty_x:f2 in
+        let l2 = aux x1 ~ty_x:x2 in
+        l1 @ l2
+    | AbsOnTy (_, _, t1), AbsOnTy (_, _, t2) ->
+        aux t1 ~ty_x:t2
+    | (Ty _ | Eff _ | TyVar _ | Fun _ | Forall _ | TyClass _ | AppOnTy _ | AbsOnTy _), _ ->
+        TyErr.fail ~loc_t:loc_x ~has:ty_x ~expected:x
+  in
+  aux
+
+(* TODO: Equality *)
+let unify_tyclass ~loc_x ~is_new_tyvar l1 l2 =
+  try
+    let aux acc x ty_x =
+      unify_tyclass_one ~loc_x ~is_new_tyvar x ~ty_x @ acc
+    in
+    List.fold_left2 aux [] l1 l2
+  with
+  | Invalid_argument _ -> assert false
+
+let apply_tyclass ~loc_x ty tyclass args = match ty with
+  | TyClass ((name, tyvars, args'), eff, res) ->
       if not (Ident.TyClass.equal name tyclass) then
         TyErr.name_tyclass_missmatch ~has:tyclass ~expected:name;
-      if not (PrivateTypes.tyclass_args_equal args args') then
-        TyErr.args_tyclass_missmatch tyclass ~expected:args ~has:args';
-      begin try
-        let aux (res, eff) ty1 ty2 = match ty1, ty2 with
-          | Param (ty, _), Param (from, _) ->
-              let ty = TyVar ty in
-              (replace ~from ~ty res, Effects.replace ~from ~ty eff)
-          | Filled _, Filled _ ->
-              (res, eff)
-          | Filled ty, Param (from, _) ->
-              (replace ~from ~ty res, Effects.replace ~from ~ty eff)
-          | Param _, _ ->
-              assert false
-        in
-        List.fold_left2 aux (res, eff) args args'
-      with
-      | Invalid_argument _ -> assert false
-      end
+      let is_new_tyvar name = GammaMap.TypeVar.mem name tyvars in
+      let tyvars = unify_tyclass ~loc_x ~is_new_tyvar args' args in
+      let aux (res, eff) = function
+        | (from, ty)::tyvars ->
+            if List.exists (fun (name, _) -> Ident.TypeVar.equal from name) tyvars then
+              Err.fail ~loc:loc_x "Type constraints doesn't match"; (* TODO: Improve error message *)
+            (replace ~from ~ty res, Effects.replace ~from ~ty eff)
+        | [] ->
+            (res, eff)
+      in
+      aux (res, eff) tyvars
   | Ty _ | TyVar _ | Fun _ | Forall _ | AppOnTy _ as ty ->
       TyErr.tyclass_type ~loc:(Ident.TyClass.loc tyclass) ty
   | AbsOnTy _ | Eff _ ->
@@ -439,48 +455,57 @@ let is_unit options = function
   | Ty _ | TyVar _ | Fun _ | Forall _ | TyClass _ | AppOnTy _ -> false
   | AbsOnTy _ | Eff _ -> assert false
 
-let get_tys_filled args =
-  let rec aux res = function
-    | Filled ty :: xs -> aux (ty :: res) xs
-    | Param _ :: _ -> []
-    | [] -> res
-  in
-  if List.is_empty args then
-    assert false;
-  List.rev (aux [] args)
-
 let tyclass_wrap tyclass params ty =
-  let params = List.map (fun x -> Param x) params in
-  TyClass ((tyclass, params), Effects.empty, ty)
+  let (tyvars, args) =
+    let aux (tyvars, args) (name, k) =
+      (GammaMap.TypeVar.add name k tyvars, TyVar name :: args)
+    in
+    List.fold_left aux (GammaMap.TypeVar.empty, []) params
+  in
+  let args = List.rev args in
+  TyClass ((tyclass, tyvars, args), Effects.empty, ty)
+
+let contains_free_tyvars =
+  let rec aux gammaTV = function
+    | Ty _ | Eff _ -> false
+    | TyVar name when GammaSet.TypeVar.mem name gammaTV -> false
+    | TyVar _ -> true
+    | Fun (x, eff, y) ->
+        aux gammaTV x
+        || Effects.contains_free_tyvars gammaTV eff
+        || aux gammaTV y
+    | Forall (name, _, t) | AbsOnTy (name, _, t) ->
+        aux (GammaSet.TypeVar.add name gammaTV) t
+    | TyClass ((_, tyvars, args), eff, t) ->
+        let gammaTV =
+          GammaSet.TypeVar.union (GammaMap.TypeVar.to_set tyvars) gammaTV
+        in
+        List.exists (aux gammaTV) args
+        || Effects.contains_free_tyvars gammaTV eff
+        || aux gammaTV t
+    | AppOnTy (f, x) -> aux gammaTV f || aux gammaTV x
+  in
+  aux GammaSet.TypeVar.empty
 
 let rec extract_filled_tyclasses = function
-  | TyClass ((tyclass, args), eff, t') as t ->
+  | TyClass ((tyclass, tyvars, args), eff, t') as t ->
       let (tyclasses, eff', t') = extract_filled_tyclasses t' in
-      begin match get_tys_filled args with
-      | [] ->
-          (None :: tyclasses, eff', t)
-      | tys ->
-          (Some (tyclass, tys) :: tyclasses, Effects.union eff eff', t')
-      end
+      if List.exists contains_free_tyvars args then
+        (None :: tyclasses, eff', t)
+      else
+        (Some (tyclass, args) :: tyclasses, Effects.union eff eff', t')
   | Ty _ | TyVar _ | Fun _ | Forall _ | AppOnTy _ as t -> ([], Effects.empty, t)
   | Eff _ | AbsOnTy _ -> assert false
 
-let rec is_bound_args name args =
-  let aux = function
-    | Param (name', _) -> Ident.TypeVar.equal name name'
-    | Filled ty -> is_bound name ty
-  in
-  List.exists aux args
-
-and is_bound name = function
+let rec is_bound name = function
   | Ty _ | TyVar _ | Eff _ ->
       false
   | Fun (x, _, y) | AppOnTy (x, y) ->
       is_bound name x || is_bound name y
   | Forall (name', _, t) | AbsOnTy (name', _, t) ->
       Ident.TypeVar.equal name name' || is_bound name t
-  | TyClass ((_, args), _, t) ->
-      is_bound_args name args || is_bound name t
+  | TyClass ((_, tyvars, _), _, t) ->
+      GammaMap.TypeVar.mem name tyvars || is_bound name t
 
 let check_bound name t =
   (* TODO: Avoid this *)
@@ -494,13 +519,10 @@ let forall (name, k, t) =
   check_bound name t;
   Forall (name, k, t)
 
-let tyclass ((tyclass, args), eff, t) =
-  let aux = function
-    | Param (name, _) -> check_bound name t
-    | Filled _ -> ()
-  in
-  List.iter aux args;
-  TyClass ((tyclass, args), eff, t)
+let tyclass ((tyclass, tyvars, args), eff, t) =
+  let aux name _ = check_bound name t in
+  GammaMap.TypeVar.iter aux tyvars;
+  TyClass ((tyclass, tyvars, args), eff, t)
 
 let ty ~loc gamma name =
   if not (GammaMap.Types.mem name gamma.Gamma.types) then

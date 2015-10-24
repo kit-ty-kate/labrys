@@ -98,14 +98,14 @@ let unsugar_eff imports (loc, l) =
   in
   (loc, List.map aux l)
 
-let rec unsugar_tyclass_arg imports = function
-  | ParseTree.Param name -> Param (new_lower_name_to_type_var name)
-  | ParseTree.Filled ty -> Filled (unsugar_ty imports ty)
-
-and unsugar_tyclass imports (name, args) =
+let rec unsugar_tyclass imports (name, tyvars, args) =
   let name = upper_name_to_tyclass imports name in
-  let args = List.map (unsugar_tyclass_arg imports) args in
-  (name, args)
+  let tyvars =
+    let aux (name, k) = (new_lower_name_to_type_var name, unsugar_kind k) in
+    List.map aux tyvars
+  in
+  let args = List.map (unsugar_ty imports) args in
+  (name, tyvars, args)
 
 and unsugar_ty imports =
   let unsugar_forall ~loc ty args =

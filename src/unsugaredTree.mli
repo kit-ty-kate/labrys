@@ -41,11 +41,7 @@ type is_rec = ParseTree.is_rec =
   | Rec
   | NonRec
 
-type tyclass_arg =
-  | Param of tyvar_name
-  | Filled of ty
-
-and tyclass = (tyclass_name * tyclass_arg list)
+type tyclass = (tyclass_name * t_value list * ty list)
 
 and ty' =
   | Fun of (ty * effects option * ty)
@@ -60,7 +56,6 @@ and ty' =
 and ty = (loc * ty')
 
 type ty_annot = (ty * effects option)
-
 type tyclass_instance = (tyclass_name * ty list)
 
 type tyclass_app_arg =

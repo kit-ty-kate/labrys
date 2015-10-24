@@ -25,6 +25,4 @@ module Value = struct
   include Utils.EqSet(Ident.Name)
 end
 
-module TypeVar = struct
-  include Utils.EqSet(Ident.TypeVar)
-end
+module TypeVar = GammaMap.TypeVar.Set

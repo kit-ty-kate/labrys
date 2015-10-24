@@ -82,11 +82,7 @@ module ParseTree = struct
 
   let dump_t_name_ty_list l = String.concat " " (List.map dump_t_name_ty_opt l)
 
-  let rec dump_tyclass_arg = function
-    | Param name -> dump_name name
-    | Filled ty -> fmt "[%s]" (dump_ty ty)
-
-  and dump_tyclass_args args = String.concat " " (List.map dump_tyclass_arg args)
+  let rec dump_tyclass_args args = String.concat " " (List.map dump_ty args)
 
   and dump_forall_arg_list l = String.concat " " (List.map dump_t_name_ty_opt l)
 
@@ -100,9 +96,9 @@ module ParseTree = struct
     | (_, Eff eff) -> dump_eff eff
     | (_, Forall (names, res)) ->
         fmt "(forall %s, %s)" (dump_forall_arg_list names) (dump_ty res)
-    | (_, TyClass ((name, args), None, res)) ->
+    | (_, TyClass ((name, _, args), None, res)) ->
         fmt "({%s %s} => %s)" (dump_name name) (dump_tyclass_args args) (dump_ty res)
-    | (_, TyClass ((name, args), Some eff, res)) ->
+    | (_, TyClass ((name, _, args), Some eff, res)) ->
         fmt "({%s %s} =[%s]=> %s)" (dump_name name) (dump_tyclass_args args) (dump_eff eff) (dump_ty res)
     | (_, AbsOnTy (names, res)) ->
         fmt "(λ %s -> %s)" (dump_t_name_ty_list names) (dump_ty res)
@@ -124,7 +120,7 @@ module ParseTree = struct
         dump_t_name_ty_opt v
     | (_, Unit) ->
         "()"
-    | (_, TyClassArg (name, (tyclass, args))) ->
+    | (_, TyClassArg (name, (tyclass, _, args))) ->
         fmt "(%s : %s %s)" (dump_name name) (dump_name tyclass) (dump_tyclass_args args)
 
   let dump_args l = String.concat " " (List.map dump_arg l)
@@ -353,14 +349,11 @@ module UnsugaredTree = struct
     in
     String.concat ", " (List.map aux x)
 
-  let rec dump_tyclass_arg = function
-    | Param x -> dump_tyvar_name x
-    | Filled ty -> fmt "[%s]" (dump_ty ty)
+  let rec dump_tyclass_args args =
+    String.concat " " (List.map dump_ty args)
 
-  and dump_tyclass_args args =
-    String.concat " " (List.map dump_tyclass_arg args)
-
-  and dump_tyclass_value (tyclass, args) =
+  (* TODO: Print tyvars (and above) *)
+  and dump_tyclass_value (tyclass, _, args) =
     fmt "%s %s" (dump_tyclass_name tyclass) (dump_tyclass_args args)
 
   and dump_ty =

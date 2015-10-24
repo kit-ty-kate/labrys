@@ -27,8 +27,8 @@ let printNat (n : Nat) =
 
 let printUnit () = println "()"
 
-class Fractional A (E : !) =
-  let div : A -[]-> A -[E]-> A
+class Fractional a (e : !) =
+  let div : a -[]-> a -[e]-> a
 end
 
 exception DivByZero
@@ -37,8 +37,8 @@ instance Fractional Nat [Exn [DivByZero]] =
   let div (_ : Nat) (_ : Nat) = fail [Nat] DivByZero -- Sorry, doesn't have real ints
 end
 
-class Print A =
-  let print : A -[IO]-> Unit
+class Print a =
+  let print : a -[IO]-> Unit
 end
 
 instance Print Nat =

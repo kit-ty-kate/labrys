@@ -153,3 +153,16 @@ let match_tyclass ~is_tyclass ~is_tyclass_x eff ~eff_x =
   | false, true -> (matched, eff_union, [], eff_x')
   | true, false -> ([], eff', matched_x, eff_union)
   | false, false -> (matched, eff_union, matched_x, eff_union)
+
+let unify_tyclass ~is_new_tyvar eff ~eff_x =
+  let aux name acc =
+    if is_new_tyvar name then
+      (name, PrivateTypes.Eff eff_x) :: acc
+    else
+      acc
+  in
+  Variables.fold aux eff.variables []
+
+let contains_free_tyvars gammaTV self =
+  let aux name = GammaSet.TypeVar.mem name gammaTV in
+  Variables.for_all aux self.variables

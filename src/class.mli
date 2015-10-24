@@ -36,9 +36,10 @@ val get_params :
   loc:Location.t ->
   (Gamma.t -> UnsugaredTree.ty -> PrivateTypes.t * Kinds.t) ->
   Gamma.t ->
-  UnsugaredTree.tyclass_arg list ->
+  Kinds.t GammaMap.TypeVar.t ->
+  UnsugaredTree.ty list ->
   t ->
-  (Gamma.t * PrivateTypes.tyclass_arg list)
+  (Gamma.t * PrivateTypes.t list)
 
 val get_instance_name :
   loc:Location.t ->

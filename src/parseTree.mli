@@ -39,11 +39,7 @@ type is_rec =
   | Rec
   | NonRec
 
-type tyclass_arg =
-  | Param of new_lower_name
-  | Filled of ty
-
-and tyclass = (upper_name * tyclass_arg list)
+and tyclass = (upper_name * ty_arg list * ty list)
 
 and ty' =
   | Fun of (ty * effects option * ty)

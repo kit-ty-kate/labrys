@@ -59,3 +59,11 @@ val match_tyclass :
   t ->
   eff_x:t ->
   ((Ident.TypeVar.t * PrivateTypes.t) list * t * (Ident.TypeVar.t * PrivateTypes.t) list * t)
+
+val unify_tyclass :
+  is_new_tyvar:(Ident.TypeVar.t -> bool) ->
+  t ->
+  eff_x:t ->
+  (Ident.TypeVar.t * PrivateTypes.t) list (* TODO: replace by a Set *)
+
+val contains_free_tyvars : GammaSet.TypeVar.t -> t -> bool

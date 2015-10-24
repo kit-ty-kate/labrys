@@ -144,16 +144,20 @@ let rec aux options gamma = function
       check_effects_forall ~loc_t:(fst t) options ~effect;
       let abs_ty = Types.forall (name, k, ty_expr) in
       (expr, abs_ty, effect)
-  | (_, UnsugaredTree.CAbs ((name, (tyclass, args)), t)) ->
+  | (_, UnsugaredTree.CAbs ((name, (tyclass, tyvars, args)), t)) ->
       let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
+      let tyvars =
+        let aux acc (name, k) = GammaMap.TypeVar.add name k acc in
+        List.fold_left aux GammaMap.TypeVar.empty tyvars
+      in
       let (gamma, args) =
         let loc = Ident.TyClass.loc tyclass in
         let f = Types.of_parse_tree_kind ~pure_arrow:`Forbid options in
-        Class.get_params ~loc f gamma args tyclass'
+        Class.get_params ~loc f gamma tyvars args tyclass'
       in
       let gamma = Gamma.add_named_instance name (tyclass, args) gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
-      let abs_ty = Types.tyclass ((tyclass, args), effect, ty_expr) in
+      let abs_ty = Types.tyclass ((tyclass, tyvars, args), effect, ty_expr) in
       (Abs (Ident.Instance.to_name name, expr), abs_ty, Effects.empty)
   | (loc, UnsugaredTree.App (f, x)) ->
       let loc_f = fst f in
@@ -205,9 +209,10 @@ let rec aux options gamma = function
             let name =
               Class.get_instance_name ~loc:(Ident.TyClass.loc tyclass) ~tyclass tys tyclass'
             in
-            (name, tyclass, List.map (fun x -> PrivateTypes.Filled x) tys)
+            (name, tyclass, tys)
       in
-      let (res, effect2) = Types.apply_tyclass ty_f tyclass args in
+      (* TODO: Fix loc *)
+      let (res, effect2) = Types.apply_tyclass ~loc_x:loc ty_f tyclass args in
       let (tyclasses, eff_f, res) = Types.extract_filled_tyclasses res in
       let f = App (f, Val name) in
       let f = wrap_typeclass_apps ~loc gamma ~tyclasses ~f Fun.id in
@@ -485,11 +490,8 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       in
       let (name', tys, tyclass') = Class.add_instance ~tyclass ~current_module tys tyclass' in
       let gamma = match name with
-        | Some name ->
-            let args = List.map (fun x -> PrivateTypes.Filled x) tys in
-            Gamma.add_named_instance name (tyclass, args) gamma
-        | None ->
-            gamma
+        | Some name -> Gamma.add_named_instance name (tyclass, tys) gamma
+        | None -> gamma
       in
       let gamma = Gamma.replace_tyclass tyclass tyclass' gamma in
       let values = Class.get_values ~loc:(Ident.TyClass.loc tyclass) tys values tyclass' in

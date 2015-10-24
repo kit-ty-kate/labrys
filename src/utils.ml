@@ -104,80 +104,6 @@ module type EQ = sig
   val equal : t -> t -> bool
 end
 
-module type EQMAP = sig
-  type key
-  type 'a t
-
-  val empty : 'a t
-  val is_empty : 'a t -> bool
-  val mem : key -> 'a t -> bool
-  val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-  val add : key -> 'a -> 'a t -> 'a t
-  val find : key -> 'a t -> 'a option
-  val modify_def : 'a -> key -> ('a -> 'a) -> 'a t -> 'a t
-  val bindings : 'a t -> (key * 'a) list
-  val singleton : key -> 'a -> 'a t
-  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-  val filter : (key -> 'a -> bool) -> 'a t -> 'a t
-  val remove : key -> 'a t -> 'a t
-  val map_keys : (key -> key) -> 'a t -> 'a t
-  val find_binding : key -> 'a t -> (key * 'a) option
-end
-
-module EqMap (I : EQ) = struct
-  type key = I.t
-  type 'a t = (key * 'a) list
-
-  let empty = []
-
-  let is_empty = List.is_empty
-
-  let mem x self = List.exists (fun (y, _) -> I.equal x y) self
-
-  let fold f self acc = List.fold_left (fun acc (k, x) -> f k x acc) acc self
-
-  let add k x self =
-    let self = List.filter (fun (y, _) -> not (I.equal k y)) self in
-    (k, x) :: self
-
-  let find_binding x self =
-    List.find_pred (fun (y, _) -> I.equal x y) self
-
-  let find x self =
-    Option.map snd (find_binding x self)
-
-  let modify_def x k f self =
-    match find k self with
-    | Some x -> add k (f x) self
-    | None -> add k (f x) self
-
-  let bindings = Fun.id
-
-  let singleton k x = [(k, x)]
-
-  let equal f l l' =
-    let eq (k, x) (k', y) = I.equal k k' && f x y in
-    Int.equal (List.length l) (List.length l')
-    && List.for_all (fun x -> List.exists (fun y -> eq x y) l') l
-
-  let filter f self = List.filter (fun (k, x) -> f k x) self
-
-  let remove k self =
-    let rec aux = function
-      | [] ->
-          []
-      | (k', x)::self ->
-          if I.equal k k' then
-            self
-          else
-            (k', x) :: aux self
-    in
-    aux self
-
-  let map_keys f self =
-    fold (fun k -> add (f k)) self empty
-end
-
 module type EQSET = sig
   type elt
   type t
@@ -245,6 +171,95 @@ module EqSet (I : EQ) = struct
   let subset l l' = List.for_all (fun x -> mem x l') l
 
   let union l l' = fold add l l'
+end
+
+module type EQMAP = sig
+  type key
+  type 'a t
+
+  module Set : EQSET with type elt = key
+
+  val empty : 'a t
+  val is_empty : 'a t -> bool
+  val mem : key -> 'a t -> bool
+  val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+  val add : key -> 'a -> 'a t -> 'a t
+  val find : key -> 'a t -> 'a option
+  val modify_def : 'a -> key -> ('a -> 'a) -> 'a t -> 'a t
+  val bindings : 'a t -> (key * 'a) list
+  val singleton : key -> 'a -> 'a t
+  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+  val filter : (key -> 'a -> bool) -> 'a t -> 'a t
+  val remove : key -> 'a t -> 'a t
+  val map_keys : (key -> key) -> 'a t -> 'a t
+  val find_binding : key -> 'a t -> (key * 'a) option
+  val merge : 'a t -> 'a t -> 'a t
+  val iter : (key -> 'a -> unit) -> 'a t -> unit
+  val to_set : _ t -> Set.t
+end
+
+module EqMap (I : EQ) = struct
+  type key = I.t
+  type 'a t = (key * 'a) list
+
+  module Set = EqSet(I)
+
+  let empty = []
+
+  let is_empty = List.is_empty
+
+  let mem x self = List.exists (fun (y, _) -> I.equal x y) self
+
+  let fold f self acc = List.fold_left (fun acc (k, x) -> f k x acc) acc self
+
+  let add k x self =
+    let self = List.filter (fun (y, _) -> not (I.equal k y)) self in
+    (k, x) :: self
+
+  let find_binding x self =
+    List.find_pred (fun (y, _) -> I.equal x y) self
+
+  let find x self =
+    Option.map snd (find_binding x self)
+
+  let modify_def x k f self =
+    match find k self with
+    | Some x -> add k (f x) self
+    | None -> add k (f x) self
+
+  let bindings = Fun.id
+
+  let singleton k x = [(k, x)]
+
+  let equal f l l' =
+    let eq (k, x) (k', y) = I.equal k k' && f x y in
+    Int.equal (List.length l) (List.length l')
+    && List.for_all (fun x -> List.exists (fun y -> eq x y) l') l
+
+  let filter f self = List.filter (fun (k, x) -> f k x) self
+
+  let remove k self =
+    let rec aux = function
+      | [] ->
+          []
+      | (k', x)::self ->
+          if I.equal k k' then
+            self
+          else
+            (k', x) :: aux self
+    in
+    aux self
+
+  let map_keys f self =
+    fold (fun k -> add (f k)) self empty
+
+  let merge self self' = fold add self self'
+
+  let iter f self =
+    List.iter (fun (k, x) -> f k x) self
+
+  let to_set self =
+    List.map (fun (k, _) -> k) self
 end
 
 module CCIO = struct

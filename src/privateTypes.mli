@@ -33,17 +33,13 @@ type effects =
   ; exns : Exn_set.t
   }
 
-type tyclass_arg =
-  | Param of (tyvar_name * Kinds.t)
-  | Filled of t
-
-and t =
+type t =
   | Ty of ty_name
   | TyVar of tyvar_name
   | Eff of effects
   | Fun of (t * effects * t)
   | Forall of (tyvar_name * Kinds.t * t)
-  | TyClass of ((Ident.TyClass.t * tyclass_arg list) * effects * t)
+  | TyClass of ((Ident.TyClass.t * Kinds.t GammaMap.TypeVar.t * t list) * effects * t)
   | AbsOnTy of (tyvar_name * Kinds.t * t)
   | AppOnTy of (t * t)
 
@@ -59,9 +55,12 @@ val ty_is_subset_of : t -> t -> bool
 
 val ty_to_string : t -> string
 
-val tyclass_args_remove_module_aliases : tyclass_arg list -> tyclass_arg list
+val tyclass_args_remove_module_aliases : t list -> t list
 
-val tyclass_args_equal : tyclass_arg list -> tyclass_arg list -> bool
+val tyclass_args_equal :
+  (tyvar_name list * t) list ->
+  (tyvar_name list * t) list ->
+  bool
 
 val ty_remove_module_aliases : t -> t
 

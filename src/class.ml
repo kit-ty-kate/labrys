@@ -42,20 +42,21 @@ let create params signature =
 let remove_module_aliases = PrivateTypes.class_remove_module_aliases
 let equal = PrivateTypes.class_equal
 
-let get_params ~loc f gamma args self =
+let get_params ~loc f gamma tyvars args self =
+  let gamma =
+    GammaMap.TypeVar.fold Gamma.add_type_var tyvars gamma
+  in
   try
-    let aux (gamma, args) (_, k) = function
-      | UnsugaredTree.Param name ->
-          let gamma = Gamma.add_type_var name k gamma in
-          (gamma, PrivateTypes.Param (name, k) :: args)
-      | UnsugaredTree.Filled ty ->
-          let loc = fst ty in
-          let (ty, k') = f gamma ty in
-          if not (Kinds.equal k k') then
-            Kinds.Err.fail ~loc ~has:k' ~expected:k;
-          (gamma, PrivateTypes.Filled ty :: args)
+    let aux (gamma, args) (_, k) ty =
+      let loc = fst ty in
+      let (ty, k') = f gamma ty in
+      if not (Kinds.equal k k') then
+        Kinds.Err.fail ~loc ~has:k' ~expected:k;
+      (gamma, ty :: args)
     in
-    let (gamma, args) = List.fold_left2 aux (gamma, []) self.params args in
+    let (gamma, args) =
+      List.fold_left2 aux (gamma, []) self.params args
+    in
     (gamma, List.rev args)
   with
   | Invalid_argument _ ->

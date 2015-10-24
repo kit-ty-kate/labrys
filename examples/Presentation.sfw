@@ -31,8 +31,8 @@ class Print a =
 end
 
 let test0 = print
-let test1 ?(z : Print a) = print ?[z]
-let test2 ?(z : Print a) (x : a) = print ?[z] x
+let test1 ?(z : Print {a} a) = print ?[z]
+let test2 ?(z : Print {a} a) (x : a) = print ?[z] x
 
 instance [printNat] Print Unit =
   let print () = printNat O

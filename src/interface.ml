@@ -93,8 +93,7 @@ let compile ~current_module options gamma =
         let (_, tys, tyclass') = Class.add_instance ~tyclass ~current_module tys tyclass' in
         let gamma = match name with
           | Some name ->
-              let args = List.map (fun x -> PrivateTypes.Filled x) tys in
-              Gamma.add_named_instance name (tyclass, args) gamma
+              Gamma.add_named_instance name (tyclass, tys) gamma
           | None ->
               gamma
         in

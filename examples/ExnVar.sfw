@@ -27,9 +27,9 @@ let printNat (n : Nat) =
   fmt buf "%d" n;
   println buf
 
-type List X =
+type List x =
   | Nil
-  | Cons X (List X)
+  | Cons x (List x)
 
 let inputLine () =
   match Cons [Unit] Unit (Nil [Unit]) with

@@ -35,17 +35,13 @@ type effects =
   ; exns : Exn_set.t
   }
 
-type tyclass_arg =
-  | Param of (tyvar_name * Kinds.t)
-  | Filled of t
-
-and t =
+type t =
   | Ty of ty_name
   | TyVar of tyvar_name
   | Eff of effects
   | Fun of (t * effects * t)
   | Forall of (tyvar_name * Kinds.t * t)
-  | TyClass of ((Ident.TyClass.t * tyclass_arg list) * effects * t)
+  | TyClass of ((Ident.TyClass.t * Kinds.t GammaMap.TypeVar.t * t list) * effects * t)
   | AbsOnTy of (tyvar_name * Kinds.t * t)
   | AppOnTy of (t * t)
 
@@ -105,7 +101,7 @@ let eff_replace ~from ~ty self =
   in
   Variables.fold aux self.variables self
 
-let ty_equal eff_eq x y =
+let ty_equal' eff_eq eq_list x y =
   let rec aux eq_list = function
     | Ty x, Ty x' ->
         let eq = Ident.Type.equal in
@@ -125,18 +121,18 @@ let ty_equal eff_eq x y =
         aux ((name1, name2) :: eq_list) (t, t')
     | Forall (name1, k1, t), Forall (name2, k2, t') when Kinds.equal k1 k2 ->
         aux ((name1, name2) :: eq_list) (t, t')
-    | TyClass ((name1, args1), eff1, t), TyClass ((name2, args2), eff2, t') ->
+    | TyClass ((name1, tyvars1, args1), eff1, t), TyClass ((name2, tyvars2, args2), eff2, t') ->
         begin try
           let l =
-            let aux acc x y = match x, y with
-              | Param (param1, _), Param (param2, _) ->
-                  (param1, param2) :: acc
-              | Filled ty1, Filled ty2 ->
-                  if not (aux eq_list (ty1, ty2)) then
-                    raise Not_found;
-                  acc
-              | Param _, _ | Filled _, _ ->
-                  raise Not_found
+            let aux acc ty1 ty2 =
+              let eq_list =
+                let conv = GammaMap.TypeVar.bindings in
+                let aux (name1, _) (name2, _) = (name1, name2) in
+                List.map2 aux (conv tyvars1) (conv tyvars2) @ eq_list
+              in
+              if not (aux eq_list (ty1, ty2)) then
+                raise Not_found;
+              acc
             in
             List.fold_left2 aux [] args1 args2
           in
@@ -144,7 +140,7 @@ let ty_equal eff_eq x y =
           Ident.TyClass.equal name1 name2
           && eff_eq eq_list eff1 eff2
           && aux (l @ eq_list) (t, t')
-        with Not_found ->
+        with Not_found | Invalid_argument _ ->
           false
         end
     | AppOnTy _, _
@@ -156,18 +152,20 @@ let ty_equal eff_eq x y =
     | Eff _, _
     | Fun _, _ -> false
   in
-  aux [] (x, y)
+  aux eq_list (x, y)
 
-let ty_is_subset_of = ty_equal eff_is_subset_of
+let ty_is_subset_of = ty_equal' eff_is_subset_of []
 
-let ty_equal = ty_equal eff_equal
+let ty_equal = ty_equal' eff_equal []
 
 let tyclass_args_equal args1 args2 =
-  let aux arg1 arg2 = match arg1, arg2 with
-    | Filled _, Param _ | Param _, Param _ -> true
-    | Filled ty1, Filled ty2 -> ty_equal ty1 ty2
-    | Param _, _ -> false
-  in
+  (* TODO: Check if correct. See comment above *)
+  let aux (tyvars1, ty1) (tyvars2, ty2) =
+    let eq_list =
+      List.fold_left2 (fun acc x y -> (x, y) :: acc) [] tyvars1 tyvars2
+    in
+    ty_equal' eff_equal eq_list ty1 ty2
+  in (* TODO: DEBUJIN ? *)
   try List.for_all2 aux args1 args2 with Invalid_argument _ -> assert false
 
 let eff_remove_module_aliases {variables; effects; exns} =
@@ -200,11 +198,7 @@ let eff_to_string self =
   in
   fmt "[%s]" (String.concat ", " (variables @ effects @ exns))
 
-let rec tyclass_arg_remove_module_aliases = function
-  | Param _ as arg -> arg
-  | Filled ty -> Filled (ty_remove_module_aliases ty)
-
-and ty_remove_module_aliases = function
+let rec ty_remove_module_aliases = function
   | Ty name ->
       Ty (Ident.Type.remove_aliases name)
   | TyVar _ as ty ->
@@ -215,25 +209,21 @@ and ty_remove_module_aliases = function
       Fun (ty_remove_module_aliases x, eff_remove_module_aliases eff, ty_remove_module_aliases y)
   | Forall (name, k, t) ->
       Forall (name, k, ty_remove_module_aliases t)
-  | TyClass ((name, args), eff, t) ->
-      let args = List.map tyclass_arg_remove_module_aliases args in
+  | TyClass ((name, tyvars, args), eff, t) ->
+      let args = List.map ty_remove_module_aliases args in
       let eff = eff_remove_module_aliases eff in
-      TyClass ((name, args), eff, ty_remove_module_aliases t)
+      TyClass ((name, tyvars, args), eff, ty_remove_module_aliases t)
   | AbsOnTy (name, k, t) ->
       AbsOnTy (name, k, ty_remove_module_aliases t)
   | AppOnTy (x, y) ->
       AppOnTy (ty_remove_module_aliases x, ty_remove_module_aliases y)
 
-let tyclass_args_remove_module_aliases = List.map tyclass_arg_remove_module_aliases
+let tyclass_args_remove_module_aliases = List.map ty_remove_module_aliases
 let ty_remove_module_aliases = ty_remove_module_aliases
 
 let rec ty_to_string =
-  let tyclass_arg_to_string = function
-    | Param (x, _) -> Ident.TypeVar.to_string x
-    | Filled ty -> fmt "[%s]" (ty_to_string ty)
-  in
   let tyclass_args_to_string args =
-    String.concat " " (List.map tyclass_arg_to_string args)
+    String.concat " " (List.map ty_to_string args)
   in
   function
   | Ty x -> Ident.Type.to_string x
@@ -247,9 +237,9 @@ let rec ty_to_string =
       fmt "(%s) -%s-> %s" (ty_to_string x) (eff_to_string eff) (ty_to_string ret)
   | Forall (x, k, t) ->
       fmt "forall %s : %s. %s" (Ident.TypeVar.to_string x) (Kinds.to_string k) (ty_to_string t)
-  | TyClass ((name, args), eff, t) when eff_is_empty eff ->
+  | TyClass ((name, _, args), eff, t) when eff_is_empty eff -> (* TODO: Display tyvars ? *)
       fmt "{%s %s} => %s" (Ident.TyClass.to_string name) (tyclass_args_to_string args) (ty_to_string t)
-  | TyClass ((name, args), eff, t) ->
+  | TyClass ((name, _, args), eff, t) -> (* TODO: Display tyvars ? *)
       fmt "{%s %s} =%s=> %s" (Ident.TyClass.to_string name) (tyclass_args_to_string args) (eff_to_string eff) (ty_to_string t)
   | AbsOnTy (name, k, t) ->
       fmt "λ%s : %s. %s" (Ident.TypeVar.to_string name) (Kinds.to_string k) (ty_to_string t)
@@ -268,15 +258,9 @@ let rec ty_reduce = function
   | Ty _ | TyVar _ | Eff _ as ty -> ty
   | Fun (x, eff, y) -> Fun (ty_reduce x, eff, ty_reduce y)
   | Forall (x, k, t) -> Forall (x, k, ty_reduce t)
-  | TyClass ((x, args), eff, t) ->
-      let args =
-        let aux = function
-          | Param _ as arg -> arg
-          | Filled ty -> Filled (ty_reduce ty)
-        in
-        List.map aux args
-      in
-      TyClass ((x, args), eff, ty_reduce t)
+  | TyClass ((x, tyvars, args), eff, t) ->
+      let args = List.map ty_reduce args in
+      TyClass ((x, tyvars, args), eff, ty_reduce t)
   | AbsOnTy (name, k, ty) -> AbsOnTy (name, k, ty_reduce ty)
 
 and ty_replace ~from ~ty =
@@ -287,16 +271,10 @@ and ty_replace ~from ~ty =
     | Fun (param, eff, ret) ->
         Fun (aux param, eff_replace ~from ~ty eff, aux ret)
     | Forall (x, k, t) -> Forall (x, k, aux t)
-    | TyClass ((x, args), eff, t) ->
-        let args =
-          let aux = function
-            | Param _ as arg -> arg
-            | Filled ty -> Filled (aux ty)
-          in
-          List.map aux args
-        in
+    | TyClass ((x, tyvars, args), eff, t) ->
+        let args = List.map aux args in
         let eff = eff_replace ~from ~ty eff in
-        TyClass ((x, args), eff, aux t)
+        TyClass ((x, tyvars, args), eff, aux t)
     | AbsOnTy (x, k, t) -> AbsOnTy (x, k, aux t)
     | AppOnTy (f, x) -> ty_reduce (AppOnTy (aux f, aux x))
   in

@@ -38,28 +38,6 @@ module type EQ = sig
   val equal : t -> t -> bool
 end
 
-module type EQMAP = sig
-  type key
-  type 'a t
-
-  val empty : 'a t
-  val is_empty : 'a t -> bool
-  val mem : key -> 'a t -> bool
-  val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-  val add : key -> 'a -> 'a t -> 'a t
-  val find : key -> 'a t -> 'a option
-  val modify_def : 'a -> key -> ('a -> 'a) -> 'a t -> 'a t
-  val bindings : 'a t -> (key * 'a) list
-  val singleton : key -> 'a -> 'a t
-  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-  val filter : (key -> 'a -> bool) -> 'a t -> 'a t
-  val remove : key -> 'a t -> 'a t
-  val map_keys : (key -> key) -> 'a t -> 'a t
-  val find_binding : key -> 'a t -> (key * 'a) option
-end
-
-module EqMap (I : EQ) : EQMAP with type key = I.t
-
 module type EQSET = sig
   type elt
   type t
@@ -80,6 +58,32 @@ module type EQSET = sig
   val union : t -> t -> t
 end
 
+module type EQMAP = sig
+  type key
+  type 'a t
+
+  module Set : EQSET with type elt = key
+
+  val empty : 'a t
+  val is_empty : 'a t -> bool
+  val mem : key -> 'a t -> bool
+  val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+  val add : key -> 'a -> 'a t -> 'a t
+  val find : key -> 'a t -> 'a option
+  val modify_def : 'a -> key -> ('a -> 'a) -> 'a t -> 'a t
+  val bindings : 'a t -> (key * 'a) list
+  val singleton : key -> 'a -> 'a t
+  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+  val filter : (key -> 'a -> bool) -> 'a t -> 'a t
+  val remove : key -> 'a t -> 'a t
+  val map_keys : (key -> key) -> 'a t -> 'a t
+  val find_binding : key -> 'a t -> (key * 'a) option
+  val merge : 'a t -> 'a t -> 'a t
+  val iter : (key -> 'a -> unit) -> 'a t -> unit
+  val to_set : _ t -> Set.t
+end
+
+module EqMap (I : EQ) : EQMAP with type key = I.t
 module EqSet (I : EQ) : EQSET with type elt = I.t
 
 module CCIO : module type of CCIO

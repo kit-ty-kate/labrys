@@ -29,7 +29,7 @@ type t =
   ; constructors : (Ident.TypeVar.t list * (PrivateTypes.t list * int) GammaMap.Index.t) GammaMap.Constr.t
   ; exceptions : PrivateTypes.t list GammaMap.Exn.t
   ; tyclasses : PrivateTypes.class_t GammaMap.TyClass.t
-  ; named_instances : (Ident.TyClass.t * PrivateTypes.tyclass_arg list) GammaMap.Instance.t
+  ; named_instances : (Ident.TyClass.t * PrivateTypes.t list) GammaMap.Instance.t
   }
 
 let empty options =
@@ -123,8 +123,10 @@ let constr_equal (x, y) (x', y') =
   List.equal Ident.TypeVar.equal x x' && GammaMap.Index.equal idx_equal y y'
 
 let named_instances_equal (name1, args1) (name2, args2) =
+  (* TODO: Allow forall a. Class a ? *)
+  let map_args = List.map (fun arg -> ([], arg)) in
   Ident.TyClass.equal name1 name2
-  && PrivateTypes.tyclass_args_equal args1 args2
+  && PrivateTypes.tyclass_args_equal (map_args args1) (map_args args2)
 
 let is_subset_of a b =
   check_toplevel_type_vars a.type_vars;
