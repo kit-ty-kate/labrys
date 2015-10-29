@@ -7,4 +7,6 @@ PKG re
 PKG msgpack
 PKG uutf
 S src
+S src/*
 B _build/src
+B _build/src/*

@@ -7,13 +7,14 @@ authors: "Jacques-Pascal Deplaix <jp.deplaix@gmail.com>"
 homepage: "https://github.com/jpdeplaix/cervoise"
 dev-repo: "https://github.com/jpdeplaix/cervoise.git"
 bug-reports: "https://github.com/jpdeplaix/cervoise/issues"
+substs: [
+  "src/config.ml"
+]
 build: [
-  ["./configure"]
   [make]
 ]
 depends: [
   "ocamlfind" {build}
-  "oasis" {build & >= "0.4.5"}
   "menhir" {build}
   "base-unix"
   "cmdliner"

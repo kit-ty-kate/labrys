@@ -6,3 +6,29 @@
 
 true: use_menhir, explain, safe_string
 true: warn(A-44-33-4)
+
+true: package(unix)
+true: package(cmdliner)
+true: package(pprint)
+true: package(re)
+true: package(msgpack)
+true: package(uutf)
+true: package(llvm)
+true: package(llvm.passmgr_builder)
+true: package(llvm.target)
+true: package(llvm.bitwriter)
+true: package(llvm.bitreader)
+true: package(llvm.all_backends)
+true: package(llvm.linker)
+true: package(llvm.scalar_opts)
+true: package(containers.io)
+true: package(monomorphic.containers)
+
+"src": include
+"src/parsing": include
+"src/desugaring": include
+"src/interface": include
+"src/pre-typing": include
+"src/typing": include
+"src/lambda": include
+"src/backend": include
