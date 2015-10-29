@@ -28,7 +28,7 @@ type arity = int
 type length = int
 
 type ('int, 'float, 'char, 'string) ty =
-  ('int, 'float, 'char, 'string) TypedTree.ty =
+  ('int, 'float, 'char, 'string) UntypedTree.ty =
   | Int of 'int
   | Float of 'float
   | Char of 'char

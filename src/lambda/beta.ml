@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open Monomorphic_containers.Open
 
-open UntypedTree
+open LambdaTree
 
 let replace ~from ~by =
   let eq = Ident.Name.equal from in

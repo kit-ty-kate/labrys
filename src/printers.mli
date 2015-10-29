@@ -27,10 +27,10 @@ module UnsugaredTree : sig
   val dump : UnsugaredTree.top list -> string
 end
 
-module TypedTree : sig
-  val dump : TypedTree.top list -> string
-end
-
 module UntypedTree : sig
   val dump : UntypedTree.top list -> string
+end
+
+module LambdaTree : sig
+  val dump : LambdaTree.top list -> string
 end

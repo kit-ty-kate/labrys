@@ -26,4 +26,4 @@ val check :
   <lib_dir : string; ..> ->
   Gamma.t ->
   UnsugaredTree.top list ->
-  TypedTree.top list
+  UntypedTree.top list

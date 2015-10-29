@@ -21,5 +21,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 val of_typed_tree :
   current_module:Module.t ->
-  TypedTree.top list ->
-  UntypedTree.top list
+  UntypedTree.top list ->
+  LambdaTree.top list

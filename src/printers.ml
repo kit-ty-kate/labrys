@@ -597,8 +597,8 @@ module UnsugaredTree = struct
     string_of_doc doc
 end
 
-module TypedTree = struct
-  open TypedTree
+module UntypedTree = struct
+  open UntypedTree
 
   let dump_pattern_matching t content =
     PPrint.group
@@ -775,8 +775,8 @@ module TypedTree = struct
     string_of_doc doc
 end
 
-module UntypedTree = struct
-  open UntypedTree
+module LambdaTree = struct
+  open LambdaTree
 
   let dump_pattern_matching t content =
     PPrint.group

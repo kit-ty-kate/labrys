@@ -173,7 +173,7 @@ let print_typed_tree options modul =
   let (_, typed_tree) =
     get_typed_tree ~with_main:true ~interface:(Gamma.empty options) options modul
   in
-  print_endline (Printers.TypedTree.dump typed_tree)
+  print_endline (Printers.UntypedTree.dump typed_tree)
 
 let print_untyped_tree options modul =
   let modul = Module.from_string options modul in
@@ -181,7 +181,7 @@ let print_untyped_tree options modul =
   let (_, untyped_tree) =
     get_untyped_tree ~with_main:true ~interface:(Gamma.empty options) options modul
   in
-  print_endline (Printers.UntypedTree.dump untyped_tree)
+  print_endline (Printers.LambdaTree.dump untyped_tree)
 
 let print_reduced_tree options modul =
   let modul = Module.from_string options modul in
@@ -189,7 +189,7 @@ let print_reduced_tree options modul =
   let (_, reduced_tree) =
     get_reduced_tree ~with_main:true ~interface:(Gamma.empty options) options modul
   in
-  print_endline (Printers.UntypedTree.dump reduced_tree)
+  print_endline (Printers.LambdaTree.dump reduced_tree)
 
 let print_early_llvm options modul =
   let modul = Module.from_string options modul in

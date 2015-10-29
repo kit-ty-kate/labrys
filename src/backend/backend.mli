@@ -25,7 +25,7 @@ val make :
   modul:Module.t ->
   imports:Module.t list ->
   <debug : bool; ..> ->
-  UntypedTree.top list ->
+  LambdaTree.top list ->
   t
 
 val link : main_module_name:Module.t -> main_module:t -> t Module.Map.t -> t

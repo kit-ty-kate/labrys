@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open Monomorphic_containers.Open
 
-open TypedTree
+open UntypedTree
 
 let fail_rec_val ~loc_name =
   Err.fail ~loc:loc_name "Recursive values are not allowed"

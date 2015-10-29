@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open Monomorphic_containers.Open
 
-open UntypedTree
+open LambdaTree
 
 module Set = GammaSet.Value
 
@@ -78,22 +78,22 @@ and of_branches mapn branches =
   (List.rev a, b)
 
 and of_typed_term mapn = function
-  | TypedTree.Abs (name, t) ->
+  | UntypedTree.Abs (name, t) ->
       let mapn = GammaMap.Value.remove name mapn in
       let (t, used_vars) = of_typed_term mapn t in
       let used_vars = Set.remove name used_vars in
       (Abs (name, used_vars, t), used_vars)
-  | TypedTree.App (f, x) ->
+  | UntypedTree.App (f, x) ->
       let (f, used_vars1) = of_typed_term mapn f in
       let (x, used_vars2) = of_typed_term mapn x in
       (App (f, x), Set.union used_vars1 used_vars2)
-  | TypedTree.Val name ->
+  | UntypedTree.Val name ->
       let name = match GammaMap.Value.find_opt name mapn with
         | Some x -> x
         | None -> name
       in
       (Val name, Set.singleton name)
-  | TypedTree.Var (idx, len) ->
+  | UntypedTree.Var (idx, len) ->
       create_dyn_functions
         (fun params ->
            ( Variant (idx, List.rev_map (fun x -> Val x) params)
@@ -101,22 +101,22 @@ and of_typed_term mapn = function
            )
         )
         len
-  | TypedTree.PatternMatching (t, results, patterns) ->
+  | UntypedTree.PatternMatching (t, results, patterns) ->
       let (t, used_vars1) = of_typed_term mapn t in
       let (results, used_vars2) = of_results mapn results in
       let patterns = of_patterns patterns in
       (PatternMatching (t, results, patterns), Set.union used_vars1 used_vars2)
-  | TypedTree.Try (t, branches) ->
+  | UntypedTree.Try (t, branches) ->
       let (t, used_vars1) = of_typed_term mapn t in
       let (branches, used_vars2) = of_branches mapn branches in
       (Try (t, branches), Set.union used_vars1 used_vars2)
-  | TypedTree.Let ((name, TypedTree.NonRec, t), xs) ->
+  | UntypedTree.Let ((name, UntypedTree.NonRec, t), xs) ->
       let (t, used_vars1) = of_typed_term mapn t in
       let mapn = GammaMap.Value.remove name mapn in
       let (xs, used_vars2) = of_typed_term mapn xs in
       let used_vars = Set.union used_vars1 (Set.remove name used_vars2) in
       (Let (name, t, xs), used_vars)
-  | TypedTree.Let ((name, TypedTree.Rec, t), xs) ->
+  | UntypedTree.Let ((name, UntypedTree.Rec, t), xs) ->
       let mapn = GammaMap.Value.remove name mapn in
       let (t, used_vars1) = of_typed_term mapn t in
       let (xs, used_vars2) = of_typed_term mapn xs in
@@ -124,7 +124,7 @@ and of_typed_term mapn = function
         Set.union (Set.remove name used_vars1) (Set.remove name used_vars2)
       in
       (LetRec (name, t, xs), used_vars)
-  | TypedTree.Fail (name, args) ->
+  | UntypedTree.Fail (name, args) ->
       let (args, used_vars) =
         let aux (acc, used_vars_acc) t =
           let (t, used_vars) = of_typed_term mapn t in
@@ -133,17 +133,17 @@ and of_typed_term mapn = function
         List.fold_left aux ([], Set.empty) args
       in
       (Fail (name, args), used_vars)
-  | TypedTree.RecordGet (t, n) ->
+  | UntypedTree.RecordGet (t, n) ->
       let (t, used_vars) = of_typed_term mapn t in
       (RecordGet (t, n), used_vars)
-  | TypedTree.RecordCreate fields ->
+  | UntypedTree.RecordCreate fields ->
       let aux t (fields, used_vars_acc) =
         let (t, used_vars) = of_typed_term mapn t in
         (t :: fields, Set.union used_vars used_vars_acc)
       in
       let (fields, used_vars) = List.fold_right aux fields ([], Set.empty) in
       (RecordCreate fields, used_vars)
-  | TypedTree.Const const ->
+  | UntypedTree.Const const ->
       (Const const, Set.empty)
 
 let get_name_and_linkage name' names mapn =
@@ -159,10 +159,10 @@ let get_name_and_linkage name' names mapn =
       (name, names, mapn, Private)
 
 let of_ret_type mapn = function
-  | TypedTree.Void t ->
+  | UntypedTree.Void t ->
       let (t, used_vars) = of_typed_term mapn t in
       (Void t, used_vars)
-  | TypedTree.Alloc ty ->
+  | UntypedTree.Alloc ty ->
       (Alloc ty, Set.empty)
 
 let create_dyn_functions mapn cname (ret, args) =
@@ -197,33 +197,33 @@ let create_dyn_functions mapn cname (ret, args) =
       (name, t)
 
 let of_value names mapn = function
-  | (name, TypedTree.Rec, TypedTree.Abs (name', t)) ->
+  | (name, UntypedTree.Rec, UntypedTree.Abs (name', t)) ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let (t, _) = of_typed_term mapn t in
       (Function (name, (name', t), linkage), names, mapn)
-  | (name, TypedTree.NonRec, TypedTree.Abs (name', t)) ->
+  | (name, UntypedTree.NonRec, UntypedTree.Abs (name', t)) ->
       let (t, _) = of_typed_term mapn t in
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       (Function (name, (name', t), linkage), names, mapn)
-  | (name, TypedTree.Rec, t)  ->
+  | (name, UntypedTree.Rec, t)  ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let (t, _) = of_typed_term mapn t in
       (Value (name, t, linkage), names, mapn)
-  | (name, TypedTree.NonRec, t) ->
+  | (name, UntypedTree.NonRec, t) ->
       let (t, _) = of_typed_term mapn t in
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       (Value (name, t, linkage), names, mapn)
 
 let rec of_typed_tree ~current_module names mapn = function
-  | TypedTree.Value value :: xs ->
+  | UntypedTree.Value value :: xs ->
       let (value, names, mapn) = of_value names mapn value in
       let xs = of_typed_tree ~current_module names mapn xs in
       value :: xs
-  | TypedTree.Foreign (cname, name, ty) :: xs ->
+  | UntypedTree.Foreign (cname, name, ty) :: xs ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let xs = of_typed_tree ~current_module names mapn xs in
       Function (name, create_dyn_functions mapn cname ty, linkage) :: xs
-  | TypedTree.Exception name :: xs ->
+  | UntypedTree.Exception name :: xs ->
       let xs = of_typed_tree ~current_module names mapn xs in
       Exception name :: xs
   | [] ->
@@ -232,9 +232,9 @@ let rec of_typed_tree ~current_module names mapn = function
 let of_typed_tree ~current_module top =
   let add name names = GammaMap.Value.modify_def (-1) name succ names in
   let aux names = function
-    | TypedTree.Value (name, _, _) -> add name names
-    | TypedTree.Foreign (_, name, _) -> add name names
-    | TypedTree.Exception _ -> names
+    | UntypedTree.Value (name, _, _) -> add name names
+    | UntypedTree.Foreign (_, name, _) -> add name names
+    | UntypedTree.Exception _ -> names
   in
   let names = List.fold_left aux GammaMap.Value.empty top in
   of_typed_tree ~current_module names GammaMap.Value.empty top
