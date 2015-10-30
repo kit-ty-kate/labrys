@@ -412,6 +412,7 @@ let create ~current_module options =
         let name = new_upper_name_to_exn ~current_module name in
         Exception (name, List.map (unsugar_ty imports) tys) :: aux imports' xs
     | ParseTree.Open (loc, `UpperName modul) :: xs ->
+        (* TODO: Check if module exists *)
         let imports = Imports.open_module modul imports in
         aux imports xs
     | ParseTree.Class (name, params, sigs) :: xs ->
@@ -499,6 +500,7 @@ let create_interface ~current_module imports interface =
         let name = new_upper_name_to_exn ~current_module name in
         aux imports' local_imports (InterfaceTree.Exception (name, List.map (unsugar_ty local_imports) tys) :: acc) xs
     | ParseTree.IOpen (loc, `UpperName modul) :: xs ->
+        (* TODO: Check if module exists *)
         let local_imports = Imports.open_module modul local_imports in
         aux imports local_imports acc xs
     | ParseTree.IClass (name, params, sigs) :: xs ->

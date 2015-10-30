@@ -4,7 +4,10 @@
 "examples": -traverse
 "examples": not_hygienic
 
-true: use_menhir, explain, safe_string
+true: use_menhir
+true: explain
+true: safe_string
+true: annot, bin_annot
 true: warn(A-44-33-4)
 
 true: package(unix)
