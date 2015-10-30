@@ -51,8 +51,6 @@ val to_string : t -> string
 
 val replace : from:Ident.TypeVar.t -> ty:PrivateTypes.t -> t -> t
 
-val remove_module_aliases : t -> t
-
 val match_tyclass :
   is_tyclass:(Ident.TypeVar.t -> bool) ->
   is_tyclass_x:(Ident.TypeVar.t -> bool) ->

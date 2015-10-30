@@ -30,8 +30,6 @@ val create :
 
 val equal : t -> t -> bool
 
-val remove_module_aliases : t -> t
-
 val get_params :
   loc:Location.t ->
   (Gamma.t -> UnsugaredTree.ty -> PrivateTypes.t * Kinds.t) ->

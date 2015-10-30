@@ -29,7 +29,6 @@ type t =
   { library : bool
   ; src_dir : string
   ; build_dir : string
-  ; aliases : Aliases.t
   ; modul : string list (** NOTE: Absolute module name *)
   }
 
@@ -40,15 +39,13 @@ let create ~current_module modul =
   let src_dir = current_module.src_dir in
   let build_dir = current_module.build_dir in
   let modul = Utils.remove_last current_module.modul @ modul in
-  let aliases = Aliases.singleton modul in
-  {library; src_dir; build_dir; aliases; modul}
+  {library; src_dir; build_dir; modul}
 
 let library_create options modul =
   let library = true in
   let src_dir = options#lib_dir in
   let build_dir = options#lib_dir in
-  let aliases = Aliases.singleton modul in
-  {library; src_dir; build_dir; aliases; modul}
+  {library; src_dir; build_dir; modul}
 
 let matches_module_name =
   let open Re in
@@ -73,16 +70,14 @@ let from_string options modul =
   let src_dir = options#src_dir in
   let build_dir = Filename.concat options#build_dir src_dir in
   let modul = module_from_string modul in
-  let aliases = Aliases.singleton modul in
-  {library; src_dir; build_dir; aliases; modul}
+  {library; src_dir; build_dir; modul}
 
 let library_from_string options modul =
   let library = true in
   let src_dir = options#lib_dir in
   let build_dir = options#lib_dir in
   let modul = module_from_string modul in
-  let aliases = Aliases.singleton modul in
-  {library; src_dir; build_dir; aliases; modul}
+  {library; src_dir; build_dir; modul}
 
 let impl self =
   Filename.concat self.src_dir (to_file self.modul) ^ ".sfw"
@@ -102,19 +97,9 @@ let to_string self =
 let is_library self =
   self.library
 
-let equal x y =
-  Aliases.exists (fun x -> Aliases.mem x y.aliases) x.aliases
+let equal x y = List.equal String.equal x.modul y.modul
 
-let remove_aliases self =
-  let aliases = Aliases.singleton self.modul in
-  {self with aliases}
-
-let open_module self =
-  let aliases = Aliases.add [] self.aliases in
-  {self with aliases}
-
-let is_open self =
-  Aliases.mem [] self.aliases
+let to_module self = self.modul
 
 type tmp = t
 

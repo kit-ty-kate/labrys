@@ -74,9 +74,9 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
         fail_not_star ~loc:loc_y "->";
       (Fun (x, eff, y), Kinds.Star)
   | (_, UnsugaredTree.Ty name) ->
-      begin match GammaMap.Types.find_binding name gamma.Gamma.types with
-      | (_, Alias (ty, k)) -> (ty, k) (* TODO: Fix variables if already exist *)
-      | (name, Abstract k) -> (Ty name, k)
+      begin match GammaMap.Types.find name gamma.Gamma.types with
+      | Alias (ty, k) -> (ty, k) (* TODO: Fix variables if already exist *)
+      | Abstract k -> (Ty name, k)
       end
   | (_, UnsugaredTree.TyVar name) ->
       let k = GammaMap.TypeVar.find name gamma.Gamma.type_vars in
@@ -92,10 +92,8 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
       (Forall (name, k, ret), Kinds.Star)
   | (loc, UnsugaredTree.TyClass ((name, tyvars, args), eff, ret)) ->
       let loc_ret = fst ret in
-      let (name, gamma, tyvars, args) =
-        let (name, tyclass) =
-          GammaMap.TyClass.find_binding name gamma.Gamma.tyclasses
-        in
+      let (gamma, tyvars, args) =
+        let tyclass = GammaMap.TyClass.find name gamma.Gamma.tyclasses in
         let tyvars =
           let aux acc (name, k) = GammaMap.TypeVar.add name k acc in
           List.fold_left aux GammaMap.TypeVar.empty tyvars
@@ -105,7 +103,7 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
           let f = of_parse_tree_kind ~pure_arrow:(false, `Forbid) options in
           Class.get_params ~loc f gamma tyvars args tyclass
         in
-        (name, gamma, tyvars, args)
+        (gamma, tyvars, args)
       in
       let eff = handle_effects ~loc options pure_arrow gamma eff in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow options gamma ret in
@@ -180,8 +178,6 @@ let rec head = function
   | AppOnTy (t, y) ->
       let (x, xs) = head t in
       (x, y :: xs)
-
-let remove_module_aliases = PrivateTypes.ty_remove_module_aliases
 
 module TyErr = struct
   let fail ~loc_t ~has ~expected =

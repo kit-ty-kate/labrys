@@ -88,8 +88,6 @@ val is_fun : t -> bool
 
 val is_unit : <lib_dir : string; ..> -> t -> bool
 
-val remove_module_aliases : t -> t
-
 val tyclass_wrap : Ident.TyClass.t -> (tyvar_name * Kinds.t) list -> t -> t
 
 val extract_filled_tyclasses :

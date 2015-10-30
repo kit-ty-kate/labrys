@@ -43,7 +43,6 @@ val add_named_instance : Ident.Instance.t -> (Ident.TyClass.t * PrivateTypes.t l
 
 val replace_tyclass : Ident.TyClass.t -> PrivateTypes.class_t -> t -> t
 
-val union : imported:t -> t -> t
-val open_module : Module.t -> t -> t
+val union : t -> t -> t
 
 val is_subset_of : t -> t -> string list

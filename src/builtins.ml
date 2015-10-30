@@ -28,6 +28,7 @@ let unknown_loc =
 let prelude options =
   Module.library_create options ["Prelude"]
 
+let prelude_name = (unknown_loc, `UpperName ["Prelude"])
 let t_unit_name = `UpperName ["Prelude"; "Unit"]
 
 let unit options =
@@ -41,31 +42,29 @@ let char options =
 let string options =
   Ident.Type.create ~loc:unknown_loc (prelude options) "String"
 
-let underscore_loc ~current_module loc =
-  Ident.Name.create ~loc current_module "_"
+let underscore_loc loc =
+  Ident.Name.local_create ~loc "_"
 let underscore_type_var_loc loc =
   Ident.TypeVar.local_create ~loc "_"
-let underscore_instance_loc ~current_module loc =
-  Ident.Instance.create ~loc current_module "_"
-let underscore ~current_module =
-  underscore_loc ~current_module unknown_loc
+let underscore_instance_loc loc =
+  Ident.Instance.local_create ~loc "_"
+let underscore =
+  underscore_loc unknown_loc
 
 let exn options = Ident.Type.create ~loc:unknown_loc (prelude options) "Exn"
 let io options = Ident.Type.create ~loc:unknown_loc (prelude options) "IO"
 
-let effects options = [io options; exn options]
-
 let main ~current_module =
   Ident.Name.create ~loc:unknown_loc current_module "main"
 
-let imports ~no_prelude options imports =
+let imports ~no_prelude imports =
   if no_prelude then
     imports
   else
-  (["Prelude"], prelude options) :: imports
+    ParseTree.Library prelude_name :: imports
 
-let tree ~no_prelude options tree =
+let tree ~no_prelude tree =
   if no_prelude then
     tree
   else
-    UnsugaredTree.Open (prelude options) :: tree
+    ParseTree.Open prelude_name :: tree

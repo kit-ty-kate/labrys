@@ -19,17 +19,21 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val create :
-  no_prelude:bool ->
+val create_imports :
   current_module:Module.t ->
   <lib_dir : string; ..> ->
   ParseTree.imports ->
+  Module.t list
+
+val create :
+  current_module:Module.t ->
+  <lib_dir : string; ..> ->
+  Imports.t ->
   ParseTree.top list ->
-  (UnsugaredTree.imports * UnsugaredTree.top list)
+  UnsugaredTree.top list
 
 val create_interface :
   current_module:Module.t ->
-  < lib_dir : string; .. > ->
-  ParseTree.imports ->
+  Imports.t ->
   ParseTree.interface list ->
-  (UnsugaredTree.imports * InterfaceTree.t list)
+  (Imports.t * InterfaceTree.t list)

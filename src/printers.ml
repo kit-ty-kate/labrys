@@ -40,8 +40,6 @@ let rec dump_top f doc = function
 
 let dump_exn x = String.concat " | " (List.map dump_exn_name x)
 
-let dump_module = Module.to_string
-
 let string_of_doc doc =
   let buf = Buffer.create 1024 in
   PPrint.ToBuffer.pretty 0.9 80 buf doc;
@@ -575,8 +573,6 @@ module UnsugaredTree = struct
         ^^ PPrint.nest 2 (dump_variants variants)
     | Exception (name, args) ->
         PPrint.string (fmt "exception %s %s" (dump_exn_name name) (String.concat " " (List.map dump_ty args)))
-    | Open modul ->
-        PPrint.string (fmt "open %s" (dump_module modul))
     | Class (name, params, sigs) ->
         PPrint.string (fmt "class %s %s =" (dump_tyclass_name name) (String.concat " " (List.map dump_ty_arg params)))
         ^^ PPrint.break 1

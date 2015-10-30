@@ -22,17 +22,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 module type S = sig
   include Utils.EQMAP
 
-  val union : ('a -> 'a) -> imported:'a t -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
-  val open_module : Module.t -> 'a t -> 'a t
   val find : key -> 'a t -> 'a
   val find_opt : key -> 'a t -> 'a option
 end
 
 module Value : sig
   include S with type key = Ident.Name.t
-
-  val find_binding : key -> 'a t -> (key * 'a)
 end
 
 module Variant : sig
@@ -41,8 +37,6 @@ end
 
 module Types : sig
   include S with type key = Ident.Type.t
-
-  val find_binding : key -> 'a t -> (key * 'a)
 end
 
 module TypeVar : sig
@@ -53,28 +47,23 @@ module Index : sig
   include S with type key = Ident.Variant.t
 
   val find : head_ty:Ident.Type.t -> key -> 'a t -> 'a
-  val find_binding : head_ty:Ident.Type.t -> key -> 'a t -> (key * 'a)
 end
 
 module Constr : sig
   include S with type key = Ident.Type.t
 
   val add : key -> Index.key -> 'a -> 'b -> ('a * 'b Index.t) t -> ('a * 'b Index.t) t
-  val open_module : Module.t -> ('b * 'a Index.t) t -> ('b * 'a Index.t) t
 
   val find : key -> 'a t -> 'a option
 end
 
 module Exn : sig
   include S with type key = Ident.Exn.t
-
-  val find_binding : key -> 'a t -> (key * 'a)
 end
 
 module TyClass : sig
   include S with type key = Ident.TyClass.t
 
-  val find_binding : key -> 'a t -> (key * 'a)
   val replace : key -> 'a -> 'a t -> 'a t
 end
 

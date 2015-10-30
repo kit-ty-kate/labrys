@@ -24,9 +24,7 @@ open Monomorphic_containers.Open
 module type S = sig
   include Utils.EQMAP
 
-  val union : ('a -> 'a) -> imported:'a t -> 'a t -> 'a t
   val diff : eq:('a -> 'a -> bool) -> 'a t -> 'a t -> string list
-  val open_module : Module.t -> 'a t -> 'a t
   val find : key -> 'a t -> 'a
   val find_opt : key -> 'a t -> 'a option
 end
@@ -34,10 +32,6 @@ end
 module Aux
          (M : Utils.EQMAP)
          (Ident : module type of Ident.Name with type t = M.key) = struct
-  let union f ~imported b =
-    let aux k x = M.add (Ident.remove_aliases k) (f x) in
-    M.fold aux imported b
-
   let diff ~eq a b =
     let aux k x acc =
       match M.find k b with
@@ -46,10 +40,6 @@ module Aux
       | None -> Ident.to_string k :: acc
     in
     M.fold aux a []
-
-  let open_module modul self =
-    let aux k = M.add (Ident.open_module modul k) in
-    M.fold aux self M.empty
 end
 
 module Make (I : module type of Ident.Name) = struct
@@ -72,11 +62,6 @@ module Value = struct
 
   let find k self =
     match find k self with
-    | Some x -> x
-    | None -> fail k
-
-  let find_binding k self =
-    match find_binding k self with
     | Some x -> x
     | None -> fail k
 end
@@ -117,11 +102,6 @@ module Types = struct
     match find k self with
     | Some x -> x
     | None -> fail k
-
-  let find_binding k self =
-    match find_binding k self with
-    | Some x -> x
-    | None -> fail k
 end
 
 module TypeVar = struct
@@ -153,21 +133,10 @@ module Index = struct
     match find k self with
     | Some x -> x
     | None -> fail ~head_ty k
-
-  let find_binding ~head_ty k self =
-    match find_binding k self with
-    | Some x -> x
-    | None -> fail ~head_ty k
 end
 
 module Constr = struct
   include Make(Ident.Type)
-
-  let open_module modul self =
-    let aux k (args, idx) =
-      add (Ident.Type.open_module modul k) (args, Index.open_module modul idx)
-    in
-    fold aux self empty
 
   let add k k2 args x map =
     match find k map with
@@ -196,11 +165,6 @@ module Exn = struct
     match find k self with
     | Some x -> x
     | None -> fail k
-
-  let find_binding k self =
-    match find_binding k self with
-    | Some x -> x
-    | None -> fail k
 end
 
 module TyClass = struct
@@ -224,11 +188,6 @@ module TyClass = struct
 
   let find k self =
     match find k self with
-    | Some x -> x
-    | None -> fail k
-
-  let find_binding k self =
-    match find_binding k self with
     | Some x -> x
     | None -> fail k
 end

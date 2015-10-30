@@ -32,17 +32,17 @@ let rec remove_last = function
   | [] | [_] -> []
   | x::xs -> x :: remove_last xs
 
-let detach_last =
-  let rec aux = function
-    | [] -> assert false
-    | [last] -> ([], last)
-    | x::xs ->
-        let (xs, last) = aux xs in
-        (x :: xs, last)
-  in
-  function
-  | [] | [_] -> assert false
-  | l -> aux l
+let rec detach_last = function
+  | [] -> assert false
+  | [last] -> ([], last)
+  | x::xs ->
+      let (xs, last) = detach_last xs in
+      (x :: xs, last)
+
+let rec last = function
+  | [] -> assert false
+  | [last] -> last
+  | _::xs -> last xs
 
 let mkdir name =
   let aux name =

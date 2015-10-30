@@ -32,43 +32,51 @@ let new_upper_name_to_exn ~current_module (loc, `NewUpperName name) =
 let new_upper_name_to_tyclass ~current_module (loc, `NewUpperName name) =
   Ident.TyClass.create ~loc current_module name
 
-let get_module imports loc modul =
-  let aux (k, _) = List.equal String.equal k modul in
-  match List.find_pred aux imports with
-  | None ->
-      Err.fail ~loc "Unbound module %s" (String.concat "." modul)
-  | Some (_, modul) ->
-      modul
-
-let transform_name imports loc local_f f = function
-  | [] ->
-      assert false
-  | [name] ->
-      local_f ~loc name
-  | name ->
-      let (modul, name) = Utils.detach_last name in
-      let modul = get_module imports loc modul in
+let create_name imports loc f local_f name =
+  match Imports.Imports.find name imports with
+  | modul ->
+      let name = Utils.last name in
       f ~loc modul name
+  | exception Not_found ->
+      match name with
+      | [name] -> local_f ~loc name
+      | name -> Err.fail ~loc "Unbound identifier %s" (String.concat "." name)
 
 let upper_name_to_variant imports (loc, `UpperName name) =
-  transform_name imports loc Ident.Variant.local_create Ident.Variant.create name
+  create_name imports.Imports.variants loc Ident.Variant.create Ident.Variant.local_create name
 let upper_name_to_type imports (loc, `UpperName name) =
-  transform_name imports loc Ident.Type.local_create Ident.Type.create name
+  create_name imports.Imports.types loc Ident.Type.create Ident.Type.local_create name
 let upper_name_to_exn imports (loc, `UpperName name) =
-  transform_name imports loc Ident.Exn.local_create Ident.Exn.create name
+  create_name imports.Imports.exns loc Ident.Exn.create Ident.Exn.local_create name
 let upper_name_to_tyclass imports (loc, `UpperName name) =
-  transform_name imports loc Ident.TyClass.local_create Ident.TyClass.create name
+  create_name imports.Imports.tyclasses loc Ident.TyClass.create Ident.TyClass.local_create name
 
 let lower_name_to_value imports (loc, `LowerName name) =
-  transform_name imports loc Ident.Name.local_create Ident.Name.create name
+  create_name imports.Imports.values loc Ident.Name.create Ident.Name.local_create name
 let lower_name_to_instance imports (loc, `LowerName name) =
-  transform_name imports loc Ident.Instance.local_create Ident.Instance.create name
+  create_name imports.Imports.instances loc Ident.Instance.create Ident.Instance.local_create name
+
+let new_lower_name_to_local_value ~allow_underscore = function
+  | (loc, `NewLowerName name) ->
+      Ident.Name.local_create ~loc name
+  | (loc, `Underscore) when allow_underscore ->
+      Builtins.underscore_loc loc
+  | (loc, `Underscore) ->
+      Err.fail ~loc "Wildcards are not allowed here"
+
+let new_lower_name_to_local_instance ~allow_underscore = function
+  | (loc, `NewLowerName name) ->
+      Ident.Instance.local_create ~loc name
+  | (loc, `Underscore) when allow_underscore ->
+      Builtins.underscore_instance_loc loc
+  | (loc, `Underscore) ->
+      Err.fail ~loc "Wildcards are not allowed here"
 
 let new_lower_name_to_value ~current_module ~allow_underscore = function
   | (loc, `NewLowerName name) ->
       Ident.Name.create ~loc current_module name
   | (loc, `Underscore) when allow_underscore ->
-      Builtins.underscore_loc ~current_module loc
+      Builtins.underscore_loc loc
   | (loc, `Underscore) ->
       Err.fail ~loc "Wildcards are not allowed here"
 
@@ -76,7 +84,7 @@ let new_lower_name_to_instance ~current_module ~allow_underscore = function
   | (loc, `NewLowerName name) ->
       Ident.Instance.create ~loc current_module name
   | (loc, `Underscore) when allow_underscore ->
-      Builtins.underscore_instance_loc ~current_module loc
+      Builtins.underscore_instance_loc loc
   | (loc, `Underscore) ->
       Err.fail ~loc "Wildcards are not allowed here"
 
@@ -160,17 +168,12 @@ let unsugar_annot imports (annot, eff) =
   let eff = Option.map (unsugar_eff imports) eff in
   (unsugar_ty imports annot, eff)
 
-let unsugar_sig ~current_module imports (name, ty) =
-  let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
-  let ty = unsugar_ty imports ty in
-  (name, ty)
-
-let rec unsugar_pattern ~current_module imports = function
+let rec unsugar_pattern imports = function
   | ParseTree.TyConstr (loc, name, args) ->
       let name = upper_name_to_variant imports name in
-      TyConstr (loc, name, List.map (unsugar_pattern ~current_module imports) args)
+      TyConstr (loc, name, List.map (unsugar_pattern imports) args)
   | ParseTree.Any name ->
-      let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
+      let name = new_lower_name_to_local_value ~allow_underscore:true name in
       Any name
 
 let unsugar_instance imports (name, tys) =
@@ -214,33 +217,33 @@ let unsugar_char ~loc s =
   | [c] -> c
   | _ -> Err.fail ~loc "A character cannot contain several characters"
 
-let rec unsugar_value ~current_module imports options (name, is_rec, (args, x)) =
-  let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
-  (name, is_rec, unsugar_args ~current_module imports options args x)
+let rec unsugar_local_value imports options (name, is_rec, (args, x)) =
+  let name = new_lower_name_to_local_value ~allow_underscore:true name in
+  (name, is_rec, unsugar_args imports options args x)
 
-and unsugar_pat ~current_module imports options (pattern, t) =
-  (unsugar_pattern ~current_module imports pattern, unsugar_t ~current_module imports options t)
+and unsugar_pat imports options (pattern, t) =
+  (unsugar_pattern imports pattern, unsugar_t imports options t)
 
 (* TODO: Allow full patterns but restrict here *)
-and unsugar_try_pattern ~current_module imports options (pattern, t) =
+and unsugar_try_pattern imports options (pattern, t) =
   let pattern =
     (upper_name_to_exn imports (fst pattern),
-     List.map (new_lower_name_to_value ~current_module ~allow_underscore:true) (snd pattern)
+     List.map (new_lower_name_to_local_value ~allow_underscore:true) (snd pattern)
     )
   in
-  (pattern, unsugar_t ~current_module imports options t)
+  (pattern, unsugar_t imports options t)
 
-and unsugar_t ~current_module imports options = function
+and unsugar_t imports options = function
   | (_, ParseTree.Abs (args, t)) ->
       if List.is_empty args then
         assert false;
-      unsugar_args ~current_module imports options args t
+      unsugar_args imports options args t
   | (loc, ParseTree.App (f, x)) ->
-      (loc, App (unsugar_t ~current_module imports options f, unsugar_t ~current_module imports options x))
+      (loc, App (unsugar_t imports options f, unsugar_t imports options x))
   | (loc, ParseTree.TApp (t, ty)) ->
-      (loc, TApp (unsugar_t ~current_module imports options t, unsugar_ty imports ty))
+      (loc, TApp (unsugar_t imports options t, unsugar_ty imports ty))
   | (loc, ParseTree.TyClassApp (t, x)) ->
-      (loc, CApp (unsugar_t ~current_module imports options t, unsugar_tyclass_app_arg imports x))
+      (loc, CApp (unsugar_t imports options t, unsugar_tyclass_app_arg imports x))
   | (loc, ParseTree.LowerVal name) ->
       let name = lower_name_to_value imports name in
       (loc, Val name)
@@ -248,21 +251,21 @@ and unsugar_t ~current_module imports options = function
       let name = upper_name_to_variant imports name in
       (loc, Var name)
   | (loc, ParseTree.PatternMatching (t, patterns)) ->
-      (loc, PatternMatching (unsugar_t ~current_module imports options t, List.map (unsugar_pat ~current_module imports options) patterns))
+      (loc, PatternMatching (unsugar_t imports options t, List.map (unsugar_pat imports options) patterns))
   | (loc, ParseTree.Let (value, t)) ->
-      let value = unsugar_value ~current_module imports options value in
-      (loc, Let (value, unsugar_t ~current_module imports options t))
+      let value = unsugar_local_value imports options value in
+      (loc, Let (value, unsugar_t imports options t))
   | (loc, ParseTree.Fail (ty, (exn, args))) ->
       let exn = upper_name_to_exn imports exn in
-      (loc, Fail (unsugar_ty imports ty, (exn, List.map (unsugar_t ~current_module imports options) args)))
+      (loc, Fail (unsugar_ty imports ty, (exn, List.map (unsugar_t imports options) args)))
   | (loc, ParseTree.Try (t, patterns)) ->
-      (loc, Try (unsugar_t ~current_module imports options t, List.map (unsugar_try_pattern ~current_module imports options) patterns))
+      (loc, Try (unsugar_t imports options t, List.map (unsugar_try_pattern imports options) patterns))
   | (loc, ParseTree.Seq (x, y)) ->
-      let name = Builtins.underscore ~current_module in
+      let name = Builtins.underscore in
       let ty = ((loc, Ty (Builtins.unit options)), None) in
-      (loc, Let ((name, NonRec, (fst x, Annot (unsugar_t ~current_module imports options x, ty))), unsugar_t ~current_module imports options y))
+      (loc, Let ((name, NonRec, (fst x, Annot (unsugar_t imports options x, ty))), unsugar_t imports options y))
   | (loc, ParseTree.Annot (t, ty)) ->
-      (loc, Annot (unsugar_t ~current_module imports options t, unsugar_annot imports ty))
+      (loc, Annot (unsugar_t imports options t, unsugar_annot imports ty))
   | (loc, ParseTree.Const (ParseTree.Int n)) ->
       (loc, Const (Int (int_of_string n)))
   | (loc, ParseTree.Const (ParseTree.Float n)) ->
@@ -276,10 +279,10 @@ and unsugar_t ~current_module imports options = function
       List.iter (Uutf.Buffer.add_utf_8 buf) s;
       (loc, Const (String (Buffer.contents buf)))
 
-and unsugar_args ~current_module imports options args (annot, t) =
+and unsugar_args imports options args (annot, t) =
   let rec aux = function
     | (loc, ParseTree.VArg (name, ty)) :: xs ->
-        let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
+        let name = new_lower_name_to_local_value ~allow_underscore:true name in
         let ty = unsugar_ty imports ty in
         let (ty_xs, xs) = aux xs in
         let ty_xs =
@@ -309,7 +312,7 @@ and unsugar_args ~current_module imports options args (annot, t) =
         in
         aux ((loc, x) :: xs)
     | (loc, ParseTree.TyClassArg (name, tyclass)) :: xs ->
-        let name = new_lower_name_to_instance ~current_module ~allow_underscore:true name in
+        let name = new_lower_name_to_local_instance ~allow_underscore:true name in
         let tyclass = unsugar_tyclass imports tyclass in
         let (ty_xs, xs) = aux xs in
         let ty_xs =
@@ -324,9 +327,9 @@ and unsugar_args ~current_module imports options args (annot, t) =
         begin match annot with
         | Some annot ->
             let annot = unsugar_annot imports annot in
-            (Some annot, (fst t, Annot (unsugar_t ~current_module imports options t, annot)))
+            (Some annot, (fst t, Annot (unsugar_t imports options t, annot)))
         | None ->
-            (None, unsugar_t ~current_module imports options t)
+            (None, unsugar_t imports options t)
         end
   in
   match aux args with
@@ -346,6 +349,11 @@ let unsugar_variant ~current_module imports ~datatype ~args (ParseTree.Variant (
   in
   Variant (name, tys, (uloc, ty))
 
+let unsugar_sig ~current_module imports (name, ty) =
+  let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
+  let ty = unsugar_ty imports ty in
+  (name, ty)
+
 let unsugar_variants ~current_module imports ~datatype ~args =
   List.map (unsugar_variant ~current_module imports ~datatype ~args)
 
@@ -353,117 +361,179 @@ let unsugar_variant_args args =
   let aux (x, k) = (new_lower_name_to_type_var x, unsugar_kind k) in
   List.map aux args
 
-let create ~current_module imports options = function
-  | ParseTree.Value value ->
-      Value (unsugar_value ~current_module imports options value)
-  | ParseTree.Type (name, ty) ->
-      let name = new_upper_name_to_type ~current_module name in
-      Type (name, unsugar_ty imports ty)
-  | ParseTree.Foreign (cname, name, ty) ->
-      let cname = unsugar_string ~loc:(fst name) cname in
-      let cname =
-        let buf = Buffer.create 32 in
-        List.iter (Uutf.Buffer.add_utf_8 buf) cname;
-        Buffer.contents buf
-      in
-      let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
-      Foreign (cname, name, unsugar_ty imports ty)
-  | ParseTree.AbstractType (name, kind) ->
-      let name = new_upper_name_to_type ~current_module name in
-      let kind = unsugar_kind kind in
-      Datatype (name, kind, [], [])
-  | ParseTree.Datatype (name, args, variants) ->
-      let kind = Kinds.from_list (List.map (fun (_, k) -> unsugar_kind k) args) in
-      let name = new_upper_name_to_type ~current_module name in
-      let args = unsugar_variant_args args in
-      let variants = unsugar_variants ~current_module imports ~datatype:name ~args variants in
-      Datatype (name, kind, args, variants)
-  | ParseTree.Exception (name, tys) ->
-      let name = new_upper_name_to_exn ~current_module name in
-      Exception (name, List.map (unsugar_ty imports) tys)
-  | ParseTree.Open (loc, `UpperName modul) ->
-      let modul = get_module imports loc modul in
-      Open modul
-  | ParseTree.Class (name, params, sigs) ->
-      let name = new_upper_name_to_tyclass ~current_module name in
-      let params =
-        let aux (name, k) =
-          (new_lower_name_to_type_var name, unsugar_kind k)
+let unsugar_value ~current_module imports options (name, is_rec, (args, x)) =
+  let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
+  (name, is_rec, unsugar_args imports options args x)
+
+let create ~current_module options =
+  let rec aux imports = function
+    | ParseTree.Value ((name, ParseTree.NonRec, _) as value) :: xs ->
+        let value = unsugar_value ~current_module imports options value in
+        let imports = Imports.add_value ~export:false name current_module imports in
+        Value value :: aux imports xs
+    | ParseTree.Value ((name, ParseTree.Rec, _) as value) :: xs ->
+        let imports = Imports.add_value ~export:false name current_module imports in
+        let value = unsugar_value ~current_module imports options value in
+        Value value :: aux imports xs
+    | ParseTree.Type (name, ty) :: xs ->
+        let imports = Imports.add_type ~export:false name current_module imports in
+        let name = new_upper_name_to_type ~current_module name in
+        Type (name, unsugar_ty imports ty) :: aux imports xs
+    | ParseTree.Foreign (cname, name, ty) :: xs ->
+        let cname = unsugar_string ~loc:(fst name) cname in
+        let cname =
+          let buf = Buffer.create 32 in
+          List.iter (Uutf.Buffer.add_utf_8 buf) cname;
+          Buffer.contents buf
         in
-        List.map aux params
-      in
-      let sigs = List.map (unsugar_sig ~current_module imports) sigs in
-      Class (name, params, sigs)
-  | ParseTree.Instance (tyclass, name, values) ->
-      let tyclass = unsugar_instance imports tyclass in
-      let name =
-        Option.map
-          (new_lower_name_to_instance ~current_module ~allow_underscore:false)
-          name
-      in
-      let values =
-        List.map (unsugar_value ~current_module imports options) values
-      in
-      Instance (tyclass, name, values)
+        let imports' = Imports.add_value ~export:false name current_module imports in
+        let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
+        Foreign (cname, name, unsugar_ty imports ty) :: aux imports' xs
+    | ParseTree.AbstractType (name, kind) :: xs ->
+        let imports = Imports.add_type ~export:false name current_module imports in
+        let name = new_upper_name_to_type ~current_module name in
+        let kind = unsugar_kind kind in
+        Datatype (name, kind, [], []) :: aux imports xs
+    | ParseTree.Datatype (name, args, variants) :: xs ->
+        let imports = Imports.add_type ~export:false name current_module imports in
+        let kind = Kinds.from_list (List.map (fun (_, k) -> unsugar_kind k) args) in
+        let name = new_upper_name_to_type ~current_module name in
+        let args = unsugar_variant_args args in
+        let imports =
+          let aux imports (ParseTree.Variant (name, ty)) =
+            Imports.add_variant ~export:false name current_module imports
+          in
+          List.fold_left aux imports variants
+        in
+        let variants = unsugar_variants ~current_module imports ~datatype:name ~args variants in
+        Datatype (name, kind, args, variants) :: aux imports xs
+    | ParseTree.Exception (name, tys) :: xs ->
+        let imports' = Imports.add_exn ~export:false name current_module imports in
+        let name = new_upper_name_to_exn ~current_module name in
+        Exception (name, List.map (unsugar_ty imports) tys) :: aux imports' xs
+    | ParseTree.Open (loc, `UpperName modul) :: xs ->
+        let imports = Imports.open_module modul imports in
+        aux imports xs
+    | ParseTree.Class (name, params, sigs) :: xs ->
+        let imports' =
+          let aux imports (name, _) =
+            Imports.add_value ~export:false name current_module imports
+          in
+          let imports = Imports.add_tyclass ~export:false name current_module imports in
+          List.fold_left aux imports sigs
+        in
+        let name = new_upper_name_to_tyclass ~current_module name in
+        let params =
+          let aux (name, k) =
+            (new_lower_name_to_type_var name, unsugar_kind k)
+          in
+          List.map aux params
+        in
+        let sigs = List.map (unsugar_sig ~current_module imports) sigs in
+        Class (name, params, sigs) :: aux imports' xs
+    | ParseTree.Instance (tyclass, name, values) :: xs ->
+        let tyclass = unsugar_instance imports tyclass in
+        let (name, imports') = match name with
+          | Some name ->
+              let name' =
+                new_lower_name_to_instance
+                  ~current_module
+                  ~allow_underscore:false
+                  name
+              in
+              (Some name', Imports.add_instance ~export:false name current_module imports)
+          | None ->
+              (None, imports)
+        in
+        let values =
+          List.map (unsugar_value ~current_module imports options) values
+        in
+        Instance (tyclass, name, values) :: aux imports' xs
+    | [] ->
+        []
+  in
+  aux
 
 (* TODO: check "doublons" *)
 let create_imports ~current_module options =
   let aux = function
     | ParseTree.Source (_, `UpperName name) ->
-        (name, Module.create ~current_module name)
+        Module.create ~current_module name
     | ParseTree.Library (_, `UpperName name) ->
-        (name, Module.library_create options name)
+        Module.library_create options name
   in
   List.map aux
 
-let create ~no_prelude ~current_module options imports tree =
-  let imports = create_imports ~current_module options imports in
-  let imports = Builtins.imports ~no_prelude options imports in
-  let tree = List.map (create ~current_module imports options) tree in
-  let tree = Builtins.tree ~no_prelude options tree in
-  (List.map snd imports, tree)
-
-let create_interface ~current_module imports = function
-  | ParseTree.IVal signature ->
-      InterfaceTree.Val (unsugar_sig ~current_module imports signature)
-  | ParseTree.IAbstractType (name, k) ->
-      let name = new_upper_name_to_type ~current_module name in
-      InterfaceTree.AbstractType (name, unsugar_kind k)
-  | ParseTree.IDatatype (name, args, variants) ->
-      let kind = Kinds.from_list (List.map (fun (_, k) -> unsugar_kind k) args) in
-      let name = new_upper_name_to_type ~current_module name in
-      let args = unsugar_variant_args args in
-      let variants = unsugar_variants ~current_module imports ~datatype:name ~args variants in
-      InterfaceTree.Datatype (name, kind, args, variants)
-  | ParseTree.ITypeAlias (name, ty) ->
-      let name = new_upper_name_to_type ~current_module name in
-      InterfaceTree.TypeAlias (name, unsugar_ty imports ty)
-  | ParseTree.IException (name, tys) ->
-      let name = new_upper_name_to_exn ~current_module name in
-      InterfaceTree.Exception (name, List.map (unsugar_ty imports) tys)
-  | ParseTree.IOpen (loc, `UpperName modul) ->
-      let modul = get_module imports loc modul in
-      InterfaceTree.Open modul
-  | ParseTree.IClass (name, params, sigs) ->
-      let name = new_upper_name_to_tyclass ~current_module name in
-      let params =
-        let aux (name, k) =
-          (new_lower_name_to_type_var name, unsugar_kind k)
+let create_interface ~current_module imports interface =
+  let rec aux imports local_imports acc = function
+    | ParseTree.IVal ((name, _) as signature) :: xs ->
+        let value = unsugar_sig ~current_module local_imports signature in
+        let imports = Imports.add_value ~export:true name current_module imports in
+        aux imports local_imports (InterfaceTree.Val value :: acc) xs
+    | ParseTree.IAbstractType (name, k) :: xs ->
+        let imports = Imports.add_type ~export:true name current_module imports in
+        let local_imports = Imports.add_type ~export:false name current_module local_imports in
+        let name = new_upper_name_to_type ~current_module name in
+        aux imports local_imports (InterfaceTree.AbstractType (name, unsugar_kind k) :: acc) xs
+    | ParseTree.IDatatype (name, args, variants) :: xs ->
+        let imports = Imports.add_type ~export:true name current_module imports in
+        let local_imports = Imports.add_type ~export:false name current_module local_imports in
+        let kind = Kinds.from_list (List.map (fun (_, k) -> unsugar_kind k) args) in
+        let name = new_upper_name_to_type ~current_module name in
+        let args = unsugar_variant_args args in
+        let imports =
+          let aux imports (ParseTree.Variant (name, _)) =
+            Imports.add_variant ~export:true name current_module imports
+          in
+          List.fold_left aux imports variants
         in
-        List.map aux params
-      in
-      let sigs = List.map (unsugar_sig ~current_module imports) sigs in
-      InterfaceTree.Class (name, params, sigs)
-  | ParseTree.IInstance (tyclass, name) ->
-      let tyclass = unsugar_instance imports tyclass in
-      let name =
-        Option.map
-          (new_lower_name_to_instance ~current_module ~allow_underscore:false)
-          name
-      in
-      InterfaceTree.Instance (tyclass, name)
-
-let create_interface ~current_module options imports tree =
-  let imports = create_imports ~current_module options imports in
-  let tree = List.map (create_interface ~current_module imports) tree in
-  (List.map snd imports, tree)
+        let variants = unsugar_variants ~current_module local_imports ~datatype:name ~args variants in
+        aux imports local_imports (InterfaceTree.Datatype (name, kind, args, variants) :: acc) xs
+    | ParseTree.ITypeAlias (name, ty) :: xs ->
+        let imports = Imports.add_type ~export:true name current_module imports in
+        let local_imports' = Imports.add_type ~export:false name current_module local_imports in
+        let name = new_upper_name_to_type ~current_module name in
+        aux imports local_imports' (InterfaceTree.TypeAlias (name, unsugar_ty local_imports ty) :: acc) xs
+    | ParseTree.IException (name, tys) :: xs ->
+        let imports' = Imports.add_exn ~export:true name current_module imports in
+        let name = new_upper_name_to_exn ~current_module name in
+        aux imports' local_imports (InterfaceTree.Exception (name, List.map (unsugar_ty local_imports) tys) :: acc) xs
+    | ParseTree.IOpen (loc, `UpperName modul) :: xs ->
+        let local_imports = Imports.open_module modul local_imports in
+        aux imports local_imports acc xs
+    | ParseTree.IClass (name, params, sigs) :: xs ->
+        let imports = Imports.add_tyclass ~export:true name current_module imports in
+        let local_imports' = Imports.add_tyclass ~export:false name current_module local_imports in
+        let name = new_upper_name_to_tyclass ~current_module name in
+        let params =
+          let aux (name, k) =
+            (new_lower_name_to_type_var name, unsugar_kind k)
+          in
+          List.map aux params
+        in
+        let imports =
+          let aux imports (name, _) =
+            Imports.add_value ~export:true name current_module imports
+          in
+          List.fold_left aux imports sigs
+        in
+        let sigs = List.map (unsugar_sig ~current_module local_imports) sigs in
+        aux imports local_imports' (InterfaceTree.Class (name, params, sigs) :: acc) xs
+    | ParseTree.IInstance (tyclass, name) :: xs ->
+        (* NOTE: No need to add the name in the interfaces *)
+        let tyclass = unsugar_instance local_imports tyclass in
+        let (name, imports, local_imports) = match name with
+          | Some name ->
+              let imports = Imports.add_instance ~export:true name current_module imports in
+              let local_imports = Imports.add_instance ~export:false name current_module local_imports in
+              let name = new_lower_name_to_instance ~current_module ~allow_underscore:false name in
+              (Some name, imports, local_imports)
+          | None ->
+              (None, imports, local_imports)
+        in
+        aux imports local_imports (InterfaceTree.Instance (tyclass, name) :: acc) xs
+    | [] ->
+        (imports, acc)
+  in
+  let (imports, interface) = aux Imports.empty imports [] interface in
+  (imports, List.rev interface)

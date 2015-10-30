@@ -35,7 +35,7 @@ type t =
 let empty options =
   { values = GammaMap.Value.empty
   ; variants = GammaMap.Variant.empty
-  ; types = PrivateTypes.ty_empty options
+  ; types = GammaMap.Types.empty
   ; type_vars = GammaMap.TypeVar.empty
   ; constructors = GammaMap.Constr.empty
   ; exceptions = GammaMap.Exn.empty
@@ -59,51 +59,20 @@ let check_toplevel_type_vars type_vars =
   if not (GammaMap.TypeVar.is_empty type_vars) then
     assert false
 
-let union ~imported b =
-  let values =
-    let aux = PrivateTypes.ty_remove_module_aliases in
-    GammaMap.Value.union aux ~imported:imported.values b.values
-  in
-  let variants =
-    let aux (idx, ty, len) = (idx, PrivateTypes.ty_remove_module_aliases ty, len) in
-    GammaMap.Variant.union aux ~imported:imported.variants b.variants
-  in
-  let types =
-    let aux = function
-      | PrivateTypes.Alias (ty, k) -> PrivateTypes.Alias (PrivateTypes.ty_remove_module_aliases ty, k)
-      | PrivateTypes.Abstract _ as x -> x
-    in
-    GammaMap.Types.union aux ~imported:imported.types b.types
-  in
+let union a b =
+  let values = GammaMap.Value.merge a.values b.values in
+  let variants = GammaMap.Variant.merge a.variants b.variants in
+  let types = GammaMap.Types.merge a.types b.types in
   let type_vars =
-    check_toplevel_type_vars imported.type_vars;
+    check_toplevel_type_vars a.type_vars;
     check_toplevel_type_vars b.type_vars;
     GammaMap.TypeVar.empty
   in
-  let constructors =
-    let aux (args, idx) =
-      let aux (tys, idx) =
-        (List.map PrivateTypes.ty_remove_module_aliases tys, idx)
-      in
-      (args, GammaMap.Index.union aux ~imported:idx GammaMap.Index.empty)
-    in
-    GammaMap.Constr.union aux ~imported:imported.constructors b.constructors
-  in
-  let exceptions =
-    let aux = List.map PrivateTypes.ty_remove_module_aliases in
-    GammaMap.Exn.union aux ~imported:imported.exceptions b.exceptions
-  in
-  let tyclasses =
-    let aux = PrivateTypes.class_remove_module_aliases in
-    GammaMap.TyClass.union aux ~imported:imported.tyclasses b.tyclasses
-  in
+  let constructors = GammaMap.Constr.merge a.constructors b.constructors in
+  let exceptions = GammaMap.Exn.merge a.exceptions b.exceptions in
+  let tyclasses = GammaMap.TyClass.merge a.tyclasses b.tyclasses in
   let named_instances =
-    let aux (name, tys) =
-      let name = Ident.TyClass.remove_aliases name in
-      let tys = PrivateTypes.tyclass_args_remove_module_aliases tys in
-      (name, tys)
-    in
-    GammaMap.Instance.union aux ~imported:imported.named_instances b.named_instances
+    GammaMap.Instance.merge a.named_instances b.named_instances
   in
   {values; variants; types; type_vars; constructors; exceptions; tyclasses; named_instances}
 
@@ -138,13 +107,3 @@ let is_subset_of a b =
   @ GammaMap.Exn.diff ~eq:(List.equal PrivateTypes.ty_equal) a.exceptions b.exceptions
   @ GammaMap.TyClass.diff ~eq:PrivateTypes.class_equal a.tyclasses b.tyclasses
   @ GammaMap.Instance.diff ~eq:named_instances_equal a.named_instances b.named_instances
-
-let open_module modul {values; variants; types; type_vars; constructors; exceptions; tyclasses; named_instances} =
-  let values = GammaMap.Value.open_module modul values in
-  let variants = GammaMap.Variant.open_module modul variants in
-  let types = GammaMap.Types.open_module modul types in
-  let constructors = GammaMap.Constr.open_module modul constructors in
-  let exceptions = GammaMap.Exn.open_module modul exceptions in
-  let tyclasses = GammaMap.TyClass.open_module modul tyclasses in
-  let named_instances = GammaMap.Instance.open_module modul named_instances in
-  {values; variants; types; type_vars; constructors; exceptions; tyclasses; named_instances}

@@ -52,19 +52,15 @@ let union = PrivateTypes.eff_union
 let add options gamma eff self =
   match eff with
   | UnsugaredTree.EffTy (name, exns) ->
-      let exns =
-        let aux x = fst (GammaMap.Exn.find_binding x gamma.Gamma.exceptions) in
-        List.map aux exns
-      in
-      let (name, k, has_args, self) =
-        match GammaMap.Types.find_binding name gamma.Gamma.types with
-        | (name, PrivateTypes.Abstract k) ->
+      let (k, has_args, self) =
+        match GammaMap.Types.find name gamma.Gamma.types with
+        | PrivateTypes.Abstract k ->
             if Ident.Type.equal name (Builtins.exn options) then
-              (name, k, true, self)
+              (k, true, self)
             else
-              (name, k, false, {self with effects = Effects.add name self.effects})
-        | (name, PrivateTypes.Alias (ty, k)) ->
-            (name, k, false, union_ty self ty)
+              (k, false, {self with effects = Effects.add name self.effects})
+        | (PrivateTypes.Alias (ty, k)) ->
+            (k, false, union_ty self ty)
       in
       if not (Kinds.is_effect k) then
         Err.fail
@@ -118,8 +114,6 @@ let of_list options gamma (_, l) =
   List.fold_left aux empty l
 
 let replace = PrivateTypes.eff_replace
-
-let remove_module_aliases = PrivateTypes.eff_remove_module_aliases
 
 let remove_tyclass_variables ~is_tyclass eff =
   let variables =
