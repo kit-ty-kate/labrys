@@ -443,24 +443,25 @@ module Make (I : I) = struct
         (Llvm.build_phi results "" builder', builder')
     | LambdaTree.Val name ->
         (get_value func gamma builder name, builder)
-    | LambdaTree.Variant (i, params) ->
+    | LambdaTree.Variant (index, params) ->
         let aux (acc, builder) t =
           let (t, builder) = lambda func ~jmp_buf gamma builder t in
           (t :: acc, builder)
         in
         let (values, builder) = List.fold_left aux ([], builder) params in
         let values = List.rev values in
-        begin match List.length values with
-        | 0 ->
-            let index = Llvm.const_inttoptr (i32 i) Type.star in
-            let v = Llvm.define_constant "" (Llvm.const_array Type.star [|index|]) m in
-            let v = Llvm.build_bitcast v Type.star "" builder in
-            (v, builder)
-        | size ->
-            let i = Llvm.build_inttoptr (i32 i) Type.star "" builder in
-            let value = malloc_and_init (Type.variant (succ size)) (i :: values) builder in
-            let value = Llvm.build_bitcast value Type.star "" builder in
-            (value, builder)
+        let index = Llvm.const_inttoptr (i32 index) Type.star in
+        if List.for_all Llvm.is_constant values then begin
+          let v = Array.of_list (index :: values) in
+          let v = Llvm.define_constant "" (Llvm.const_array Type.star v) m in
+          let v = Llvm.const_bitcast v Type.star in
+          (v, builder)
+        end else begin
+          let size = List.length values in
+          let v = index :: values in
+          let v = malloc_and_init (Type.variant (succ size)) v builder in
+          let v = Llvm.build_bitcast v Type.star "" builder in
+          (v, builder)
         end
     | LambdaTree.CallForeign (name, ret, args) ->
         let ty = Llvm.function_type (ret_type ret) (args_type args) in
@@ -520,7 +521,7 @@ module Make (I : I) = struct
         (record, builder)
     | LambdaTree.Const const ->
         let v = Llvm.define_constant "" (get_const const) m in
-        let v = Llvm.build_bitcast v Type.star "" builder in
+        let v = Llvm.const_bitcast v Type.star in
         (v, builder)
 
   and fold_args func ~jmp_buf gamma builder args =
