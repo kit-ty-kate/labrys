@@ -29,6 +29,12 @@ val build_cond_br : llvalue -> llbasicblock -> llbasicblock -> llbuilder -> unit
 val build_unreachable : llbuilder -> unit
 val build_call_void : llvalue -> llvalue array -> llbuilder -> unit
 
+val current_function : llbuilder -> llvalue
+val current_param : llbuilder -> int -> llvalue
+
+val create_block : llcontext -> llbuilder -> (llbasicblock * llbuilder)
+val build_load_cast : llvalue -> lltype -> llbuilder -> llvalue
+
 val define_function :
   [`External | `Private] ->
   llcontext ->

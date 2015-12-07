@@ -53,9 +53,7 @@ module Type = struct
   let star = Llvm.pointer_type i8
   let array = Llvm.array_type star
   let array_ptr size = Llvm.pointer_type (array size)
-  let variant = array
   let variant_ptr = array_ptr
-  let closure = array
   let closure_ptr = array_ptr
 
   (** Note: jmp_buf is a five word buffer (see the Llvm doc). *)
@@ -88,13 +86,15 @@ module Generic (I : sig val m : t end) = struct
     let ty = Llvm.function_type Type.star [||] in
     Llvm.declare_function "llvm.stacksave" ty m
 
-  let init_jmp_buf jmp_buf builder =
+  let alloc_jmp_buf builder =
+    let jmp_buf = Llvm.build_alloca Type.jmp_buf "" builder in
     let v = Llvm.undef Type.jmp_buf in
     let fp = Llvm.build_call frameaddress [|i32 0|] "" builder in
     let v = Llvm.build_insertvalue v fp 0 "" builder in
     let sp = Llvm.build_call stacksave [||] "" builder in
     let v = Llvm.build_insertvalue v sp 2 "" builder in
-    Llvm.build_store v jmp_buf builder
+    Llvm.build_store v jmp_buf builder;
+    jmp_buf
 end
 
 module Main (I : sig val main_module : Module.t end) = struct
@@ -132,8 +132,7 @@ module Main (I : sig val main_module : Module.t end) = struct
       Llvm.define_function `External c "main" Type.main_function m
     in
     init_gc builder;
-    let jmp_buf = Llvm.build_alloca Type.jmp_buf "" builder in
-    Generic.init_jmp_buf jmp_buf builder;
+    let jmp_buf = Generic.alloc_jmp_buf builder in
     Llvm.build_call_void main_init [|jmp_buf|] builder;
     Llvm.build_ret (i32 0) builder;
     m
@@ -155,20 +154,21 @@ module Make (I : I) = struct
     let values = List.Idx.foldi aux (Llvm.undef ty) values in
     Llvm.build_store values ptr builder
 
-  let malloc_and_init ty values builder =
+  let malloc_and_init size values builder =
+    let ty = Type.array size in
     let allocated = Llvm.build_malloc ty "" builder in
     init allocated ty values builder;
-    allocated
+    Llvm.build_bitcast allocated Type.star "" builder
 
-  let malloc_and_init_array size values builder =
-    match size with
+  let malloc_and_init values builder =
+    match List.length values with
     | 0 -> null
-    | size -> malloc_and_init (Type.array size) values builder
+    | size -> malloc_and_init size values builder
 
   let debug_trap = Llvm.declare_function "llvm.debugtrap" Type.unit_function m
 
-  let load_env func builder =
-    let env = Llvm.param func 1 in
+  let load_env builder =
+    let env = Llvm.current_param builder 1 in
     Llvm.build_load env "" builder
 
   let unreachable builder =
@@ -196,13 +196,12 @@ module Make (I : I) = struct
     Llvm.set_linkage Llvm.Linkage.Link_once_odr v;
     v
 
-  let create_default_branch func =
-    let block = Llvm.append_block c "" func in
-    let builder = Llvm.builder_at_end c block in
+  let create_default_branch builder =
+    let (block, builder) = Llvm.create_block c builder in
     unreachable builder;
     block
 
-  let fold_env func gamma builder =
+  let fold_env gamma builder =
     let aux name value (i, values, gamma) =
       match value with
       | Value value ->
@@ -210,13 +209,13 @@ module Make (I : I) = struct
           let gamma = GammaMap.Value.add name (Env i) gamma in
           (succ i, values, gamma)
       | Env j ->
-          let env = load_env func builder in
+          let env = load_env builder in
           let value = Llvm.build_extractvalue env j "" builder in
           let values = value :: values in
           let gamma = GammaMap.Value.add name (Env i) gamma in
           (succ i, values, gamma)
       | RecFun ->
-          let value = Llvm.param func 1 in
+          let value = Llvm.current_param builder 1 in
           let value = Llvm.build_bitcast value Type.star "" builder in
           let values = value :: values in
           let gamma = GammaMap.Value.add name (Env i) gamma in
@@ -228,9 +227,9 @@ module Make (I : I) = struct
     let (_, b, c) = GammaMap.Value.fold aux gamma (1, [], GammaMap.Value.empty) in
     (List.rev b, c)
 
-  let create_closure func ~isrec ~used_vars gamma builder =
+  let create_closure ~isrec ~used_vars gamma builder =
     let gamma = GammaMap.Value.filter (fun x _ -> Set.mem x used_vars) gamma in
-    let (values, gamma) = fold_env func gamma builder in
+    let (values, gamma) = fold_env gamma builder in
     let env_size = List.length values in
     let gamma = match isrec with
       | Some rec_name when Set.mem rec_name used_vars ->
@@ -241,9 +240,9 @@ module Make (I : I) = struct
     let env_size = succ env_size in
     let (f, builder') = Llvm.define_function `Private c "__lambda" (Type.lambda ~env_size) m in
     Llvm.set_linkage Llvm.Linkage.Private f;
-    let f' = Llvm.build_bitcast f Type.star "" builder in
-    let closure = malloc_and_init (Type.closure env_size) (f' :: values) builder in
-    (f, builder', closure, gamma)
+    let f = Llvm.build_bitcast f Type.star "" builder in
+    let closure = malloc_and_init (f :: values) builder in
+    (builder', closure, gamma)
 
   let get_exn name =
     let name = Ident.Exn.to_string name in
@@ -261,8 +260,7 @@ module Make (I : I) = struct
           | Pattern.VNode (i, var) ->
               let i = succ i in
               let (value, vars) = llvalue_of_pattern_var vars value builder var in
-              let value = Llvm.build_bitcast value (Type.variant_ptr (succ i)) "" builder in
-              let value = Llvm.build_load value "" builder in
+              let value = Llvm.build_load_cast value (Type.variant_ptr (succ i)) builder in
               (Llvm.build_extractvalue value i "" builder, vars)
         in
         (value, Map.add var value vars)
@@ -287,15 +285,15 @@ module Make (I : I) = struct
     let aux (ty, _) = llvm_ty_of_ty ty in
     Array.of_list (List.map aux args)
 
-  let get_value func gamma builder name =
+  let get_value gamma builder name =
     match GammaMap.Value.find_opt name gamma with
     | Some (Global value) | Some (Value value) ->
         value
     | Some (Env i) ->
-        let env = load_env func builder in
+        let env = load_env builder in
         Llvm.build_extractvalue env i "" builder
     | Some RecFun ->
-        let value = Llvm.param func 1 in
+        let value = Llvm.current_param builder 1 in
         let value = Llvm.build_bitcast value Type.star "" builder in
         value
     | None ->
@@ -303,24 +301,23 @@ module Make (I : I) = struct
         let extern = Llvm.declare_global Type.star name m in
         Llvm.build_load extern "" builder
 
-  let map_args func gamma builder = function
+  let map_args gamma builder = function
     | [] ->
         [||]
     | args ->
         let aux = function
           | (LambdaTree.String (), name) ->
-              get_value func gamma builder name
+              get_value gamma builder name
           | (ty, name) ->
               let ty = Llvm.pointer_type (llvm_ty_of_ty ty) in
-              let v = get_value func gamma builder name in
-              let v = Llvm.build_bitcast v ty "" builder in
-              Llvm.build_load v "" builder
+              let v = get_value gamma builder name in
+              Llvm.build_load_cast v ty builder
         in
         Array.of_list (List.map aux args)
 
-  let rec map_ret func ~jmp_buf gamma builder t = function
+  let rec map_ret ~jmp_buf gamma builder t = function
     | LambdaTree.Void t ->
-        lambda func ~jmp_buf gamma builder t
+        lambda ~jmp_buf gamma builder t
     | LambdaTree.Alloc (LambdaTree.String ()) ->
         (t, builder)
     | LambdaTree.Alloc ty ->
@@ -330,15 +327,8 @@ module Make (I : I) = struct
         let value = Llvm.build_bitcast value Type.star "" builder in
         (value, builder)
 
-  and create_branch func ~default vars gamma value results tree =
-    let block = Llvm.append_block c "" func in
-    let builder = Llvm.builder_at_end c block in
-    create_tree func ~default vars gamma builder value results tree;
-    block
-
-  and create_result func ~jmp_buf ~next_block gamma builder (vars, result) =
-    let block = Llvm.append_block c "" func in
-    let builder' = Llvm.builder_at_end c block in
+  and create_result ~jmp_buf ~next_block gamma builder (vars, result) =
+    let (block, builder') = Llvm.create_block c builder in
     let (gamma, pattern_vars) =
       let aux (gamma, pattern_vars) (var, name) =
         let variable = Llvm.build_alloca Type.star "" builder in
@@ -347,11 +337,11 @@ module Make (I : I) = struct
       in
       List.fold_left aux (gamma, []) vars
     in
-    let (v, builder') = lambda func ~jmp_buf gamma builder' result in
+    let (v, builder') = lambda ~jmp_buf gamma builder' result in
     Llvm.build_br next_block builder';
     (block, (v, Llvm.insertion_block builder'), pattern_vars)
 
-  and create_tree func ~default vars gamma builder value results = function
+  and create_tree ~default vars gamma builder value results = function
     | LambdaTree.Leaf i ->
         let (block, _, pattern_vars) = List.nth results i in
         let aux vars (var, variable) =
@@ -363,23 +353,22 @@ module Make (I : I) = struct
         Llvm.build_br block builder
     | LambdaTree.Node (var, cases) ->
         let (term, vars) = llvalue_of_pattern_var vars value builder var in
-        let term = Llvm.build_bitcast term (Type.variant_ptr 1) "" builder in
-        let term = Llvm.build_load term "" builder in
+        let term = Llvm.build_load_cast term (Type.variant_ptr 1) builder in
         let term = Llvm.build_extractvalue term 0 "" builder in
         let term = Llvm.build_ptrtoint term Type.i32 "" builder in
         let switch = Llvm.build_switch term default (List.length cases) builder in
         List.iter
           (fun (constr, tree) ->
-             let branch = create_branch func ~default vars gamma value results tree in
+             let (branch, builder) = Llvm.create_block c builder in
+             create_tree ~default vars gamma builder value results tree;
              Llvm.add_case switch (i32 constr) branch
           )
           cases
 
-  and create_exn_result func ~jmp_buf ~next_block ~exn_args gamma (args, result) =
-    let block = Llvm.append_block c "" func in
-    let builder = Llvm.builder_at_end c block in
-    let exn_args = Llvm.build_bitcast exn_args (Type.array_ptr (List.length args)) "" builder in
-    let exn_args = lazy (Llvm.build_load exn_args "" builder) in
+  and create_exn_result ~jmp_buf ~next_block ~exn_args gamma builder (args, result) =
+    let (block, builder) = Llvm.create_block c builder in
+    let exn_args_ty = Type.array_ptr (List.length args) in
+    let exn_args = lazy (Llvm.build_load_cast exn_args exn_args_ty builder) in
     let gamma =
       let aux gamma i name =
         let exn_args = Lazy.force exn_args in
@@ -388,20 +377,20 @@ module Make (I : I) = struct
       in
       List.Idx.foldi aux gamma args
     in
-    let (v, builder) = lambda func ~jmp_buf gamma builder result in
+    let (v, builder) = lambda ~jmp_buf gamma builder result in
     Llvm.build_br next_block builder;
     ((v, Llvm.insertion_block builder), block)
 
-  and create_exn_branches func ~jmp_buf ~next_block gamma builder branches =
+  and create_exn_branches ~jmp_buf ~next_block gamma builder branches =
     let exn_tag = Llvm.build_load exn_tag_var "" builder in
     let exn_args = Llvm.build_load exn_args_var "" builder in
     let aux (acc, builder) ((name, args), t) =
-      let (x, block) = create_exn_result func ~next_block ~jmp_buf ~exn_args gamma (args, t) in
+      let (x, block) = create_exn_result ~next_block ~jmp_buf ~exn_args gamma builder (args, t) in
       let exn = get_exn name in
-      let next_block = Llvm.append_block c "" func in
+      let (next_block, builder') = Llvm.create_block c builder in
       let cond = Llvm.build_icmp Llvm.Icmp.Eq exn exn_tag "" builder in
       Llvm.build_cond_br cond block next_block builder;
-      (x :: acc, Llvm.builder_at_end c next_block)
+      (x :: acc, builder')
     in
     let (x, builder) = List.fold_left aux ([], builder) branches in
     let jmp_buf = Llvm.build_bitcast jmp_buf Type.star "" builder in
@@ -409,43 +398,41 @@ module Make (I : I) = struct
     unreachable builder;
     x
 
-  and abs ~f ~name t gamma builder =
-    let param = Llvm.param f 0 in
-    let jmp_buf = Llvm.param f 2 in
+  and abs ~name t gamma builder =
+    let param = Llvm.current_param builder 0 in
+    let jmp_buf = Llvm.current_param builder 2 in
     let gamma = GammaMap.Value.add name (Value param) gamma in
-    let (v, builder) = lambda f ~jmp_buf gamma builder t in
+    let (v, builder) = lambda ~jmp_buf gamma builder t in
     Llvm.build_ret v builder
 
-  and lambda func ?isrec ~jmp_buf gamma builder = function
+  and lambda ?isrec ~jmp_buf gamma builder = function
     | LambdaTree.Abs (name, used_vars, t) ->
-        let (f, builder', closure, gamma) =
-          create_closure func ~isrec ~used_vars gamma builder
+        let (builder', closure, gamma) =
+          create_closure ~isrec ~used_vars gamma builder
         in
-        abs ~f ~name t gamma builder';
-        let closure = Llvm.build_bitcast closure Type.star "" builder in
+        abs ~name t gamma builder';
         (closure, builder)
     | LambdaTree.App (f, x) ->
-        let (closure, builder) = lambda func ~jmp_buf gamma builder f in
-        let (x, builder) = lambda func ~jmp_buf gamma builder x in
+        let (closure, builder) = lambda ~jmp_buf gamma builder f in
+        let (x, builder) = lambda ~jmp_buf gamma builder x in
         let closure = Llvm.build_bitcast closure (Type.closure_ptr 1) "" builder in
         let f = Llvm.build_load closure "" builder in
         let f = Llvm.build_extractvalue f 0 "" builder in
         let f = Llvm.build_bitcast f (Type.lambda_ptr ~env_size:1) "" builder in
         (Llvm.build_call f [|x; closure; jmp_buf|] "" builder, builder)
     | LambdaTree.PatternMatching (t, results, tree) ->
-        let (t, builder) = lambda func ~jmp_buf gamma builder t in
-        let next_block = Llvm.append_block c "" func in
-        let results = List.map (create_result func ~next_block ~jmp_buf gamma builder) results in
-        let builder' = Llvm.builder_at_end c next_block in
-        let default = create_default_branch func in
-        create_tree func ~default Map.empty gamma builder t results tree;
+        let (t, builder) = lambda ~jmp_buf gamma builder t in
+        let (next_block, builder') = Llvm.create_block c builder in
+        let results = List.map (create_result ~next_block ~jmp_buf gamma builder) results in
+        let default = create_default_branch builder in
+        create_tree ~default Map.empty gamma builder t results tree;
         let results = List.map (fun (_, x, _) -> x) results in
         (Llvm.build_phi results "" builder', builder')
     | LambdaTree.Val name ->
-        (get_value func gamma builder name, builder)
+        (get_value gamma builder name, builder)
     | LambdaTree.Variant (index, params) ->
         let aux (acc, builder) t =
-          let (t, builder) = lambda func ~jmp_buf gamma builder t in
+          let (t, builder) = lambda ~jmp_buf gamma builder t in
           (t :: acc, builder)
         in
         let (values, builder) = List.fold_left aux ([], builder) params in
@@ -457,76 +444,67 @@ module Make (I : I) = struct
           let v = Llvm.const_bitcast v Type.star in
           (v, builder)
         end else begin
-          let size = List.length values in
-          let v = index :: values in
-          let v = malloc_and_init (Type.variant (succ size)) v builder in
-          let v = Llvm.build_bitcast v Type.star "" builder in
+          let v = malloc_and_init (index :: values) builder in
           (v, builder)
         end
     | LambdaTree.CallForeign (name, ret, args) ->
         let ty = Llvm.function_type (ret_type ret) (args_type args) in
         let f = Llvm.declare_function name ty m in
-        let args = map_args func gamma builder args in
-        map_ret func ~jmp_buf gamma builder (Llvm.build_call f args "" builder) ret
+        let args = map_args gamma builder args in
+        map_ret ~jmp_buf gamma builder (Llvm.build_call f args "" builder) ret
     | LambdaTree.Let (name, t, xs) ->
-        let (t, builder) = lambda func ~jmp_buf gamma builder t in
+        let (t, builder) = lambda ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
-        lambda func ~jmp_buf gamma builder xs
+        lambda ~jmp_buf gamma builder xs
     | LambdaTree.LetRec (name, t, xs) ->
-        let (t, builder) = lambda func ~isrec:name ~jmp_buf gamma builder t in
+        let (t, builder) = lambda ~isrec:name ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
-        lambda func ~jmp_buf gamma builder xs
+        lambda ~jmp_buf gamma builder xs
     | LambdaTree.Fail (name, args) ->
-        let (args, builder) = fold_args func ~jmp_buf gamma builder args in
-        let args = malloc_and_init_array (List.length args) args builder in
+        let (args, builder) = fold_args ~jmp_buf gamma builder args in
+        let args = malloc_and_init args builder in
         let tag = get_exn name in
         Llvm.build_store args exn_args_var builder;
         Llvm.build_store tag exn_tag_var builder;
         let jmp_buf = Llvm.build_bitcast jmp_buf Type.star "" builder in
         Llvm.build_call_void longjmp [|jmp_buf|] builder;
         unreachable builder;
-        (undef, Llvm.builder_at_end c (Llvm.append_block c "" func))
+        (undef, snd (Llvm.create_block c builder))
     | LambdaTree.Try (t, branches) ->
-        let jmp_buf' = Llvm.build_alloca Type.jmp_buf "" builder in
-        Generic.init_jmp_buf jmp_buf' builder;
-        let next_block = Llvm.append_block c "" func in
+        let jmp_buf' = Generic.alloc_jmp_buf builder in
+        let (next_block, builder') = Llvm.create_block c builder in
         let (try_result, try_block) =
-          let block = Llvm.append_block c "" func in
-          let builder = Llvm.builder_at_end c block in
-          let (t, builder) = lambda func ~jmp_buf:jmp_buf' gamma builder t in
+          let (block, builder) = Llvm.create_block c builder in
+          let (t, builder) = lambda ~jmp_buf:jmp_buf' gamma builder t in
           Llvm.build_br next_block builder;
           ((t, Llvm.insertion_block builder), block)
         in
         let (results, catch_block) =
-          let block = Llvm.append_block c "" func in
-          let builder = Llvm.builder_at_end c block in
-          let results = create_exn_branches func ~jmp_buf ~next_block gamma builder branches in
+          let (block, builder) = Llvm.create_block c builder in
+          let results = create_exn_branches ~jmp_buf ~next_block gamma builder branches in
           (try_result :: results, block)
         in
         let jmp_buf' = Llvm.build_bitcast jmp_buf' Type.star "" builder in
         let jmp_res = Llvm.build_call setjmp [|jmp_buf'|] "" builder in
         let cond = Llvm.build_icmp Llvm.Icmp.Eq jmp_res (i32 0) "" builder in
         Llvm.build_cond_br cond try_block catch_block builder;
-        let builder = Llvm.builder_at_end c next_block in
-        (Llvm.build_phi results "" builder, builder)
+        (Llvm.build_phi results "" builder', builder')
     | LambdaTree.RecordGet (t, n) ->
-        let (t, builder) = lambda func ~jmp_buf gamma builder t in
-        let t = Llvm.build_bitcast t (Type.array_ptr (succ n)) "" builder in
-        let t = Llvm.build_load t "" builder in
+        let (t, builder) = lambda ~jmp_buf gamma builder t in
+        let t = Llvm.build_load_cast t (Type.array_ptr (succ n)) builder in
         (Llvm.build_extractvalue t n "" builder, builder)
     | LambdaTree.RecordCreate fields ->
-        let (fields, builder) = fold_args func ~jmp_buf gamma builder fields in
-        let record = malloc_and_init_array (List.length fields) fields builder in
-        let record = Llvm.build_bitcast record Type.star "" builder in
+        let (fields, builder) = fold_args ~jmp_buf gamma builder fields in
+        let record = malloc_and_init fields builder in
         (record, builder)
     | LambdaTree.Const const ->
         let v = Llvm.define_constant "" (get_const const) m in
         let v = Llvm.const_bitcast v Type.star in
         (v, builder)
 
-  and fold_args func ~jmp_buf gamma builder args =
+  and fold_args ~jmp_buf gamma builder args =
     let aux (acc, builder) x =
-      let (x, builder) = lambda func ~jmp_buf gamma builder x in
+      let (x, builder) = lambda ~jmp_buf gamma builder x in
       (x :: acc, builder)
     in
     let (args, builder) = List.fold_left aux ([], builder) args in
@@ -543,24 +521,19 @@ module Make (I : I) = struct
     let v = Llvm.define_constant name (Llvm.const_bitcast v Type.star) m in
     set_linkage v linkage
 
-  let rec init func ~jmp_buf bindings builder = function
+  let rec init ~jmp_buf bindings builder = function
     | `Val (global, t) :: xs ->
-        let (value, builder) = lambda func ~jmp_buf bindings builder t in
+        let (value, builder) = lambda ~jmp_buf bindings builder t in
         Llvm.build_store value global builder;
-        init func ~jmp_buf bindings builder xs
+        init ~jmp_buf bindings builder xs
     | `Const g :: xs ->
         g bindings;
-        init func ~jmp_buf bindings builder xs
+        init ~jmp_buf bindings builder xs
     | `Binding (name, v) :: xs ->
         let bindings = GammaMap.Value.add name (Global v) bindings in
-        init func ~jmp_buf bindings builder xs
+        init ~jmp_buf bindings builder xs
     | [] ->
         builder
-
-  let init func builder =
-    let jmp_buf = Llvm.build_alloca Type.jmp_buf "" builder in
-    Generic.init_jmp_buf jmp_buf builder;
-    init func ~jmp_buf GammaMap.Value.empty builder
 
   let init_imports ~jmp_buf imports builder =
     let aux import =
@@ -584,7 +557,7 @@ module Make (I : I) = struct
       | LambdaTree.Function (name, (name', t), linkage) :: xs ->
           let (f, builder) = Llvm.define_function `Private c (".." ^ Ident.Name.to_string name) (Type.lambda ~env_size:0) m in
           define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]);
-          let g bindings = abs ~f ~name:name' t bindings builder in
+          let g bindings = abs ~name:name' t bindings builder in
           top (`Const g :: init_list) xs
       | [] ->
           let (f, builder) =
@@ -592,7 +565,7 @@ module Make (I : I) = struct
           in
           let jmp_buf = Llvm.param f 0 in
           init_imports ~jmp_buf imports builder;
-          let builder = init f builder (List.rev init_list) in
+          let builder = init ~jmp_buf GammaMap.Value.empty builder (List.rev init_list) in
           Llvm.build_ret_void builder;
           m
     in
