@@ -1,6 +1,8 @@
-import library Nat
+import Nat
 
 open Nat
+
+type alias Nat = Nat.T
 
 exception EndOfFile
 
@@ -48,13 +50,13 @@ let readLines () =
   in
   loop (Nil [Unit])
 
-let rec plus (n : Nat.Nat) (m : Nat.Nat) : Nat.Nat =
+let rec plus (n : Nat.T) (m : Nat.T) : Nat.T =
   match n with
   | Nat.O -> m
   | Nat.S p -> Nat.S (plus p m)
   end
 
-let rec mult (n : Nat.Nat) (m : Nat.Nat) : Nat.Nat =
+let rec mult (n : Nat.T) (m : Nat.T) : Nat.T =
   match n with
   | Nat.O -> Nat.O
   | Nat.S p -> plus m (mult p m)

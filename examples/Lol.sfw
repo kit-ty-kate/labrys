@@ -1,4 +1,4 @@
-import library Nat
+import Nat
 
 open Nat
 

@@ -1,6 +1,8 @@
-import library Nat
+import Nat
 
 open Nat
+
+type alias Nat = Nat.T
 
 foreign "puts" println : String -[IO]-> Unit
 foreign "GC_malloc" alloc : Int -[IO]-> String

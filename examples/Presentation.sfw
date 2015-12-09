@@ -1,5 +1,7 @@
-import library Nat
+import Nat
 open Nat
+
+type alias Nat = Nat.T
 
 foreign "GC_malloc" alloc : Int -[IO]-> String
 
