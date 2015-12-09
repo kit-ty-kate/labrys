@@ -22,3 +22,4 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open Monomorphic_containers.Open
 
 let version = "%{version}%"
+let lib = "%{lib}%/cervoise"

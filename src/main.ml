@@ -129,7 +129,7 @@ let restrained_base args =
 
 let base args =
   let args = restrained_base args in
-  let args = args $ Arg.(value & opt dir "stdlib" & info ["lib-dir"]) in
+  let args = args $ Arg.(value & opt dir Config.lib & info ["lib-dir"]) in
   let args = args $ Arg.(value & flag & info ["no-prelude"]) in
   args
 
