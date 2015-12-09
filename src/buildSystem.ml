@@ -98,7 +98,12 @@ let check_impl options modul =
   try
     let infos = Module.impl_infos modul in
     let infos = Utils.CCIO.with_in infos (parse_impl_infos) in
-    let hash = Digest.file (Module.impl modul) in
+    let hash =
+      if Module.is_library modul then
+        infos.hash
+      else
+        Digest.file (Module.impl modul)
+    in
     let hash_bc = Digest.file (Module.cimpl modul) in
     if not
          (String.equal infos.version Config.version
