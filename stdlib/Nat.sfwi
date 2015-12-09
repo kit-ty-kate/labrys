@@ -1,3 +1,0 @@
-type Nat =
-  | O
-  | S Nat
