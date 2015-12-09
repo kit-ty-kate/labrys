@@ -1,7 +1,10 @@
+-- TODO: Fix
+import library Prelude
+
+open Prelude
+
 type T =
   | O
   | S T
 
-type Unit = Unit : Unit
-
-let print : T -> Unit
+let print : T -[IO]-> Unit

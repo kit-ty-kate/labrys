@@ -1,6 +1,8 @@
-import library Nat
+import Nat
 
 open Nat
+
+type alias Nat = Nat.T
 
 foreign "GC_malloc" alloc : Int -[IO]-> String
 
@@ -25,7 +27,7 @@ let printNat (n : Nat) =
   fmt buf "%d" n;
   println buf
 
-let rec plus (n : Nat.Nat) (m : Nat.Nat) : Nat.Nat =
+let rec plus (n : Nat.T) (m : Nat.T) : Nat.T =
   match n with
   | Nat.O -> m
   | Nat.S p -> Nat.S (plus p m)
@@ -34,13 +36,13 @@ let rec plus (n : Nat.Nat) (m : Nat.Nat) : Nat.Nat =
 let rec mult =
   let y = Nat.O in
   let rec z = \() : Nat -> y in
-  \(n : Nat.Nat) (m : Nat.Nat) : Nat.Nat ->
+  \(n : Nat.T) (m : Nat.T) : Nat.T ->
   match n with
   | Nat.O -> z Unit
   | Nat.S p -> plus m (mult p m)
   end
 
-let rec fact (n : Nat.Nat) : Nat.Nat =
+let rec fact (n : Nat.T) : Nat.T =
   match n with
   | O -> Nat.S Nat.O
   | Nat.S x -> mult (Nat.S x) (fact x)
