@@ -96,7 +96,7 @@ and of_typed_term mapn = function
   | UntypedTree.Var (idx, len) ->
       create_dyn_functions
         (fun params ->
-           ( Variant (idx, List.rev_map (fun x -> Val x) params)
+           ( Datatype (Some idx, List.rev_map (fun x -> Val x) params)
            , Set.of_list params
            )
         )
@@ -142,7 +142,7 @@ and of_typed_term mapn = function
         (t :: fields, Set.union used_vars used_vars_acc)
       in
       let (fields, used_vars) = List.fold_right aux fields ([], Set.empty) in
-      (RecordCreate fields, used_vars)
+      (Datatype (None, fields), used_vars)
   | UntypedTree.Const const ->
       (Const const, Set.empty)
 

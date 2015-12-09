@@ -861,12 +861,12 @@ module LambdaTree = struct
           )
     | Val name ->
         PPrint.string (dump_name name)
-    | Variant (index, params) ->
+    | Datatype (index, params) ->
         let params = List.fold_left (fun acc x -> dump_t x ^^ PPrint.break 1 ^^ acc) PPrint.empty params in
         PPrint.group
           (PPrint.lbracket
            ^^ PPrint.break 1
-           ^^ PPrint.string (string_of_int index)
+           ^^ PPrint.string (Option.maybe string_of_int "" index)
            ^^ PPrint.break 1
            ^^ PPrint.bar
            ^^ PPrint.break 1
@@ -925,13 +925,6 @@ module LambdaTree = struct
         ^^ PPrint.string "end"
     | RecordGet (t, n) ->
         dump_t t ^^ PPrint.string (fmt ".%d" n)
-    | RecordCreate fields ->
-        let aux doc x = doc ^^ PPrint.semi ^^ PPrint.break 1 ^^ dump_t x in
-        PPrint.group
-          (PPrint.lbrace
-           ^^ List.fold_left aux PPrint.empty fields
-           ^^ PPrint.rbrace
-          )
     | Const (Int n) ->
         PPrint.string (fmt "%d" n)
     | Const (Float n) ->

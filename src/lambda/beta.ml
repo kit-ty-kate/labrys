@@ -33,7 +33,7 @@ let replace ~from ~by =
     | Abs (name, used_vars, t) -> Abs (name, used_vars, aux t)
     | Val name when eq name -> by
     | Val _ | Const _ | CallForeign _ as t -> t
-    | Variant (idx, fields) -> Variant (idx, List.map aux fields)
+    | Datatype (idx, fields) -> Datatype (idx, List.map aux fields)
     | LetRec (name, _, _) as t when eq name -> t
     | LetRec (name, t, xs) -> LetRec (name, aux t, aux xs)
     | PatternMatching (t, results, patterns) ->
@@ -44,27 +44,26 @@ let replace ~from ~by =
         Try (aux t, List.map aux' patterns)
     | Fail (name, args) -> Fail (name, List.map aux args)
     | RecordGet (t, n) -> RecordGet (aux t, n)
-    | RecordCreate fields -> RecordCreate (List.map aux fields)
   in
   aux
 
 let rec reduce = function
   | Let (name, t, xs) ->
       begin match reduce t with
-      | Val _ | Variant _ | Const _ as by -> reduce (replace ~from:name ~by xs)
-      | Let _ | App _ | Abs _
-      | PatternMatching _ | Try _ | Fail _ | CallForeign _
-      | LetRec _ | RecordGet _ | RecordCreate _ as t -> Let (name, t, reduce xs)
+      | Val _ | Datatype _ | Const _ as by -> reduce (replace ~from:name ~by xs)
+      | Let _ | App _ | Abs _ | PatternMatching _
+      | Try _ | Fail _ | CallForeign _
+      | LetRec _ | RecordGet _ as t -> Let (name, t, reduce xs)
       end
   | App (f, x) ->
       begin match reduce f with
       | Abs (name, _, t) -> reduce (Let (name, x, t))
-      | Let _ | App _ | Val _ | Variant _ | Const _
-      | PatternMatching _ | Try _ | Fail _ | CallForeign _
-      | LetRec _ | RecordGet _ | RecordCreate _ as f -> App (f, reduce x)
+      | Let _ | App _ | Val _ | Datatype _
+      | Const _ | PatternMatching _ | Try _ | Fail _
+      | CallForeign _ | LetRec _ | RecordGet _ as f -> App (f, reduce x)
       end
   | Abs (name, used_vars, t) -> Abs (name, used_vars, reduce t)
-  | Val _ | Variant _ | Const _ as t -> t
+  | Val _ | Datatype _ | Const _ as t -> t
   | CallForeign (name, ty, args) -> CallForeign (name, ty, args)
   | LetRec (name, t, xs) -> LetRec (name, reduce t, reduce xs)
   | PatternMatching (t, results, patterns) ->
@@ -75,7 +74,6 @@ let rec reduce = function
       Try (reduce t, List.map aux patterns)
   | Fail (name, args) -> Fail (name, List.map reduce args)
   | RecordGet (t, n) -> RecordGet (reduce t, n)
-  | RecordCreate fields -> RecordCreate (List.map reduce fields)
 
 let reduce =
   let aux = function

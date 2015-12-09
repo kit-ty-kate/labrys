@@ -430,21 +430,24 @@ module Make (I : I) = struct
         (Llvm.build_phi results "" builder', builder')
     | LambdaTree.Val name ->
         (get_value gamma builder name, builder)
-    | LambdaTree.Variant (index, params) ->
+    | LambdaTree.Datatype (index, params) ->
         let aux (acc, builder) t =
           let (t, builder) = lambda ~jmp_buf gamma builder t in
           (t :: acc, builder)
         in
         let (values, builder) = List.fold_left aux ([], builder) params in
         let values = List.rev values in
-        let index = Llvm.const_inttoptr (i32 index) Type.star in
+        let values = match index with
+          | Some index -> Llvm.const_inttoptr (i32 index) Type.star :: values
+          | None -> values
+        in
         if List.for_all Llvm.is_constant values then begin
-          let v = Array.of_list (index :: values) in
+          let v = Array.of_list values in
           let v = Llvm.define_constant "" (Llvm.const_array Type.star v) m in
           let v = Llvm.const_bitcast v Type.star in
           (v, builder)
         end else begin
-          let v = malloc_and_init (index :: values) builder in
+          let v = malloc_and_init values builder in
           (v, builder)
         end
     | LambdaTree.CallForeign (name, ret, args) ->
@@ -493,10 +496,6 @@ module Make (I : I) = struct
         let (t, builder) = lambda ~jmp_buf gamma builder t in
         let t = Llvm.build_load_cast t (Type.array_ptr (succ n)) builder in
         (Llvm.build_extractvalue t n "" builder, builder)
-    | LambdaTree.RecordCreate fields ->
-        let (fields, builder) = fold_args ~jmp_buf gamma builder fields in
-        let record = malloc_and_init fields builder in
-        (record, builder)
     | LambdaTree.Const const ->
         let v = Llvm.define_constant "" (get_const const) m in
         let v = Llvm.const_bitcast v Type.star in

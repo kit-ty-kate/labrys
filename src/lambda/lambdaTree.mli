@@ -49,7 +49,7 @@ and t =
   | Abs of (name * used_vars * t)
   | App of (t * t)
   | Val of name
-  | Variant of (index * t list)
+  | Datatype of (index option * t list)
   | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
   | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)
   | Let of (name * t * t)
@@ -57,7 +57,6 @@ and t =
   | Fail of (eff_name * t list)
   | Try of (t * ((eff_name * name list) * t) list)
   | RecordGet of (t * index)
-  | RecordCreate of t list
   | Const of const
 
 type linkage = Public | Private
