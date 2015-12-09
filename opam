@@ -12,6 +12,7 @@ substs: [
 ]
 build: [
   [make]
+  [make "stdlib"]
 ]
 depends: [
   "ocamlbuild" {build}

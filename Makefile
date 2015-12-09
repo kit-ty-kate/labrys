@@ -21,7 +21,6 @@ semantics: $(DOC)/semantics.ott
 	    && $(RM) $(<:.ott=.aux) $(<:.ott=.log) $(<:.ott=.tex)
 
 stdlib:
-	./main.native build-module --no-prelude --src-dir stdlib --build-dir . Prelude
-	./main.native build-module --src-dir stdlib --build-dir . Nat
+	./main.native build-module --no-prelude --src-dir stdlib Prelude
 
 .PHONY: all clean semantics stdlib
