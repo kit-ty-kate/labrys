@@ -37,6 +37,8 @@ type ('int, 'float, 'char, 'string) ty =
 type tag_ty = (unit, unit, unit, unit) ty
 type const = (int, float, int, string) ty
 
+type is_rec = NonRec | Rec
+
 type foreign_ret_type =
   | Void of t
   | Alloc of tag_ty
@@ -52,8 +54,7 @@ and t =
   | Datatype of (index option * t list)
   | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
   | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)
-  | Let of (name * t * t)
-  | LetRec of (name * t * t)
+  | Let of (name * is_rec * t * t)
   | Fail of (eff_name * t list)
   | Try of (t * ((eff_name * name list) * t) list)
   | RecordGet of (t * index)

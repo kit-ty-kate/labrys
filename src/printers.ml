@@ -838,6 +838,10 @@ module LambdaTree = struct
     | Char () -> "Char"
     | String () -> "String"
 
+  let dump_rec = function
+    | Rec -> " rec"
+    | NonRec -> ""
+
   let rec dump_ret_ty = function
     | Void t -> fmt "Void %s" (string_of_doc (dump_t t))
     | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
@@ -881,21 +885,10 @@ module LambdaTree = struct
           (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Let (name, t, xs) ->
+    | Let (name, is_rec, t, xs) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "let %s =" (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
-           ^^ PPrint.break 1
-           ^^ PPrint.string "in"
-           ^^ PPrint.break 1
-           ^^ dump_t xs
-           ^^ PPrint.rparen
-          )
-    | LetRec (name, t, xs) ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ PPrint.string (fmt "let %s =" (dump_name name))
+           ^^ PPrint.string (fmt "let%s %s =" (dump_rec is_rec) (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"

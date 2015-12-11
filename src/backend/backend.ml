@@ -455,11 +455,11 @@ module Make (I : I) = struct
         let f = Llvm.declare_function name ty m in
         let args = map_args gamma builder args in
         map_ret ~jmp_buf gamma builder (Llvm.build_call f args "" builder) ret
-    | LambdaTree.Let (name, t, xs) ->
+    | LambdaTree.Let (name, LambdaTree.NonRec, t, xs) ->
         let (t, builder) = lambda ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
         lambda ~jmp_buf gamma builder xs
-    | LambdaTree.LetRec (name, t, xs) ->
+    | LambdaTree.Let (name, LambdaTree.Rec, t, xs) ->
         let (t, builder) = lambda ~isrec:name ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
         lambda ~jmp_buf gamma builder xs

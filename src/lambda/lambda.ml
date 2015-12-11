@@ -115,7 +115,7 @@ and of_typed_term mapn = function
       let mapn = GammaMap.Value.remove name mapn in
       let (xs, used_vars2) = of_typed_term mapn xs in
       let used_vars = Set.union used_vars1 (Set.remove name used_vars2) in
-      (Let (name, t, xs), used_vars)
+      (Let (name, NonRec, t, xs), used_vars)
   | UntypedTree.Let ((name, UntypedTree.Rec, t), xs) ->
       let mapn = GammaMap.Value.remove name mapn in
       let (t, used_vars1) = of_typed_term mapn t in
@@ -123,7 +123,7 @@ and of_typed_term mapn = function
       let used_vars =
         Set.union (Set.remove name used_vars1) (Set.remove name used_vars2)
       in
-      (LetRec (name, t, xs), used_vars)
+      (Let (name, Rec, t, xs), used_vars)
   | UntypedTree.Fail (name, args) ->
       let (args, used_vars) =
         let aux (acc, used_vars_acc) t =
