@@ -51,10 +51,6 @@ type visibility =
 
 let fmt = Printf.sprintf
 
-let ty_empty options =
-  let aux gammaT eff = GammaMap.Types.add eff (Abstract Kinds.Eff) gammaT in
-  List.fold_left aux GammaMap.Types.empty (Builtins.effects options)
-
 let var_eq list_eq x y =
   let aux k =
     let mem k = Variables.mem k y in
@@ -168,13 +164,6 @@ let tyclass_args_equal args1 args2 =
   in (* TODO: DEBUJIN ? *)
   try List.for_all2 aux args1 args2 with Invalid_argument _ -> assert false
 
-let eff_remove_module_aliases {variables; effects; exns} =
-  let effects =
-    Effects.map Ident.Type.remove_aliases effects
-  in
-  let exns = Exn_set.map Ident.Exn.remove_aliases exns in
-  {variables; effects; exns}
-
 let eff_is_empty {variables; effects; exns} =
   Variables.is_empty variables
   && Effects.is_empty effects
@@ -197,29 +186,6 @@ let eff_to_string self =
       [fmt "Exn [%s]" (String.concat " | " (Exn_set.fold aux self.exns []))]
   in
   fmt "[%s]" (String.concat ", " (variables @ effects @ exns))
-
-let rec ty_remove_module_aliases = function
-  | Ty name ->
-      Ty (Ident.Type.remove_aliases name)
-  | TyVar _ as ty ->
-      ty
-  | Eff effects ->
-      Eff (eff_remove_module_aliases effects)
-  | Fun (x, eff, y) ->
-      Fun (ty_remove_module_aliases x, eff_remove_module_aliases eff, ty_remove_module_aliases y)
-  | Forall (name, k, t) ->
-      Forall (name, k, ty_remove_module_aliases t)
-  | TyClass ((name, tyvars, args), eff, t) ->
-      let args = List.map ty_remove_module_aliases args in
-      let eff = eff_remove_module_aliases eff in
-      TyClass ((name, tyvars, args), eff, ty_remove_module_aliases t)
-  | AbsOnTy (name, k, t) ->
-      AbsOnTy (name, k, ty_remove_module_aliases t)
-  | AppOnTy (x, y) ->
-      AppOnTy (ty_remove_module_aliases x, ty_remove_module_aliases y)
-
-let tyclass_args_remove_module_aliases = List.map ty_remove_module_aliases
-let ty_remove_module_aliases = ty_remove_module_aliases
 
 let rec ty_to_string =
   let tyclass_args_to_string args =
@@ -294,19 +260,6 @@ type class_t =
   ; signature : (name * t) list
   ; instances : name Instances.t
   }
-
-let class_remove_module_aliases {params; signature; instances} =
-  let signature =
-    let aux (name, ty) =
-      (Ident.Name.remove_aliases name, ty_remove_module_aliases ty)
-    in
-    List.map aux signature
-  in
-  let instances =
-    let aux = List.map ty_remove_module_aliases in
-    Instances.map_keys aux instances
-  in
-  {params; signature; instances}
 
 let params_equal (name1, k1) (name2, k2) =
   (* TODO: Do not test typevar equality *)

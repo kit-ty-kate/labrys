@@ -19,57 +19,29 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open Monomorphic_containers.Open
+module Imports : sig
+  type 'a t
 
-let fmt = Printf.sprintf
-
-module Name = struct
-  type t = (Location.t * Module.t option * string)
-
-  let equal (_, module_x, x) (_, module_y, y) = match module_x, module_y with
-    | Some module_x, Some module_y ->
-        Module.equal module_x module_y && String.equal x y
-    | None, None ->
-        String.equal x y
-    | Some _, None | None, Some _ ->
-        false
-
-  let create ~loc modul name =
-    (loc, Some modul, name)
-
-  let local_create ~loc name =
-    (loc, None, name)
-
-  let to_string = function
-    | (_, Some modul, name) ->
-        Module.to_string modul ^ "." ^ name
-    | (_, None, name) ->
-        name
-
-  let loc (loc, _, _) = loc
-
-  let unique (loc, modul, name) n =
-    if n <= 0 then
-      assert false;
-    (loc, modul, fmt "%s__%d" name n)
-
-  let prepend_empty (loc, modul, name) =
-    (loc, modul, "." ^ name)
+  val find : string list -> 'a t -> 'a
 end
 
-module Variant = Name
+type t = private
+  { values : Module.t Imports.t
+  ; variants : Module.t Imports.t
+  ; types : Module.t Imports.t
+  ; exns : Module.t Imports.t
+  ; tyclasses : Module.t Imports.t
+  ; instances : Module.t Imports.t
+  }
 
-module Type = Name
+val empty : t
 
-module TypeVar = Name
+val add_value : export:bool -> ParseTree.new_lower_name -> Module.t -> t -> t
+val add_variant : export:bool -> ParseTree.new_upper_name -> Module.t -> t -> t
+val add_type : export:bool -> ParseTree.new_upper_name -> Module.t -> t -> t
+val add_exn : export:bool -> ParseTree.new_upper_name -> Module.t -> t -> t
+val add_tyclass : export:bool -> ParseTree.new_upper_name -> Module.t -> t -> t
+val add_instance : export:bool -> ParseTree.new_lower_name -> Module.t -> t -> t
 
-module Exn = Name
-
-module TyClass = Name
-
-module Instance = struct
-  include Name
-
-  let to_name (loc, modul, name) =
-    (loc, modul, "$named-instance$" ^ name)
-end
+val open_module : string list -> t -> t
+val union : t -> t -> t

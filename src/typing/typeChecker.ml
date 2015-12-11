@@ -218,7 +218,7 @@ let rec aux options gamma = function
       let f = wrap_typeclass_apps ~loc gamma ~tyclasses ~f Fun.id in
       (f, res, Effects.union3 effect1 effect2 eff_f)
   | (_, UnsugaredTree.Val name) ->
-      let (name, ty) = GammaMap.Value.find_binding name gamma.Gamma.values in
+      let ty = GammaMap.Value.find name gamma.Gamma.values in
       (Val name, ty, Effects.empty)
   | (_, UnsugaredTree.Var name) ->
       let (idx, ty, len) =
@@ -253,7 +253,7 @@ let rec aux options gamma = function
   | (_, UnsugaredTree.Let ((name, UnsugaredTree.Rec, _), _)) ->
       fail_rec_val ~loc_name:(Ident.Name.loc name)
   | (loc, UnsugaredTree.Fail (ty, (exn, args))) ->
-      let (exn, tys) = GammaMap.Exn.find_binding exn gamma.Gamma.exceptions in
+      let tys = GammaMap.Exn.find exn gamma.Gamma.exceptions in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let (args, effects) =
         let aux (acc, effects) ty_exn arg =
@@ -275,7 +275,7 @@ let rec aux options gamma = function
       let (e, ty, effect) = aux options gamma e in
       let (branches, effect) =
         let aux (branches, effect) ((name, args), t) =
-          let (name, tys) = GammaMap.Exn.find_binding name gamma.Gamma.exceptions in
+          let tys = GammaMap.Exn.find name gamma.Gamma.exceptions in
           if Int.Infix.(List.length args <> List.length tys) then
             Err.fail ~loc:(Ident.Exn.loc name) "Wrong number of argument";
           (branches @ [((name, args), t)], Effects.remove_exn name effect)
@@ -446,9 +446,6 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       let gamma = Gamma.add_exception name args gamma in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       (Exception name :: xs, has_main, gamma)
-  | UnsugaredTree.Open modul :: xs ->
-      let gamma = Gamma.open_module modul gamma in
-      from_parse_tree ~current_module ~with_main ~has_main options gamma xs
   | UnsugaredTree.Class (name, params, sigs) :: xs ->
       let sigs =
         let gamma =

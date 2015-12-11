@@ -60,9 +60,6 @@ let compile ~current_module options gamma =
         let gamma = Gamma.add_exception name args gamma in
         let local_gamma = Gamma.add_exception name args local_gamma in
         compile ~gamma ~local_gamma xs
-    | Open modul :: xs ->
-        let local_gamma = Gamma.open_module modul local_gamma in
-        compile ~gamma ~local_gamma xs
     | Class (name, params, sigs) :: xs ->
         let sigs =
           let local_gamma =

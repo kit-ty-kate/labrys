@@ -47,22 +47,16 @@ type visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
-val ty_empty : < lib_dir : string; .. > -> visibility GammaMap.Types.t
-
 val ty_equal : t -> t -> bool
 
 val ty_is_subset_of : t -> t -> bool
 
 val ty_to_string : t -> string
 
-val tyclass_args_remove_module_aliases : t list -> t list
-
 val tyclass_args_equal :
   (tyvar_name list * t) list ->
   (tyvar_name list * t) list ->
   bool
-
-val ty_remove_module_aliases : t -> t
 
 val ty_reduce : t -> t
 
@@ -79,8 +73,6 @@ val eff_equal : (tyvar_name * tyvar_name) list -> effects -> effects -> bool
 
 val eff_is_subset_of : (tyvar_name * tyvar_name) list -> effects -> effects -> bool
 
-val eff_remove_module_aliases : effects -> effects
-
 val eff_is_empty : effects -> bool
 
 val eff_to_string : effects -> string
@@ -95,5 +87,3 @@ type class_t =
   }
 
 val class_equal : class_t -> class_t -> bool
-
-val class_remove_module_aliases : class_t -> class_t

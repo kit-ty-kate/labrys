@@ -43,8 +43,6 @@ val is_library : t -> bool
 
 val equal : t -> t -> bool
 
-val remove_aliases : t -> t
-val open_module : t -> t
-val is_open : t -> bool
+val to_module : t -> string list
 
 module Map : Utils.EQMAP with type key = t

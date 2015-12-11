@@ -39,7 +39,6 @@ let create params signature =
   ; instances = Instances.empty
   }
 
-let remove_module_aliases = PrivateTypes.class_remove_module_aliases
 let equal = PrivateTypes.class_equal
 
 let get_params ~loc f gamma tyvars args self =

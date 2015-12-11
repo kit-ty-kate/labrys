@@ -32,11 +32,7 @@ module Name : sig
 
   val unique : t -> int -> t
 
-  val remove_aliases : t -> t
-
   val prepend_empty : t -> t
-
-  val open_module : Module.t -> t -> t
 end
 
 module Variant : module type of Name

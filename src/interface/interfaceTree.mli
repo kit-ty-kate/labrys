@@ -36,6 +36,5 @@ type t =
   | Datatype of (t_name * Kinds.t * (tyvar_name * Kinds.t) list * variant list)
   | TypeAlias of (t_name * ty)
   | Exception of (exn_name * ty list)
-  | Open of Module.t
   | Class of (tyclass_name * (tyvar_name * Kinds.t) list * (name * ty) list)
   | Instance of (tyclass_instance * instance_name option)
