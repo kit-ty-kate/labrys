@@ -99,7 +99,7 @@ body:
       { ParseTree.Datatype datatype }
   | Exception name = newUpperName args = exceptionArgs
       { ParseTree.Exception (name, args) }
-  | Open modul = upperName
+  | Open modul = import_module
       { ParseTree.Open modul }
   | Class name = newUpperName params = kind_and_name+ Equal sigs = letSig+ End
       { ParseTree.Class (name, params, sigs) }
@@ -431,7 +431,7 @@ bodyInterface:
       { ParseTree.ITypeAlias typeAlias }
   | Exception name = newUpperName args = exceptionArgs
       { ParseTree.IException (name, args) }
-  | Open modul = upperName
+  | Open modul = import_module
       { ParseTree.IOpen modul }
   | Class name = newUpperName params = kind_and_name+ Equal sigs = letSig+ End
       { ParseTree.IClass (name, params, sigs) }
@@ -441,11 +441,13 @@ bodyInterface:
 
 (********* Module utils *********)
 
-import:
-  | Import modul = upperName
+import_module:
+  | modul = upperName
       { ParseTree.Source modul }
-  | Import Library modul = upperName
+  | Library modul = upperName
       { ParseTree.Library modul }
+
+import: Import m = import_module { m }
 
 
 (********* Functions ***********)

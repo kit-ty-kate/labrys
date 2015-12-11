@@ -101,6 +101,10 @@ and t = (loc * t')
 
 type variant = Variant of (new_upper_name * ty list)
 
+type import =
+  | Source of upper_name
+  | Library of upper_name
+
 type top =
   | Value of value
   | Type of (new_upper_name * ty)
@@ -108,13 +112,9 @@ type top =
   | Foreign of (char list * new_lower_name * ty)
   | Datatype of (new_upper_name * ty_arg list * variant list)
   | Exception of (new_upper_name * ty list)
-  | Open of upper_name
+  | Open of import
   | Class of (new_upper_name * ty_arg list * (new_lower_name * ty) list)
   | Instance of (tyclass_instance * new_lower_name option * value list)
-
-type import =
-  | Source of upper_name
-  | Library of upper_name
 
 type imports = import list
 
@@ -124,6 +124,6 @@ type interface =
   | IDatatype of (new_upper_name * ty_arg list * variant list)
   | ITypeAlias of (new_upper_name * ty)
   | IException of (new_upper_name * ty list)
-  | IOpen of upper_name
+  | IOpen of import
   | IClass of (new_upper_name * ty_arg list * (new_lower_name * ty) list)
   | IInstance of (tyclass_instance * new_lower_name option)

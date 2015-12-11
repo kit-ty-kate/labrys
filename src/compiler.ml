@@ -48,11 +48,12 @@ let write ~o result =
 
 let rec build_intf options current_module =
   let module P = ParserHandler.Make(struct let get = Module.intf current_module end) in
-  let (imports, tree) = P.parse_intf () in
-  let imports = Unsugar.create_imports ~current_module options imports in
-  let (imports, gamma) = build_imports_intf options imports in
+  let (mimports, tree) = P.parse_intf () in
+  let (mimports, tree) = Builtins.interface ~current_module options mimports tree in
+  let mimports = Unsugar.create_imports ~current_module options mimports in
+  let (imports, gamma) = build_imports_intf options mimports in
   let (imports, tree) =
-    Unsugar.create_interface ~current_module imports tree
+    Unsugar.create_interface ~current_module options mimports imports tree
   in
   (imports, Interface.compile ~current_module options gamma tree)
 
@@ -61,21 +62,21 @@ and build_imports_intf options imports =
     let (imports', gamma') = build_intf options x in
     (Imports.union imports imports', Gamma.union gamma' gamma)
   in
-  List.fold_left aux (Imports.empty, Gamma.empty options) imports
+  List.fold_left aux (Imports.empty, Gamma.empty) imports
 
 let get_parse_tree modul =
   let module P = ParserHandler.Make(struct let get = Module.impl modul end) in
   P.parse_impl ()
 
 let get_unsugared_tree options modul =
-  let no_prelude = options#no_prelude in
   let (mimports, parse_tree) = get_parse_tree modul in
-  let parse_tree = Builtins.tree ~no_prelude parse_tree in
-  let mimports = Builtins.imports ~no_prelude mimports in
+  let (mimports, parse_tree) =
+    Builtins.tree ~current_module:modul options mimports parse_tree
+  in
   let mimports = Unsugar.create_imports ~current_module:modul options mimports in
   let (imports, gamma) = build_imports_intf options mimports in
   let unsugared_tree =
-    Unsugar.create ~current_module:modul options imports parse_tree
+    Unsugar.create ~current_module:modul options mimports imports parse_tree
   in
   (mimports, gamma, unsugared_tree)
 
@@ -139,7 +140,7 @@ and compile ?(with_main=false) imports_code interface options modul =
 
 let get_code options modul =
   let (imports_code, code) =
-    compile ~with_main:true Module.Map.empty (Gamma.empty options) options modul
+    compile ~with_main:true Module.Map.empty Gamma.empty options modul
   in
   prerr_endline (fmt "Linking %s" (Module.to_string modul));
   Backend.link ~main_module_name:modul ~main_module:code imports_code
@@ -155,7 +156,7 @@ let compile_program options modul =
 let compile_module options modul =
   let modul = Module.from_string options modul in
   let (_, _) =
-    compile Module.Map.empty (Gamma.empty options) options modul
+    compile Module.Map.empty Gamma.empty options modul
   in
   prerr_endline (fmt "Module %s compiled" (Module.to_string modul))
 
@@ -172,21 +173,21 @@ let print_unsugared_tree options modul =
 let print_typed_tree options modul =
   let modul = Module.from_string options modul in
   let (_, typed_tree) =
-    get_typed_tree ~with_main:true ~interface:(Gamma.empty options) options modul
+    get_typed_tree ~with_main:true ~interface:Gamma.empty options modul
   in
   print_endline (Printers.UntypedTree.dump typed_tree)
 
 let print_untyped_tree options modul =
   let modul = Module.from_string options modul in
   let (_, untyped_tree) =
-    get_untyped_tree ~with_main:true ~interface:(Gamma.empty options) options modul
+    get_untyped_tree ~with_main:true ~interface:Gamma.empty options modul
   in
   print_endline (Printers.LambdaTree.dump untyped_tree)
 
 let print_reduced_tree options modul =
   let modul = Module.from_string options modul in
   let (_, reduced_tree) =
-    get_reduced_tree ~with_main:true ~interface:(Gamma.empty options) options modul
+    get_reduced_tree ~with_main:true ~interface:Gamma.empty options modul
   in
   print_endline (Printers.LambdaTree.dump reduced_tree)
 

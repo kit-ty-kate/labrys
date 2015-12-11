@@ -32,7 +32,7 @@ type t =
   ; named_instances : (Ident.TyClass.t * PrivateTypes.t list) GammaMap.Instance.t
   }
 
-let empty options =
+let empty =
   { values = GammaMap.Value.empty
   ; variants = GammaMap.Variant.empty
   ; types = GammaMap.Types.empty

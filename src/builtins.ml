@@ -57,14 +57,25 @@ let io options = Ident.Type.create ~loc:unknown_loc (prelude options) "IO"
 let main ~current_module =
   Ident.Name.create ~loc:unknown_loc current_module "main"
 
-let imports ~no_prelude imports =
-  if no_prelude then
+let imports ~current_module options imports =
+  let no_prelude = options#no_prelude in
+  if no_prelude || Module.equal current_module (prelude options) then
     imports
   else
     ParseTree.Library prelude_name :: imports
 
-let tree ~no_prelude tree =
-  if no_prelude then
-    tree
+let interface ~current_module options mimports tree =
+  let no_prelude = options#no_prelude in
+  let mimports = imports ~current_module options mimports in
+  if no_prelude || Module.equal current_module (prelude options) then
+    (mimports, tree)
   else
-    ParseTree.Open prelude_name :: tree
+    (mimports, ParseTree.IOpen (ParseTree.Library prelude_name) :: tree)
+
+let tree ~current_module options mimports tree =
+  let no_prelude = options#no_prelude in
+  let mimports = imports ~current_module options mimports in
+  if no_prelude || Module.equal current_module (prelude options) then
+    (mimports, tree)
+  else
+    (mimports, ParseTree.Open (ParseTree.Library prelude_name) :: tree)

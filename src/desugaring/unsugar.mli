@@ -28,12 +28,15 @@ val create_imports :
 val create :
   current_module:Module.t ->
   <lib_dir : string; ..> ->
+  Module.t list ->
   Imports.t ->
   ParseTree.top list ->
   UnsugaredTree.top list
 
 val create_interface :
   current_module:Module.t ->
+  <lib_dir : string; ..> ->
+  Module.t list ->
   Imports.t ->
   ParseTree.interface list ->
   (Imports.t * InterfaceTree.t list)

@@ -59,7 +59,9 @@ module ParseTree = struct
 
   let dump_exn_name = dump_name
   let dump_t_name = dump_name
-  let dump_module = dump_name
+  let dump_module = function
+    | Source name -> dump_name name
+    | Library name -> dump_name name
 
   let dump_exn x = String.concat " | " (List.map dump_exn_name x)
 

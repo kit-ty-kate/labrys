@@ -99,4 +99,4 @@ let compile ~current_module options gamma =
     | [] ->
         gamma
   in
-  compile ~gamma:(Gamma.empty options) ~local_gamma:gamma
+  compile ~gamma:Gamma.empty ~local_gamma:gamma

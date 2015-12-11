@@ -30,7 +30,7 @@ type t = private
   ; named_instances : (Ident.TyClass.t * PrivateTypes.t list) GammaMap.Instance.t
   }
 
-val empty : <lib_dir : string; ..> -> t
+val empty : t
 
 val add_value : Ident.Name.t -> PrivateTypes.t -> t -> t
 val add_variant : Ident.Variant.t -> (int * PrivateTypes.t * int) -> t -> t

@@ -365,7 +365,13 @@ let unsugar_value ~current_module imports options (name, is_rec, (args, x)) =
   let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
   (name, is_rec, unsugar_args imports options args x)
 
-let create ~current_module options =
+let unsugar_open ~current_module options = function
+  | ParseTree.Source (loc, `UpperName modul) ->
+      (loc, Module.create ~current_module modul, modul)
+  | ParseTree.Library (loc, `UpperName modul) ->
+      (loc, Module.library_create options modul, modul)
+
+let create ~current_module options mimports =
   let rec aux imports = function
     | ParseTree.Value ((name, ParseTree.NonRec, _) as value) :: xs ->
         let value = unsugar_value ~current_module imports options value in
@@ -400,7 +406,7 @@ let create ~current_module options =
         let name = new_upper_name_to_type ~current_module name in
         let args = unsugar_variant_args args in
         let imports =
-          let aux imports (ParseTree.Variant (name, ty)) =
+          let aux imports (ParseTree.Variant (name, _)) =
             Imports.add_variant ~export:false name current_module imports
           in
           List.fold_left aux imports variants
@@ -411,8 +417,10 @@ let create ~current_module options =
         let imports' = Imports.add_exn ~export:false name current_module imports in
         let name = new_upper_name_to_exn ~current_module name in
         Exception (name, List.map (unsugar_ty imports) tys) :: aux imports' xs
-    | ParseTree.Open (loc, `UpperName modul) :: xs ->
-        (* TODO: Check if module exists *)
+    | ParseTree.Open import :: xs ->
+        let (loc, modul', modul) = unsugar_open ~current_module options import in
+        if not (List.exists (Module.equal modul') mimports) then
+          Err.fail ~loc "Module '%s' isn't imported" (Module.to_string modul');
         let imports = Imports.open_module modul imports in
         aux imports xs
     | ParseTree.Class (name, params, sigs) :: xs ->
@@ -465,7 +473,7 @@ let create_imports ~current_module options =
   in
   List.map aux
 
-let create_interface ~current_module imports interface =
+let create_interface ~current_module options mimports imports interface =
   let rec aux imports local_imports acc = function
     | ParseTree.IVal ((name, _) as signature) :: xs ->
         let value = unsugar_sig ~current_module local_imports signature in
@@ -499,8 +507,10 @@ let create_interface ~current_module imports interface =
         let imports' = Imports.add_exn ~export:true name current_module imports in
         let name = new_upper_name_to_exn ~current_module name in
         aux imports' local_imports (InterfaceTree.Exception (name, List.map (unsugar_ty local_imports) tys) :: acc) xs
-    | ParseTree.IOpen (loc, `UpperName modul) :: xs ->
-        (* TODO: Check if module exists *)
+    | ParseTree.IOpen import :: xs ->
+        let (loc, modul', modul) = unsugar_open ~current_module options import in
+        if not (List.exists (Module.equal modul') mimports) then
+          Err.fail ~loc "Module '%s' isn't imported" (Module.to_string modul');
         let local_imports = Imports.open_module modul local_imports in
         aux imports local_imports acc xs
     | ParseTree.IClass (name, params, sigs) :: xs ->

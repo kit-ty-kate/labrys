@@ -39,5 +39,16 @@ val io : <lib_dir : string; ..> -> Ident.Type.t
 
 val main : current_module:Module.t -> Ident.Name.t
 
-val imports : no_prelude:bool -> ParseTree.imports -> ParseTree.imports
-val tree : no_prelude:bool -> ParseTree.top list -> ParseTree.top list
+val interface :
+  current_module:Module.t ->
+  <lib_dir : string; no_prelude : bool; ..> ->
+  ParseTree.imports ->
+  ParseTree.interface list ->
+  (ParseTree.imports * ParseTree.interface list)
+
+val tree :
+  current_module:Module.t ->
+  <lib_dir : string; no_prelude : bool; ..> ->
+  ParseTree.imports ->
+  ParseTree.top list ->
+  (ParseTree.imports * ParseTree.top list)

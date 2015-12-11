@@ -1,6 +1,3 @@
-import library Prelude
-open Prelude
-
 type Nat =
   | O
   | S Nat
