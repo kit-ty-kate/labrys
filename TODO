@@ -1,42 +1,42 @@
 === TODO ===
 
+== Before the first release (0.1) ==
+
+* Fix typing (debunijn ?)
+* Cleans
+  * pre-typing
+  * Fix TODO
+* Stabilization (unit-tests)
+* Define a proper operational semantics
+  * Do the semantics of Γ
+  * Do the semantics of typeclasses
+
+
 == Short term ==
 
 * Improve the FFI
-* Change the syntax:
- * λ(a : *), T
- * {Test a Int} => T     (instead of {Test A [Int]} => T)
+  * Allow to pass and return abstract types
 * « exception NotFound » creates now an abstract type of kind φ --> so remove Exn [Things]
 * Records
+  * Mixing instances & records ?
+  * Accessors ?:
+    type Lol a = Lol {x : a; y : Unit}
+    let lol = Lol [Unit] {x = Unit, y = Unit}
+    let f () () = Unit
+    let lol = f Lol#lol#x Lol#lol#y
+    map (Lol#x) l
 * Split parsers (Interfaces, Common, Implementation, FFI, …)
 * Clean error the handling system: extend an error type (+= ..) for each module that can raise errors and print them in ErrorPrinter
 * Add a builtin « fmt » operator that binds sprintf such as « fmt "%s" » has type « {Show a} => a -> String »
-
-
-== *Stashed* ==
-
-* Define a proper operational semantics
-  * Do the semantics of Γ
 * Typeclasses
- * Allow tyclass constraints in classes & instances (inheritance)
-* Typeclasses (TO THINK)
- * Avoid non-equality between two types with that uses typeclasses at different places ?
- * Allow recursive use of the typeclass ?
- * Test: instance Show ({Read A} => A) = …
- * Mixing instances & records
- * Merge togather typeclasses as constraints not as type variables => Solved: {C1 A} => {C2 [A]} => T
+  * Allow tyclass constraints in classes & instances (inheritance)
 
 
 == Medium term ==
 
 * Extensible records & extensible variants
 * Clean:
-  * Fix TODO
-  * Remove names in backend (« %comment = call donothing » or metadata instead) ?
-  * Add functions in backend (like access_env …)
   * Add more explicit type names (like « type name = string » instead of just use a string)
-* Cleaning (parser, typechecker, backend, printer, …)
-* Unit-tests
 * Handle dynamic exceptions (allocation failures, …)
     let main try with
       | CannotAllocate -> ()
