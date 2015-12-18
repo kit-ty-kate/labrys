@@ -9,6 +9,7 @@ The git repository is located at: https://github.com/jpdeplaix/cervoise
 * Boehm GC: libgc-dev on debian.
 * Clang
 * The latest OPAM and the latest OCaml (https://opam.ocaml.org/)
+* Cram (for tests only)
 
 ### Installation
 

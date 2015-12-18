@@ -1,0 +1,3 @@
+let id (f:Unit -> Unit) = f Unit
+
+let main = Unit

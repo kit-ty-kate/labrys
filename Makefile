@@ -2,13 +2,17 @@ DOC = doc
 
 OCB = ocamlbuild -use-ocamlfind
 TARGET = src/main.native
+
 SUBSTS = \
-	 src/config.ml
+	 src/config.ml \
+
+TESTS = \
+	tests/basic.t \
 
 all: $(SUBSTS)
 	$(OCB) $(TARGET)
 
-$(SUBSTS):
+$(SUBSTS): $(addsuffix .in, $(SUBSTS))
 	opam config subst $(SUBSTS)
 
 clean:
@@ -23,4 +27,7 @@ semantics: $(DOC)/semantics.ott
 stdlib:
 	./main.native build-module --no-prelude --src-dir stdlib Prelude
 
-.PHONY: all clean semantics stdlib
+tests:
+	OLD_PWD=$(shell pwd) cram $(TESTS)
+
+.PHONY: all clean semantics stdlib tests
