@@ -28,6 +28,6 @@ stdlib:
 	./main.native build-module --no-prelude --src-dir stdlib Prelude
 
 tests:
-	OLD_PWD=$(shell pwd) cram $(TESTS)
+	CERVOISE=$(shell pwd) cram $(TESTS)
 
 .PHONY: all clean semantics stdlib tests
