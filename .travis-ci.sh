@@ -11,5 +11,4 @@ eval `opam config env`
 opam pin add -n --kind=git cervoise .
 opam install "llvm.$LLVM_VERSION" cervoise.dev
 
-cervoise build-program --src-dir examples TailFact
-./a.out
+make tests
