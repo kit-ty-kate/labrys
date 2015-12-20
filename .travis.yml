@@ -1,4 +1,6 @@
 language: c
+sudo: required
+dist: trusty
 script: bash -ex .travis-ci.sh
 env:
   matrix:
