@@ -1,0 +1,47 @@
+import Nat
+
+open Nat
+
+type alias Nat = Nat.T
+
+foreign "puts" println : String -[IO]-> Unit
+foreign "GC_malloc" alloc : Int -[IO]-> String
+foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
+
+let printInt (n : Int) =
+  let buf = alloc 512 in
+  fmt buf "%d" n;
+  println buf
+
+foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
+foreign ".cervoise.mul" mul : Int -> Int -[IO]-> Int
+
+let natToInt =
+  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+    match n with
+    | O -> acc
+    | S n -> aux (add 1 acc) n
+    end
+  in
+  aux 0
+
+let rec fact (n : Nat) : [[IO]] Int =
+  match n with
+  | O -> 1
+  | S x -> mul (add 1 (natToInt x)) (fact x)
+  end
+
+let main =
+  printInt (fact O); -- 1
+  printInt (fact (S O)); -- 1
+  printInt (fact (S (S O))); -- 2
+  printInt (fact (S (S (S O)))); -- 6
+  printInt (fact (S (S (S (S O))))); -- 24
+  printInt (fact (S (S (S (S (S O)))))); -- 120
+  printInt (fact (S (S (S (S (S (S O))))))); -- 720
+  printInt (fact (S (S (S (S (S (S (S O)))))))); -- 5040
+  printInt (fact (S (S (S (S (S (S (S (S O))))))))); -- 40320
+  printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))); -- 362880
+  printInt (fact (S (S (S (S (S (S (S (S (S (S O))))))))))); -- 3628800
+  printInt (fact (S (S (S (S (S (S (S (S (S (S (S O)))))))))))); -- 29916800
+  Unit

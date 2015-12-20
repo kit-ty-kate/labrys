@@ -1,6 +1,6 @@
 Init
 
-  $ cp $CERVOISE/tests/Basic.sfw .
+  $ cp $CERVOISE/tests/basic/Basic.sfw .
 
 Normal compilation
 

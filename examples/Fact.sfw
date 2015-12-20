@@ -2,57 +2,29 @@ import Nat
 
 open Nat
 
-type alias Nat = Nat.T
-
-foreign "GC_malloc" alloc : Int -[IO]-> String
-
-foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
-
-foreign "puts" println : String -[IO]-> Unit
-
-foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
-
-let natToInt =
-  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
-    match n with
-    | O -> acc
-    | S n -> aux (add 1 acc) n
-    end
-  in
-  aux 0
-
-let printNat (n : Nat) =
-  let n = natToInt n in
-  let buf = alloc 512 in
-  fmt buf "%d" n;
-  println buf
-
 let rec plus (n : Nat.T) (m : Nat.T) : Nat.T =
   match n with
-  | Nat.O -> m
-  | Nat.S p -> Nat.S (plus p m)
+  | O -> m
+  | S p -> S (plus p m)
   end
 
-let rec mult =
-  let y = Nat.O in
-  let rec z = \() : Nat -> y in
-  \(n : Nat.T) (m : Nat.T) : Nat.T ->
+let rec mult (n : Nat.T) (m : Nat.T) : Nat.T =
   match n with
-  | Nat.O -> z Unit
-  | Nat.S p -> plus m (mult p m)
+  | O -> O
+  | S p -> plus m (mult p m)
   end
 
 let rec fact (n : Nat.T) : Nat.T =
   match n with
-  | O -> Nat.S Nat.O
-  | Nat.S x -> mult (Nat.S x) (fact x)
+  | O -> S O
+  | S x -> mult (S x) (fact x)
   end
 
 let main =
-  printNat (fact O); -- 1
-  printNat (fact (S O)); -- 1
-  printNat (fact (S (S O))); -- 2
-  printNat (fact (S (S (S O)))); -- 6
-  printNat (fact (S (S (S (S O))))); -- 24
-  printNat (fact (S (S (S (S (S O)))))); -- 120
-  printNat (fact (S (S (S (S (S (S (S (S (S O)))))))))) -- 362880
+  Nat.print (fact O); -- 1
+  Nat.print (fact (S O)); -- 1
+  Nat.print (fact (S (S O))); -- 2
+  Nat.print (fact (S (S (S O)))); -- 6
+  Nat.print (fact (S (S (S (S O))))); -- 24
+  Nat.print (fact (S (S (S (S (S O)))))); -- 120
+  Nat.print (fact (S (S (S (S (S (S (S (S (S O)))))))))) -- 362880

@@ -7,7 +7,10 @@ SUBSTS = \
 	 src/config.ml \
 
 TESTS = \
-	tests/basic.t \
+	tests/basic/basic.t \
+	tests/old-examples/old-examples.t \
+	tests/examples/examples.t \
+
 
 all: $(SUBSTS)
 	$(OCB) $(TARGET)

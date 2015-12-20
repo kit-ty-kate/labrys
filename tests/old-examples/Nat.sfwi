@@ -1,0 +1,5 @@
+type T =
+  | O
+  | S T
+
+let print : T -[IO]-> Unit

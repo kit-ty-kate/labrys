@@ -1,0 +1,28 @@
+type T =
+  | O
+  | S T
+
+foreign "GC_malloc" alloc : Int -[IO]-> String
+
+foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
+
+foreign "puts" println : String -[IO]-> Unit
+
+foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
+
+let natToInt =
+  let rec aux (acc : Int) (n : T) : [[IO]] Int =
+    match n with
+    | O -> acc
+    | S n -> aux (add 1 acc) n
+    end
+  in
+  aux 0
+
+let print (n : T) =
+  let n = natToInt n in
+  let buf = alloc 512 in
+  fmt buf "%d" n;
+  println buf
+
+let main = Unit

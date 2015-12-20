@@ -1,0 +1,70 @@
+import Nat
+
+open Nat
+
+type alias Nat = Nat.T
+
+foreign "GC_malloc" alloc : Int -[IO]-> String
+
+foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
+
+foreign "puts" println : String -[IO]-> Unit
+
+foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
+
+let natToInt =
+  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+    match n with
+    | O -> acc
+    | S n -> aux (add 1 acc) n
+    end
+  in
+  aux 0
+
+let printNat (n : Nat) =
+  let n = natToInt n in
+  let buf = alloc 512 in
+  fmt buf "%d" n;
+  println buf
+
+exception Lol
+
+let rec plus (n : Nat) (m : Nat) : [[Exn [Lol]]] Nat =
+  match n with
+  | O -> m
+  | S p -> match S O with O -> fail [Nat] Lol | S _ -> plus p (S m) end
+  end
+
+let rec mult (s : Nat) (m : Nat) (n : Nat) : [[Exn [Lol]]] Nat =
+  match n with
+  | O -> s
+  | S p -> match S O with O -> fail [Nat] Lol | S _ -> mult (plus m s) m p end
+  end
+
+let mult (a : Nat) (b : Nat) = mult O a b
+
+let rec fact (acc : Nat) (n : Nat) : [[Exn [Lol]]] Nat =
+  match n with
+  | O -> acc
+  | S x -> match S O with O -> fail [Nat] Lol | S _ -> fact (mult n acc) x end
+  end
+
+let fact = fact (S O)
+
+let main =
+  try
+    printNat (fact O); -- 1
+    printNat (fact (S O)); -- 1
+    printNat (fact (S (S O))); -- 2
+    printNat (fact (S (S (S O)))); -- 6
+    printNat (fact (S (S (S (S O))))); -- 24
+    printNat (fact (S (S (S (S (S O)))))); -- 120
+    printNat (fact (S (S (S (S (S (S O))))))); -- 720
+    printNat (fact (S (S (S (S (S (S (S O)))))))); -- 5040
+    printNat (fact (S (S (S (S (S (S (S (S O))))))))); -- 40320
+    printNat (fact (S (S (S (S (S (S (S (S (S O)))))))))); -- 362880
+    printNat (fact (S (S (S (S (S (S (S (S (S (S O))))))))))) -- 3628800
+--    printNat (fact (S (S (S (S (S (S (S (S (S (S (S O)))))))))))) -- 29916800 (Too much RAM but works)
+  with
+  | Lol -> Unit
+  end
