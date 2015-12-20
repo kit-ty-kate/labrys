@@ -33,3 +33,49 @@ Test compiling printed LLVM-IR code
   Linking TailFact
   $ $CERVOISE/main.native print-early-llvm NativeFact | llc-3.7 - -o /dev/null
   Linking NativeFact
+
+Test behaviours
+
+  $ $CERVOISE/main.native build-program Hello
+  Linking Hello
+  $ ./a.out
+  Hello World !
+  $ $CERVOISE/main.native build-program Fact
+  Linking Fact
+  $ ./a.out
+  1
+  1
+  2
+  6
+  24
+  120
+  362880
+  $ $CERVOISE/main.native build-program TailFact
+  Linking TailFact
+  $ ./a.out
+  1
+  1
+  2
+  6
+  24
+  120
+  720
+  5040
+  40320
+  362880
+  3628800
+  $ $CERVOISE/main.native build-program NativeFact
+  Linking NativeFact
+  $ ./a.out
+  1
+  1
+  2
+  6
+  24
+  120
+  720
+  5040
+  40320
+  362880
+  3628800
+  39916800
