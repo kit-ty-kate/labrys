@@ -27,7 +27,7 @@ To compile an example you have to use the following command:
 $ cervoise build-program --src-dir examples Hello
 ```
 
-Just replace `Hello` by the name of the module you want to compile (such as `TyClass` or `Fact`)
+Just replace `Hello` by the name of the module you want to compile (such as `NativeFact` or `Fact`)
 
 Then you can execute the resulting program with:
 
