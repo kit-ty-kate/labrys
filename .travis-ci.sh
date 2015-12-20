@@ -6,7 +6,7 @@ wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
 sudo apt-get update -qq
 sudo apt-get install -qq ocaml ocaml-native-compilers camlp4-extra opam
 sudo apt-get install -qq "llvm-$LLVM_VERSION" libgc-dev clang
-sudo apt-get install -qq cram
+sudo apt-get install -qq python-cram
 export OPAMYES=1
 opam init
 eval `opam config env`
