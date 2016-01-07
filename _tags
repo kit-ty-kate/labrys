@@ -6,7 +6,7 @@ not "src": not_hygienic
 
 true: use_menhir, explain
 true: safe_string
-true: annot, bin_annot
+true: bin_annot
 true: warn(A-44-33-4)
 
 true: package(unix)
