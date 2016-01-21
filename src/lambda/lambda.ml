@@ -25,6 +25,8 @@ open LambdaTree
 
 module Set = GammaSet.Value
 
+let fmt = Printf.sprintf
+
 let rec of_patterns = function
   | Pattern.Leaf label ->
       Leaf label
@@ -53,11 +55,11 @@ let create_dyn_functions f n =
     assert false;
   (t, Set.empty)
 
-let rec of_results mapn m =
+let rec of_results freshn mapn m =
   let aux (acc, used_vars_acc) (wildcards, t) =
     let remove acc (_, name) = GammaMap.Value.remove name acc in
     let mapn = List.fold_left remove mapn wildcards in
-    let (t, used_vars) = of_typed_term mapn t in
+    let (t, used_vars) = of_typed_term freshn mapn t in
     let remove acc (_, name) = Set.remove name acc in
     let used_vars = List.fold_left remove used_vars wildcards in
     ((wildcards, t) :: acc, Set.union used_vars used_vars_acc)
@@ -65,11 +67,11 @@ let rec of_results mapn m =
   let (a, b) = List.fold_left aux ([], Set.empty) m in
   (List.rev a, b)
 
-and of_branches mapn branches =
+and of_branches freshn mapn branches =
   let aux (acc, used_vars_acc) ((name, args), t) =
     let remove acc name = GammaMap.Value.remove name acc in
     let mapn = List.fold_left remove mapn args in
-    let (t, used_vars) = of_typed_term mapn t in
+    let (t, used_vars) = of_typed_term freshn mapn t in
     let remove acc name = Set.remove name acc in
     let used_vars = List.fold_left remove used_vars args in
     (((name, args), t) :: acc, Set.union used_vars used_vars_acc)
@@ -77,16 +79,18 @@ and of_branches mapn branches =
   let (a, b) = List.fold_left aux ([], Set.empty) branches in
   (List.rev a, b)
 
-and of_typed_term mapn = function
+and of_typed_term freshn mapn = function
   | UntypedTree.Abs (name, t) ->
       let mapn = GammaMap.Value.remove name mapn in
-      let (t, used_vars) = of_typed_term mapn t in
+      let (t, used_vars) = of_typed_term freshn mapn t in
       let used_vars = Set.remove name used_vars in
       (Abs (name, used_vars, t), used_vars)
   | UntypedTree.App (f, x) ->
-      let (f, used_vars1) = of_typed_term mapn f in
-      let (x, used_vars2) = of_typed_term mapn x in
-      (App (f, x), Set.union used_vars1 used_vars2)
+      let (f, used_vars1) = of_typed_term (succ freshn) mapn f in
+      let (x, used_vars2) = of_typed_term freshn mapn x in
+      let name = fmt ".@fresh.%d" freshn in
+      let name = Ident.Name.local_create ~loc:Builtins.unknown_loc name in
+      (Let (name, NonRec, x, App (f, name)), Set.union used_vars1 used_vars2)
   | UntypedTree.Val name ->
       let name = match GammaMap.Value.find_opt name mapn with
         | Some x -> x
@@ -102,24 +106,24 @@ and of_typed_term mapn = function
         )
         len
   | UntypedTree.PatternMatching (t, results, patterns) ->
-      let (t, used_vars1) = of_typed_term mapn t in
-      let (results, used_vars2) = of_results mapn results in
+      let (t, used_vars1) = of_typed_term freshn mapn t in
+      let (results, used_vars2) = of_results freshn mapn results in
       let patterns = of_patterns patterns in
       (PatternMatching (t, results, patterns), Set.union used_vars1 used_vars2)
   | UntypedTree.Try (t, branches) ->
-      let (t, used_vars1) = of_typed_term mapn t in
-      let (branches, used_vars2) = of_branches mapn branches in
+      let (t, used_vars1) = of_typed_term freshn mapn t in
+      let (branches, used_vars2) = of_branches freshn mapn branches in
       (Try (t, branches), Set.union used_vars1 used_vars2)
   | UntypedTree.Let ((name, UntypedTree.NonRec, t), xs) ->
-      let (t, used_vars1) = of_typed_term mapn t in
+      let (t, used_vars1) = of_typed_term freshn mapn t in
       let mapn = GammaMap.Value.remove name mapn in
-      let (xs, used_vars2) = of_typed_term mapn xs in
+      let (xs, used_vars2) = of_typed_term freshn mapn xs in
       let used_vars = Set.union used_vars1 (Set.remove name used_vars2) in
       (Let (name, NonRec, t, xs), used_vars)
   | UntypedTree.Let ((name, UntypedTree.Rec, t), xs) ->
       let mapn = GammaMap.Value.remove name mapn in
-      let (t, used_vars1) = of_typed_term mapn t in
-      let (xs, used_vars2) = of_typed_term mapn xs in
+      let (t, used_vars1) = of_typed_term freshn mapn t in
+      let (xs, used_vars2) = of_typed_term freshn mapn xs in
       let used_vars =
         Set.union (Set.remove name used_vars1) (Set.remove name used_vars2)
       in
@@ -127,18 +131,18 @@ and of_typed_term mapn = function
   | UntypedTree.Fail (name, args) ->
       let (args, used_vars) =
         let aux (acc, used_vars_acc) t =
-          let (t, used_vars) = of_typed_term mapn t in
+          let (t, used_vars) = of_typed_term freshn mapn t in
           (t :: acc, Set.union used_vars used_vars_acc)
         in
         List.fold_left aux ([], Set.empty) args
       in
       (Fail (name, args), used_vars)
   | UntypedTree.RecordGet (t, n) ->
-      let (t, used_vars) = of_typed_term mapn t in
+      let (t, used_vars) = of_typed_term freshn mapn t in
       (RecordGet (t, n), used_vars)
   | UntypedTree.RecordCreate fields ->
       let aux t (fields, used_vars_acc) =
-        let (t, used_vars) = of_typed_term mapn t in
+        let (t, used_vars) = of_typed_term freshn mapn t in
         (t :: fields, Set.union used_vars used_vars_acc)
       in
       let (fields, used_vars) = List.fold_right aux fields ([], Set.empty) in
@@ -160,7 +164,7 @@ let get_name_and_linkage name' names mapn =
 
 let of_ret_type mapn = function
   | UntypedTree.Void t ->
-      let (t, used_vars) = of_typed_term mapn t in
+      let (t, used_vars) = of_typed_term 0 mapn t in
       (Void t, used_vars)
   | UntypedTree.Alloc ty ->
       (Alloc ty, Set.empty)
@@ -199,18 +203,18 @@ let create_dyn_functions mapn cname (ret, args) =
 let of_value names mapn = function
   | (name, UntypedTree.Rec, UntypedTree.Abs (name', t)) ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      let (t, _) = of_typed_term mapn t in
+      let (t, _) = of_typed_term 0 mapn t in
       (Function (name, (name', t), linkage), names, mapn)
   | (name, UntypedTree.NonRec, UntypedTree.Abs (name', t)) ->
-      let (t, _) = of_typed_term mapn t in
+      let (t, _) = of_typed_term 0 mapn t in
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       (Function (name, (name', t), linkage), names, mapn)
   | (name, UntypedTree.Rec, t)  ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      let (t, _) = of_typed_term mapn t in
+      let (t, _) = of_typed_term 0 mapn t in
       (Value (name, t, linkage), names, mapn)
   | (name, UntypedTree.NonRec, t) ->
-      let (t, _) = of_typed_term mapn t in
+      let (t, _) = of_typed_term 0 mapn t in
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       (Value (name, t, linkage), names, mapn)
 

@@ -769,19 +769,19 @@ defns
 
 
     ----------------------------------------------- :: App1Failure
-    D |- (failure exnval) t --> D |- failure exnval
+    D |- (failure exnval) v --> D |- failure exnval
 
 
     ----------------------------------------------- :: App2Failure
-    D |- v (failure exnval) --> D |- failure exnval
+    D |- t (failure exnval) --> D |- failure exnval
 
     D |- t1 --> D |- t1'
     ------------------------ :: App1
-    D |- t1 t --> D |- t1' t
+    D |- t t1 --> D |- t t1'
 
     D |- t1 --> D |- t1'
     ------------------------ :: App2
-    D |- v t1 --> D |- v t1'
+    D |- t1 v --> D |- t1' v
 
 
     ------------------------------------------------- :: AppAbs

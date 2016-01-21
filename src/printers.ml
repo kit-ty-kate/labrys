@@ -858,7 +858,7 @@ module LambdaTree = struct
           (PPrint.lparen
            ^^ dump_t f
            ^^ PPrint.blank 1
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t x)
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ PPrint.string (dump_name x))
            ^^ PPrint.rparen
           )
     | Val name ->

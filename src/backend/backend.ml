@@ -414,7 +414,7 @@ module Make (I : I) = struct
         (closure, builder)
     | LambdaTree.App (f, x) ->
         let (closure, builder) = lambda ~jmp_buf gamma builder f in
-        let (x, builder) = lambda ~jmp_buf gamma builder x in
+        let x = get_value gamma builder x in
         let closure = Llvm.build_bitcast closure (Type.closure_ptr 1) "" builder in
         let f = Llvm.build_load closure "" builder in
         let f = Llvm.build_extractvalue f 0 "" builder in

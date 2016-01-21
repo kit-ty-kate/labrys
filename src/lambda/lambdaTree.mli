@@ -49,7 +49,7 @@ and tree =
 
 and t =
   | Abs of (name * used_vars * t)
-  | App of (t * t)
+  | App of (t * name)
   | Val of name
   | Datatype of (index option * t list)
   | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)

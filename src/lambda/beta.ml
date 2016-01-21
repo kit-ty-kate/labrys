@@ -23,30 +23,15 @@ open Monomorphic_containers.Open
 
 open LambdaTree
 
-let fmt = Printf.sprintf
+let rec reduce_abs x = function
+  | Abs (name, _, t) -> Let (name, NonRec, Val x, t)
+  | Let (name, is_rec, y, t) -> Let (name, is_rec, y, reduce_abs x t)
+  | App _ | Val _ | Datatype _
+  | Const _ | PatternMatching _ | Try _
+  | Fail _ | CallForeign _ | RecordGet _ as f -> App (f, x)
 
-let rec reduce =
-  (* TODO: Remove impure *)
-  let fresh_ident =
-    let n = ref (-1) in
-    fun () ->
-      incr n;
-      Ident.Name.local_create ~loc:Builtins.unknown_loc (fmt "beta.%d" !n)
-  in
-  function
-  | App (f, x) ->
-      begin match reduce f with
-      | Let (name, is_rec, y, t) ->
-          let ident = fresh_ident () in
-          let t = App (t, Val ident) in
-          reduce (Let (ident, NonRec, x, Let (name, is_rec, y, t)))
-      | Abs (name, _, t) ->
-          reduce (Let (name, NonRec, x, t))
-      | App _ | Val _ | Datatype _
-      | Const _ | PatternMatching _ | Try _
-      | Fail _ | CallForeign _ | RecordGet _ as f ->
-          App (f, reduce x)
-      end
+let rec reduce = function
+  | App (f, x) -> reduce_abs x (reduce f)
   | Abs (name, used_vars, t) -> Abs (name, used_vars, reduce t)
   | Val _ | Datatype _ | Const _ as t -> t
   | CallForeign (name, ty, args) -> CallForeign (name, ty, args)
