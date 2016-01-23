@@ -131,6 +131,26 @@ let wrap_typeclass_apps ~loc gamma ~tyclasses ~f g =
   in
   aux f 1 tyclasses
 
+let try_to_pattern l =
+  let (branches, patterns) =
+    let rec aux i = function
+      | [] ->
+          ([], [])
+      | ((exn, args), t)::xs ->
+          let used_vars =
+            List.mapi (fun i x -> (PatternMatrix.exn_var i, x)) args
+          in
+          let (branches, patterns) = aux (succ i) xs in
+          ((used_vars, t) :: branches, (exn, Pattern.Leaf i) :: patterns)
+    in
+    aux 0 l
+  in
+  let pattern =
+    Pattern.Ptr (Pattern.Node (PatternMatrix.current_var, patterns))
+  in
+  let name = Ident.Name.local_create ~loc:Builtins.unknown_loc ".exn" in
+  (name, PatternMatching (Val name, branches, Reraise name, pattern))
+
 let rec aux options gamma = function
   | (_, UnsugaredTree.Abs ((name, ty), t)) ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
@@ -234,7 +254,7 @@ let rec aux options gamma = function
         Pattern.create ~loc (aux options) gamma ty patterns
       in
       let effect = Effects.union effect1 effect2 in
-      (PatternMatching (t, results, patterns), initial_ty, effect)
+      (PatternMatching (t, results, Unreachable, patterns), initial_ty, effect)
   | (_, UnsugaredTree.Let ((name, UnsugaredTree.NonRec, t), xs)) ->
       let loc_t = fst t in
       let ty = get_ty_from_let t in
@@ -292,7 +312,7 @@ let rec aux options gamma = function
       in
       let (branches, effect) = List.fold_left aux ([], effect) branches in
       let branches = List.rev branches in
-      (Try (e, branches), ty, effect)
+      (Try (e, try_to_pattern branches), ty, effect)
   | (_, UnsugaredTree.Annot (t, ty)) ->
       let loc_t = fst t in
       let (_, ty_t, effects) as res = aux options gamma t in

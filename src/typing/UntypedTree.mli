@@ -48,13 +48,15 @@ and t =
   | App of (t * t)
   | Val of name
   | Var of (index * length)
-  | PatternMatching of (t * (used_vars * t) list * Pattern.t)
+  | PatternMatching of (t * (used_vars * t) list * t * Pattern.t)
   | Let of (value * t)
   | Fail of (eff_name * t list)
-  | Try of (t * ((eff_name * name list) * t) list)
+  | Try of (t * (name * t))
   | RecordGet of (t * int)
   | RecordCreate of t list
   | Const of const
+  | Unreachable
+  | Reraise of name
 
 and foreign_ret_type =
   | Void of t

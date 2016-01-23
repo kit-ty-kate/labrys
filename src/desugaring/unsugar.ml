@@ -257,6 +257,11 @@ and unsugar_t imports options = function
       (loc, Let (value, unsugar_t imports options t))
   | (loc, ParseTree.Fail (ty, (exn, args))) ->
       let exn = upper_name_to_exn imports exn in
+      if Int.Infix.(List.length args > Config.max_fail_num_args) then
+        Err.fail
+          ~loc
+          "Cannot handle more than %d parameters with fail"
+          Config.max_fail_num_args;
       (loc, Fail (unsugar_ty imports ty, (exn, List.map (unsugar_t imports options) args)))
   | (loc, ParseTree.Try (t, patterns)) ->
       (loc, Try (unsugar_t imports options t, List.map (unsugar_try_pattern imports options) patterns))

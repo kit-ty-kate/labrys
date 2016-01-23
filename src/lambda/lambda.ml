@@ -27,13 +27,17 @@ module Set = GammaSet.Value
 
 let fmt = Printf.sprintf
 
-let rec of_patterns = function
+let rec of_patterns' f = function
   | Pattern.Leaf label ->
       Leaf label
   | Pattern.Node (var, cases) ->
-      let aux ((_, constr), tree) = (constr, of_patterns tree) in
+      let aux (constr, tree) = (f constr, of_patterns' f tree) in
       let cases = List.map aux cases in
       Node (var, cases)
+
+let of_patterns = function
+  | Pattern.Idx pat -> IdxTree (of_patterns' snd pat)
+  | Pattern.Ptr pat -> PtrTree (of_patterns' Fun.id pat)
 
 let create_dyn_functions f n =
   let rec aux params = function
@@ -67,18 +71,6 @@ let rec of_results freshn mapn m =
   let (a, b) = List.fold_left aux ([], Set.empty) m in
   (List.rev a, b)
 
-and of_branches freshn mapn branches =
-  let aux (acc, used_vars_acc) ((name, args), t) =
-    let remove acc name = GammaMap.Value.remove name acc in
-    let mapn = List.fold_left remove mapn args in
-    let (t, used_vars) = of_typed_term freshn mapn t in
-    let remove acc name = Set.remove name acc in
-    let used_vars = List.fold_left remove used_vars args in
-    (((name, args), t) :: acc, Set.union used_vars used_vars_acc)
-  in
-  let (a, b) = List.fold_left aux ([], Set.empty) branches in
-  (List.rev a, b)
-
 and of_typed_term freshn mapn = function
   | UntypedTree.Abs (name, t) ->
       let mapn = GammaMap.Value.remove name mapn in
@@ -105,15 +97,18 @@ and of_typed_term freshn mapn = function
            )
         )
         len
-  | UntypedTree.PatternMatching (t, results, patterns) ->
+  | UntypedTree.PatternMatching (t, results, default, patterns) ->
       let (t, used_vars1) = of_typed_term freshn mapn t in
       let (results, used_vars2) = of_results freshn mapn results in
       let patterns = of_patterns patterns in
-      (PatternMatching (t, results, patterns), Set.union used_vars1 used_vars2)
-  | UntypedTree.Try (t, branches) ->
+      let (default, used_vars3) = of_typed_term freshn mapn default in
+      let used_vars = Set.union3 used_vars1 used_vars2 used_vars3 in
+      (PatternMatching (t, results, default, patterns), used_vars)
+  | UntypedTree.Try (t, (name, t')) ->
       let (t, used_vars1) = of_typed_term freshn mapn t in
-      let (branches, used_vars2) = of_branches freshn mapn branches in
-      (Try (t, branches), Set.union used_vars1 used_vars2)
+      let (t', used_vars2) = of_typed_term freshn mapn t' in
+      let used_vars = Set.union used_vars1 (Set.remove name used_vars2) in
+      (Try (t, (name, t')), used_vars)
   | UntypedTree.Let ((name, UntypedTree.NonRec, t), xs) ->
       let (t, used_vars1) = of_typed_term freshn mapn t in
       let mapn = GammaMap.Value.remove name mapn in
@@ -149,6 +144,10 @@ and of_typed_term freshn mapn = function
       (Datatype (None, fields), used_vars)
   | UntypedTree.Const const ->
       (Const const, Set.empty)
+  | UntypedTree.Unreachable ->
+      (Unreachable, Set.empty)
+  | UntypedTree.Reraise e ->
+      (Reraise e, Set.singleton e)
 
 let get_name_and_linkage name' names mapn =
   match GammaMap.Value.find_opt name' names with

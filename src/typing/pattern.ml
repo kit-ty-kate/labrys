@@ -24,6 +24,7 @@ open Monomorphic_containers.Open
 module Matrix = PatternMatrix
 
 type name = Ident.Name.t
+type eff_name = Ident.Exn.t
 type variant_name = Ident.Variant.t
 
 type var = Matrix.var = private
@@ -34,9 +35,13 @@ type index = int
 
 type constr = (variant_name * index)
 
-type t =
-  | Node of (Matrix.var * (constr * t) list)
+type 'a t' =
+  | Node of (Matrix.var * ('a * 'a t') list)
   | Leaf of int
+
+type t =
+  | Idx of constr t'
+  | Ptr of eff_name t'
 
 let are_any =
   let aux = function
@@ -148,4 +153,4 @@ let create ~loc f gamma ty patterns =
       ~loc
       "The pattern matching contains the following unused cases (%s)"
       (Utils.string_of_list (fun x -> string_of_int (succ x)) unused_cases);
-  (patterns, results, initial_ty, effect)
+  (Idx patterns, results, initial_ty, effect)

@@ -27,22 +27,21 @@ let rec reduce_abs x = function
   | Abs (name, _, t) -> Let (name, NonRec, Val x, t)
   | Let (name, is_rec, y, t) -> Let (name, is_rec, y, reduce_abs x t)
   | App _ | Val _ | Datatype _
-  | Const _ | PatternMatching _ | Try _
-  | Fail _ | CallForeign _ | RecordGet _ as f -> App (f, x)
+  | Const _ | PatternMatching _
+  | Try _ | Fail _ | CallForeign _
+  | Unreachable | Reraise _ | RecordGet _ as f -> App (f, x)
 
 let rec reduce = function
   | App (f, x) -> reduce_abs x (reduce f)
   | Abs (name, used_vars, t) -> Abs (name, used_vars, reduce t)
-  | Val _ | Const _ as t -> t
+  | Val _ | Const _ | Unreachable | Reraise _ as t -> t
   | Datatype (i, fields) -> Datatype (i, List.map reduce fields)
   | CallForeign (name, ty, args) -> CallForeign (name, ty, args)
   | Let (name, is_rec, t, xs) -> Let (name, is_rec, reduce t, reduce xs)
-  | PatternMatching (t, results, patterns) ->
+  | PatternMatching (t, results, default, patterns) ->
       let aux (vars, t) = (vars, reduce t) in
-      PatternMatching (reduce t, List.map aux results, patterns)
-  | Try (t, patterns) ->
-      let aux (vars, t) = (vars, reduce t) in
-      Try (reduce t, List.map aux patterns)
+      PatternMatching (reduce t, List.map aux results, reduce default, patterns)
+  | Try (t, (name, t')) -> Try (reduce t, (name, reduce t'))
   | Fail (name, args) -> Fail (name, List.map reduce args)
   | RecordGet (t, n) -> RecordGet (reduce t, n)
 

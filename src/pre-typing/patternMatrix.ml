@@ -117,3 +117,7 @@ let split m =
         ([], [])
   in
   aux 0 m
+
+let exn_var n = VNode (n, VLeaf)
+
+let current_var = VLeaf

@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
 type name = Ident.Name.t
+type eff_name = Ident.Exn.t
 type variant_name = Ident.Variant.t
 
 type var = PatternMatrix.var = private
@@ -30,9 +31,13 @@ type index = int
 
 type constr = (variant_name * index)
 
-type t =
-  | Node of (var * (constr * t) list)
+type 'a t' =
+  | Node of (var * ('a * 'a t') list)
   | Leaf of int
+
+type t =
+  | Idx of constr t'
+  | Ptr of eff_name t'
 
 val create :
   loc:Location.t ->

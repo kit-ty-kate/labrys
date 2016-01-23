@@ -58,6 +58,7 @@ module type EQSET = sig
   val equal : t -> t -> bool
   val subset : t -> t -> bool
   val union : t -> t -> t
+  val union3 : t -> t -> t -> t
 end
 
 module type EQMAP = sig

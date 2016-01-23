@@ -21,3 +21,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 val version : string
 val lib : string
+
+val max_fail_num_args : int

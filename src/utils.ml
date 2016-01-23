@@ -122,6 +122,7 @@ module type EQSET = sig
   val equal : t -> t -> bool
   val subset : t -> t -> bool
   val union : t -> t -> t
+  val union3 : t -> t -> t -> t
 end
 
 module EqSet (I : EQ) = struct
@@ -171,6 +172,7 @@ module EqSet (I : EQ) = struct
   let subset l l' = List.for_all (fun x -> mem x l') l
 
   let union l l' = fold add l l'
+  let union3 l l' l'' = union (union l l') l''
 end
 
 module type EQMAP = sig

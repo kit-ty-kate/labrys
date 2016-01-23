@@ -39,13 +39,17 @@ type const = (int, float, int, string) ty
 
 type is_rec = NonRec | Rec
 
+type 'a tree' =
+  | Node of (Pattern.var * ('a * 'a tree') list)
+  | Leaf of int
+
+type tree =
+  | IdxTree of constr tree'
+  | PtrTree of eff_name tree'
+
 type foreign_ret_type =
   | Void of t
   | Alloc of tag_ty
-
-and tree =
-  | Node of (Pattern.var * (constr * tree) list)
-  | Leaf of int
 
 and t =
   | Abs of (name * used_vars * t)
@@ -53,12 +57,14 @@ and t =
   | Val of name
   | Datatype of (index option * t list)
   | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
-  | PatternMatching of (t * ((Pattern.var * name) list * t) list * tree)
+  | PatternMatching of (t * ((Pattern.var * name) list * t) list * t * tree)
   | Let of (name * is_rec * t * t)
   | Fail of (eff_name * t list)
-  | Try of (t * ((eff_name * name list) * t) list)
+  | Try of (t * (name * t))
   | RecordGet of (t * index)
   | Const of const
+  | Unreachable
+  | Reraise of name
 
 type linkage = Public | Private
 

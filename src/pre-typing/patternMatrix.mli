@@ -47,3 +47,6 @@ val create :
   (mconstr * Gamma.t)
 
 val split : 'a t -> (matrix * ((var * name) list * 'a) list)
+
+val exn_var : int -> var
+val current_var : var

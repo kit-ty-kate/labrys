@@ -23,3 +23,5 @@ open Monomorphic_containers.Open
 
 let version = "%{cervoise:version}%"
 let lib = "%{cervoise:lib}%"
+
+let max_fail_num_args = 31

@@ -38,7 +38,7 @@ let current_param builder = Llvm.param (current_function builder)
 
 let create_block c builder =
   let func = current_function builder in
-  let block = Llvm.append_block c "" func in
+  let block = Llvm.append_block c "block" func in
   let builder = Llvm.builder_at_end c block in
   (block, builder)
 
