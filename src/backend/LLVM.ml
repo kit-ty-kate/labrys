@@ -33,18 +33,18 @@ let build_cond_br cond tbb fbb b = ignore (build_cond_br cond tbb fbb b)
 let build_unreachable b = ignore (build_unreachable b)
 let build_call_void f params b = ignore (build_call f params "" b)
 
-let current_function builder = Llvm.block_parent (Llvm.insertion_block builder)
-let current_param builder = Llvm.param (current_function builder)
+let current_function builder = block_parent (insertion_block builder)
+let current_param builder = param (current_function builder)
 
 let create_block c builder =
   let func = current_function builder in
-  let block = Llvm.append_block c "block" func in
-  let builder = Llvm.builder_at_end c block in
+  let block = append_block c "block" func in
+  let builder = builder_at_end c block in
   (block, builder)
 
 let build_load_cast v ty builder =
-  let v = Llvm.build_bitcast v ty "" builder in
-  Llvm.build_load v "" builder
+  let v = build_bitcast v ty "" builder in
+  build_load v "" builder
 
 let define_function linkage c s ty m =
   let linkage = match linkage with
@@ -53,16 +53,16 @@ let define_function linkage c s ty m =
   in
   let f = define_function s ty m in
 (* NOTE: Uncomment this when switching to LLVM 3.8 *)
-(*  Llvm.set_unnamed_addr true f; *)
-  Llvm.set_linkage linkage f;
+(*  set_unnamed_addr true f; *)
+  set_linkage linkage f;
   f, builder_at_end c (entry_block f)
 
 let define_constant name v m =
   let v = define_global name v m in
 (* NOTE: Uncomment this when switching to LLVM 3.8 *)
-(*  Llvm.set_unnamed_addr true v; *)
-  Llvm.set_linkage Llvm.Linkage.Private v;
-  Llvm.set_global_constant true v;
+(*  set_unnamed_addr true v; *)
+  set_linkage Linkage.Private v;
+  set_global_constant true v;
   v
 
 let optimize ~lto ~opt layout m =
@@ -80,4 +80,4 @@ let optimize ~lto ~opt layout m =
       b;
   end;
   ignore (PassManager.run_module m pm);
-  Llvm.PassManager.dispose pm
+  PassManager.dispose pm
