@@ -544,6 +544,7 @@ module Make (I : I) = struct
           top (`Val (global, t) :: init_list) xs
       | LambdaTree.Exception name :: xs ->
           let name = Ident.Exn.to_string name in
+          (* NOTE: Don't use Llvm.define_constant as it merges equal values *)
           let v = Llvm.define_global name (string name) m in
           Llvm.set_global_constant true v;
           top init_list xs
@@ -580,15 +581,13 @@ let main main_module =
 
 let link ~main_module_name ~main_module imports =
   let aux _ x dst =
-    Llvm_linker.link_modules dst x;
-    Llvm.dispose_module x;
+    Llvm_linker.link_modules' dst x;
     dst
   in
   let dst = main_module in
   let () =
     let src = main main_module_name in
-    Llvm_linker.link_modules dst src;
-    Llvm.dispose_module src;
+    Llvm_linker.link_modules' dst src;
   in
   Module.Map.fold aux imports dst
 

@@ -52,15 +52,13 @@ let define_function linkage c s ty m =
     | `Private -> Linkage.Private
   in
   let f = define_function s ty m in
-(* NOTE: Uncomment this when switching to LLVM 3.8 *)
-(*  set_unnamed_addr true f; *)
+  set_unnamed_addr true f;
   set_linkage linkage f;
   f, builder_at_end c (entry_block f)
 
 let define_constant name v m =
   let v = define_global name v m in
-(* NOTE: Uncomment this when switching to LLVM 3.8 *)
-(*  set_unnamed_addr true v; *)
+  set_unnamed_addr true v;
   set_linkage Linkage.Private v;
   set_global_constant true v;
   v

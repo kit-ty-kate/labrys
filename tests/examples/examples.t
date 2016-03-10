@@ -25,13 +25,13 @@ Normal compilation
 
 Test compiling printed LLVM-IR code
 
-  $ $CERVOISE/main.native print-early-llvm Hello | llc-3.7 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Hello | llc-3.8 - -o /dev/null
   Linking Hello
-  $ $CERVOISE/main.native print-early-llvm Fact | llc-3.7 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Fact | llc-3.8 - -o /dev/null
   Linking Fact
-  $ $CERVOISE/main.native print-early-llvm TailFact | llc-3.7 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm TailFact | llc-3.8 - -o /dev/null
   Linking TailFact
-  $ $CERVOISE/main.native print-early-llvm NativeFact | llc-3.7 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm NativeFact | llc-3.8 - -o /dev/null
   Linking NativeFact
 
 Test behaviours

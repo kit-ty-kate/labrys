@@ -24,7 +24,7 @@ depends: [
   "re"
   "msgpack"
   "uutf"
-  "llvm" {>= "3.7"}
+  "llvm" {>= "3.8"}
   "containers" {>= "0.11"}
   "monomorphic" {>= "1.2"}
 ]

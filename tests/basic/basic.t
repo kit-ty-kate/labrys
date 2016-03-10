@@ -10,5 +10,5 @@ Normal compilation
 
 Test compiling printed LLVM-IR code
 
-  $ $CERVOISE/main.native print-early-llvm Basic | llc-3.7 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Basic | llc-3.8 - -o /dev/null
   Linking Basic
