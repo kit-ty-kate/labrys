@@ -124,59 +124,59 @@ Normal compilation
 
 Test compiling printed LLVM-IR code
 
-  $ $CERVOISE/main.native print-early-llvm Multi | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Multi | llc-$LLVM_VERSION - -o /dev/null
   Linking Multi
-  $ $CERVOISE/main.native print-early-llvm Nat | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Nat | llc-$LLVM_VERSION - -o /dev/null
   Linking Nat
-  $ $CERVOISE/main.native print-early-llvm TestImports | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm TestImports | llc-$LLVM_VERSION - -o /dev/null
   Linking TestImports
-  $ $CERVOISE/main.native print-early-llvm YetAnotherBug | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm YetAnotherBug | llc-$LLVM_VERSION - -o /dev/null
   Linking YetAnotherBug
-  $ $CERVOISE/main.native print-early-llvm Bug | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Bug | llc-$LLVM_VERSION - -o /dev/null
   Linking Bug
-  $ $CERVOISE/main.native print-early-llvm CombS | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm CombS | llc-$LLVM_VERSION - -o /dev/null
   Linking CombS
-  $ $CERVOISE/main.native print-early-llvm Exn | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Exn | llc-$LLVM_VERSION - -o /dev/null
   Compiling Exn
   Error in 'Exn.sfw' from line 9 column 4 to line 9 column 8:
       Effects are not allowed on toplevel
-  $ $CERVOISE/main.native print-early-llvm Fact | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Fact | llc-$LLVM_VERSION - -o /dev/null
   Linking Fact
-  $ $CERVOISE/main.native print-early-llvm TailFact | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm TailFact | llc-$LLVM_VERSION - -o /dev/null
   Linking TailFact
-  $ $CERVOISE/main.native print-early-llvm NativeFact | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm NativeFact | llc-$LLVM_VERSION - -o /dev/null
   Linking NativeFact
-  $ $CERVOISE/main.native print-early-llvm GrosGrosBug | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm GrosGrosBug | llc-$LLVM_VERSION - -o /dev/null
   Linking GrosGrosBug
-  $ $CERVOISE/main.native print-early-llvm LetRecIn | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm LetRecIn | llc-$LLVM_VERSION - -o /dev/null
   Linking LetRecIn
-  $ $CERVOISE/main.native print-early-llvm MultiTypes | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm MultiTypes | llc-$LLVM_VERSION - -o /dev/null
   Linking MultiTypes
-  $ $CERVOISE/main.native print-early-llvm Multi | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Multi | llc-$LLVM_VERSION - -o /dev/null
   Linking Multi
-  $ $CERVOISE/main.native print-early-llvm Print | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Print | llc-$LLVM_VERSION - -o /dev/null
   Linking Print
-  $ $CERVOISE/main.native print-early-llvm Rec | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Rec | llc-$LLVM_VERSION - -o /dev/null
   Linking Rec
-  $ $CERVOISE/main.native print-early-llvm Simple | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Simple | llc-$LLVM_VERSION - -o /dev/null
   Linking Simple
-  $ $CERVOISE/main.native print-early-llvm SystemFOmega | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm SystemFOmega | llc-$LLVM_VERSION - -o /dev/null
   Linking SystemFOmega
-  $ $CERVOISE/main.native print-early-llvm SystemF | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm SystemF | llc-$LLVM_VERSION - -o /dev/null
   Linking SystemF
-  $ $CERVOISE/main.native print-early-llvm Test | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Test | llc-$LLVM_VERSION - -o /dev/null
   Linking Test
-  $ $CERVOISE/main.native print-early-llvm UselessEnv | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm UselessEnv | llc-$LLVM_VERSION - -o /dev/null
   Linking UselessEnv
-  $ $CERVOISE/main.native print-early-llvm Variants | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Variants | llc-$LLVM_VERSION - -o /dev/null
   Linking Variants
-  $ $CERVOISE/main.native print-early-llvm TyClass | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm TyClass | llc-$LLVM_VERSION - -o /dev/null
   Linking TyClass
-  $ $CERVOISE/main.native print-early-llvm Presentation | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Presentation | llc-$LLVM_VERSION - -o /dev/null
   Linking Presentation
-  $ $CERVOISE/main.native print-early-llvm ExOne | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm ExOne | llc-$LLVM_VERSION - -o /dev/null
   Linking ExOne
-  $ $CERVOISE/main.native print-early-llvm ExnVar | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm ExnVar | llc-$LLVM_VERSION - -o /dev/null
   Linking ExnVar
-  $ $CERVOISE/main.native print-early-llvm Lol | llc-3.8 - -o /dev/null
+  $ $CERVOISE/main.native print-early-llvm Lol | llc-$LLVM_VERSION - -o /dev/null
   Linking Lol

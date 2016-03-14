@@ -31,6 +31,6 @@ stdlib:
 	./main.native build-module --no-prelude --src-dir stdlib Prelude
 
 tests:
-	CERVOISE=$(shell pwd) cram $(TESTS)
+	CERVOISE=$(shell pwd) LLVM_VERSION=3.8 cram $(TESTS)
 
 .PHONY: all clean semantics stdlib tests
