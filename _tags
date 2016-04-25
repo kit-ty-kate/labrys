@@ -1,6 +1,3 @@
-# OASIS_START
-# OASIS_STOP
-
 not "src": -traverse
 not "src": not_hygienic
 
@@ -23,8 +20,8 @@ true: package(llvm.bitreader)
 true: package(llvm.all_backends)
 true: package(llvm.linker)
 true: package(llvm.scalar_opts)
-true: package(containers.io)
-true: package(monomorphic.containers)
+true: package(containers)
+true: package(monomorphic)
 
 "src": include
 "src/parsing": include

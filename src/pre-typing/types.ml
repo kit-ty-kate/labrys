@@ -21,7 +21,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (* NOTE: Types are in normal form *)
 
-open Monomorphic_containers.Open
+open Containers
+open Monomorphic.None
 
 type name = Ident.Type.t
 type tyvar_name = Ident.TypeVar.t
@@ -280,7 +281,7 @@ let match_tyclass ~loc_x ~tyclasses x ~ty_x =
     let (_, _, matched_x, _) as res =
       match_tyclass ~loc_x ~tyclasses ~tyclasses_x x ~ty_x:ty_x'
     in
-    if Int.Infix.(List.length matched_x = GammaSet.TypeVar.cardinal tyclasses_x) then
+    if Int.(List.length matched_x = GammaSet.TypeVar.cardinal tyclasses_x) then
       (res, tyclasses_x_list)
     else
       let tyclasses_x = GammaSet.TypeVar.empty in

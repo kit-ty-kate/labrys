@@ -19,7 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open Monomorphic_containers.Open
+open Containers
+open Monomorphic.None
 
 open UnsugaredTree
 
@@ -257,7 +258,7 @@ and unsugar_t imports options = function
       (loc, Let (value, unsugar_t imports options t))
   | (loc, ParseTree.Fail (ty, (exn, args))) ->
       let exn = upper_name_to_exn imports exn in
-      if Int.Infix.(List.length args > Config.max_fail_num_args) then
+      if Int.(List.length args > Config.max_fail_num_args) then
         Err.fail
           ~loc
           "Cannot handle more than %d parameters with fail"

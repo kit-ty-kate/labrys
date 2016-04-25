@@ -19,7 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open Monomorphic_containers.Open
+open Containers
+open Monomorphic.None
 
 module Matrix = PatternMatrix
 
@@ -55,7 +56,7 @@ let specialize name m =
   let size =
     let rec aux = function
       | (Matrix.Constr (_, (x, _), args) :: _, _) :: m when eq name x ->
-          Int.Cmp.max (List.length args) (aux m)
+          Int.max (List.length args) (aux m)
       | ([], _) :: m
       | (Matrix.Constr _ :: _, _) :: m
       | (Matrix.Any _ :: _, _) :: m ->

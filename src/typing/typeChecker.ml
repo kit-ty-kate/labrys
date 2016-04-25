@@ -19,7 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-open Monomorphic_containers.Open
+open Containers
+open Monomorphic.None
 
 open UntypedTree
 
@@ -296,7 +297,7 @@ let rec aux options gamma = function
       let (branches, effect) =
         let aux (branches, effect) ((name, args), t) =
           let tys = GammaMap.Exn.find name gamma.Gamma.exceptions in
-          if Int.Infix.(List.length args <> List.length tys) then
+          if Int.(List.length args <> List.length tys) then
             Err.fail ~loc:(Ident.Exn.loc name) "Wrong number of argument";
           (branches @ [((name, args), t)], Effects.remove_exn name effect)
         in
