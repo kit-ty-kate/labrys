@@ -1,15 +1,12 @@
 opam-version: "1.2"
 name: "cervoise"
-version: "dev"
+version: "0+dev"
 license: "MIT"
 maintainer: "Jacques-Pascal Deplaix <jp.deplaix@gmail.com>"
 authors: "Jacques-Pascal Deplaix <jp.deplaix@gmail.com>"
 homepage: "https://github.com/jpdeplaix/cervoise"
 dev-repo: "https://github.com/jpdeplaix/cervoise.git"
 bug-reports: "https://github.com/jpdeplaix/cervoise/issues"
-substs: [
-  "src/config.ml"
-]
 build: [
   [make]
   [make "stdlib"]
