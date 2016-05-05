@@ -33,4 +33,7 @@ stdlib:
 tests:
 	CERVOISE=$(shell pwd) LLVM_VERSION=3.8 cram $(TESTS)
 
-.PHONY: all clean semantics stdlib tests
+check:
+	dead_code_analyzer.opt --all -S -bind-seq --exclude _build/src/parsing/parser.ml _build/src
+
+.PHONY: all clean semantics stdlib tests check

@@ -4,6 +4,7 @@ not "src": not_hygienic
 true: use_menhir, explain
 true: safe_string
 true: bin_annot
+true: keep_locs
 true: warn(A-44-33-4)
 
 true: package(unix)
