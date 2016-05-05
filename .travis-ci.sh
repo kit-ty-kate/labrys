@@ -11,7 +11,7 @@ export OPAMYES=1
 opam init
 eval `opam config env`
 opam pin add -n --kind=git cervoise .
-opam install "llvm.$LLVM_VERSION" cervoise.dev
+opam install "llvm.$LLVM_VERSION" cervoise
 
 make
 make tests
