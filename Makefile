@@ -28,8 +28,7 @@ all: $(SUBSTS)
 	$(OCB) $(TARGET)
 
 $(SUBSTS): $(SUBSTS_IN)
-	@$(foreach file, $(SUBSTS), cp $(file).in $(file))
-	@awk -i inplace '$(SUBSTS_AWK)' $(SUBSTS)
+	@$(foreach file, $(SUBSTS), awk '$(SUBSTS_AWK)' $(file).in > $(file))
 
 clean:
 	$(OCB) -clean
