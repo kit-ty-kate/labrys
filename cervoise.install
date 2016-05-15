@@ -1,8 +1,0 @@
-bin: [
-  "_build/src/main.native" {"cervoise"}
-]
-lib: [
-  "stdlib/Prelude.sfwi"
-  "dest/stdlib/Prelude.bc"
-  "dest/stdlib/Prelude.csfw"
-]

@@ -10,3 +10,7 @@ S src
 S src/*
 B _build/src
 B _build/src/*
+
+PKG ocamlbuild-pkg
+S .
+B _build

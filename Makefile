@@ -1,38 +1,17 @@
 DOC = doc
 
-OCB = ocamlbuild -use-ocamlfind
-TARGET = src/main.native
-
-LIBDIR = $(shell opam config var lib)
-VERSION = $(shell grep '^version:' opam | cut -d '"' -f 2)
-# VERSION = $(shell opam query --version)
-# NOTE: opam-query could be used instead
-
-SUBSTS_AWK = { \
-    gsub("%%LIBDIR%%", "$(LIBDIR)"); \
-    gsub("%%VERSION%%", "$(VERSION)"); \
-    print \
-}
-
-SUBSTS = \
-	 src/config.ml \
-
-SUBSTS_IN = $(addsuffix .in, $(SUBSTS))
-
 TESTS = \
 	tests/basic/basic.t \
 	tests/old-examples/old-examples.t \
 	tests/examples/examples.t \
 
-all: $(SUBSTS)
-	$(OCB) $(TARGET)
-
-$(SUBSTS): $(SUBSTS_IN)
-	@$(foreach file, $(SUBSTS), awk '$(SUBSTS_AWK)' $(file).in > $(file))
+all:
+	ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild-pkg)"
+	cp _build/cervoise.install .
 
 clean:
-	$(OCB) -clean
-	@$(RM) $(SUBSTS)
+	ocamlbuild -clean
+	rm -f cervoise.install
 
 semantics: $(DOC)/semantics.ott
 	ott -i $< -o $(<:.ott=.tex) \
