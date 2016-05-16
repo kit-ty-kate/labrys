@@ -7,11 +7,9 @@ TESTS = \
 
 all:
 	ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild-pkg)"
-	cp _build/cervoise.install .
 
 clean:
 	ocamlbuild -clean
-	rm -f cervoise.install
 
 semantics: $(DOC)/semantics.ott
 	ott -i $< -o $(<:.ott=.tex) \

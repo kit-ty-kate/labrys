@@ -4,9 +4,14 @@ let subst_files = [
   "src/config.ml"
 ]
 
+let cmd str =
+  let str = Ocamlbuild_plugin.run_and_read str in
+  let len = String.length str in
+  String.sub str 0 (pred len)
+
 let substs = [
-  ("%%LIBDIR%%", Ocamlbuild_plugin.run_and_read "opam config var lib");
-  ("%%VERSION%%", Ocamlbuild_plugin.run_and_read "grep '^version:' opam | cut -d '\"' -f 2");
+  ("%%LIBDIR%%", cmd "opam config var lib");
+  ("%%VERSION%%", cmd "grep '^version:' opam | cut -d '\"' -f 2");
 ]
 
 let () =

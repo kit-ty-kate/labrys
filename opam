@@ -12,7 +12,7 @@ build: [
   [make "stdlib"]
 ]
 depends: [
-  "ocamlbuild-pkg" {build} {>= "0.2"}
+  "ocamlbuild-pkg" {build & >= "0.2"}
   "menhir" {build}
   "base-unix"
   "cmdliner"
