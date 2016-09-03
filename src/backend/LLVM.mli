@@ -48,6 +48,6 @@ val define_constant : string -> llvalue -> llmodule -> llvalue
 val optimize :
   lto:bool ->
   opt:int ->
-  Llvm_target.DataLayout.t ->
+  Llvm_target.TargetMachine.t ->
   llmodule ->
   unit

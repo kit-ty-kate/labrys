@@ -617,9 +617,10 @@ let optimize options m =
   let triple = get_triple () in
   let target = get_target ~triple in
   let layout = Llvm_target.TargetMachine.data_layout target in
+  let layout = Llvm_target.DataLayout.as_string layout in
   Llvm.set_target_triple triple m;
-  Llvm.set_data_layout (Llvm_target.DataLayout.as_string layout) m;
-  Llvm.optimize ~lto ~opt layout m;
+  Llvm.set_data_layout layout m;
+  Llvm.optimize ~lto ~opt target m;
   m
 
 let to_string = Llvm.string_of_llmodule

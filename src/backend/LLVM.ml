@@ -64,13 +64,15 @@ let define_constant name v m =
   set_global_constant true v;
   v
 
-let optimize ~lto ~opt layout m =
+let optimize ~lto ~opt target m =
   let pm = PassManager.create () in
-  Llvm_target.DataLayout.add_to_pass_manager pm layout;
+  let pm_f = PassManager.create_function m in (* TODO: Is this useful ? *)
+  Llvm_target.TargetMachine.add_analysis_passes pm target; (* TODO Is this useful ? *)
   let b = Llvm_passmgr_builder.create () in
   Llvm_passmgr_builder.set_opt_level opt b;
   Llvm_scalar_opts.add_tail_call_elimination pm;
   Llvm_passmgr_builder.populate_module_pass_manager pm b;
+  Llvm_passmgr_builder.populate_function_pass_manager pm_f b; (* TODO Is this useful ? *)
   if lto then begin
     Llvm_passmgr_builder.populate_lto_pass_manager
       ~internalize:true
