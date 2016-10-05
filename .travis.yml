@@ -5,3 +5,4 @@ script: bash -ex .travis-ci.sh
 env:
   matrix:
     - LLVM_VERSION=3.8
+    - LLVM_VERSION=3.9
