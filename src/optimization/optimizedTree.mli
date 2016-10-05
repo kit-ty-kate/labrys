@@ -1,5 +1,5 @@
 (*
-Copyright (c) 2013-2015 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
+Copyright (c) 2013-2016 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -28,7 +28,7 @@ type arity = int
 type length = int
 
 type ('int, 'float, 'char, 'string) ty =
-  ('int, 'float, 'char, 'string) UntypedTree.ty =
+  ('int, 'float, 'char, 'string) LambdaTree.ty =
   | Int of 'int
   | Float of 'float
   | Char of 'char
@@ -37,21 +37,21 @@ type ('int, 'float, 'char, 'string) ty =
 type tag_ty = (unit, unit, unit, unit) ty
 type const = (int, float, int, string) ty
 
-type is_rec = NonRec | Rec
+type is_rec = LambdaTree.is_rec = NonRec | Rec
 
-type 'a tree' =
+type 'a tree' = 'a LambdaTree.tree' =
   | Node of (Pattern.var * ('a * 'a tree') list)
   | Leaf of int
 
-type tree =
+type tree = LambdaTree.tree =
   | IdxTree of constr tree'
   | PtrTree of eff_name tree'
 
-type foreign_ret_type =
+type foreign_ret_type = LambdaTree.foreign_ret_type =
   | Void of t
   | Alloc of tag_ty
 
-and t =
+and t = LambdaTree.t =
   | Abs of (name * used_vars * t)
   | App of (t * name)
   | Val of name
@@ -66,8 +66,9 @@ and t =
   | Unreachable
   | Reraise of name
 
-type linkage = Public | Private
+type linkage = LambdaTree.linkage = Public | Private
 
 type top =
   | Value of (name * t * linkage)
   | Exception of eff_name
+  | Function of (name * (name * t) * linkage)

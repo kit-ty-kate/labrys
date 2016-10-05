@@ -198,42 +198,30 @@ let create_dyn_functions mapn cname (ret, args) =
       let used_vars = Set.remove name used_vars in
       if Int.(Set.cardinal used_vars <> 0) then
         assert false;
-      (name, t)
+      Abs (name, Set.empty, t)
 
-let of_value names mapn = function
-  | (name, UntypedTree.Rec, UntypedTree.Abs (name', t)) ->
+let rec of_typed_tree names mapn = function
+  | UntypedTree.Value (name, UntypedTree.Rec, t) :: xs  ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let (t, _) = of_typed_term 0 mapn t in
-      (Function (name, (name', t), linkage), names, mapn)
-  | (name, UntypedTree.NonRec, UntypedTree.Abs (name', t)) ->
+      let xs = of_typed_tree names mapn xs in
+      Value (name, t, linkage) :: xs
+  | UntypedTree.Value (name, UntypedTree.NonRec, t) :: xs ->
       let (t, _) = of_typed_term 0 mapn t in
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      (Function (name, (name', t), linkage), names, mapn)
-  | (name, UntypedTree.Rec, t)  ->
-      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      let (t, _) = of_typed_term 0 mapn t in
-      (Value (name, t, linkage), names, mapn)
-  | (name, UntypedTree.NonRec, t) ->
-      let (t, _) = of_typed_term 0 mapn t in
-      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      (Value (name, t, linkage), names, mapn)
-
-let rec of_typed_tree ~current_module names mapn = function
-  | UntypedTree.Value value :: xs ->
-      let (value, names, mapn) = of_value names mapn value in
-      let xs = of_typed_tree ~current_module names mapn xs in
-      value :: xs
+      let xs = of_typed_tree names mapn xs in
+      Value (name, t, linkage) :: xs
   | UntypedTree.Foreign (cname, name, ty) :: xs ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      let xs = of_typed_tree ~current_module names mapn xs in
-      Function (name, create_dyn_functions mapn cname ty, linkage) :: xs
+      let xs = of_typed_tree names mapn xs in
+      Value (name, create_dyn_functions mapn cname ty, linkage) :: xs
   | UntypedTree.Exception name :: xs ->
-      let xs = of_typed_tree ~current_module names mapn xs in
+      let xs = of_typed_tree names mapn xs in
       Exception name :: xs
   | [] ->
       []
 
-let of_typed_tree ~current_module top =
+let of_typed_tree top =
   let add name names = GammaMap.Value.modify_def (-1) name succ names in
   let aux names = function
     | UntypedTree.Value (name, _, _) -> add name names
@@ -241,4 +229,4 @@ let of_typed_tree ~current_module top =
     | UntypedTree.Exception _ -> names
   in
   let names = List.fold_left aux GammaMap.Value.empty top in
-  of_typed_tree ~current_module names GammaMap.Value.empty top
+  of_typed_tree names GammaMap.Value.empty top

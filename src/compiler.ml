@@ -81,26 +81,33 @@ let get_unsugared_tree options modul =
   in
   (mimports, gamma, unsugared_tree)
 
-let get_typed_tree ~with_main ~interface options modul =
+let get_untyped_tree ~with_main ~interface options modul =
   let (imports, gamma, unsugared_tree) = get_unsugared_tree options modul in
   let typed_tree =
     TypeChecker.check ~modul ~interface ~with_main options gamma unsugared_tree
   in
   (imports, typed_tree)
 
-let get_untyped_tree ~with_main ~interface options modul =
+let get_lambda_tree ~with_main ~interface options modul =
   let (imports, typed_tree) =
-    get_typed_tree ~with_main ~interface options modul
-  in
-  let untyped_tree = Lambda.of_typed_tree ~current_module:modul typed_tree in
-  (imports, untyped_tree)
-
-let get_reduced_tree ~with_main ~interface options modul =
-  let (imports, untyped_tree) =
     get_untyped_tree ~with_main ~interface options modul
   in
-  let reduced_tree = Beta.reduce untyped_tree in
+  let lambda_tree = Lambda.of_typed_tree typed_tree in
+  (imports, lambda_tree)
+
+let get_reduced_tree ~with_main ~interface options modul =
+  let (imports, lambda_tree) =
+    get_lambda_tree ~with_main ~interface options modul
+  in
+  let reduced_tree = Beta.reduce lambda_tree in
   (imports, reduced_tree)
+
+let get_optimized_tree ~with_main ~interface options modul =
+  let (imports, reduced_tree) =
+    get_reduced_tree ~with_main ~interface options modul
+  in
+  let optimized_tree = Optimize.of_lambda_tree reduced_tree in
+  (imports, optimized_tree)
 
 let rec build_imports ~imports_code options imports =
   let aux imports_code modul =
@@ -131,7 +138,7 @@ and compile ?(with_main=false) imports_code interface options modul =
           (Module.to_string modul);
       prerr_endline (fmt "Compiling %s" (Module.to_string modul));
       let (imports, reduced_tree) =
-        get_reduced_tree ~with_main ~interface options modul
+        get_optimized_tree ~with_main ~interface options modul
       in
       let imports_code = build_imports ~imports_code options imports in
       let code = Backend.make ~modul ~imports options reduced_tree in
@@ -171,17 +178,17 @@ let print_unsugared_tree options modul =
   let (_, _, unsugared_tree) = get_unsugared_tree options modul in
   print_endline (Printers.UnsugaredTree.dump unsugared_tree)
 
-let print_typed_tree options modul =
+let print_untyped_tree options modul =
   let modul = Module.from_string options modul in
   let (_, typed_tree) =
-    get_typed_tree ~with_main:true ~interface:Gamma.empty options modul
+    get_untyped_tree ~with_main:true ~interface:Gamma.empty options modul
   in
   print_endline (Printers.UntypedTree.dump typed_tree)
 
-let print_untyped_tree options modul =
+let print_lambda_tree options modul =
   let modul = Module.from_string options modul in
   let (_, untyped_tree) =
-    get_untyped_tree ~with_main:true ~interface:Gamma.empty options modul
+    get_lambda_tree ~with_main:true ~interface:Gamma.empty options modul
   in
   print_endline (Printers.LambdaTree.dump untyped_tree)
 
@@ -192,6 +199,13 @@ let print_reduced_tree options modul =
   in
   print_endline (Printers.LambdaTree.dump reduced_tree)
 
+let print_optimized_tree options modul =
+  let modul = Module.from_string options modul in
+  let (_, optimized_tree) =
+    get_optimized_tree ~with_main:true ~interface:Gamma.empty options modul
+  in
+  print_endline (Printers.OptimizedTree.dump optimized_tree)
+
 let print_early_llvm options modul =
   let modul = Module.from_string options modul in
   let code = get_code options modul in
@@ -201,3 +215,5 @@ let print_llvm options modul =
   let modul = Module.from_string options modul in
   let optimized_code = get_optimized_code options modul in
   print_endline (Backend.to_string optimized_code)
+
+(* TODO: Clean this module *)

@@ -259,20 +259,20 @@ module Make (I : I) = struct
         (value, Map.add var value vars)
 
   let get_const = function
-    | LambdaTree.Int n -> Llvm.const_int Type.i32 n
-    | LambdaTree.Float n -> Llvm.const_float Type.float n
-    | LambdaTree.Char n -> Llvm.const_int Type.i32 n
-    | LambdaTree.String s -> Llvm.const_string c (s ^ "\x00")
+    | OptimizedTree.Int n -> Llvm.const_int Type.i32 n
+    | OptimizedTree.Float n -> Llvm.const_float Type.float n
+    | OptimizedTree.Char n -> Llvm.const_int Type.i32 n
+    | OptimizedTree.String s -> Llvm.const_string c (s ^ "\x00")
 
   let llvm_ty_of_ty = function
-    | LambdaTree.Int () -> Type.i32
-    | LambdaTree.Float () -> Type.float
-    | LambdaTree.Char () -> Type.i32
-    | LambdaTree.String () -> Type.star
+    | OptimizedTree.Int () -> Type.i32
+    | OptimizedTree.Float () -> Type.float
+    | OptimizedTree.Char () -> Type.i32
+    | OptimizedTree.String () -> Type.star
 
   let ret_type = function
-    | LambdaTree.Void _ -> Type.void
-    | LambdaTree.Alloc ty -> llvm_ty_of_ty ty
+    | OptimizedTree.Void _ -> Type.void
+    | OptimizedTree.Alloc ty -> llvm_ty_of_ty ty
 
   let args_type args =
     let aux (ty, _) = llvm_ty_of_ty ty in
@@ -305,7 +305,7 @@ module Make (I : I) = struct
         [||]
     | args ->
         let aux = function
-          | (LambdaTree.String (), name) ->
+          | (OptimizedTree.String (), name) ->
               get_value gamma builder name
           | (ty, name) ->
               let ty = Llvm.pointer_type (llvm_ty_of_ty ty) in
@@ -331,7 +331,7 @@ module Make (I : I) = struct
     Llvm.build_br default builder
 
   and create_tree' ~default vars gamma builder value results f = function
-    | LambdaTree.Leaf i ->
+    | OptimizedTree.Leaf i ->
         let (block, _, pattern_vars) = List.nth results i in
         let aux vars (var, variable) =
           let (var, vars) = llvalue_of_pattern_var vars value builder var in
@@ -340,7 +340,7 @@ module Make (I : I) = struct
         in
         ignore (List.fold_left aux vars pattern_vars);
         Llvm.build_br block builder
-    | LambdaTree.Node (var, cases) ->
+    | OptimizedTree.Node (var, cases) ->
         let (term, vars) = llvalue_of_pattern_var vars value builder var in
         let term = Llvm.build_load_cast term (Type.variant_ptr 1) builder in
         let term = Llvm.build_extractvalue term 0 "" builder in
@@ -350,15 +350,15 @@ module Make (I : I) = struct
     let g f tree = create_tree' ~default vars gamma builder value results f tree in
     let int_to_ptr i = Llvm.const_inttoptr (Llvm.const_int Type.i32 i) Type.star in
     function
-    | LambdaTree.IdxTree tree -> g int_to_ptr tree
-    | LambdaTree.PtrTree tree -> g get_exn tree
+    | OptimizedTree.IdxTree tree -> g int_to_ptr tree
+    | OptimizedTree.PtrTree tree -> g get_exn tree
 
   let rec map_ret ~jmp_buf gamma builder t = function
-    | LambdaTree.Void t ->
+    | OptimizedTree.Void t ->
         lambda ~jmp_buf gamma builder t
-    | LambdaTree.Alloc (LambdaTree.String ()) ->
+    | OptimizedTree.Alloc (OptimizedTree.String ()) ->
         (t, builder)
-    | LambdaTree.Alloc ty ->
+    | OptimizedTree.Alloc ty ->
         let ty = llvm_ty_of_ty ty in
         let value = Llvm.build_malloc ty "" builder in
         Llvm.build_store t value builder;
@@ -387,13 +387,13 @@ module Make (I : I) = struct
     Llvm.build_ret v builder
 
   and lambda ?isrec ~jmp_buf gamma builder = function
-    | LambdaTree.Abs (name, used_vars, t) ->
+    | OptimizedTree.Abs (name, used_vars, t) ->
         let (builder', closure, gamma) =
           create_closure ~isrec ~used_vars gamma builder
         in
         abs ~name t gamma builder';
         (closure, builder)
-    | LambdaTree.App (f, x) ->
+    | OptimizedTree.App (f, x) ->
         let (closure, builder) = lambda ~jmp_buf gamma builder f in
         let x = get_value gamma builder x in
         let closure = Llvm.build_bitcast closure (Type.closure_ptr 1) "" builder in
@@ -401,7 +401,7 @@ module Make (I : I) = struct
         let f = Llvm.build_extractvalue f 0 "" builder in
         let f = Llvm.build_bitcast f (Type.lambda_ptr ~env_size:1) "" builder in
         (Llvm.build_call f [|x; closure; jmp_buf|] "" builder, builder)
-    | LambdaTree.PatternMatching (t, results, default, tree) ->
+    | OptimizedTree.PatternMatching (t, results, default, tree) ->
         let (t, builder) = lambda ~jmp_buf gamma builder t in
         let (next_block, next_builder) = Llvm.create_block c builder in
         let results = List.map (create_result ~next_block ~jmp_buf gamma builder) results in
@@ -414,9 +414,9 @@ module Make (I : I) = struct
         create_tree ~default Map.empty gamma builder t results tree;
         let results = List.map (fun (_, x, _) -> x) results in
         (Llvm.build_phi results "" next_builder, next_builder)
-    | LambdaTree.Val name ->
+    | OptimizedTree.Val name ->
         (get_value gamma builder name, builder)
-    | LambdaTree.Datatype (index, params) ->
+    | OptimizedTree.Datatype (index, params) ->
         let aux (acc, builder) t =
           let (t, builder) = lambda ~jmp_buf gamma builder t in
           (t :: acc, builder)
@@ -436,25 +436,25 @@ module Make (I : I) = struct
           let v = malloc_and_init values builder in
           (v, builder)
         end
-    | LambdaTree.CallForeign (name, ret, args) ->
+    | OptimizedTree.CallForeign (name, ret, args) ->
         let ty = Llvm.function_type (ret_type ret) (args_type args) in
         let f = Llvm.declare_function name ty m in
         let args = map_args gamma builder args in
         map_ret ~jmp_buf gamma builder (Llvm.build_call f args "" builder) ret
-    | LambdaTree.Let (name, LambdaTree.NonRec, t, xs) ->
+    | OptimizedTree.Let (name, OptimizedTree.NonRec, t, xs) ->
         let (t, builder) = lambda ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
         lambda ~jmp_buf gamma builder xs
-    | LambdaTree.Let (name, LambdaTree.Rec, t, xs) ->
+    | OptimizedTree.Let (name, OptimizedTree.Rec, t, xs) ->
         let (t, builder) = lambda ~isrec:name ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
         lambda ~jmp_buf gamma builder xs
-    | LambdaTree.Fail (name, args) ->
+    | OptimizedTree.Fail (name, args) ->
         let (args, builder) = fold_args ~jmp_buf gamma builder args in
         let tag = get_exn name in
         init exn_var Type.exn_glob (tag :: args) builder;
         create_fail jmp_buf builder
-    | LambdaTree.Try (t, (name, t')) ->
+    | OptimizedTree.Try (t, (name, t')) ->
         let jmp_buf' = Generic.alloc_jmp_buf builder in
         let (next_block, next_builder) = Llvm.create_block c builder in
         let jmp_buf_gen = Llvm.build_bitcast jmp_buf' Type.star "" builder in
@@ -479,18 +479,18 @@ module Make (I : I) = struct
         in
         Llvm.build_cond_br cond try_block catch_block builder;
         (Llvm.build_phi [try_result; catch_result] "" next_builder, next_builder)
-    | LambdaTree.RecordGet (t, n) ->
+    | OptimizedTree.RecordGet (t, n) ->
         let (t, builder) = lambda ~jmp_buf gamma builder t in
         let t = Llvm.build_load_cast t (Type.array_ptr (succ n)) builder in
         (Llvm.build_extractvalue t n "" builder, builder)
-    | LambdaTree.Const const ->
+    | OptimizedTree.Const const ->
         let v = Llvm.define_constant "" (get_const const) m in
         let v = Llvm.const_bitcast v Type.star in
         (v, builder)
-    | LambdaTree.Unreachable ->
+    | OptimizedTree.Unreachable ->
         unreachable builder;
         (undef, snd (Llvm.create_block c builder))
-    | LambdaTree.Reraise e ->
+    | OptimizedTree.Reraise e ->
         let e = get_value gamma builder e in
         let e = Llvm.build_load e "" builder in
         Llvm.build_store e exn_var builder;
@@ -505,8 +505,8 @@ module Make (I : I) = struct
     (List.rev args, builder)
 
   let set_linkage v = function
-    | LambdaTree.Private -> Llvm.set_linkage Llvm.Linkage.Private v
-    | LambdaTree.Public -> Llvm.set_linkage Llvm.Linkage.External v
+    | OptimizedTree.Private -> Llvm.set_linkage Llvm.Linkage.Private v
+    | OptimizedTree.Public -> Llvm.set_linkage Llvm.Linkage.External v
 
   let define_global ~name ~linkage value =
     let name = Ident.Name.to_string name in
@@ -538,18 +538,18 @@ module Make (I : I) = struct
 
   let make ~imports =
     let rec top init_list = function
-      | LambdaTree.Value (name, t, linkage) :: xs ->
+      | OptimizedTree.Value (name, t, linkage) :: xs ->
           let name = Ident.Name.to_string name in
           let global = Llvm.define_global name null m in
           set_linkage global linkage;
           top (`Val (global, t) :: init_list) xs
-      | LambdaTree.Exception name :: xs ->
+      | OptimizedTree.Exception name :: xs ->
           let name = Ident.Exn.to_string name in
           (* NOTE: Don't use Llvm.define_constant as it merges equal values *)
           let v = Llvm.define_global name (string name) m in
           Llvm.set_global_constant true v;
           top init_list xs
-      | LambdaTree.Function (name, (name', t), linkage) :: xs ->
+      | OptimizedTree.Function (name, (name', t), linkage) :: xs ->
           let (f, builder) = Llvm.define_function `Private c (".." ^ Ident.Name.to_string name) (Type.lambda ~env_size:0) m in
           define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]);
           let g bindings = abs ~name:name' t bindings builder in

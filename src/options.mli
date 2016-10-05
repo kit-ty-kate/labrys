@@ -61,11 +61,15 @@ class type print_unsugared_tree = object
   inherit base
 end
 
-class type print_typed_tree = object
+class type print_untyped_tree = object
   inherit base
 end
 
-class type print_untyped_tree = object
+class type print_lambda_tree = object
+  inherit base
+end
+
+class type print_optimized_tree = object
   inherit base
 end
 

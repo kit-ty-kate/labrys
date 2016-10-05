@@ -25,8 +25,9 @@ val compile_program : Options.program -> module_name -> unit
 val compile_module : Options.modul -> module_name -> unit
 val print_parse_tree : Options.print_parse_tree -> module_name -> unit
 val print_unsugared_tree : Options.print_unsugared_tree -> module_name -> unit
-val print_typed_tree : Options.print_typed_tree -> module_name -> unit
 val print_untyped_tree : Options.print_untyped_tree -> module_name -> unit
-val print_reduced_tree : Options.print_untyped_tree -> module_name -> unit
+val print_lambda_tree : Options.print_lambda_tree -> module_name -> unit
+val print_reduced_tree : Options.print_lambda_tree -> module_name -> unit
+val print_optimized_tree : Options.print_optimized_tree -> module_name -> unit
 val print_early_llvm : Options.print_early_llvm -> module_name -> unit
 val print_llvm : Options.print_llvm -> module_name -> unit

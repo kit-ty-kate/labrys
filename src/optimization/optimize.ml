@@ -1,5 +1,5 @@
 (*
-Copyright (c) 2013-2015 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
+Copyright (c) 2013-2016 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,22 +19,15 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-module ParseTree : sig
-  val dump : ParseTree.top list -> string
-end
+open OptimizedTree
 
-module UnsugaredTree : sig
-  val dump : UnsugaredTree.top list -> string
-end
-
-module UntypedTree : sig
-  val dump : UntypedTree.top list -> string
-end
-
-module LambdaTree : sig
-  val dump : LambdaTree.top list -> string
-end
-
-module OptimizedTree : sig
-  val dump : OptimizedTree.top list -> string
-end
+let of_lambda_tree tree =
+  let aux = function
+    | LambdaTree.Value (name, LambdaTree.Abs (abs_name, _, t), linkage) ->
+        Function (name, (abs_name, t), linkage)
+    | LambdaTree.Value (name, t, linkage) ->
+        Value (name, t, linkage)
+    | LambdaTree.Exception exn ->
+        Exception exn
+  in
+  List.map aux tree

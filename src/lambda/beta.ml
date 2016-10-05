@@ -49,7 +49,6 @@ let rec reduce = function
 let reduce =
   let aux = function
     | Value (name, t, linkage) -> Value (name, reduce t, linkage)
-    | Function (name, (arg, t), link) -> Function (name, (arg, reduce t), link)
     | Exception _ as top -> top
   in
   List.map aux

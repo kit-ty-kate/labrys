@@ -31,4 +31,5 @@ true: package(monomorphic)
 "src/pre-typing": include
 "src/typing": include
 "src/lambda": include
+"src/optimization": include
 "src/backend": include
