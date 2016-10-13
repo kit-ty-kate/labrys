@@ -6,7 +6,7 @@ TESTS = \
 	tests/examples/examples.t \
 
 all:
-	ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild-pkg)"
+	ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild-pkg)" cervoise
 
 clean:
 	ocamlbuild -clean

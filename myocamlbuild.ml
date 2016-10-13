@@ -15,14 +15,19 @@ let substs = [
 ]
 
 let () =
-  Ocamlbuild_plugin.dispatch (fun hook ->
-    Substs.dispatcher subst_files substs hook;
+  Dispatcher.dispatch [
+    Substs.dispatcher subst_files substs;
     Pkg.dispatcher
       {
         Pkg.pkg_name = "cervoise";
-        Pkg.lib = None;
+        Pkg.libs = [];
         Pkg.bins = [
-          ("src/main", Some "cervoise");
+          {
+            Pkg.Bin.main = "src/main";
+            Pkg.Bin.options = [
+              ("target", "cervoise");
+            ];
+          };
         ];
         Pkg.files = [
           Install.files "lib" [
@@ -31,6 +36,5 @@ let () =
             Install.file ~check:`NoCheck "dest/stdlib/Prelude.csfw";
           ]
         ];
-      }
-      hook;
-  )
+      };
+  ]
