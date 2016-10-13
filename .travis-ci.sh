@@ -10,6 +10,9 @@ sudo apt-get install -qq python-cram
 export OPAMYES=1
 opam init
 eval `opam config env`
+# BEGIN: temporary
+opam pin add -n --kind=git ocamlbuild-pkg https://github.com/jpdeplaix/ocamlbuild-pkg
+# END: temporary
 opam pin add -n --kind=git cervoise .
 opam install "llvm.$LLVM_VERSION" cervoise
 
