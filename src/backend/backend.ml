@@ -402,7 +402,7 @@ module Make (I : I) = struct
         let f = Llvm.build_bitcast f (Type.lambda_ptr ~env_size:1) "" builder in
         (Llvm.build_call f [|x; closure; jmp_buf|] "" builder, builder)
     | OptimizedTree.PatternMatching (t, results, default, tree) ->
-        let (t, builder) = lambda ~jmp_buf gamma builder t in
+        let t = get_value gamma builder t in
         let (next_block, next_builder) = Llvm.create_block c builder in
         let results = List.map (create_result ~next_block ~jmp_buf gamma builder) results in
         let default =

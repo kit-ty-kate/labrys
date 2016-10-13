@@ -117,11 +117,14 @@ and of_typed_term freshn mapn = function
         len
   | UntypedTree.PatternMatching (t, results, default, patterns) ->
       let (t, used_vars1) = of_typed_term freshn mapn t in
+      let name = create_fresh_name freshn in
+      let freshn = succ freshn in
       let (results, used_vars2) = of_results freshn mapn results in
       let patterns = of_patterns patterns in
       let (default, used_vars3) = of_typed_term freshn mapn default in
       let used_vars = Set.union3 used_vars1 used_vars2 used_vars3 in
-      (PatternMatching (t, results, default, patterns), used_vars)
+      let pat = PatternMatching (name, results, default, patterns) in
+      (Let (name, NonRec, t, pat), used_vars)
   | UntypedTree.Try (t, (name, t')) ->
       let (t, used_vars1) = of_typed_term freshn mapn t in
       let (t', used_vars2) = of_typed_term freshn mapn t' in

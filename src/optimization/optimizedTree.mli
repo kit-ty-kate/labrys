@@ -57,7 +57,7 @@ and t = LambdaTree.t =
   | Val of name
   | Datatype of (index option * name list)
   | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
-  | PatternMatching of (t * ((Pattern.var * name) list * t) list * t * tree)
+  | PatternMatching of (name * ((Pattern.var * name) list * t) list * t * tree)
   | Let of (name * is_rec * t * t)
   | Fail of (eff_name * name list)
   | Try of (t * (name * t))

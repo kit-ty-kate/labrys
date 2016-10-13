@@ -890,7 +890,7 @@ module LambdaTree = struct
         PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_ret_ty ret))
     | PatternMatching (t, results, default, patterns) ->
         dump_pattern_matching
-          (dump_t t)
+          (PPrint.string (dump_name t))
           (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
         ^^ PPrint.break 1
         ^^ PPrint.string "| _ -> " ^^ dump_t default
@@ -1090,7 +1090,7 @@ module OptimizedTree = struct
         PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_ret_ty ret))
     | PatternMatching (t, results, default, patterns) ->
         dump_pattern_matching
-          (dump_t t)
+          (PPrint.string (dump_name t))
           (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
         ^^ PPrint.break 1
         ^^ PPrint.string "| _ -> " ^^ dump_t default
