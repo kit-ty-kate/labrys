@@ -914,7 +914,7 @@ module LambdaTree = struct
            ^^ PPrint.string "fail"
            ^^ PPrint.blank 1
            ^^ PPrint.string (dump_exn_name name)
-           ^^ dump_exn_args args
+           ^^ dump_args args
            ^^ PPrint.rparen
           )
     | Try (t, (name, t')) ->
@@ -955,8 +955,8 @@ module LambdaTree = struct
     in
     List.Idx.foldi aux PPrint.empty results
 
-  and dump_exn_args args =
-    let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
+  and dump_args args =
+    let aux doc name = doc ^^ PPrint.break 1 ^^ PPrint.string (dump_name name) in
     List.fold_left aux PPrint.empty args
 
   let dump_linkage = function
@@ -1115,7 +1115,7 @@ module OptimizedTree = struct
            ^^ PPrint.string "fail"
            ^^ PPrint.blank 1
            ^^ PPrint.string (dump_exn_name name)
-           ^^ dump_exn_args args
+           ^^ dump_args args
            ^^ PPrint.rparen
           )
     | Try (t, (name, t')) ->
@@ -1156,8 +1156,8 @@ module OptimizedTree = struct
     in
     List.Idx.foldi aux PPrint.empty results
 
-  and dump_exn_args args =
-    let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
+  and dump_args args =
+    let aux doc name = doc ^^ PPrint.break 1 ^^ PPrint.string (dump_name name) in
     List.fold_left aux PPrint.empty args
 
   let dump_linkage = function

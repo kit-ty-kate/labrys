@@ -450,7 +450,7 @@ module Make (I : I) = struct
         let gamma = GammaMap.Value.add name (Value t) gamma in
         lambda ~jmp_buf gamma builder xs
     | OptimizedTree.Fail (name, args) ->
-        let (args, builder) = fold_args ~jmp_buf gamma builder args in
+        let args = List.map (get_value gamma builder) args in
         let tag = get_exn name in
         init exn_var Type.exn_glob (tag :: args) builder;
         create_fail jmp_buf builder
@@ -495,14 +495,6 @@ module Make (I : I) = struct
         let e = Llvm.build_load e "" builder in
         Llvm.build_store e exn_var builder;
         create_fail jmp_buf builder
-
-  and fold_args ~jmp_buf gamma builder args =
-    let aux (acc, builder) x =
-      let (x, builder) = lambda ~jmp_buf gamma builder x in
-      (x :: acc, builder)
-    in
-    let (args, builder) = List.fold_left aux ([], builder) args in
-    (List.rev args, builder)
 
   let set_linkage v = function
     | OptimizedTree.Private -> Llvm.set_linkage Llvm.Linkage.Private v

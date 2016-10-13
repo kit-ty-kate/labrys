@@ -76,6 +76,24 @@ let rec of_results freshn mapn m =
   let (a, b) = List.fold_left aux ([], Set.empty) m in
   (List.rev a, b)
 
+and of_args f freshn mapn args =
+  let (args, used_vars) =
+    let aux (acc, used_vars_acc, freshn) t =
+      let name = create_fresh_name freshn in
+      let (t, used_vars) = of_typed_term freshn mapn t in
+      ((name, t) :: acc, Set.union used_vars used_vars_acc, succ freshn)
+    in
+    let (args, used_vars, _) =
+      List.fold_left aux ([], Set.empty, freshn) args
+    in
+    (List.rev args, used_vars)
+  in
+  let rec aux names = function
+    | [] -> f (List.rev names)
+    | (name, t)::args -> Let (name, NonRec, t, aux (name :: names) args)
+  in
+  (aux [] args, used_vars)
+
 and of_typed_term freshn mapn = function
   | UntypedTree.Abs (name, t) ->
       let mapn = GammaMap.Value.remove name mapn in
@@ -128,14 +146,7 @@ and of_typed_term freshn mapn = function
       in
       (Let (name, Rec, t, xs), used_vars)
   | UntypedTree.Fail (name, args) ->
-      let (args, used_vars) =
-        let aux (acc, used_vars_acc) t =
-          let (t, used_vars) = of_typed_term freshn mapn t in
-          (t :: acc, Set.union used_vars used_vars_acc)
-        in
-        List.fold_left aux ([], Set.empty) args
-      in
-      (Fail (name, args), used_vars)
+      of_args (fun names -> (Fail (name, names))) freshn mapn args
   | UntypedTree.RecordGet (t, n) ->
       let name = create_fresh_name freshn in
       let (t, used_vars) = of_typed_term freshn mapn t in

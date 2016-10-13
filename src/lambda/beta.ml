@@ -43,7 +43,7 @@ let rec reduce = function
       let aux (vars, t) = (vars, reduce t) in
       PatternMatching (reduce t, List.map aux results, reduce default, patterns)
   | Try (t, (name, t')) -> Try (reduce t, (name, reduce t'))
-  | Fail (name, args) -> Fail (name, List.map reduce args)
+  | Fail (name, args) -> Fail (name, args)
   | RecordGet (name, n) -> RecordGet (name, n)
 
 let reduce =

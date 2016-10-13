@@ -59,7 +59,7 @@ and t = LambdaTree.t =
   | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
   | PatternMatching of (t * ((Pattern.var * name) list * t) list * t * tree)
   | Let of (name * is_rec * t * t)
-  | Fail of (eff_name * t list)
+  | Fail of (eff_name * name list)
   | Try of (t * (name * t))
   | RecordGet of (name * index)
   | Const of const
