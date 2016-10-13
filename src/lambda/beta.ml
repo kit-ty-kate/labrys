@@ -44,7 +44,7 @@ let rec reduce = function
       PatternMatching (reduce t, List.map aux results, reduce default, patterns)
   | Try (t, (name, t')) -> Try (reduce t, (name, reduce t'))
   | Fail (name, args) -> Fail (name, List.map reduce args)
-  | RecordGet (t, n) -> RecordGet (reduce t, n)
+  | RecordGet (name, n) -> RecordGet (name, n)
 
 let reduce =
   let aux = function

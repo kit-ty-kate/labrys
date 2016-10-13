@@ -479,8 +479,8 @@ module Make (I : I) = struct
         in
         Llvm.build_cond_br cond try_block catch_block builder;
         (Llvm.build_phi [try_result; catch_result] "" next_builder, next_builder)
-    | OptimizedTree.RecordGet (t, n) ->
-        let (t, builder) = lambda ~jmp_buf gamma builder t in
+    | OptimizedTree.RecordGet (name, n) ->
+        let t = get_value gamma builder name in
         let t = Llvm.build_load_cast t (Type.array_ptr (succ n)) builder in
         (Llvm.build_extractvalue t n "" builder, builder)
     | OptimizedTree.Const const ->

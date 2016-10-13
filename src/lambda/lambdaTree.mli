@@ -61,7 +61,7 @@ and t =
   | Let of (name * is_rec * t * t)
   | Fail of (eff_name * t list)
   | Try of (t * (name * t))
-  | RecordGet of (t * index)
+  | RecordGet of (name * index)
   | Const of const
   | Unreachable
   | Reraise of name

@@ -929,8 +929,8 @@ module LambdaTree = struct
         ^^ dump_t t'
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | RecordGet (t, n) ->
-        dump_t t ^^ PPrint.string (fmt ".%d" n)
+    | RecordGet (name, n) ->
+        PPrint.string (fmt "%s.%d" (dump_name name) n)
     | Const (Int n) ->
         PPrint.string (fmt "%d" n)
     | Const (Float n) ->
@@ -1130,8 +1130,8 @@ module OptimizedTree = struct
         ^^ dump_t t'
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | RecordGet (t, n) ->
-        dump_t t ^^ PPrint.string (fmt ".%d" n)
+    | RecordGet (name, n) ->
+        PPrint.string (fmt "%s.%d" (dump_name name) n)
     | Const (Int n) ->
         PPrint.string (fmt "%d" n)
     | Const (Float n) ->

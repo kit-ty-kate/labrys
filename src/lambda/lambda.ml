@@ -60,6 +60,10 @@ let create_dyn_functions f n =
     assert false;
   (t, Set.empty)
 
+let create_fresh_name freshn =
+  let name = fmt ".@fresh.%d" freshn in
+  Ident.Name.local_create ~loc:Builtins.unknown_loc name
+
 let rec of_results freshn mapn m =
   let aux (acc, used_vars_acc) (wildcards, t) =
     let remove acc (_, name) = GammaMap.Value.remove name acc in
@@ -81,8 +85,7 @@ and of_typed_term freshn mapn = function
   | UntypedTree.App (f, x) ->
       let (f, used_vars1) = of_typed_term (succ freshn) mapn f in
       let (x, used_vars2) = of_typed_term freshn mapn x in
-      let name = fmt ".@fresh.%d" freshn in
-      let name = Ident.Name.local_create ~loc:Builtins.unknown_loc name in
+      let name = create_fresh_name freshn in
       (Let (name, NonRec, x, App (f, name)), Set.union used_vars1 used_vars2)
   | UntypedTree.Val name ->
       let name = match GammaMap.Value.find_opt name mapn with
@@ -134,8 +137,9 @@ and of_typed_term freshn mapn = function
       in
       (Fail (name, args), used_vars)
   | UntypedTree.RecordGet (t, n) ->
+      let name = create_fresh_name freshn in
       let (t, used_vars) = of_typed_term freshn mapn t in
-      (RecordGet (t, n), used_vars)
+      (Let (name, NonRec, t, RecordGet (name, n)), used_vars)
   | UntypedTree.RecordCreate fields ->
       let aux t (fields, used_vars_acc) =
         let (t, used_vars) = of_typed_term freshn mapn t in
