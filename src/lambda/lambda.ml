@@ -113,11 +113,7 @@ and of_typed_term freshn mapn = function
       (Val name, Set.singleton name)
   | UntypedTree.Var (idx, len) ->
       create_dyn_functions
-        (fun params ->
-           ( Datatype (Some idx, List.rev_map (fun x -> Val x) params)
-           , Set.of_list params
-           )
-        )
+        (fun params -> (Datatype (Some idx, params), Set.of_list params))
         len
   | UntypedTree.PatternMatching (t, results, default, patterns) ->
       let (t, used_vars1) = of_typed_term freshn mapn t in
@@ -152,12 +148,7 @@ and of_typed_term freshn mapn = function
       let (t, used_vars) = of_typed_term freshn mapn t in
       (Let (name, NonRec, t, RecordGet (name, n)), used_vars)
   | UntypedTree.RecordCreate fields ->
-      let aux t (fields, used_vars_acc) =
-        let (t, used_vars) = of_typed_term freshn mapn t in
-        (t :: fields, Set.union used_vars used_vars_acc)
-      in
-      let (fields, used_vars) = List.fold_right aux fields ([], Set.empty) in
-      (Datatype (None, fields), used_vars)
+      of_args (fun names -> (Datatype (None, names))) freshn mapn fields
   | UntypedTree.Const const ->
       (Const const, Set.empty)
   | UntypedTree.Unreachable ->

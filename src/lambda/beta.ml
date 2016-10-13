@@ -36,7 +36,7 @@ let rec reduce = function
   | App (f, x) -> reduce_abs x (reduce f)
   | Abs (name, used_vars, t) -> Abs (name, used_vars, reduce t)
   | Val _ | Const _ | Unreachable | Reraise _ as t -> t
-  | Datatype (i, fields) -> Datatype (i, List.map reduce fields)
+  | Datatype (i, fields) -> Datatype (i, fields)
   | CallForeign (name, ty, args) -> CallForeign (name, ty, args)
   | Let (name, is_rec, t, xs) -> Let (name, is_rec, reduce t, reduce xs)
   | PatternMatching (t, results, default, patterns) ->

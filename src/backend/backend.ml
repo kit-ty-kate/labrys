@@ -417,12 +417,7 @@ module Make (I : I) = struct
     | OptimizedTree.Val name ->
         (get_value gamma builder name, builder)
     | OptimizedTree.Datatype (index, params) ->
-        let aux (acc, builder) t =
-          let (t, builder) = lambda ~jmp_buf gamma builder t in
-          (t :: acc, builder)
-        in
-        let (values, builder) = List.fold_left aux ([], builder) params in
-        let values = List.rev values in
+        let values = List.map (get_value gamma builder) params in
         let values = match index with
           | Some index -> Llvm.const_inttoptr (i32 index) Type.star :: values
           | None -> values

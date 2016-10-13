@@ -876,7 +876,6 @@ module LambdaTree = struct
     | Val name ->
         PPrint.string (dump_name name)
     | Datatype (index, params) ->
-        let params = List.fold_left (fun acc x -> dump_t x ^^ PPrint.break 1 ^^ acc) PPrint.empty params in
         PPrint.group
           (PPrint.lbracket
            ^^ PPrint.break 1
@@ -884,7 +883,7 @@ module LambdaTree = struct
            ^^ PPrint.break 1
            ^^ PPrint.bar
            ^^ PPrint.break 1
-           ^^ params
+           ^^ dump_args params
            ^^ PPrint.rbracket
           )
     | CallForeign (name, ret, args) ->
@@ -1077,7 +1076,6 @@ module OptimizedTree = struct
     | Val name ->
         PPrint.string (dump_name name)
     | Datatype (index, params) ->
-        let params = List.fold_left (fun acc x -> dump_t x ^^ PPrint.break 1 ^^ acc) PPrint.empty params in
         PPrint.group
           (PPrint.lbracket
            ^^ PPrint.break 1
@@ -1085,7 +1083,7 @@ module OptimizedTree = struct
            ^^ PPrint.break 1
            ^^ PPrint.bar
            ^^ PPrint.break 1
-           ^^ params
+           ^^ dump_args params
            ^^ PPrint.rbracket
           )
     | CallForeign (name, ret, args) ->
