@@ -3,6 +3,7 @@
 == Before the first release (0.1) ==
 
 * Fix typing (debunijn ?)
+* Rename Lambda.used_vars to Lambda.free_vars
 * Cleans
   * pre-typing
   * Fix TODO
