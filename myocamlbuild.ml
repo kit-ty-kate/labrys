@@ -14,27 +14,27 @@ let substs = [
   ("%%VERSION%%", cmd "grep '^version:' opam | cut -d '\"' -f 2");
 ]
 
+let bin =
+  Pkg.Bin.create
+    ~main:"src/main"
+    ~target:"cervoise"
+    ()
+
+let cervoise =
+  Pkg.create
+    ~name:"cervoise"
+    ~bins:[bin]
+    ~files:[
+      Install.dir ~dir:"lib" [
+        Install.file "stdlib/Prelude.sfwi";
+        Install.file "dest/stdlib/Prelude.bc";
+        Install.file "dest/stdlib/Prelude.csfw";
+      ];
+    ]
+    ()
+
 let () =
-  Dispatcher.dispatch [
-    Substs.dispatcher subst_files substs;
-    Pkg.dispatcher
-      {
-        Pkg.pkg_name = "cervoise";
-        Pkg.libs = [];
-        Pkg.bins = [
-          {
-            Pkg.Bin.main = "src/main";
-            Pkg.Bin.options = [
-              ("target", "cervoise");
-            ];
-          };
-        ];
-        Pkg.files = [
-          Install.files "lib" [
-            Install.file ~check:`NoCheck "stdlib/Prelude.sfwi";
-            Install.file ~check:`NoCheck "dest/stdlib/Prelude.bc";
-            Install.file ~check:`NoCheck "dest/stdlib/Prelude.csfw";
-          ]
-        ];
-      };
-  ]
+  Ocamlbuild_plugin.dispatch (fun hook ->
+    Substs.dispatcher subst_files substs hook;
+    Pkg.dispatcher cervoise hook;
+  )
