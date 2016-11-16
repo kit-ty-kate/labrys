@@ -18,8 +18,8 @@ eval `opam config env`
 opam lint
 
 # Install
-opam pin add -n --kind=git cervoise .
-opam install "llvm.$LLVM_VERSION" cervoise
+opam pin add -y --no-action --kind=git cervoise .
+opam install -y "llvm.$LLVM_VERSION" cervoise
 
 # Run tests
 make
