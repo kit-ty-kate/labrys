@@ -10,3 +10,7 @@ env:
     - OCAML_VERSION=4.03.0 LLVM_VERSION=3.9
     - OCAML_VERSION=4.04.0 LLVM_VERSION=3.8
     - OCAML_VERSION=4.04.0 LLVM_VERSION=3.9
+cache:
+  directories:
+    - $HOME/opam-cache
+    - $HOME/opam-bin
