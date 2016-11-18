@@ -1,5 +1,7 @@
 DOC = doc
 
+LLVM_VERSION ?= 3.8
+
 TESTS = \
 	tests/basic/basic.t \
 	tests/old-examples/old-examples.t \
@@ -20,7 +22,7 @@ stdlib:
 	./main.native build-module --no-prelude --src-dir stdlib Prelude
 
 tests:
-	CERVOISE=$(shell pwd) LLVM_VERSION=3.8 cram $(TESTS)
+	CERVOISE="$(shell pwd)" LLVM_VERSION="$(LLVM_VERSION)" cram $(TESTS)
 
 check:
 	dead_code_analyzer.opt --all -S -bind-seq --exclude _build/src/parsing/parser.ml _build/src

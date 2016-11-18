@@ -20,7 +20,7 @@ opam install -y "llvm.$LLVM_VERSION" cervoise
 
 # Run tests
 make
-make tests
+make LLVM_VERSION="$LLVM_VERSION" tests
 
 # Uninstall
 opam remove -y cervoise
