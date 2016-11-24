@@ -1,8 +1,11 @@
 /_build
 
 /main.native
+/main.byte
 
 /a.out
 /dest
 
 /cervoise.install
+
+/tests/*/*.t.err
