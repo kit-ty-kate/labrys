@@ -23,13 +23,6 @@ open Containers
 open Monomorphic.None
 
 module Set = GammaSet.Value
-module Map = struct
-  include Map.Make (struct
-      type t = PatternMatrix.var
-
-      let compare = PatternMatrix.var_compare
-    end)
-end
 
 module Llvm = struct
   include Llvm
@@ -241,22 +234,13 @@ module Make (I : I) = struct
     let name = Ident.Exn.to_string name in
     Llvm.declare_global Type.i8 name m
 
-  let rec llvalue_of_pattern_var vars value builder var =
-    match Map.find var vars with
-    | value ->
-        (value, vars)
-    | exception Not_found ->
-        let (value, vars) =
-          match var with
-          | Pattern.VLeaf ->
-              (value, vars)
-          | Pattern.VNode (i, var) ->
-              let i = succ i in
-              let (value, vars) = llvalue_of_pattern_var vars value builder var in
-              let value = Llvm.build_load_cast value (Type.variant_ptr (succ i)) builder in
-              (Llvm.build_extractvalue value i "" builder, vars)
-        in
-        (value, Map.add var value vars)
+  let llvalue_of_pattern_var value builder = function
+    | None ->
+        value
+    | Some idx ->
+        let idx = succ idx in
+        let value = Llvm.build_load_cast value (Type.variant_ptr (succ idx)) builder in
+        Llvm.build_extractvalue value idx "" builder
 
   let get_const = function
     | OptimizedTree.Int n -> Llvm.const_int Type.i32 n
@@ -314,11 +298,11 @@ module Make (I : I) = struct
         in
         Array.of_list (List.map aux args)
 
-  let rec build_if_chain ~default vars gamma builder value results f term cases =
+  let rec build_if_chain ~default gamma builder value results f term cases =
     let aux builder (constr, tree) =
       let if_branch =
         let (block, builder) = Llvm.create_block c builder in
-        create_tree' ~default vars gamma builder value results f tree;
+        create_tree' ~default gamma builder value results f tree;
         block
       in
       let (else_branch, else_builder) = Llvm.create_block c builder in
@@ -330,24 +314,18 @@ module Make (I : I) = struct
     let builder = List.fold_left aux builder cases in
     Llvm.build_br default builder
 
-  and create_tree' ~default vars gamma builder value results f = function
+  and create_tree' ~default gamma builder value results f = function
     | OptimizedTree.Leaf i ->
-        let (block, _, pattern_vars) = List.nth results i in
-        let aux vars (var, variable) =
-          let (var, vars) = llvalue_of_pattern_var vars value builder var in
-          Llvm.build_store var variable builder;
-          vars
-        in
-        ignore (List.fold_left aux vars pattern_vars);
+        let (block, _) = List.nth results i in
         Llvm.build_br block builder
     | OptimizedTree.Node (var, cases) ->
-        let (term, vars) = llvalue_of_pattern_var vars value builder var in
+        let term = llvalue_of_pattern_var value builder var in
         let term = Llvm.build_load_cast term (Type.variant_ptr 1) builder in
         let term = Llvm.build_extractvalue term 0 "" builder in
-        build_if_chain ~default vars gamma builder value results f term cases
+        build_if_chain ~default gamma builder value results f term cases
 
-  let create_tree ~default vars gamma builder value results =
-    let g f tree = create_tree' ~default vars gamma builder value results f tree in
+  let create_tree ~default gamma builder value results =
+    let g f tree = create_tree' ~default gamma builder value results f tree in
     let int_to_ptr i = Llvm.const_inttoptr (Llvm.const_int Type.i32 i) Type.star in
     function
     | OptimizedTree.IdxTree tree -> g int_to_ptr tree
@@ -365,19 +343,11 @@ module Make (I : I) = struct
         let value = Llvm.build_bitcast value Type.star "" builder in
         (value, builder)
 
-  and create_result ~jmp_buf ~next_block gamma builder (vars, result) =
+  and create_result ~jmp_buf ~next_block gamma builder result =
     let (block, builder') = Llvm.create_block c builder in
-    let (gamma, pattern_vars) =
-      let aux (gamma, pattern_vars) (var, name) =
-        let variable = Llvm.build_alloca Type.star "" builder in
-        let value = Llvm.build_load variable "" builder' in
-        (GammaMap.Value.add name (Value value) gamma, (var, variable) :: pattern_vars)
-      in
-      List.fold_left aux (gamma, []) vars
-    in
     let (v, builder'') = lambda ~jmp_buf gamma builder' result in
     Llvm.build_br next_block builder'';
-    (block, (v, Llvm.insertion_block builder''), pattern_vars)
+    (block, (v, Llvm.insertion_block builder''))
 
   and abs ~name t gamma builder =
     let param = Llvm.current_param builder 0 in
@@ -411,8 +381,8 @@ module Make (I : I) = struct
           Llvm.build_unreachable builder';
           block
         in
-        create_tree ~default Map.empty gamma builder t results tree;
-        let results = List.map (fun (_, x, _) -> x) results in
+        create_tree ~default gamma builder t results tree;
+        let results = List.map snd results in
         (Llvm.build_phi results "" next_builder, next_builder)
     | OptimizedTree.Val name ->
         (get_value gamma builder name, builder)

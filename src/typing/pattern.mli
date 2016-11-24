@@ -23,16 +23,12 @@ type name = Ident.Name.t
 type eff_name = Ident.Exn.t
 type variant_name = Ident.Variant.t
 
-type var = PatternMatrix.var = private
-  | VLeaf
-  | VNode of (int * var)
-
 type index = int
 
 type constr = (variant_name * index)
 
 type 'a t' =
-  | Node of (var * ('a * 'a t') list)
+  | Node of (int option * ('a * 'a t') list)
   | Leaf of int
 
 type t =
@@ -45,4 +41,4 @@ val create :
   Gamma.t ->
   Types.t ->
   (UnsugaredTree.pattern * UnsugaredTree.t) list ->
-  (t * ((var * name) list * 'a) list * Types.t * Effects.t)
+  (t * ((PatternMatrix.var * name) list * 'a) list * Types.t * Effects.t)

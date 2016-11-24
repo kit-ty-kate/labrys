@@ -40,8 +40,7 @@ let rec reduce = function
   | CallForeign (name, ty, args) -> CallForeign (name, ty, args)
   | Let (name, is_rec, t, xs) -> Let (name, is_rec, reduce t, reduce xs)
   | PatternMatching (name, results, default, patterns) ->
-      let aux (vars, t) = (vars, reduce t) in
-      PatternMatching (name, List.map aux results, reduce default, patterns)
+      PatternMatching (name, List.map reduce results, reduce default, patterns)
   | Try (t, (name, t')) -> Try (reduce t, (name, reduce t'))
   | Fail (name, args) -> Fail (name, args)
   | RecordGet (name, n) -> RecordGet (name, n)

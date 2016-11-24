@@ -28,16 +28,12 @@ type name = Ident.Name.t
 type eff_name = Ident.Exn.t
 type variant_name = Ident.Variant.t
 
-type var = Matrix.var = private
-  | VLeaf
-  | VNode of (int * var)
-
 type index = int
 
 type constr = (variant_name * index)
 
 type 'a t' =
-  | Node of (Matrix.var * ('a * 'a t') list)
+  | Node of (int option * ('a * 'a t') list)
   | Leaf of int
 
 type t =
@@ -80,6 +76,11 @@ let specialize name m =
   in
   aux m
 
+let rec var_to_idx = function
+  | Matrix.VLeaf -> None
+  | Matrix.VNode (idx, Matrix.VLeaf) -> Some idx
+  | Matrix.VNode (_, var) -> var_to_idx var
+
 let create ~loc gammaD =
   let rec aux m = match m with
     | ((Matrix.Any _ :: _ as row), code_index) :: _ when are_any row ->
@@ -107,7 +108,7 @@ let create ~loc gammaD =
           in
           GammaMap.Index.fold aux variants []
         in
-        Node (var, variants)
+        Node (var_to_idx var, variants)
     | ([], _) :: _
     | [] ->
         assert false

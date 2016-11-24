@@ -38,8 +38,6 @@ type pattern = private
 
 type matrix = (pattern list * code_index) list
 
-val var_compare : var -> var -> int
-
 val create :
   Gamma.t ->
   Types.t ->
@@ -49,4 +47,3 @@ val create :
 val split : 'a t -> (matrix * ((var * name) list * 'a) list)
 
 val exn_var : int -> var
-val current_var : var

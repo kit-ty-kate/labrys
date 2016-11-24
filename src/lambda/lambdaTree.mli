@@ -40,7 +40,7 @@ type const = (int, float, int, string) ty
 type is_rec = NonRec | Rec
 
 type 'a tree' =
-  | Node of (Pattern.var * ('a * 'a tree') list)
+  | Node of (int option * ('a * 'a tree') list)
   | Leaf of int
 
 type tree =
@@ -57,7 +57,7 @@ and t =
   | Val of name
   | Datatype of (index option * name list)
   | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
-  | PatternMatching of (name * ((Pattern.var * name) list * t) list * t * tree)
+  | PatternMatching of (name * t list * t * tree)
   | Let of (name * is_rec * t * t)
   | Fail of (eff_name * name list)
   | Try of (t * (name * t))

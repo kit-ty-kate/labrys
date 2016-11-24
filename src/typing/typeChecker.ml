@@ -147,7 +147,7 @@ let try_to_pattern l =
     aux 0 l
   in
   let pattern =
-    Pattern.Ptr (Pattern.Node (PatternMatrix.current_var, patterns))
+    Pattern.Ptr (Pattern.Node (None, patterns))
   in
   let name = Ident.Name.local_create ~loc:Builtins.unknown_loc ".exn" in
   (name, PatternMatching (Val name, branches, Reraise name, pattern))

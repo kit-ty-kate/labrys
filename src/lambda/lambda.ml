@@ -64,14 +64,29 @@ let create_fresh_name freshn =
   let name = fmt ".@fresh.%d" freshn in
   Ident.Name.local_create ~loc:Builtins.unknown_loc name
 
-let rec of_results freshn mapn m =
+let rec of_results freshn mapn var m =
   let aux (acc, used_vars_acc) (wildcards, t) =
     let remove acc (_, name) = GammaMap.Value.remove name acc in
     let mapn = List.fold_left remove mapn wildcards in
     let (t, used_vars) = of_typed_term freshn mapn t in
     let remove acc (_, name) = Set.remove name acc in
     let used_vars = List.fold_left remove used_vars wildcards in
-    ((wildcards, t) :: acc, Set.union used_vars used_vars_acc)
+    let aux t (idx, name) =
+      let rec aux freshn var = function
+        | PatternMatrix.VLeaf ->
+            Val var
+        | PatternMatrix.VNode (idx, xs) ->
+            let name = create_fresh_name freshn in
+            let freshn = succ freshn in
+            let t = aux freshn name xs in
+            (* NOTE: "succ idx" is here because variants' first element is
+                     taken by its tag. *)
+            Let (name, NonRec, RecordGet (var, succ idx), t)
+      in
+      Let (name, NonRec, aux freshn var idx, t)
+    in
+    let t = List.fold_left aux t wildcards in
+    (t :: acc, Set.union used_vars used_vars_acc)
   in
   let (a, b) = List.fold_left aux ([], Set.empty) m in
   (List.rev a, b)
@@ -119,7 +134,7 @@ and of_typed_term freshn mapn = function
       let (t, used_vars1) = of_typed_term freshn mapn t in
       let name = create_fresh_name freshn in
       let freshn = succ freshn in
-      let (results, used_vars2) = of_results freshn mapn results in
+      let (results, used_vars2) = of_results freshn mapn name results in
       let patterns = of_patterns patterns in
       let (default, used_vars3) = of_typed_term freshn mapn default in
       let used_vars = Set.union3 used_vars1 used_vars2 used_vars3 in

@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 type name = Ident.Name.t
 type eff_name = Ident.Exn.t
 type ty_size = int
-type used_vars = (Pattern.var * name) list
+type pattern_var = (PatternMatrix.var * name)
 type index = int
 type arity = int
 type length = int
@@ -48,7 +48,7 @@ and t =
   | App of (t * t)
   | Val of name
   | Var of (index * length)
-  | PatternMatching of (t * (used_vars * t) list * t * Pattern.t)
+  | PatternMatching of (t * (pattern_var list * t) list * t * Pattern.t)
   | Let of (value * t)
   | Fail of (eff_name * t list)
   | Try of (t * (name * t))

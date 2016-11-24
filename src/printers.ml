@@ -610,8 +610,8 @@ module UntypedTree = struct
     ^^ content
 
   let rec dump_var = function
-    | Pattern.VLeaf -> "VLeaf"
-    | Pattern.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
+    | PatternMatrix.VLeaf -> "VLeaf"
+    | PatternMatrix.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
 
   let rec dump_cases f cases =
     let aux doc (constr, t) =
@@ -626,8 +626,8 @@ module UntypedTree = struct
     | Pattern.Leaf i ->
         PPrint.break 1
         ^^ PPrint.OCaml.int i
-    | Pattern.Node (var, cases) ->
-        dump_pattern_matching (PPrint.string (dump_var var)) (dump_cases f cases)
+    | Pattern.Node (idx, cases) ->
+        dump_pattern_matching (PPrint.string (Option.maybe string_of_int "<CURRENT>" idx)) (dump_cases f cases)
 
   let dump_patterns = function
     | Pattern.Idx pat ->
@@ -790,8 +790,8 @@ module LambdaTree = struct
     ^^ content
 
   let rec dump_var = function
-    | Pattern.VLeaf -> "VLeaf"
-    | Pattern.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
+    | PatternMatrix.VLeaf -> "VLeaf"
+    | PatternMatrix.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
 
   let rec dump_cases f cases =
     let aux doc (constr, t) =
@@ -806,8 +806,8 @@ module LambdaTree = struct
     | Leaf i ->
         PPrint.break 1
         ^^ PPrint.OCaml.int i
-    | Node (var, cases) ->
-        dump_pattern_matching (PPrint.string (dump_var var)) (dump_cases f cases)
+    | Node (idx, cases) ->
+        dump_pattern_matching (PPrint.string (Option.maybe string_of_int "<CURRENT>" idx)) (dump_cases f cases)
 
   let dump_patterns = function
     | IdxTree pat ->
@@ -944,11 +944,11 @@ module LambdaTree = struct
         PPrint.string (fmt "reraise %s" (dump_name e))
 
   and dump_results results =
-    let aux doc i (vars, result) =
+    let aux doc i result =
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %d with %s ->" i (dump_vars vars))
+           (PPrint.string (fmt "| %d ->" i)
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
            )
     in
@@ -990,8 +990,8 @@ module OptimizedTree = struct
     ^^ content
 
   let rec dump_var = function
-    | Pattern.VLeaf -> "VLeaf"
-    | Pattern.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
+    | PatternMatrix.VLeaf -> "VLeaf"
+    | PatternMatrix.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
 
   let rec dump_cases f cases =
     let aux doc (constr, t) =
@@ -1006,8 +1006,8 @@ module OptimizedTree = struct
     | Leaf i ->
         PPrint.break 1
         ^^ PPrint.OCaml.int i
-    | Node (var, cases) ->
-        dump_pattern_matching (PPrint.string (dump_var var)) (dump_cases f cases)
+    | Node (idx, cases) ->
+        dump_pattern_matching (PPrint.string (Option.maybe string_of_int "<CURRENT>" idx)) (dump_cases f cases)
 
   let dump_patterns = function
     | IdxTree pat ->
@@ -1144,11 +1144,11 @@ module OptimizedTree = struct
         PPrint.string (fmt "reraise %s" (dump_name e))
 
   and dump_results results =
-    let aux doc i (vars, result) =
+    let aux doc i result =
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %d with %s ->" i (dump_vars vars))
+           (PPrint.string (fmt "| %d ->" i)
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
            )
     in
