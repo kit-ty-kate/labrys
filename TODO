@@ -54,6 +54,7 @@
       - StackOverflow
       - CannotAllocate
       - Signal Int  --> We will need to remove the third argument in functions and load/store jmp-handler from a thread_local global
+                        Do we really want that ? (see the OCaml interface on signals in Sys)
 * Exceptions
   * Check if the exception is actually raised
 * Dynamically create a wrapper when partially apply a function instead of creating a lambda for each arguments (needs an analysis)
