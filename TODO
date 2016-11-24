@@ -43,6 +43,17 @@
       | CannotAllocate -> ()
     end =
       dosomething ()
+  * List of dynamic exceptions (divided in categories):
+    * Explicitly put exceptions by users (critical cases):
+      - Assert String
+      - TODO
+    * Can be explicit but do we want to ?
+      - DivByZero
+      - NumberOverflow
+    * Cannot be determined:
+      - StackOverflow
+      - CannotAllocate
+      - Signal Int  --> We will need to remove the third argument in functions and load/store jmp-handler from a thread_local global
 * Exceptions
   * Check if the exception is actually raised
 * Dynamically create a wrapper when partially apply a function instead of creating a lambda for each arguments (needs an analysis)
