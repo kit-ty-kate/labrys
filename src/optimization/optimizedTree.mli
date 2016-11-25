@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = Ident.Name.t
 type eff_name = Ident.Exn.t
-type used_vars = GammaSet.Value.t
+type free_vars = GammaSet.Value.t
 type index = int
 type constr = int
 type arity = int
@@ -47,12 +47,12 @@ type tree = LambdaTree.tree =
   | IdxTree of constr tree'
   | PtrTree of eff_name tree'
 
-type foreign_ret_type = LambdaTree.foreign_ret_type =
+type foreign_ret_type =
   | Void of t
   | Alloc of tag_ty
 
-and t = LambdaTree.t =
-  | Abs of (name * used_vars * t)
+and t =
+  | Abs of (name * free_vars * t)
   | App of (t * name)
   | Val of name
   | Datatype of (index option * name list)

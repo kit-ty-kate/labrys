@@ -857,11 +857,11 @@ module LambdaTree = struct
     | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
 
   and dump_t = function
-    | Abs (name, used_vars, t) ->
+    | Abs (name, t) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string
-                (fmt "λ %s [%s] ->" (dump_name name) (dump_used_vars used_vars))
+                (fmt "λ %s ->" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )

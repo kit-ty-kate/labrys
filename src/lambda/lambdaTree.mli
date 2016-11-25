@@ -21,7 +21,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = Ident.Name.t
 type eff_name = Ident.Exn.t
-type used_vars = GammaSet.Value.t
 type index = int
 type constr = int
 type arity = int
@@ -52,7 +51,7 @@ type foreign_ret_type =
   | Alloc of tag_ty
 
 and t =
-  | Abs of (name * used_vars * t)
+  | Abs of (name * t)
   | App of (t * name)
   | Val of name
   | Datatype of (index option * name list)
