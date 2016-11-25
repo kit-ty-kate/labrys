@@ -95,18 +95,11 @@ let get_lambda_tree ~with_main ~interface options modul =
   let lambda_tree = Lambda.of_typed_tree typed_tree in
   (imports, lambda_tree)
 
-let get_reduced_tree ~with_main ~interface options modul =
+let get_optimized_tree ~with_main ~interface options modul =
   let (imports, lambda_tree) =
     get_lambda_tree ~with_main ~interface options modul
   in
-  let reduced_tree = Beta.reduce lambda_tree in
-  (imports, reduced_tree)
-
-let get_optimized_tree ~with_main ~interface options modul =
-  let (imports, reduced_tree) =
-    get_reduced_tree ~with_main ~interface options modul
-  in
-  let optimized_tree = Optimize.of_lambda_tree reduced_tree in
+  let optimized_tree = Optimize.of_lambda_tree lambda_tree in
   (imports, optimized_tree)
 
 let rec build_imports ~imports_code options imports =
@@ -137,11 +130,11 @@ and compile ?(with_main=false) imports_code interface options modul =
           "The library %s cannot be collected"
           (Module.to_string modul);
       prerr_endline (fmt "Compiling %s" (Module.to_string modul));
-      let (imports, reduced_tree) =
+      let (imports, lambda_tree) =
         get_optimized_tree ~with_main ~interface options modul
       in
       let imports_code = build_imports ~imports_code options imports in
-      let code = Backend.make ~modul ~imports options reduced_tree in
+      let code = Backend.make ~modul ~imports options lambda_tree in
       Backend.write_bitcode ~o:cimpl code;
       BuildSystem.write_impl_infos imports modul;
       (imports_code, code)
@@ -191,13 +184,6 @@ let print_lambda_tree options modul =
     get_lambda_tree ~with_main:true ~interface:Gamma.empty options modul
   in
   print_endline (Printers.LambdaTree.dump untyped_tree)
-
-let print_reduced_tree options modul =
-  let modul = Module.from_string options modul in
-  let (_, reduced_tree) =
-    get_reduced_tree ~with_main:true ~interface:Gamma.empty options modul
-  in
-  print_endline (Printers.LambdaTree.dump reduced_tree)
 
 let print_optimized_tree options modul =
   let modul = Module.from_string options modul in

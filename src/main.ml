@@ -91,15 +91,6 @@ let start_print_lambda_tree modul src_dir build_dir lib_dir no_prelude =
   end in
   start Compiler.print_lambda_tree options modul
 
-let start_print_reduced_tree modul src_dir build_dir lib_dir no_prelude =
-  let options = object
-    method src_dir = src_dir
-    method build_dir = build_dir
-    method lib_dir = lib_dir
-    method no_prelude = no_prelude
-  end in
-  start Compiler.print_reduced_tree options modul
-
 let start_print_optimized_tree modul src_dir build_dir lib_dir no_prelude =
   let options = object
     method src_dir = src_dir
@@ -185,11 +176,6 @@ let print_lambda_tree =
   let args = base args in
   (args, Term.info "print-lambda-tree")
 
-let print_reduced_tree =
-  let args = Term.pure start_print_reduced_tree in
-  let args = base args in
-  (args, Term.info "print-reduced-tree")
-
 let print_optimized_tree =
   let args = Term.pure start_print_optimized_tree in
   let args = base args in
@@ -216,7 +202,6 @@ let cmds =
   ; print_unsugared_tree
   ; print_untyped_tree
   ; print_lambda_tree
-  ; print_reduced_tree
   ; print_optimized_tree
   ; print_early_llvm
   ; print_llvm
