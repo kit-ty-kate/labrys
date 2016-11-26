@@ -754,7 +754,7 @@ module UntypedTree = struct
     | String () -> "String"
 
   let dump_ret_ty = function
-    | Void t -> fmt "Void %s" (string_of_doc (dump_t t))
+    | Void -> "Void"
     | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
 
   let dump_args_ty l =
@@ -852,11 +852,11 @@ module LambdaTree = struct
     | Rec -> " rec"
     | NonRec -> ""
 
-  let rec dump_ret_ty = function
-    | Void t -> fmt "Void %s" (string_of_doc (dump_t t))
+  let dump_ret_ty = function
+    | Void -> "Void"
     | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
 
-  and dump_t = function
+  let rec dump_t = function
     | Abs (name, t) ->
         PPrint.group
           (PPrint.lparen
@@ -1052,11 +1052,11 @@ module OptimizedTree = struct
     | Rec -> " rec"
     | NonRec -> ""
 
-  let rec dump_ret_ty = function
-    | Void t -> fmt "Void %s" (string_of_doc (dump_t t))
+  let dump_ret_ty = function
+    | Void -> "Void"
     | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
 
-  and dump_t = function
+  let rec dump_t = function
     | Abs (name, used_vars, t) ->
         PPrint.group
           (PPrint.lparen

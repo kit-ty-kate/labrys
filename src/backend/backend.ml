@@ -255,7 +255,7 @@ module Make (I : I) = struct
     | OptimizedTree.String () -> Type.star
 
   let ret_type = function
-    | OptimizedTree.Void _ -> Type.void
+    | OptimizedTree.Void -> Type.void
     | OptimizedTree.Alloc ty -> llvm_ty_of_ty ty
 
   let args_type args =
@@ -331,9 +331,11 @@ module Make (I : I) = struct
     | OptimizedTree.IdxTree tree -> g int_to_ptr tree
     | OptimizedTree.PtrTree tree -> g get_exn tree
 
-  let rec map_ret ~jmp_buf gamma builder t = function
-    | OptimizedTree.Void t ->
-        lambda ~jmp_buf gamma builder t
+  let map_ret builder t = function
+    | OptimizedTree.Void ->
+        let v = Llvm.define_constant "" (Llvm.const_array Type.star [||]) m in
+        let v = Llvm.const_bitcast v Type.star in
+        (v, builder)
     | OptimizedTree.Alloc (OptimizedTree.String ()) ->
         (t, builder)
     | OptimizedTree.Alloc ty ->
@@ -343,7 +345,7 @@ module Make (I : I) = struct
         let value = Llvm.build_bitcast value Type.star "" builder in
         (value, builder)
 
-  and create_result ~jmp_buf ~next_block gamma builder result =
+  let rec create_result ~jmp_buf ~next_block gamma builder result =
     let (block, builder') = Llvm.create_block c builder in
     let (v, builder'') = lambda ~jmp_buf gamma builder' result in
     Llvm.build_br next_block builder'';
@@ -405,7 +407,7 @@ module Make (I : I) = struct
         let ty = Llvm.function_type (ret_type ret) (args_type args) in
         let f = Llvm.declare_function name ty m in
         let args = map_args gamma builder args in
-        map_ret ~jmp_buf gamma builder (Llvm.build_call f args "" builder) ret
+        map_ret builder (Llvm.build_call f args "" builder) ret
     | OptimizedTree.Let (name, OptimizedTree.NonRec, t, xs) ->
         let (t, builder) = lambda ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in

@@ -38,8 +38,11 @@ type ('int, 'float, 'char, 'string) ty =
   | String of 'string
 
 type tag_ty = (unit, unit, unit, unit) ty
-
 type const = (int, float, int, string) ty
+
+type foreign_ret_type =
+  | Void
+  | Alloc of tag_ty
 
 type value = (name * is_rec * t)
 
@@ -57,10 +60,6 @@ and t =
   | Const of const
   | Unreachable
   | Reraise of name
-
-and foreign_ret_type =
-  | Void of t
-  | Alloc of tag_ty
 
 type foreign_fun_type = (foreign_ret_type * tag_ty list)
 

@@ -391,7 +391,7 @@ let get_foreign_type ~loc options =
     ]
   in
   let ret_ty_map =
-    [ (Builtins.unit options, Void (Var (0, 0))) (* TODO: Clean the magic numbers *)
+    [ (Builtins.unit options, Void)
     ]
     @ List.map (fun (k, x) -> (k, Alloc x)) arg_ty_map
   in

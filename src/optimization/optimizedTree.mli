@@ -47,11 +47,11 @@ type tree = LambdaTree.tree =
   | IdxTree of constr tree'
   | PtrTree of eff_name tree'
 
-type foreign_ret_type =
-  | Void of t
+type foreign_ret_type = LambdaTree.foreign_ret_type =
+  | Void
   | Alloc of tag_ty
 
-and t =
+type t =
   | Abs of (name * free_vars * t)
   | App of (name * name)
   | Val of name

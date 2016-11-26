@@ -46,11 +46,11 @@ type tree =
   | IdxTree of constr tree'
   | PtrTree of eff_name tree'
 
-type foreign_ret_type =
-  | Void of t
+type foreign_ret_type = UntypedTree.foreign_ret_type =
+  | Void
   | Alloc of tag_ty
 
-and t =
+type t =
   | Abs of (name * t)
   | App of (name * name)
   | Val of name

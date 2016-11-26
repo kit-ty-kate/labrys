@@ -35,8 +35,7 @@ let rec of_term = function
   | LambdaTree.Datatype (idx, args) ->
       (Datatype (idx, args), Set.of_list args)
   | LambdaTree.CallForeign (name, ty, args) ->
-      let (ty, fv) = of_foreign_ret_type ty in
-      let fv = List.fold_right (fun (_, name) -> Set.add name) args fv in
+      let fv = List.fold_right (fun (_, name) -> Set.add name) args Set.empty in
       (CallForeign (name, ty, args), fv)
   | LambdaTree.PatternMatching (name, branches, default, tree) ->
       let (default, fv) = of_term default in
@@ -73,13 +72,6 @@ and of_branches fv branches =
   in
   let (branches, fv) = List.fold_left aux ([], fv) branches in
   (List.rev branches, fv)
-
-and of_foreign_ret_type = function
-  | LambdaTree.Void t ->
-      let (t, fv) = of_term t in
-      (Void t, fv)
-  | LambdaTree.Alloc ty ->
-      (Alloc ty, Set.empty)
 
 let of_lambda_tree tree =
   let aux = function

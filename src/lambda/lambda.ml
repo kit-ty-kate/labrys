@@ -170,13 +170,7 @@ let get_name_and_linkage name' names mapn =
       let mapn = GammaMap.Value.add name' name mapn in
       (name, names, mapn, Private)
 
-let of_ret_type mapn = function
-  | UntypedTree.Void t ->
-      Void (of_typed_term 0 mapn t)
-  | UntypedTree.Alloc ty ->
-      Alloc ty
-
-let create_dyn_functions mapn cname (ret, args) =
+let create_dyn_functions cname (ret, args) =
   let create_name n =
     Ident.Name.local_create ~loc:Builtins.unknown_loc (string_of_int n)
   in
@@ -193,7 +187,6 @@ let create_dyn_functions mapn cname (ret, args) =
             in
             Abs (name, t)
         | [] ->
-            let ret = of_ret_type mapn ret in
             CallForeign (cname, ret, List.rev args)
       in
       let name = create_name 0 in
@@ -214,7 +207,7 @@ let rec of_typed_tree names mapn = function
   | UntypedTree.Foreign (cname, name, ty) :: xs ->
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let xs = of_typed_tree names mapn xs in
-      Value (name, create_dyn_functions mapn cname ty, linkage) :: xs
+      Value (name, create_dyn_functions cname ty, linkage) :: xs
   | UntypedTree.Exception name :: xs ->
       let xs = of_typed_tree names mapn xs in
       Exception name :: xs
