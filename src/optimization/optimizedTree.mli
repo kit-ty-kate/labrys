@@ -37,7 +37,7 @@ type ('int, 'float, 'char, 'string) ty =
 type tag_ty = (unit, unit, unit, unit) ty
 type const = (int, float, int, string) ty
 
-type is_rec = LambdaTree.is_rec = NonRec | Rec
+type is_rec = NonRec | Rec
 
 type 'a tree' = 'a LambdaTree.tree' =
   | Node of (int option * ('a * 'a tree') list)
