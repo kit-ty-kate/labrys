@@ -106,8 +106,10 @@ and of_typed_term freshn mapn = function
   | UntypedTree.App (f, x) ->
       let f = of_typed_term (succ freshn) mapn f in
       let x = of_typed_term freshn mapn x in
-      let name = create_fresh_name freshn in
-      Let (name, NonRec, x, App (f, name))
+      let name_x = create_fresh_name freshn in
+      let freshn = succ freshn in
+      let name_f = create_fresh_name freshn in
+      Let (name_x, NonRec, x, Let (name_f, NonRec, f, App (name_f, name_x)))
   | UntypedTree.Val name ->
       let name = match GammaMap.Value.find_opt name mapn with
         | Some x -> x

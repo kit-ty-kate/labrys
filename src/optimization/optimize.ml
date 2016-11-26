@@ -29,8 +29,7 @@ let rec of_term = function
       let fv = Set.remove name fv in
       (Abs (name, fv, t), fv)
   | LambdaTree.App (x, y) ->
-      let (x, fv) = of_term x in
-      (App (x, y), Set.add y fv)
+      (App (x, y), Set.of_list [x; y])
   | LambdaTree.Val name ->
       (Val name, Set.singleton name)
   | LambdaTree.Datatype (idx, args) ->

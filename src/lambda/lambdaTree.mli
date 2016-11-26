@@ -52,7 +52,7 @@ type foreign_ret_type =
 
 and t =
   | Abs of (name * t)
-  | App of (t * name)
+  | App of (name * name)
   | Val of name
   | Datatype of (index option * name list)
   | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)

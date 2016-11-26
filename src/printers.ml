@@ -868,7 +868,7 @@ module LambdaTree = struct
     | App (f, x) ->
         PPrint.group
           (PPrint.lparen
-           ^^ dump_t f
+           ^^ PPrint.string (dump_name f)
            ^^ PPrint.blank 1
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ PPrint.string (dump_name x))
            ^^ PPrint.rparen
@@ -1068,7 +1068,7 @@ module OptimizedTree = struct
     | App (f, x) ->
         PPrint.group
           (PPrint.lparen
-           ^^ dump_t f
+           ^^ PPrint.string (dump_name f)
            ^^ PPrint.blank 1
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ PPrint.string (dump_name x))
            ^^ PPrint.rparen
