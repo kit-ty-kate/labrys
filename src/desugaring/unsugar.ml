@@ -218,9 +218,15 @@ let unsugar_char ~loc s =
   | [c] -> c
   | _ -> Err.fail ~loc "A character cannot contain several characters"
 
-let rec unsugar_local_value imports options (name, is_rec, (args, x)) =
+let rec unsugar_local_value imports options (name, is_rec, t) =
   let name = new_lower_name_to_local_value ~allow_underscore:true name in
-  (name, is_rec, unsugar_args imports options args x)
+  unsugar_let imports options name is_rec t
+
+and unsugar_let imports options name is_rec (args, x) =
+  let t = unsugar_args imports options args x in
+  match is_rec with
+  | ParseTree.NonRec -> (name, t)
+  | ParseTree.Rec -> (name, (fst t, Rec (name, t)))
 
 and unsugar_pat imports options (pattern, t) =
   (unsugar_pattern imports pattern, unsugar_t imports options t)
@@ -254,8 +260,8 @@ and unsugar_t imports options = function
   | (loc, ParseTree.PatternMatching (t, patterns)) ->
       (loc, PatternMatching (unsugar_t imports options t, List.map (unsugar_pat imports options) patterns))
   | (loc, ParseTree.Let (value, t)) ->
-      let value = unsugar_local_value imports options value in
-      (loc, Let (value, unsugar_t imports options t))
+      let (name, x) = unsugar_local_value imports options value in
+      (loc, Let (name, x, unsugar_t imports options t))
   | (loc, ParseTree.Fail (ty, (exn, args))) ->
       let exn = upper_name_to_exn imports exn in
       if Int.(List.length args > Config.max_fail_num_args) then
@@ -269,7 +275,7 @@ and unsugar_t imports options = function
   | (loc, ParseTree.Seq (x, y)) ->
       let name = Builtins.underscore in
       let ty = ((loc, Ty (Builtins.unit options)), None) in
-      (loc, Let ((name, NonRec, (fst x, Annot (unsugar_t imports options x, ty))), unsugar_t imports options y))
+      (loc, Let (name, (fst x, Annot (unsugar_t imports options x, ty)), unsugar_t imports options y))
   | (loc, ParseTree.Annot (t, ty)) ->
       (loc, Annot (unsugar_t imports options t, unsugar_annot imports ty))
   | (loc, ParseTree.Const (ParseTree.Int n)) ->
@@ -367,9 +373,9 @@ let unsugar_variant_args args =
   let aux (x, k) = (new_lower_name_to_type_var x, unsugar_kind k) in
   List.map aux args
 
-let unsugar_value ~current_module imports options (name, is_rec, (args, x)) =
+let unsugar_value ~current_module imports options (name, is_rec, t) =
   let name = new_lower_name_to_value ~current_module ~allow_underscore:true name in
-  (name, is_rec, unsugar_args imports options args x)
+  unsugar_let imports options name is_rec t
 
 let unsugar_open ~current_module options = function
   | ParseTree.Source (loc, `UpperName modul) ->

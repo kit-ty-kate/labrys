@@ -50,6 +50,10 @@ type visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
+type rec_ty =
+  | PreRec of t
+  | Type of t
+
 let fmt = Printf.sprintf
 
 let var_eq list_eq x y =

@@ -24,33 +24,12 @@ open Monomorphic.None
 
 open UntypedTree
 
-let fail_rec_val ~loc_name =
-  Err.fail ~loc:loc_name "Recursive values are not allowed"
-
-let rec well_formed_rec = function
-  | (_, UnsugaredTree.CAbs _)
-  | (_, UnsugaredTree.Abs _) ->
-      true
-  | (_, UnsugaredTree.TAbs (_, t))
-  | (_, UnsugaredTree.Annot (t, _))
-  | (_, UnsugaredTree.Let (_, t)) ->
-      well_formed_rec t
-  | (_, UnsugaredTree.App _)
-  | (_, UnsugaredTree.TApp _)
-  | (_, UnsugaredTree.CApp _)
-  | (_, UnsugaredTree.Val _)
-  | (_, UnsugaredTree.Var _)
-  | (_, UnsugaredTree.Const _)
-  | (_, UnsugaredTree.PatternMatching _)
-  | (_, UnsugaredTree.Fail _)
-  | (_, UnsugaredTree.Try _) ->
-      false
-
-let rec get_ty_from_let = function
+let rec get_ty_from_nearest_annot = function
   | (_, UnsugaredTree.Annot (_, ty)) ->
       Some ty
-  | (_, UnsugaredTree.Let (_, t)) ->
-      get_ty_from_let t
+  | (_, UnsugaredTree.Rec (_, t))
+  | (_, UnsugaredTree.Let (_, _, t)) ->
+      get_ty_from_nearest_annot t
   | (_, UnsugaredTree.CAbs _)
   | (_, UnsugaredTree.Abs _)
   | (_, UnsugaredTree.TAbs _)
@@ -81,7 +60,12 @@ let get_rec_ty ~loc_name = function
         "Recursive functions must have explicit return types"
 
 let get_ty_from_let_rec ~loc_name ty =
-  get_rec_ty ~loc_name (get_ty_from_let ty)
+  get_rec_ty ~loc_name (get_ty_from_nearest_annot ty)
+
+let get_non_rec_ty ~loc = function
+  | PrivateTypes.Type ty -> ty
+  | PrivateTypes.PreRec _ -> Err.fail ~loc "This recursive value \
+                                            cannot be used here"
 
 let check_type options ~loc_t ~ty:(ty, eff) ~ty_t ~effects gamma =
   let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
@@ -155,10 +139,17 @@ let try_to_pattern l =
 let rec aux options gamma = function
   | (_, UnsugaredTree.Abs ((name, ty), t)) ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
+      let gamma = Gamma.include_rec_values gamma in
       let gamma = Gamma.add_value name ty gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
       let abs_ty = PrivateTypes.Fun (ty, effect, ty_expr) in
       (Abs (name, expr), abs_ty, Effects.empty)
+  | (_, UnsugaredTree.Rec (name, t)) ->
+      let ty = get_ty_from_let_rec ~loc_name:(Ident.Name.loc name) t in
+      let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
+      let gamma = Gamma.add_rec_value name ty gamma in
+      let (expr, ty_expr, effects) = aux options gamma t in
+      (Rec (name, expr), ty_expr, effects)
   | (_, UnsugaredTree.TAbs ((name, k), t)) ->
       let gamma = Gamma.add_type_var name k gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
@@ -238,8 +229,9 @@ let rec aux options gamma = function
       let f = App (f, Val name) in
       let f = wrap_typeclass_apps ~loc gamma ~tyclasses ~f Fun.id in
       (f, res, Effects.union3 effect1 effect2 eff_f)
-  | (_, UnsugaredTree.Val name) ->
+  | (loc, UnsugaredTree.Val name) ->
       let ty = GammaMap.Value.find name gamma.Gamma.values in
+      let ty = get_non_rec_ty ~loc ty in
       (Val name, ty, Effects.empty)
   | (_, UnsugaredTree.Var name) ->
       let (idx, ty, len) =
@@ -256,23 +248,14 @@ let rec aux options gamma = function
       in
       let effect = Effects.union effect1 effect2 in
       (PatternMatching (t, results, Unreachable, patterns), initial_ty, effect)
-  | (_, UnsugaredTree.Let ((name, UnsugaredTree.NonRec, t), xs)) ->
+  | (_, UnsugaredTree.Let (name, t, xs)) ->
       let loc_t = fst t in
-      let ty = get_ty_from_let t in
+      let ty = get_ty_from_nearest_annot t in
       let (t, ty_t, effect1) = aux options gamma t in
       check_type_opt options ~loc_t ~ty ~ty_t ~effects:effect1 gamma;
       let gamma = Gamma.add_value name ty_t gamma in
       let (xs, ty_xs, effect2) = aux options gamma xs in
-      (Let ((name, NonRec, t), xs), ty_xs, Effects.union effect1 effect2)
-  | (_, UnsugaredTree.Let ((name, UnsugaredTree.Rec, t), xs)) when well_formed_rec t ->
-      let ty = get_ty_from_let_rec ~loc_name:(Ident.Name.loc name) t in
-      let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
-      let gamma = Gamma.add_value name ty gamma in
-      let (t, _, effect1) = aux options gamma t in
-      let (xs, ty_xs, effect2) = aux options gamma xs in
-      (Let ((name, Rec, t), xs), ty_xs, Effects.union effect1 effect2)
-  | (_, UnsugaredTree.Let ((name, UnsugaredTree.Rec, _), _)) ->
-      fail_rec_val ~loc_name:(Ident.Name.loc name)
+      (Let (name, t, xs), ty_xs, Effects.union effect1 effect2)
   | (loc, UnsugaredTree.Fail (ty, (exn, args))) ->
       let tys = GammaMap.Exn.find exn gamma.Gamma.exceptions in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
@@ -355,22 +338,10 @@ let check_effects ~current_module ~with_main ~has_main ~name options (t, ty, eff
       (Types.to_string ty);
   (is_main, t, ty)
 
-let from_value ~current_module ~with_main ~has_main options gamma = function
-  | (name, UnsugaredTree.NonRec, term) ->
-      let loc_t = fst term in
-      let ty = get_ty_from_let term in
-      let (has_main, x, ty_t) = check_effects ~current_module ~with_main ~has_main ~name options (aux options gamma term) in
-      check_type_opt options ~loc_t ~ty ~ty_t ~effects:Effects.empty gamma;
-      let gamma = Gamma.add_value name ty_t gamma in
-      ((name, NonRec, x), ty_t, has_main, gamma)
-  | (name, UnsugaredTree.Rec, term) when well_formed_rec term ->
-      let ty = get_ty_from_let_rec ~loc_name:(Ident.Name.loc name) term in
-      let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
-      let gamma = Gamma.add_value name ty gamma in
-      let (has_main, x, _) = check_effects ~current_module ~with_main ~has_main ~name options (aux options gamma term) in
-      ((name, Rec, x), ty, has_main, gamma)
-  | (name, UnsugaredTree.Rec, _) ->
-      fail_rec_val ~loc_name:(Ident.Name.loc name)
+let from_value ~current_module ~with_main ~has_main options gamma (name, term) =
+  let (has_main, x, ty_t) = check_effects ~current_module ~with_main ~has_main ~name options (aux options gamma term) in
+  let gamma = Gamma.add_value name ty_t gamma in
+  ((name, x), ty_t, has_main, gamma)
 
 let get_foreign_type ~loc options =
   (* TODO: Unit -> X   -->   args = [] *)
@@ -491,7 +462,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       let (_, xs) =
         let aux (n, xs) (name, _) =
           let abs_name = Ident.Name.create ~loc:Builtins.unknown_loc current_module "0" in
-          (succ n, Value (name, NonRec, Abs (abs_name, RecordGet (Val abs_name, n))) :: xs)
+          (succ n, Value (name, Abs (abs_name, RecordGet (Val abs_name, n))) :: xs)
         in
         List.fold_left aux (0, xs) sigs
       in
@@ -515,12 +486,12 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       let values = Class.get_values ~loc:(Ident.TyClass.loc tyclass) tys values tyclass' in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       let values =
-        let aux value t = Let (value, t) in
-        let fields = List.map (fun (x, _, _) -> Val x) values in
+        let aux (name, x) t = Let (name, x, t) in
+        let fields = List.map (fun (x, _) -> Val x) values in
         List.fold_right aux values (RecordCreate fields)
       in
-      let xs = Option.maybe (fun name -> Value (Ident.Instance.to_name name, NonRec, Val name') :: xs) xs name in
-      (Value (name', NonRec, values) :: xs, has_main, gamma)
+      let xs = Option.maybe (fun name -> Value (Ident.Instance.to_name name, Val name') :: xs) xs name in
+      (Value (name', values) :: xs, has_main, gamma)
   | [] ->
       ([], has_main, gamma)
 

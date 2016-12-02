@@ -381,10 +381,6 @@ module UnsugaredTree = struct
     | (ty, None) -> dump_ty ty
     | (ty, Some eff) -> fmt "[%s] %s" (dump_eff eff) (dump_ty ty)
 
-  let dump_rec is_rec = match is_rec with
-    | Rec -> " rec"
-    | NonRec -> ""
-
   let dump_ty_arg (name, k) =
     fmt "(%s : %s)" (dump_tyvar_name name) (dump_k k)
 
@@ -406,10 +402,9 @@ module UnsugaredTree = struct
     | TyClassVariable name -> dump_instance_name name
     | TyClassInstance instance -> dump_tyclass_instance instance
 
-  let rec dump_value (name, is_rec, t) =
-    let is_rec = dump_rec is_rec in
+  let rec dump_value name t =
     PPrint.group
-      (PPrint.string (fmt "let%s %s =" is_rec (dump_name name))
+      (PPrint.string (fmt "let %s =" (dump_name name))
        ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
       )
 
@@ -418,6 +413,13 @@ module UnsugaredTree = struct
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string (fmt "λ (%s : %s) ->" (dump_name name) (dump_ty ty))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | (_, Rec (name, t)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "μ %s ->" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
@@ -471,10 +473,10 @@ module UnsugaredTree = struct
         ^^ dump_cases cases
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | (_, Let (value, xs)) ->
+    | (_, Let (name, x, xs)) ->
         PPrint.group
           (PPrint.lparen
-           ^^ dump_value value
+           ^^ dump_value name x
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
            ^^ PPrint.break 1
@@ -565,8 +567,8 @@ module UnsugaredTree = struct
     PPrint.string (fmt "let %s : %s" (dump_name name) (dump_ty ty))
 
   let dump = function
-    | Value value ->
-        dump_value value
+    | Value (name, t) ->
+        dump_value name t
     | Type (name, ty) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
     | Foreign (cname, name, ty) ->
@@ -588,7 +590,7 @@ module UnsugaredTree = struct
         in
         PPrint.string (fmt "instance %s%s =" (dump_opt_instance_name name) (dump_tyclass_instance instance))
         ^^ PPrint.break 1
-        ^^ PPrint.nest 2 (List.fold_left (fun acc x -> acc ^^ dump_value x ^^ PPrint.break 1) PPrint.empty values)
+        ^^ PPrint.nest 2 (List.fold_left (fun acc (name, x) -> acc ^^ dump_value name x ^^ PPrint.break 1) PPrint.empty values)
         ^^ PPrint.string "end"
 
   let dump top =
@@ -647,15 +649,18 @@ module UntypedTree = struct
     in
     List.fold_left aux "Ø" used_vars
 
-  let dump_is_rec = function
-    | Rec -> "rec "
-    | NonRec -> ""
-
   let rec dump_t = function
     | Abs (name, t) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string (fmt "λ %s ->" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | Rec (name, t) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "μ %s ->" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
@@ -678,10 +683,10 @@ module UntypedTree = struct
         ^^ PPrint.string "| _ -> " ^^ dump_t default
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Let ((name, is_rec, t), xs) ->
+    | Let (name, t, xs) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "let %s%s =" (dump_is_rec is_rec) (dump_name name))
+           ^^ PPrint.string (fmt "let %s =" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
@@ -761,9 +766,9 @@ module UntypedTree = struct
     fmt "(%s)" (String.concat ", " (List.map dump_tag_ty l))
 
   let dump = function
-    | Value (name, is_rec, t) ->
+    | Value (name, t) ->
         PPrint.group
-          (PPrint.string (fmt "let %s%s =" (dump_is_rec is_rec) (dump_name name))
+          (PPrint.string (fmt "let %s =" (dump_name name))
            ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
           )
     | Foreign (cname, name, (ret, args)) ->
@@ -848,10 +853,6 @@ module LambdaTree = struct
     | Char () -> "Char"
     | String () -> "String"
 
-  let dump_rec = function
-    | Rec -> " rec"
-    | NonRec -> ""
-
   let dump_ret_ty = function
     | Void -> "Void"
     | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
@@ -862,6 +863,14 @@ module LambdaTree = struct
           (PPrint.lparen
            ^^ PPrint.string
                 (fmt "λ %s ->" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | Rec (name, t) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string
+                (fmt "μ %s ->" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
@@ -896,10 +905,10 @@ module LambdaTree = struct
         ^^ PPrint.string "| _ -> " ^^ dump_t default
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Let (name, is_rec, t, xs) ->
+    | Let (name, t, xs) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "let%s %s =" (dump_rec is_rec) (dump_name name))
+           ^^ PPrint.string (fmt "let %s =" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
@@ -1048,10 +1057,6 @@ module OptimizedTree = struct
     | Char () -> "Char"
     | String () -> "String"
 
-  let dump_rec = function
-    | Rec -> " rec"
-    | NonRec -> ""
-
   let dump_ret_ty = function
     | Void -> "Void"
     | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
@@ -1062,6 +1067,14 @@ module OptimizedTree = struct
           (PPrint.lparen
            ^^ PPrint.string
                 (fmt "λ %s [%s] ->" (dump_name name) (dump_used_vars used_vars))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | Rec (name, t) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string
+                (fmt "μ %s ->" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
@@ -1096,10 +1109,10 @@ module OptimizedTree = struct
         ^^ PPrint.string "| _ -> " ^^ dump_t default
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Let (name, is_rec, t, xs) ->
+    | Let (name, t, xs) ->
         PPrint.group
           (PPrint.lparen
-           ^^ PPrint.string (fmt "let%s %s =" (dump_rec is_rec) (dump_name name))
+           ^^ PPrint.string (fmt "let %s =" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"

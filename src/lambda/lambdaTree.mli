@@ -36,8 +36,6 @@ type ('int, 'float, 'char, 'string) ty =
 type tag_ty = (unit, unit, unit, unit) ty
 type const = (int, float, int, string) ty
 
-type is_rec = NonRec | Rec
-
 type 'a tree' =
   | Node of (int option * ('a * 'a tree') list)
   | Leaf of int
@@ -52,12 +50,13 @@ type foreign_ret_type = UntypedTree.foreign_ret_type =
 
 type t =
   | Abs of (name * t)
+  | Rec of (name * t)
   | App of (name * name)
   | Val of name
   | Datatype of (index option * name list)
   | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
   | PatternMatching of (name * t list * t * tree)
-  | Let of (name * is_rec * t * t)
+  | Let of (name * t * t)
   | Fail of (eff_name * name list)
   | Try of (t * (name * t))
   | RecordGet of (name * index)

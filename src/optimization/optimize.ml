@@ -41,16 +41,15 @@ let rec of_term = function
       let (default, fv) = of_term default in
       let (branches, fv) = of_branches fv branches in
       (PatternMatching (name, branches, default, tree), Set.add name fv)
-  | LambdaTree.Let (name, LambdaTree.NonRec, x, t) ->
+  | LambdaTree.Let (name, x, t) ->
       let (x, fv1) = of_term x in
       let (t, fv2) = of_term t in
       let fv = Set.union fv1 (Set.remove name fv2) in
-      (Let (name, NonRec, x, t), fv)
-  | LambdaTree.Let (name, LambdaTree.Rec, x, t) ->
-      let (x, fv1) = of_term x in
-      let (t, fv2) = of_term t in
-      let fv = Set.remove name (Set.union fv1 fv2) in
-      (Let (name, Rec, x, t), fv)
+      (Let (name, x, t), fv)
+  | LambdaTree.Rec (name, t) ->
+      let (t, fv) = of_term t in
+      let fv = Set.remove name fv in
+      (Rec (name, t), fv)
   | LambdaTree.Fail (exn, args) ->
       (Fail (exn, args), Set.of_list args)
   | LambdaTree.Try (t, (name, t')) ->

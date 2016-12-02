@@ -72,9 +72,9 @@ let rec of_results freshn mapn var m =
             let t = aux freshn name xs in
             (* NOTE: "succ idx" is here because variants' first element is
                      taken by its tag. *)
-            Let (name, NonRec, RecordGet (var, succ idx), t)
+            Let (name, RecordGet (var, succ idx), t)
       in
-      Let (name, NonRec, aux freshn var idx, t)
+      Let (name, aux freshn var idx, t)
     in
     List.fold_left aux t wildcards
   in
@@ -94,7 +94,7 @@ and of_args f freshn mapn args =
   in
   let rec aux names = function
     | [] -> f (List.rev names)
-    | (name, t)::args -> Let (name, NonRec, t, aux (name :: names) args)
+    | (name, t)::args -> Let (name, t, aux (name :: names) args)
   in
   aux [] args
 
@@ -109,7 +109,7 @@ and of_typed_term freshn mapn = function
       let name_x = create_fresh_name freshn in
       let freshn = succ freshn in
       let name_f = create_fresh_name freshn in
-      Let (name_x, NonRec, x, Let (name_f, NonRec, f, App (name_f, name_x)))
+      Let (name_x, x, Let (name_f, f, App (name_f, name_x)))
   | UntypedTree.Val name ->
       let name = match GammaMap.Value.find_opt name mapn with
         | Some x -> x
@@ -128,27 +128,26 @@ and of_typed_term freshn mapn = function
       let patterns = of_patterns patterns in
       let default = of_typed_term freshn mapn default in
       let pat = PatternMatching (name, results, default, patterns) in
-      Let (name, NonRec, t, pat)
+      Let (name, t, pat)
   | UntypedTree.Try (t, (name, t')) ->
       let t = of_typed_term freshn mapn t in
       let t' = of_typed_term freshn mapn t' in
       Try (t, (name, t'))
-  | UntypedTree.Let ((name, UntypedTree.NonRec, t), xs) ->
+  | UntypedTree.Let (name, t, xs) ->
       let t = of_typed_term freshn mapn t in
       let mapn = GammaMap.Value.remove name mapn in
       let xs = of_typed_term freshn mapn xs in
-      Let (name, NonRec, t, xs)
-  | UntypedTree.Let ((name, UntypedTree.Rec, t), xs) ->
+      Let (name, t, xs)
+  | UntypedTree.Rec (name, t) ->
       let mapn = GammaMap.Value.remove name mapn in
       let t = of_typed_term freshn mapn t in
-      let xs = of_typed_term freshn mapn xs in
-      Let (name, Rec, t, xs)
+      Rec (name, t)
   | UntypedTree.Fail (name, args) ->
       of_args (fun names -> Fail (name, names)) freshn mapn args
   | UntypedTree.RecordGet (t, n) ->
       let name = create_fresh_name freshn in
       let t = of_typed_term freshn mapn t in
-      Let (name, NonRec, t, RecordGet (name, n))
+      Let (name, t, RecordGet (name, n))
   | UntypedTree.RecordCreate fields ->
       of_args (fun names -> (Datatype (None, names))) freshn mapn fields
   | UntypedTree.Const const ->
@@ -194,12 +193,7 @@ let create_dyn_functions cname (ret, args) =
       Abs (name, t)
 
 let rec of_typed_tree names mapn = function
-  | UntypedTree.Value (name, UntypedTree.Rec, t) :: xs  ->
-      let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
-      let t = of_typed_term 0 mapn t in
-      let xs = of_typed_tree names mapn xs in
-      Value (name, t, linkage) :: xs
-  | UntypedTree.Value (name, UntypedTree.NonRec, t) :: xs ->
+  | UntypedTree.Value (name, t) :: xs ->
       let t = of_typed_term 0 mapn t in
       let (name, names, mapn, linkage) = get_name_and_linkage name names mapn in
       let xs = of_typed_tree names mapn xs in
@@ -217,7 +211,7 @@ let rec of_typed_tree names mapn = function
 let of_typed_tree top =
   let add name names = GammaMap.Value.modify_def (-1) name succ names in
   let aux names = function
-    | UntypedTree.Value (name, _, _) -> add name names
+    | UntypedTree.Value (name, _) -> add name names
     | UntypedTree.Foreign (_, name, _) -> add name names
     | UntypedTree.Exception _ -> names
   in

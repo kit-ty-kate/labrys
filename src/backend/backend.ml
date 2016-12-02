@@ -408,14 +408,12 @@ module Make (I : I) = struct
         let f = Llvm.declare_function name ty m in
         let args = map_args gamma builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret
-    | OptimizedTree.Let (name, OptimizedTree.NonRec, t, xs) ->
+    | OptimizedTree.Let (name, t, xs) ->
         let (t, builder) = lambda ~jmp_buf gamma builder t in
         let gamma = GammaMap.Value.add name (Value t) gamma in
         lambda ~jmp_buf gamma builder xs
-    | OptimizedTree.Let (name, OptimizedTree.Rec, t, xs) ->
-        let (t, builder) = lambda ~isrec:name ~jmp_buf gamma builder t in
-        let gamma = GammaMap.Value.add name (Value t) gamma in
-        lambda ~jmp_buf gamma builder xs
+    | OptimizedTree.Rec (name, t) ->
+        lambda ~isrec:name ~jmp_buf gamma builder t
     | OptimizedTree.Fail (name, args) ->
         let args = List.map (get_value gamma builder) args in
         let tag = get_exn name in

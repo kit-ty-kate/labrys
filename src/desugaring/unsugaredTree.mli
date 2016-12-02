@@ -37,10 +37,6 @@ type effect_name =
 
 type effects = (loc * effect_name list)
 
-type is_rec = ParseTree.is_rec =
-  | Rec
-  | NonRec
-
 type tyclass = (tyclass_name * t_value list * ty list)
 
 and ty' =
@@ -72,10 +68,9 @@ type const =
   | Char of int
   | String of string
 
-type value = (name * is_rec * t)
-
-and t' =
+type t' =
   | Abs of ((name * ty) * t)
+  | Rec of (name * t)
   | TAbs of (t_value * t)
   | CAbs of ((instance_name * tyclass) * t)
   | App of (t * t)
@@ -84,7 +79,7 @@ and t' =
   | Val of name
   | Var of variant_name
   | PatternMatching of (t * (pattern * t) list)
-  | Let of (value * t)
+  | Let of (name * t * t)
   | Fail of (ty * (exn_name * t list))
   | Try of (t * ((exn_name * name list) * t) list)
   | Annot of (t * ty_annot)
@@ -95,12 +90,12 @@ and t = (loc * t')
 type variant = Variant of (variant_name * ty list * ty)
 
 type top =
-  | Value of value
+  | Value of (name * t)
   | Type of (t_name * ty)
   | Foreign of (string * name * ty)
   | Datatype of (t_name * Kinds.t * (tyvar_name * Kinds.t) list * variant list)
   | Exception of (exn_name * ty list)
   | Class of (tyclass_name * t_value list * (name * ty) list)
-  | Instance of (tyclass_instance * instance_name option * value list)
+  | Instance of (tyclass_instance * instance_name option * (name * t) list)
 
 type imports = module_name list

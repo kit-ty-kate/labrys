@@ -27,10 +27,6 @@ type index = int
 type arity = int
 type length = int
 
-type is_rec =
-  | Rec
-  | NonRec
-
 type ('int, 'float, 'char, 'string) ty =
   | Int of 'int
   | Float of 'float
@@ -44,15 +40,14 @@ type foreign_ret_type =
   | Void
   | Alloc of tag_ty
 
-type value = (name * is_rec * t)
-
-and t =
+type t =
   | Abs of (name * t)
+  | Rec of (name * t)
   | App of (t * t)
   | Val of name
   | Var of (index * length)
   | PatternMatching of (t * (pattern_var list * t) list * t * Pattern.t)
-  | Let of (value * t)
+  | Let of (name * t * t)
   | Fail of (eff_name * t list)
   | Try of (t * (name * t))
   | RecordGet of (t * int)
@@ -64,6 +59,6 @@ and t =
 type foreign_fun_type = (foreign_ret_type * tag_ty list)
 
 type top =
-  | Value of value
+  | Value of (name * t)
   | Foreign of (string * name * foreign_fun_type)
   | Exception of eff_name

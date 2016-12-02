@@ -98,7 +98,7 @@ let add_instance ~tyclass ~current_module tys self =
   (name, tys, {self with instances})
 
 let get_values ~loc tys values self =
-  let aux (acc, n) ((name1, is_rec, t), ty1) (name2, ty2) =
+  let aux (acc, n) ((name1, t), ty1) (name2, ty2) =
     if not (Ident.Name.equal name1 name2) then
       Err.fail
         ~loc:(Ident.Name.loc name1)
@@ -118,7 +118,7 @@ let get_values ~loc tys values self =
         "Type missmatch. Has '%s' but expected '%s'"
         (PrivateTypes.ty_to_string ty1)
         (PrivateTypes.ty_to_string ty2);
-    ((name1, is_rec, t) :: acc, succ n)
+    ((name1, t) :: acc, succ n)
   in
   try
     let (values, _) = List.fold_left2 aux ([], 0) values self.signature in
