@@ -472,19 +472,7 @@ module Make (I : I) = struct
     let name' = "." ^ name in
     let v = Llvm.define_constant name' value m in
     let v = Llvm.define_constant name (Llvm.const_bitcast v Type.star) m in
-    set_linkage v linkage;
-    v
-
-  let rec init ~jmp_buf gamma builder = function
-    | `Val (name, global, t) :: xs ->
-        let (value, builder) = lambda ~jmp_buf gamma builder t in
-        Llvm.build_store value global builder;
-        init ~jmp_buf gamma builder xs
-    | `Const (name, f, g) :: xs ->
-        g gamma;
-        init ~jmp_buf gamma builder xs
-    | [] ->
-        builder
+    set_linkage v linkage
 
   let init_imports ~jmp_buf imports builder =
     let aux import =
@@ -494,34 +482,34 @@ module Make (I : I) = struct
     List.iter aux imports
 
   let make ~imports l =
-    let rec top init_list = function
-      | OptimizedTree.Value (name, t, linkage) :: xs ->
+    let aux ~jmp_buf gamma builder = function
+      | OptimizedTree.Value (name, t, linkage) ->
           let name' = LIdent.to_string name in
           let global = Llvm.define_global name' null m in
           set_linkage global linkage;
-          top (`Val (name, global, t) :: init_list) xs
-      | OptimizedTree.Exception name :: xs ->
+          let (value, builder) = lambda ~jmp_buf gamma builder t in
+          Llvm.build_store value global builder;
+          builder
+      | OptimizedTree.Exception name ->
           let name = Ident.Exn.to_string name in
           (* NOTE: Don't use Llvm.define_constant as it merges equal values *)
           let v = Llvm.define_global name (string name) m in
           Llvm.set_global_constant true v;
-          top init_list xs
-      | OptimizedTree.Function (name, (name', t), linkage) :: xs ->
-          let (f, builder) = Llvm.define_function `Private c (".." ^ LIdent.to_string name) (Type.lambda ~env_size:0) m in
-          let f = define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]) in
-          let g gamma = abs ~name:name' t gamma builder in
-          top (`Const (name, f, g) :: init_list) xs
-      | [] ->
-          let (f, builder) =
-            Llvm.define_function `External c (Generic.init_name I.name) Type.init m
-          in
-          let jmp_buf = Llvm.param f 0 in
-          init_imports ~jmp_buf imports builder;
-          let builder = init ~jmp_buf LIdent.Map.empty builder (List.rev init_list) in
-          Llvm.build_ret_void builder;
-          m
+          builder
+      | OptimizedTree.Function (name, (name', t), linkage) ->
+          let (f, builder') = Llvm.define_function `Private c (".." ^ LIdent.to_string name) (Type.lambda ~env_size:0) m in
+          define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]);
+          abs ~name:name' t gamma builder';
+          builder
     in
-    top [] l
+    let (f, builder) =
+      Llvm.define_function `External c (Generic.init_name I.name) Type.init m
+    in
+    let jmp_buf = Llvm.param f 0 in
+    init_imports ~jmp_buf imports builder;
+    let builder = List.fold_left (aux ~jmp_buf LIdent.Map.empty) builder l in
+    Llvm.build_ret_void builder;
+    m
 end
 
 let make ~modul ~imports options x =
