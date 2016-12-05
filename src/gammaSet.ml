@@ -27,3 +27,7 @@ module Value = struct
 end
 
 module TypeVar = GammaMap.TypeVar.Set
+
+module MValue = CCMultiSet.Make (Ident.Name)
+
+module IDValue = Utils.EqSet (LIdent)

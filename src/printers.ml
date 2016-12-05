@@ -784,6 +784,8 @@ end
 module LambdaTree = struct
   open LambdaTree
 
+  let dump_name = LIdent.to_string
+
   let dump_pattern_matching t content =
     PPrint.group
       (PPrint.string "match"
@@ -836,7 +838,7 @@ module LambdaTree = struct
     let aux name acc =
       fmt "%s %s" acc (dump_name name)
     in
-    GammaSet.Value.fold aux used_vars "Ø"
+    GammaSet.IDValue.fold aux used_vars "Ø"
 
   let dump_args_ty l =
     let aux = function
@@ -988,6 +990,8 @@ end
 module OptimizedTree = struct
   open OptimizedTree
 
+  let dump_name = LIdent.to_string
+
   let dump_pattern_matching t content =
     PPrint.group
       (PPrint.string "match"
@@ -1040,7 +1044,7 @@ module OptimizedTree = struct
     let aux name acc =
       fmt "%s %s" acc (dump_name name)
     in
-    GammaSet.Value.fold aux used_vars "Ø"
+    GammaSet.IDValue.fold aux used_vars "Ø"
 
   let dump_args_ty l =
     let aux = function

@@ -22,6 +22,7 @@ true: package(llvm.all_backends)
 true: package(llvm.linker)
 true: package(llvm.scalar_opts)
 true: package(containers)
+true: package(containers.data)
 true: package(monomorphic)
 
 "src": include

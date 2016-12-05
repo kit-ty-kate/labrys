@@ -1,5 +1,5 @@
 (*
-Copyright (c) 2013-2015 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
+Copyright (c) 2013-2016 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,10 +19,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-module Value : Utils.EQSET with type elt = Ident.Name.t
+type t
 
-module TypeVar = GammaMap.TypeVar.Set
+val create : string -> t
 
-module MValue : CCMultiSet.S with type elt = Ident.Name.t
+val equal : t -> t -> bool
 
-module IDValue : Utils.EQSET with type elt = LIdent.t
+val to_string : t -> string
+
+module Map : Utils.EQMAP with type key = t

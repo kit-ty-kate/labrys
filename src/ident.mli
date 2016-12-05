@@ -23,6 +23,7 @@ module Name : sig
   type t
 
   val equal : t -> t -> bool
+  val compare : t -> t -> int
 
   val create : loc:Location.t -> Module.t -> string -> t
   val local_create : loc:Location.t -> string -> t

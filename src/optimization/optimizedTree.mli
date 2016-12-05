@@ -19,9 +19,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type name = Ident.Name.t
+type name = LIdent.t
 type eff_name = Ident.Exn.t
-type free_vars = GammaSet.Value.t
+type free_vars = GammaSet.IDValue.t
 type index = int
 type constr = int
 type arity = int

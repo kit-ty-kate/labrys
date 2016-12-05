@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open Containers
 open Monomorphic.None
 
-module Set = GammaSet.Value
+module Set = GammaSet.IDValue
 
 module Llvm = struct
   include Llvm
@@ -192,34 +192,34 @@ module Make (I : I) = struct
       match value with
       | Value value ->
           let values = value :: values in
-          let gamma = GammaMap.Value.add name (Env i) gamma in
+          let gamma = LIdent.Map.add name (Env i) gamma in
           (succ i, values, gamma)
       | Env j ->
           let env = load_env builder in
           let value = Llvm.build_extractvalue env j "" builder in
           let values = value :: values in
-          let gamma = GammaMap.Value.add name (Env i) gamma in
+          let gamma = LIdent.Map.add name (Env i) gamma in
           (succ i, values, gamma)
       | RecFun ->
           let value = Llvm.current_param builder 1 in
           let value = Llvm.build_bitcast value Type.star "" builder in
           let values = value :: values in
-          let gamma = GammaMap.Value.add name (Env i) gamma in
+          let gamma = LIdent.Map.add name (Env i) gamma in
           (succ i, values, gamma)
       | Global value ->
-          let gamma = GammaMap.Value.add name (Global value) gamma in
+          let gamma = LIdent.Map.add name (Global value) gamma in
           (i, values, gamma)
     in
-    let (_, b, c) = GammaMap.Value.fold aux gamma (1, [], GammaMap.Value.empty) in
+    let (_, b, c) = LIdent.Map.fold aux gamma (1, [], LIdent.Map.empty) in
     (List.rev b, c)
 
   let create_closure ~isrec ~used_vars gamma builder =
-    let gamma = GammaMap.Value.filter (fun x _ -> Set.mem x used_vars) gamma in
+    let gamma = LIdent.Map.filter (fun x _ -> Set.mem x used_vars) gamma in
     let (values, gamma) = fold_env gamma builder in
     let env_size = List.length values in
     let gamma = match isrec with
       | Some rec_name when Set.mem rec_name used_vars ->
-          GammaMap.Value.add rec_name RecFun gamma
+          LIdent.Map.add rec_name RecFun gamma
       | Some _ | None ->
           gamma
     in
@@ -269,8 +269,8 @@ module Make (I : I) = struct
     (undef, snd (Llvm.create_block c builder))
 
   let get_value gamma builder name =
-    match GammaMap.Value.find_opt name gamma with
-    | Some (Global value) | Some (Value value) ->
+    match LIdent.Map.find name gamma with
+    | Some (Value value) ->
         value
     | Some (Env i) ->
         let env = load_env builder in
@@ -279,8 +279,10 @@ module Make (I : I) = struct
         let value = Llvm.current_param builder 1 in
         let value = Llvm.build_bitcast value Type.star "" builder in
         value
+    | Some (Global value) ->
+        Llvm.build_load value "" builder
     | None ->
-        let name = Ident.Name.to_string name in
+        let name = LIdent.to_string name in
         let extern = Llvm.declare_global Type.star name m in
         Llvm.build_load extern "" builder
 
@@ -354,7 +356,7 @@ module Make (I : I) = struct
   and abs ~name t gamma builder =
     let param = Llvm.current_param builder 0 in
     let jmp_buf = Llvm.current_param builder 2 in
-    let gamma = GammaMap.Value.add name (Value param) gamma in
+    let gamma = LIdent.Map.add name (Value param) gamma in
     let (v, builder) = lambda ~jmp_buf gamma builder t in
     Llvm.build_ret v builder
 
@@ -410,7 +412,7 @@ module Make (I : I) = struct
         map_ret builder (Llvm.build_call f args "" builder) ret
     | OptimizedTree.Let (name, t, xs) ->
         let (t, builder) = lambda ~jmp_buf gamma builder t in
-        let gamma = GammaMap.Value.add name (Value t) gamma in
+        let gamma = LIdent.Map.add name (Value t) gamma in
         lambda ~jmp_buf gamma builder xs
     | OptimizedTree.Rec (name, t) ->
         lambda ~isrec:name ~jmp_buf gamma builder t
@@ -437,7 +439,7 @@ module Make (I : I) = struct
           let exn' = Llvm.build_load exn_var "" builder in
           Llvm.build_store exn' exn builder;
           Llvm.build_store (Llvm.undef Type.exn_glob) exn_var builder;
-          let gamma = GammaMap.Value.add name (Value exn) gamma in
+          let gamma = LIdent.Map.add name (Value exn) gamma in
           let (t', builder') = lambda ~jmp_buf gamma builder t' in
           Llvm.build_br next_block builder';
           ((t', Llvm.insertion_block builder'), block)
@@ -466,23 +468,21 @@ module Make (I : I) = struct
     | OptimizedTree.Public -> Llvm.set_linkage Llvm.Linkage.External v
 
   let define_global ~name ~linkage value =
-    let name = Ident.Name.to_string name in
+    let name = LIdent.to_string name in
     let name' = "." ^ name in
     let v = Llvm.define_constant name' value m in
     let v = Llvm.define_constant name (Llvm.const_bitcast v Type.star) m in
-    set_linkage v linkage
+    set_linkage v linkage;
+    v
 
-  let rec init ~jmp_buf bindings builder = function
-    | `Val (global, t) :: xs ->
-        let (value, builder) = lambda ~jmp_buf bindings builder t in
+  let rec init ~jmp_buf gamma builder = function
+    | `Val (name, global, t) :: xs ->
+        let (value, builder) = lambda ~jmp_buf gamma builder t in
         Llvm.build_store value global builder;
-        init ~jmp_buf bindings builder xs
-    | `Const g :: xs ->
-        g bindings;
-        init ~jmp_buf bindings builder xs
-    | `Binding (name, v) :: xs ->
-        let bindings = GammaMap.Value.add name (Global v) bindings in
-        init ~jmp_buf bindings builder xs
+        init ~jmp_buf gamma builder xs
+    | `Const (name, f, g) :: xs ->
+        g gamma;
+        init ~jmp_buf gamma builder xs
     | [] ->
         builder
 
@@ -493,13 +493,13 @@ module Make (I : I) = struct
     in
     List.iter aux imports
 
-  let make ~imports =
+  let make ~imports l =
     let rec top init_list = function
       | OptimizedTree.Value (name, t, linkage) :: xs ->
-          let name = Ident.Name.to_string name in
-          let global = Llvm.define_global name null m in
+          let name' = LIdent.to_string name in
+          let global = Llvm.define_global name' null m in
           set_linkage global linkage;
-          top (`Val (global, t) :: init_list) xs
+          top (`Val (name, global, t) :: init_list) xs
       | OptimizedTree.Exception name :: xs ->
           let name = Ident.Exn.to_string name in
           (* NOTE: Don't use Llvm.define_constant as it merges equal values *)
@@ -507,21 +507,21 @@ module Make (I : I) = struct
           Llvm.set_global_constant true v;
           top init_list xs
       | OptimizedTree.Function (name, (name', t), linkage) :: xs ->
-          let (f, builder) = Llvm.define_function `Private c (".." ^ Ident.Name.to_string name) (Type.lambda ~env_size:0) m in
-          define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]);
-          let g bindings = abs ~name:name' t bindings builder in
-          top (`Const g :: init_list) xs
+          let (f, builder) = Llvm.define_function `Private c (".." ^ LIdent.to_string name) (Type.lambda ~env_size:0) m in
+          let f = define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]) in
+          let g gamma = abs ~name:name' t gamma builder in
+          top (`Const (name, f, g) :: init_list) xs
       | [] ->
           let (f, builder) =
             Llvm.define_function `External c (Generic.init_name I.name) Type.init m
           in
           let jmp_buf = Llvm.param f 0 in
           init_imports ~jmp_buf imports builder;
-          let builder = init ~jmp_buf GammaMap.Value.empty builder (List.rev init_list) in
+          let builder = init ~jmp_buf LIdent.Map.empty builder (List.rev init_list) in
           Llvm.build_ret_void builder;
           m
     in
-    top []
+    top [] l
 end
 
 let make ~modul ~imports options x =

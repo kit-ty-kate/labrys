@@ -35,17 +35,19 @@ module Name = struct
     | Some _, None | None, Some _ ->
         false
 
-  let create ~loc modul name =
-    (loc, Some modul, name)
-
-  let local_create ~loc name =
-    (loc, None, name)
-
   let to_string = function
     | (_, Some modul, name) ->
         Module.to_string modul ^ "." ^ name
     | (_, None, name) ->
         name
+
+  let compare x y = String.compare (to_string x) (to_string y)
+
+  let create ~loc modul name =
+    (loc, Some modul, name)
+
+  let local_create ~loc name =
+    (loc, None, name)
 
   let loc (loc, _, _) = loc
 

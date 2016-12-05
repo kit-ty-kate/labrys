@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open OptimizedTree
 
-module Set = GammaSet.Value
+module Set = GammaSet.IDValue
 
 let rec of_term = function
   | LambdaTree.Abs (name, t) ->

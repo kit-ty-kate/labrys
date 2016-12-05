@@ -1,5 +1,5 @@
 (*
-Copyright (c) 2013-2015 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
+Copyright (c) 2013-2016 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,10 +19,23 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-module Value : Utils.EQSET with type elt = Ident.Name.t
+open Containers
+open Monomorphic.None
 
-module TypeVar = GammaMap.TypeVar.Set
+(** NOTE: the unused id field is needed to avoid optimization by
+    the ocaml compiler *)
+type t = {name : string; id : unit ref}
 
-module MValue : CCMultiSet.S with type elt = Ident.Name.t
+let create name = {name; id = ref ()}
 
-module IDValue : Utils.EQSET with type elt = LIdent.t
+let equal = (==)
+
+let to_string x = x.name
+
+type tmp = t
+
+module Map = Utils.EqMap (struct
+    type t = tmp
+
+    let equal = equal
+  end)
