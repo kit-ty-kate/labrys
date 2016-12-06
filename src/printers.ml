@@ -1152,7 +1152,7 @@ module FlattenTree = struct
   and dump_t (lets, t) =
     let aux (name, x) =
       PPrint.string (dump_name name) ^^
-      PPrint.break 1 ^^ PPrint.equals ^^ PPrint.break 1 ^^
+      PPrint.space ^^ PPrint.equals ^^ PPrint.space ^^
       dump_t' x
     in
     let lets = List.map aux lets in
@@ -1361,7 +1361,7 @@ module OptimizedTree = struct
   and dump_t (lets, t) =
     let aux (name, x) =
       PPrint.string (dump_name name) ^^
-      PPrint.break 1 ^^ PPrint.equals ^^ PPrint.break 1 ^^
+      PPrint.space ^^ PPrint.equals ^^ PPrint.space ^^
       dump_t' x
     in
     let lets = List.map aux lets in
