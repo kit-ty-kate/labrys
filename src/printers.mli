@@ -35,6 +35,10 @@ module LambdaTree : sig
   val dump : LambdaTree.top list -> string
 end
 
+module FlattenTree : sig
+  val dump : FlattenTree.top list -> string
+end
+
 module OptimizedTree : sig
   val dump : OptimizedTree.top list -> string
 end

@@ -360,7 +360,7 @@ module Make (I : I) = struct
     let (v, builder) = lambda ~jmp_buf gamma builder t in
     Llvm.build_ret v builder
 
-  and lambda ?isrec ~jmp_buf gamma builder = function
+  and lambda' ~isrec ~jmp_buf gamma builder = function
     | OptimizedTree.Abs (name, used_vars, t) ->
         let (builder', closure, gamma) =
           create_closure ~isrec ~used_vars gamma builder
@@ -410,10 +410,6 @@ module Make (I : I) = struct
         let f = Llvm.declare_function name ty m in
         let args = map_args gamma builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret
-    | OptimizedTree.Let (name, t, xs) ->
-        let (t, builder) = lambda ~jmp_buf gamma builder t in
-        let gamma = LIdent.Map.add name (Value t) gamma in
-        lambda ~jmp_buf gamma builder xs
     | OptimizedTree.Rec (name, t) ->
         lambda ~isrec:name ~jmp_buf gamma builder t
     | OptimizedTree.Fail (name, args) ->
@@ -462,6 +458,18 @@ module Make (I : I) = struct
         let e = Llvm.build_load e "" builder in
         Llvm.build_store e exn_var builder;
         create_fail jmp_buf builder
+
+  and lambda ?isrec ~jmp_buf gamma builder (lets, t) =
+    let rec aux gamma builder = function
+      | (name, x)::xs ->
+          let (t, builder) = lambda' ~isrec ~jmp_buf gamma builder x in
+          let gamma = LIdent.Map.add name (Value t) gamma in
+          aux gamma builder xs
+      | [] ->
+          (gamma, builder)
+    in
+    let (gamma, builder) = aux gamma builder lets in
+    lambda' ~isrec ~jmp_buf gamma builder t
 
   let set_linkage v = function
     | OptimizedTree.Private -> Llvm.set_linkage Llvm.Linkage.Private v

@@ -987,6 +987,215 @@ module LambdaTree = struct
     string_of_doc doc
 end
 
+module FlattenTree = struct
+  open FlattenTree
+
+  let dump_name = LIdent.to_string
+
+  let dump_pattern_matching t content =
+    PPrint.group
+      (PPrint.string "match"
+       ^^ PPrint.break 1
+       ^^ t
+       ^^ PPrint.break 1
+       ^^ PPrint.string "with"
+      )
+    ^^ content
+
+  let rec dump_var = function
+    | PatternMatrix.VLeaf -> "VLeaf"
+    | PatternMatrix.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
+
+  let rec dump_cases f cases =
+    let aux doc (constr, t) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group (f constr ^^ PPrint.nest 4 (dump_patterns' f t))
+
+    in
+    List.fold_left aux PPrint.empty cases
+
+  and dump_patterns' f = function
+    | Leaf i ->
+        PPrint.break 1
+        ^^ PPrint.OCaml.int i
+    | Node (idx, cases) ->
+        dump_pattern_matching (PPrint.string (Option.maybe string_of_int "<CURRENT>" idx)) (dump_cases f cases)
+
+  let dump_patterns = function
+    | IdxTree pat ->
+        let f index =
+          PPrint.string (fmt "| %d ->" index)
+        in
+        dump_patterns' f pat
+     | PtrTree pat ->
+         let f name =
+           PPrint.string (fmt "| exn %s ->" (dump_exn_name name))
+         in
+         dump_patterns' f pat
+
+  let dump_vars vars =
+    let aux acc (var, name) =
+      fmt "%s (%s = %s)" acc (dump_name name) (dump_var var)
+    in
+    List.fold_left aux "Ø" vars
+
+  let dump_used_vars used_vars =
+    let aux name acc =
+      fmt "%s %s" acc (dump_name name)
+    in
+    GammaSet.IDValue.fold aux used_vars "Ø"
+
+  let dump_args_ty l =
+    let aux = function
+      | (Int (), name) -> fmt "Int %s" (dump_name name)
+      | (Float (), name) -> fmt "Float %s" (dump_name name)
+      | (Char (), name) -> fmt "Char %s" (dump_name name)
+      | (String (), name) -> fmt "String %s" (dump_name name)
+    in
+    String.concat ", " (List.map aux l)
+
+  let dump_tag_ty = function
+    | Int () -> "Int"
+    | Float () -> "Float"
+    | Char () -> "Char"
+    | String () -> "String"
+
+  let dump_ret_ty = function
+    | Void -> "Void"
+    | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
+
+  let rec dump_t' = function
+    | Abs (name, t) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string
+                (fmt "λ %s ->" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | Rec (name, t) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string
+                (fmt "μ %s ->" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.rparen
+          )
+    | App (f, x) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (dump_name f)
+           ^^ PPrint.blank 1
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ PPrint.string (dump_name x))
+           ^^ PPrint.rparen
+          )
+    | Val name ->
+        PPrint.string (dump_name name)
+    | Datatype (index, params) ->
+        PPrint.group
+          (PPrint.lbracket
+           ^^ PPrint.break 1
+           ^^ PPrint.string (Option.maybe string_of_int "" index)
+           ^^ PPrint.break 1
+           ^^ PPrint.bar
+           ^^ PPrint.break 1
+           ^^ dump_args params
+           ^^ PPrint.rbracket
+          )
+    | CallForeign (name, ret, args) ->
+        PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_ret_ty ret))
+    | PatternMatching (t, results, default, patterns) ->
+        dump_pattern_matching
+          (PPrint.string (dump_name t))
+          (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
+        ^^ PPrint.break 1
+        ^^ PPrint.string "| _ -> " ^^ dump_t default
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
+    | Fail (name, args) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string "fail"
+           ^^ PPrint.blank 1
+           ^^ PPrint.string (dump_exn_name name)
+           ^^ dump_args args
+           ^^ PPrint.rparen
+          )
+    | Try (t, (name, t')) ->
+        PPrint.group
+          (PPrint.string "try"
+           ^^ PPrint.break 1
+           ^^ dump_t t
+           ^^ PPrint.break 1
+           ^^ PPrint.string "with"
+          )
+        ^^ PPrint.string (fmt "| %s -> " (dump_name name))
+        ^^ dump_t t'
+        ^^ PPrint.break 1
+        ^^ PPrint.string "end"
+    | RecordGet (name, n) ->
+        PPrint.string (fmt "%s.%d" (dump_name name) n)
+    | Const (Int n) ->
+        PPrint.string (fmt "%d" n)
+    | Const (Float n) ->
+        PPrint.string (fmt "%f" n)
+    | Const (Char c) ->
+        PPrint.string (fmt "'%lc'" c)
+    | Const (String s) ->
+        PPrint.string (fmt "\"%s\"" s)
+    | Unreachable ->
+        PPrint.string "UNREACHABLE"
+    | Reraise e ->
+        PPrint.string (fmt "reraise %s" (dump_name e))
+
+  and dump_t (lets, t) =
+    let aux (name, x) =
+      PPrint.string (dump_name name) ^^
+      PPrint.break 1 ^^ PPrint.equals ^^ PPrint.break 1 ^^
+      dump_t' x
+    in
+    let lets = List.map aux lets in
+    PPrint.group
+      (PPrint.string "[" ^^
+       List.fold_left (fun acc x -> acc ^^ x ^^ PPrint.string ";") PPrint.empty lets ^^
+       PPrint.string "]" ^^
+       dump_t' t
+      )
+
+  and dump_results results =
+    let aux doc i result =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %d ->" i)
+            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
+           )
+    in
+    List.Idx.foldi aux PPrint.empty results
+
+  and dump_args args =
+    let aux doc name = doc ^^ PPrint.break 1 ^^ PPrint.string (dump_name name) in
+    List.fold_left aux PPrint.empty args
+
+  let dump_linkage = function
+    | Private -> "private"
+    | Public -> "public"
+
+  let dump = function
+    | Value (name, t, linkage) ->
+        PPrint.group
+          (PPrint.string (fmt "let %s : %s =" (dump_name name) (dump_linkage linkage))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+          )
+    | Exception name ->
+        PPrint.string (fmt "exception %s" (dump_exn_name name))
+
+  let dump top =
+    let doc = dump_top dump PPrint.empty top in
+    string_of_doc doc
+end
+
 module OptimizedTree = struct
   open OptimizedTree
 
@@ -1065,7 +1274,7 @@ module OptimizedTree = struct
     | Void -> "Void"
     | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
 
-  let rec dump_t = function
+  let rec dump_t' = function
     | Abs (name, used_vars, t) ->
         PPrint.group
           (PPrint.lparen
@@ -1113,17 +1322,6 @@ module OptimizedTree = struct
         ^^ PPrint.string "| _ -> " ^^ dump_t default
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Let (name, t, xs) ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ PPrint.string (fmt "let %s =" (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
-           ^^ PPrint.break 1
-           ^^ PPrint.string "in"
-           ^^ PPrint.break 1
-           ^^ dump_t xs
-           ^^ PPrint.rparen
-          )
     | Fail (name, args) ->
         PPrint.group
           (PPrint.lparen
@@ -1159,6 +1357,20 @@ module OptimizedTree = struct
         PPrint.string "UNREACHABLE"
     | Reraise e ->
         PPrint.string (fmt "reraise %s" (dump_name e))
+
+  and dump_t (lets, t) =
+    let aux (name, x) =
+      PPrint.string (dump_name name) ^^
+      PPrint.break 1 ^^ PPrint.equals ^^ PPrint.break 1 ^^
+      dump_t' x
+    in
+    let lets = List.map aux lets in
+    PPrint.group
+      (PPrint.string "[" ^^
+       List.fold_left (fun acc x -> acc ^^ x ^^ PPrint.string ";") PPrint.empty lets ^^
+       PPrint.string "]" ^^
+       dump_t' t
+      )
 
   and dump_results results =
     let aux doc i result =

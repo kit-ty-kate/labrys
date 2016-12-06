@@ -19,4 +19,4 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val of_lambda_tree : LambdaTree.top list -> OptimizedTree.top list
+val of_flatten_tree : FlattenTree.top list -> OptimizedTree.top list

@@ -21,14 +21,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = LIdent.t
 type eff_name = Ident.Exn.t
-type free_vars = GammaSet.IDValue.t
 type index = int
 type constr = int
 type arity = int
 type length = int
 
 type ('int, 'float, 'char, 'string) ty =
-  ('int, 'float, 'char, 'string) FlattenTree.ty =
+  ('int, 'float, 'char, 'string) LambdaTree.ty =
   | Int of 'int
   | Float of 'float
   | Char of 'char
@@ -37,20 +36,20 @@ type ('int, 'float, 'char, 'string) ty =
 type tag_ty = (unit, unit, unit, unit) ty
 type const = (int, float, int, string) ty
 
-type 'a tree' = 'a FlattenTree.tree' =
+type 'a tree' = 'a LambdaTree.tree' =
   | Node of (int option * ('a * 'a tree') list)
   | Leaf of int
 
-type tree = FlattenTree.tree =
+type tree = LambdaTree.tree =
   | IdxTree of constr tree'
   | PtrTree of eff_name tree'
 
-type foreign_ret_type = FlattenTree.foreign_ret_type =
+type foreign_ret_type = LambdaTree.foreign_ret_type =
   | Void
   | Alloc of tag_ty
 
 type t' =
-  | Abs of (name * free_vars * t)
+  | Abs of (name * t)
   | Rec of (name * t)
   | App of (name * name)
   | Val of name
@@ -66,9 +65,8 @@ type t' =
 
 and t = ((name * t') list * t')
 
-type linkage = FlattenTree.linkage = Public | Private
+type linkage = LambdaTree.linkage = Public | Private
 
 type top =
   | Value of (name * t * linkage)
   | Exception of eff_name
-  | Function of (name * (name * t) * linkage)

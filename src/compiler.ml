@@ -95,11 +95,18 @@ let get_lambda_tree ~with_main ~interface options modul =
   let lambda_tree = Lambda.of_typed_tree typed_tree in
   (imports, lambda_tree)
 
-let get_optimized_tree ~with_main ~interface options modul =
+let get_flatten_tree ~with_main ~interface options modul =
   let (imports, lambda_tree) =
     get_lambda_tree ~with_main ~interface options modul
   in
-  let optimized_tree = Optimize.of_lambda_tree lambda_tree in
+  let flatten_tree = Flatten.of_lambda_tree lambda_tree in
+  (imports, flatten_tree)
+
+let get_optimized_tree ~with_main ~interface options modul =
+  let (imports, flatten_tree) =
+    get_flatten_tree ~with_main ~interface options modul
+  in
+  let optimized_tree = Optimize.of_flatten_tree flatten_tree in
   (imports, optimized_tree)
 
 let rec build_imports ~imports_code options imports =
@@ -180,10 +187,17 @@ let print_untyped_tree options modul =
 
 let print_lambda_tree options modul =
   let modul = Module.from_string options modul in
-  let (_, untyped_tree) =
+  let (_, lambda_tree) =
     get_lambda_tree ~with_main:true ~interface:Gamma.empty options modul
   in
-  print_endline (Printers.LambdaTree.dump untyped_tree)
+  print_endline (Printers.LambdaTree.dump lambda_tree)
+
+let print_flatten_tree options modul =
+  let modul = Module.from_string options modul in
+  let (_, flatten_tree) =
+    get_flatten_tree ~with_main:true ~interface:Gamma.empty options modul
+  in
+  print_endline (Printers.FlattenTree.dump flatten_tree)
 
 let print_optimized_tree options modul =
   let modul = Module.from_string options modul in
