@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open Containers
 open Monomorphic.None
 
-module Set = GammaSet.IDValue
+module Set = GammaSet.MIDValue
 
 module Llvm = struct
   include Llvm
@@ -214,11 +214,11 @@ module Make (I : I) = struct
     (List.rev b, c)
 
   let create_closure ~isrec ~used_vars gamma builder =
-    let gamma = LIdent.Map.filter (fun x _ -> Set.mem x used_vars) gamma in
+    let gamma = LIdent.Map.filter (fun x _ -> Set.mem used_vars x) gamma in
     let (values, gamma) = fold_env gamma builder in
     let env_size = List.length values in
     let gamma = match isrec with
-      | Some rec_name when Set.mem rec_name used_vars ->
+      | Some rec_name when Set.mem used_vars rec_name ->
           LIdent.Map.add rec_name RecFun gamma
       | Some _ | None ->
           gamma

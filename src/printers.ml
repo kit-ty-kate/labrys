@@ -1208,10 +1208,10 @@ module OptimizedTree = struct
          dump_patterns' f pat
 
   let dump_used_vars used_vars =
-    let aux name acc =
+    let aux acc _ name =
       fmt "%s %s" acc (dump_name name)
     in
-    GammaSet.IDValue.fold aux used_vars "Ø"
+    GammaSet.MIDValue.fold used_vars "Ø" aux
 
   let dump_args_ty l =
     let aux = function

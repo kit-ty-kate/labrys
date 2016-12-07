@@ -28,7 +28,11 @@ type t = {name : string; id : unit ref}
 
 let create name = {name; id = ref ()}
 
+let raw_ptr (x : t) =
+  Nativeint.shift_left (Nativeint.of_int (Obj.magic x)) 1
+
 let equal = (==)
+let compare x y = Nativeint.compare (raw_ptr x) (raw_ptr y)
 
 let to_string x = x.name
 

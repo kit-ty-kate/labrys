@@ -21,12 +21,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 open OptimizedTree
 
-module Set = GammaSet.IDValue
+module Set = GammaSet.MIDValue
 
 let rec of_term' = function
   | FlattenTree.Abs (name, t) ->
       let (t, fv) = of_term t in
-      let fv = Set.remove name fv in
+      let fv = Set.remove_all fv name in
       (Abs (name, fv, t), fv)
   | FlattenTree.App (x, y) ->
       (App (x, y), Set.of_list [x; y])
@@ -35,22 +35,22 @@ let rec of_term' = function
   | FlattenTree.Datatype (idx, args) ->
       (Datatype (idx, args), Set.of_list args)
   | FlattenTree.CallForeign (name, ty, args) ->
-      let fv = List.fold_right (fun (_, name) -> Set.add name) args Set.empty in
+      let fv = List.fold_right (fun (_, name) fv -> Set.add fv name) args Set.empty in
       (CallForeign (name, ty, args), fv)
   | FlattenTree.PatternMatching (name, branches, default, tree) ->
       let (default, fv) = of_term default in
       let (branches, fv) = of_branches fv branches in
-      (PatternMatching (name, branches, default, tree), Set.add name fv)
+      (PatternMatching (name, branches, default, tree), Set.add fv name)
   | FlattenTree.Rec (name, t) ->
       let (t, fv) = of_term' t in
-      let fv = Set.remove name fv in
+      let fv = Set.remove_all fv name in
       (Rec (name, t), fv)
   | FlattenTree.Fail (exn, args) ->
       (Fail (exn, args), Set.of_list args)
   | FlattenTree.Try (t, (name, t')) ->
       let (t, fv1) = of_term t in
       let (t', fv2) = of_term t' in
-      let fv2 = Set.remove name fv2 in
+      let fv2 = Set.remove_all fv2 name in
       (Try (t, (name, t')), Set.union fv1 fv2)
   | FlattenTree.RecordGet (name, idx) ->
       (RecordGet (name, idx), Set.singleton name)
@@ -66,8 +66,13 @@ and of_term (lets, t) =
     | (name, x)::xs ->
         let (x, fv1) = of_term' x in
         let (lets, t, fv2) = aux xs in
-        let fv = Set.union fv1 (Set.remove name fv2) in
-        ((name, x) :: lets, t, fv)
+        begin match x, Set.count fv2 name with
+        | (Abs _ | Rec _ | Val _ | Datatype _ | Const _), 0 ->
+            (lets, t, Set.remove_all fv2 name)
+        | _ ->
+            let fv = Set.union fv1 (Set.remove_all fv2 name) in
+            ((name, x) :: lets, t, fv)
+        end
     | [] ->
         let (t, fv) = of_term' t in
         ([], t, fv)

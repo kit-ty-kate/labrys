@@ -26,3 +26,4 @@ module TypeVar = GammaMap.TypeVar.Set
 module MValue : CCMultiSet.S with type elt = Ident.Name.t
 
 module IDValue : Utils.EQSET with type elt = LIdent.t
+module MIDValue : CCMultiSet.S with type elt = LIdent.t

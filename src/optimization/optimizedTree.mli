@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 type name = LIdent.t
 type eff_name = Ident.Exn.t
-type free_vars = GammaSet.IDValue.t
+type free_vars = GammaSet.MIDValue.t
 type index = int
 type constr = int
 type arity = int

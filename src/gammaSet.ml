@@ -31,3 +31,4 @@ module TypeVar = GammaMap.TypeVar.Set
 module MValue = CCMultiSet.Make (Ident.Name)
 
 module IDValue = Utils.EqSet (LIdent)
+module MIDValue = CCMultiSet.Make (LIdent)
