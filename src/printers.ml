@@ -796,10 +796,6 @@ module LambdaTree = struct
       )
     ^^ content
 
-  let rec dump_var = function
-    | PatternMatrix.VLeaf -> "VLeaf"
-    | PatternMatrix.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
-
   let rec dump_cases f cases =
     let aux doc (constr, t) =
       doc
@@ -827,18 +823,6 @@ module LambdaTree = struct
            PPrint.string (fmt "| exn %s ->" (dump_exn_name name))
          in
          dump_patterns' f pat
-
-  let dump_vars vars =
-    let aux acc (var, name) =
-      fmt "%s (%s = %s)" acc (dump_name name) (dump_var var)
-    in
-    List.fold_left aux "Ø" vars
-
-  let dump_used_vars used_vars =
-    let aux name acc =
-      fmt "%s %s" acc (dump_name name)
-    in
-    GammaSet.IDValue.fold aux used_vars "Ø"
 
   let dump_args_ty l =
     let aux = function
@@ -1002,10 +986,6 @@ module FlattenTree = struct
       )
     ^^ content
 
-  let rec dump_var = function
-    | PatternMatrix.VLeaf -> "VLeaf"
-    | PatternMatrix.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
-
   let rec dump_cases f cases =
     let aux doc (constr, t) =
       doc
@@ -1033,18 +1013,6 @@ module FlattenTree = struct
            PPrint.string (fmt "| exn %s ->" (dump_exn_name name))
          in
          dump_patterns' f pat
-
-  let dump_vars vars =
-    let aux acc (var, name) =
-      fmt "%s (%s = %s)" acc (dump_name name) (dump_var var)
-    in
-    List.fold_left aux "Ø" vars
-
-  let dump_used_vars used_vars =
-    let aux name acc =
-      fmt "%s %s" acc (dump_name name)
-    in
-    GammaSet.IDValue.fold aux used_vars "Ø"
 
   let dump_args_ty l =
     let aux = function
@@ -1211,10 +1179,6 @@ module OptimizedTree = struct
       )
     ^^ content
 
-  let rec dump_var = function
-    | PatternMatrix.VLeaf -> "VLeaf"
-    | PatternMatrix.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
-
   let rec dump_cases f cases =
     let aux doc (constr, t) =
       doc
@@ -1242,12 +1206,6 @@ module OptimizedTree = struct
            PPrint.string (fmt "| exn %s ->" (dump_exn_name name))
          in
          dump_patterns' f pat
-
-  let dump_vars vars =
-    let aux acc (var, name) =
-      fmt "%s (%s = %s)" acc (dump_name name) (dump_var var)
-    in
-    List.fold_left aux "Ø" vars
 
   let dump_used_vars used_vars =
     let aux name acc =

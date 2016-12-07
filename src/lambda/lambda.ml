@@ -24,8 +24,6 @@ open Monomorphic.None
 
 open LambdaTree
 
-let fmt = Printf.sprintf
-
 let gamma_add name gamma =
   let id = LIdent.create (Ident.Name.to_string name) in
   (id, GammaMap.Value.add name id gamma)
