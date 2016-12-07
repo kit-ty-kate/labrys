@@ -38,8 +38,8 @@ let rec propagate' gamma = function
       let t = propagate gamma t in
       ([], Abs (name, t))
   | Rec (name, t) ->
-      let t = propagate gamma t in
-      ([], Rec (name, t))
+      let (lets, t) = propagate' gamma t in
+      (lets, Rec (name, t))
   | App (x, y) ->
       let x = rename gamma x in
       let y = rename gamma y in
@@ -98,8 +98,8 @@ let rec of_term = function
       let t = of_term t in
       ([], Abs (name, t))
   | LambdaTree.Rec (name, t) ->
-      let t = of_term t in
-      ([], Rec (name, t))
+      let (lets, t) = of_term t in
+      (lets, Rec (name, t))
   | LambdaTree.App (x, y) ->
       ([], App (x, y))
   | LambdaTree.Val name ->

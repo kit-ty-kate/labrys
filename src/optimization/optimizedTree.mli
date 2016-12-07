@@ -51,7 +51,7 @@ type foreign_ret_type = FlattenTree.foreign_ret_type =
 
 type t' =
   | Abs of (name * free_vars * t)
-  | Rec of (name * t)
+  | Rec of (name * t')
   | App of (name * name)
   | Val of name
   | Datatype of (index option * name list)

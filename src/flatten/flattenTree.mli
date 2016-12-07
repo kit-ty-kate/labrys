@@ -50,7 +50,7 @@ type foreign_ret_type = LambdaTree.foreign_ret_type =
 
 type t' =
   | Abs of (name * t)
-  | Rec of (name * t)
+  | Rec of (name * t')
   | App of (name * name)
   | Val of name
   | Datatype of (index option * name list)

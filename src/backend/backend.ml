@@ -411,7 +411,7 @@ module Make (I : I) = struct
         let args = map_args gamma builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret
     | OptimizedTree.Rec (name, t) ->
-        lambda ~isrec:name ~jmp_buf gamma builder t
+        lambda' ~isrec:(Some name) ~jmp_buf gamma builder t
     | OptimizedTree.Fail (name, args) ->
         let args = List.map (get_value gamma builder) args in
         let tag = get_exn name in

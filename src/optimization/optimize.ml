@@ -42,7 +42,7 @@ let rec of_term' = function
       let (branches, fv) = of_branches fv branches in
       (PatternMatching (name, branches, default, tree), Set.add name fv)
   | FlattenTree.Rec (name, t) ->
-      let (t, fv) = of_term t in
+      let (t, fv) = of_term' t in
       let fv = Set.remove name fv in
       (Rec (name, t), fv)
   | FlattenTree.Fail (exn, args) ->

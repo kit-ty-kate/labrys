@@ -1047,7 +1047,7 @@ module FlattenTree = struct
           (PPrint.lparen
            ^^ PPrint.string
                 (fmt "μ %s ->" (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t' t)
            ^^ PPrint.rparen
           )
     | App (f, x) ->
@@ -1246,7 +1246,7 @@ module OptimizedTree = struct
           (PPrint.lparen
            ^^ PPrint.string
                 (fmt "μ %s ->" (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t' t)
            ^^ PPrint.rparen
           )
     | App (f, x) ->
