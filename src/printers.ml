@@ -1304,11 +1304,11 @@ module OptimizedTree = struct
     | Datatype (index, params) ->
         PPrint.group
           (PPrint.lbracket
-           ^^ PPrint.break 1
+           ^^ PPrint.space
            ^^ PPrint.string (Option.maybe string_of_int "" index)
-           ^^ PPrint.break 1
+           ^^ PPrint.space
            ^^ PPrint.bar
-           ^^ PPrint.break 1
+           ^^ PPrint.space
            ^^ dump_args params
            ^^ PPrint.rbracket
           )
@@ -1366,9 +1366,10 @@ module OptimizedTree = struct
     in
     let lets = List.map aux lets in
     PPrint.group
-      (PPrint.string "[" ^^
-       List.fold_left (fun acc x -> acc ^^ x ^^ PPrint.string ";") PPrint.empty lets ^^
-       PPrint.string "]" ^^
+      (PPrint.lbracket ^^
+       List.fold_left (fun acc x -> acc ^^ x ^^ PPrint.semi ^^ PPrint.break 1) PPrint.empty lets ^^
+       PPrint.rbracket ^^
+       PPrint.space ^^
        dump_t' t
       )
 
