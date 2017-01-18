@@ -523,7 +523,7 @@ module UnsugaredTree = struct
     | (_, Const (Float n)) ->
         PPrint.string (fmt "%f" n)
     | (_, Const (Char c)) ->
-        PPrint.string (fmt "'%lc'" c)
+        PPrint.string (fmt "'%lc'" (Uchar.to_int c))
     | (_, Const (String s)) ->
         PPrint.string (fmt "\"%s\"" s)
 
@@ -729,7 +729,7 @@ module UntypedTree = struct
     | Const (Float n) ->
         PPrint.string (fmt "%f" n)
     | Const (Char c) ->
-        PPrint.string (fmt "'%lc'" c)
+        PPrint.string (fmt "'%lc'" (Uchar.to_int c))
     | Const (String s) ->
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
@@ -930,7 +930,7 @@ module LambdaTree = struct
     | Const (Float n) ->
         PPrint.string (fmt "%f" n)
     | Const (Char c) ->
-        PPrint.string (fmt "'%lc'" c)
+        PPrint.string (fmt "'%lc'" (Uchar.to_int c))
     | Const (String s) ->
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
@@ -1109,7 +1109,7 @@ module FlattenTree = struct
     | Const (Float n) ->
         PPrint.string (fmt "%f" n)
     | Const (Char c) ->
-        PPrint.string (fmt "'%lc'" c)
+        PPrint.string (fmt "'%lc'" (Uchar.to_int c))
     | Const (String s) ->
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
@@ -1308,7 +1308,7 @@ module OptimizedTree = struct
     | Const (Float n) ->
         PPrint.string (fmt "%f" n)
     | Const (Char c) ->
-        PPrint.string (fmt "'%lc'" c)
+        PPrint.string (fmt "'%lc'" (Uchar.to_int c))
     | Const (String s) ->
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->

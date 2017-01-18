@@ -245,7 +245,7 @@ module Make (I : I) = struct
   let get_const = function
     | OptimizedTree.Int n -> Llvm.const_int Type.i32 n
     | OptimizedTree.Float n -> Llvm.const_float Type.float n
-    | OptimizedTree.Char n -> Llvm.const_int Type.i32 n
+    | OptimizedTree.Char n -> Llvm.const_int Type.i32 (Uchar.to_int n)
     | OptimizedTree.String s -> Llvm.const_string c (s ^ "\x00")
 
   let llvm_ty_of_ty = function

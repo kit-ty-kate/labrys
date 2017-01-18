@@ -34,7 +34,7 @@ type ('int, 'float, 'char, 'string) ty =
   | String of 'string
 
 type tag_ty = (unit, unit, unit, unit) ty
-type const = (int, float, int, string) ty
+type const = (int, float, Uchar.t, string) ty
 
 type foreign_ret_type =
   | Void

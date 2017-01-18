@@ -65,7 +65,7 @@ type pattern =
 type const =
   | Int of int
   | Float of float
-  | Char of int
+  | Char of Uchar.t
   | String of string
 
 type t' =

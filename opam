@@ -19,7 +19,7 @@ depends: [
   "pprint"
   "re"
   "msgpack"
-  "uutf"
+  "uutf" {>= "1.0.0"}
   "llvm" {>= "3.8"}
   "containers" {>= "0.17"}
   "monomorphic"
