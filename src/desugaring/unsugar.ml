@@ -200,21 +200,17 @@ let unsugar_string ~loc s =
 let unsugar_string ~loc s =
   let rec aux acc = function
     | [] -> List.rev acc
-    | x::y::xs ->
-        begin match Uchar.to_int x, Uchar.to_int y with
-        | 0x5C, 0x5C -> aux (Uchar.of_char '\\' :: acc) xs
-        | 0x5C, 0x22 -> aux (Uchar.of_char '"' :: acc) xs
-        | 0x5C, 0x27 -> aux (Uchar.of_char '\'' :: acc) xs
-        | 0x5C, 0x6E -> aux (Uchar.of_char '\n' :: acc) xs
-        | 0x5C, 0x72 -> aux (Uchar.of_char '\r' :: acc) xs
-        | 0x5C, 0x74 -> aux (Uchar.of_char '\t' :: acc) xs
+    | 0x5C::0x5C::xs -> aux (Uchar.of_char '\\' :: acc) xs
+    | 0x5C::0x22::xs -> aux (Uchar.of_char '"' :: acc) xs
+    | 0x5C::0x27::xs -> aux (Uchar.of_char '\'' :: acc) xs
+    | 0x5C::0x6E::xs -> aux (Uchar.of_char '\n' :: acc) xs
+    | 0x5C::0x72::xs -> aux (Uchar.of_char '\r' :: acc) xs
+    | 0x5C::0x74::xs -> aux (Uchar.of_char '\t' :: acc) xs
     (*  | '\\' (num as n1) (num as n2) (num as n3)
         | "\\x" hexa hexa *) (* TODO *)
-        | _, _ -> aux (x :: y :: acc) xs
-        end
-    | x::xs -> aux (x :: acc) xs
+    | x::xs -> aux (Uchar.of_int x :: acc) xs
   in
-  aux [] (unsugar_string ~loc s)
+  aux [] (List.map Uchar.to_int (unsugar_string ~loc s))
 
 let unsugar_char ~loc s =
   match unsugar_string ~loc s with
