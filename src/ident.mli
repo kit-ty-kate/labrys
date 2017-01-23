@@ -36,7 +36,11 @@ module Name : sig
   val prepend_empty : t -> t
 end
 
-module Variant : module type of Name
+module Variant : sig
+  include module type of Name
+
+  val to_name : t -> Name.t
+end
 
 module Type : module type of Name
 

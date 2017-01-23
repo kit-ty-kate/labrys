@@ -56,7 +56,8 @@ let create_fresh_name () = LIdent.create ".@fresh"
 let get_name name gamma =
   match GammaMap.Value.find_opt name gamma with
   | Some x -> x
-  | None -> LIdent.create (Ident.Name.to_string name) (* External value *)
+  | None -> assert false (* NOTE: Every external values should be in the
+                            environment *)
 
 let rec of_results gamma var m =
   let aux (wildcards, t) =
@@ -213,7 +214,7 @@ let rec scan mset = function
   | [] ->
       mset
 
-let of_typed_tree top =
+let of_typed_tree gamma top =
   let mset = scan GammaSet.MValue.empty top in
-  let gamma = GammaMap.Value.empty in
+  let gamma = Gamma.get_untyped_values gamma in
   of_typed_tree mset gamma top

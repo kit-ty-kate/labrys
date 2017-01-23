@@ -19,4 +19,4 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-val of_typed_tree : UntypedTree.top list -> LambdaTree.top list
+val of_typed_tree : Gamma.t -> UntypedTree.top list -> LambdaTree.top list

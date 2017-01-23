@@ -86,13 +86,13 @@ let get_untyped_tree ~with_main ~interface options modul =
   let typed_tree =
     TypeChecker.check ~modul ~interface ~with_main options gamma unsugared_tree
   in
-  (imports, typed_tree)
+  (imports, gamma, typed_tree)
 
 let get_lambda_tree ~with_main ~interface options modul =
-  let (imports, typed_tree) =
+  let (imports, gamma, typed_tree) =
     get_untyped_tree ~with_main ~interface options modul
   in
-  let lambda_tree = Lambda.of_typed_tree typed_tree in
+  let lambda_tree = Lambda.of_typed_tree gamma typed_tree in
   (imports, lambda_tree)
 
 let get_flatten_tree ~with_main ~interface options modul =
@@ -180,7 +180,7 @@ let print_unsugared_tree options modul =
 
 let print_untyped_tree options modul =
   let modul = Module.from_string options modul in
-  let (_, typed_tree) =
+  let (_, _, typed_tree) =
     get_untyped_tree ~with_main:true ~interface:Gamma.empty options modul
   in
   print_endline (Printers.UntypedTree.dump typed_tree)

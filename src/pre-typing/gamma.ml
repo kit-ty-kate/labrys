@@ -121,3 +121,18 @@ let is_subset_of a b =
   @ GammaMap.Exn.diff ~eq:(List.equal PrivateTypes.ty_equal) a.exceptions b.exceptions
   @ GammaMap.TyClass.diff ~eq:PrivateTypes.class_equal a.tyclasses b.tyclasses
   @ GammaMap.Instance.diff ~eq:named_instances_equal a.named_instances b.named_instances
+
+let get_untyped_values self =
+  let gamma = GammaMap.Value.empty in
+  let add k _ gamma =
+    let to_string = Ident.Name.to_string in
+    GammaMap.Value.add k (LIdent.create (to_string k)) gamma
+  in
+  let gamma = GammaMap.Value.fold add self.values gamma in
+  let add k _ gamma =
+    let to_name = Ident.Variant.to_name in
+    let to_string = Ident.Variant.to_string in
+    GammaMap.Value.add (to_name k) (LIdent.create (to_string k)) gamma
+  in
+  let gamma = GammaMap.Variant.fold add self.variants gamma in
+  gamma

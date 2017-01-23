@@ -60,7 +60,11 @@ module Name = struct
     (loc, modul, "." ^ name)
 end
 
-module Variant = Name
+module Variant = struct
+  include Name
+
+  let to_name = Fun.id
+end
 
 module Type = Name
 

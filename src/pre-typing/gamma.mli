@@ -49,3 +49,5 @@ val replace_tyclass : Ident.TyClass.t -> PrivateTypes.class_t -> t -> t
 val union : t -> t -> t
 
 val is_subset_of : t -> t -> string list
+
+val get_untyped_values : t -> LIdent.t GammaMap.Value.t
