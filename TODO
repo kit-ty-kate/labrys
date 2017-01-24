@@ -66,3 +66,14 @@
 * Do we change for System Fc ? (Recursive type aliases, GADTs, …)
 * Have a real custom GC
 * Type inference
+* Parallelism
+* Concurrency
+* Implement an escape analysis
+  * Avoid some dynamic allocations
+  * Allow to have a fine grained effect system for references
+    * Local refs don't count as IO
+    * Introduce a new effect: Ref (for refs, arrays, …)
+* Mutually recursive functions
+* Prove the type system correct
+* Document the different passes and optimizations
+* Use LLD (still experimental) as library to avoid relying on an external tool (Clang & implicitly LD)
