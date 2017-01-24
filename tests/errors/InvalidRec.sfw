@@ -1,0 +1,4 @@
+let rec f : Unit -> Unit =
+  let z () = f in
+  let lol = z Unit Unit in
+  \() -> Unit

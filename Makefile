@@ -6,6 +6,7 @@ TESTS = \
 	tests/basic/basic.t \
 	tests/old-examples/old-examples.t \
 	tests/examples/examples.t \
+	tests/errors/errors.t \
 
 all:
 	ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild-pkg)" cervoise
