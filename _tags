@@ -5,7 +5,8 @@ true: use_menhir, explain
 true: safe_string
 true: bin_annot
 true: keep_locs
-true: warn(A-44-33-4)
+true: warn(A-44-33-4-58)
+# TODO: Remove -58 when oasis is fixed (see #1714)
 
 true: package(unix)
 true: package(cmdliner)
