@@ -78,3 +78,4 @@
 * Prove the type system correct
 * Document the different passes and optimizations
 * Use LLD (still experimental) as library to avoid relying on an external tool (Clang & implicitly LD)
+* Create a test tool to create correct (or incorrect) terms and check them
