@@ -25,23 +25,23 @@ open Monomorphic.None
 open UntypedTree
 
 let rec get_ty_from_nearest_annot = function
-  | (_, UnsugaredTree.Annot (_, ty)) ->
+  | (_, DesugaredTree.Annot (_, ty)) ->
       Some ty
-  | (_, UnsugaredTree.Rec (_, t))
-  | (_, UnsugaredTree.Let (_, _, t)) ->
+  | (_, DesugaredTree.Rec (_, t))
+  | (_, DesugaredTree.Let (_, _, t)) ->
       get_ty_from_nearest_annot t
-  | (_, UnsugaredTree.CAbs _)
-  | (_, UnsugaredTree.Abs _)
-  | (_, UnsugaredTree.TAbs _)
-  | (_, UnsugaredTree.App _)
-  | (_, UnsugaredTree.TApp _)
-  | (_, UnsugaredTree.CApp _)
-  | (_, UnsugaredTree.Val _)
-  | (_, UnsugaredTree.Var _)
-  | (_, UnsugaredTree.Const _)
-  | (_, UnsugaredTree.PatternMatching _)
-  | (_, UnsugaredTree.Fail _)
-  | (_, UnsugaredTree.Try _) ->
+  | (_, DesugaredTree.CAbs _)
+  | (_, DesugaredTree.Abs _)
+  | (_, DesugaredTree.TAbs _)
+  | (_, DesugaredTree.App _)
+  | (_, DesugaredTree.TApp _)
+  | (_, DesugaredTree.CApp _)
+  | (_, DesugaredTree.Val _)
+  | (_, DesugaredTree.Var _)
+  | (_, DesugaredTree.Const _)
+  | (_, DesugaredTree.PatternMatching _)
+  | (_, DesugaredTree.Fail _)
+  | (_, DesugaredTree.Try _) ->
       None
 
 let get_rec_ty ~loc_name = function
@@ -94,10 +94,10 @@ let check_effects_forall ~loc_t options ~effect =
     Err.fail ~loc:loc_t "Cannot have IO effects under a forall"
 
 let get_const options = function
-  | UnsugaredTree.Int n -> (Int n, Builtins.int options)
-  | UnsugaredTree.Float n -> (Float n, Builtins.float options)
-  | UnsugaredTree.Char c -> (Char c, Builtins.char options)
-  | UnsugaredTree.String s -> (String s, Builtins.string options)
+  | DesugaredTree.Int n -> (Int n, Builtins.int options)
+  | DesugaredTree.Float n -> (Float n, Builtins.float options)
+  | DesugaredTree.Char c -> (Char c, Builtins.char options)
+  | DesugaredTree.String s -> (String s, Builtins.string options)
 
 let wrap_typeclass_apps ~loc gamma ~tyclasses ~f g =
   let rec aux f n = function
@@ -137,26 +137,26 @@ let try_to_pattern l =
   (name, PatternMatching (Val name, branches, Reraise name, pattern))
 
 let rec aux options gamma = function
-  | (_, UnsugaredTree.Abs ((name, ty), t)) ->
+  | (_, DesugaredTree.Abs ((name, ty), t)) ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let gamma = Gamma.include_rec_values gamma in
       let gamma = Gamma.add_value name ty gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
       let abs_ty = PrivateTypes.Fun (ty, effect, ty_expr) in
       (Abs (name, expr), abs_ty, Effects.empty)
-  | (_, UnsugaredTree.Rec (name, t)) ->
+  | (_, DesugaredTree.Rec (name, t)) ->
       let ty = get_ty_from_let_rec ~loc_name:(Ident.Name.loc name) t in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let gamma = Gamma.add_rec_value name ty gamma in
       let (expr, ty_expr, effects) = aux options gamma t in
       (Rec (name, expr), ty_expr, effects)
-  | (_, UnsugaredTree.TAbs ((name, k), t)) ->
+  | (_, DesugaredTree.TAbs ((name, k), t)) ->
       let gamma = Gamma.add_type_var name k gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
       check_effects_forall ~loc_t:(fst t) options ~effect;
       let abs_ty = Types.forall (name, k, ty_expr) in
       (expr, abs_ty, effect)
-  | (_, UnsugaredTree.CAbs ((name, (tyclass, tyvars, args)), t)) ->
+  | (_, DesugaredTree.CAbs ((name, (tyclass, tyvars, args)), t)) ->
       let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
       let tyvars =
         let aux acc (name, k) = GammaMap.TypeVar.add name k acc in
@@ -171,7 +171,7 @@ let rec aux options gamma = function
       let (expr, ty_expr, effect) = aux options gamma t in
       let abs_ty = Types.tyclass ((tyclass, tyvars, args), effect, ty_expr) in
       (Abs (Ident.Instance.to_name name, expr), abs_ty, Effects.empty)
-  | (loc, UnsugaredTree.App (f, x)) ->
+  | (loc, DesugaredTree.App (f, x)) ->
       let loc_f = fst f in
       let loc_x = fst x in
       let (f, ty_f, effect1) = aux options gamma f in
@@ -197,7 +197,7 @@ let rec aux options gamma = function
         wrap_typeclass_apps ~loc gamma ~tyclasses ~f aux
       in
       (f, res, Effects.union5 effect1 effect2 effect3 eff_f eff_x)
-  | (loc, UnsugaredTree.TApp (f, ty_x)) ->
+  | (loc, DesugaredTree.TApp (f, ty_x)) ->
       let loc_f = fst f in
       let loc_x = fst ty_x in
       let (f, ty_f, effect) = aux options gamma f in
@@ -206,15 +206,15 @@ let rec aux options gamma = function
       let (tyclasses, eff_f, res) = Types.extract_filled_tyclasses res in
       let f = wrap_typeclass_apps ~loc gamma ~tyclasses ~f Fun.id in
       (f, res, Effects.union effect eff_f)
-  | (loc, UnsugaredTree.CApp (f, x)) ->
+  | (loc, DesugaredTree.CApp (f, x)) ->
       let (f, ty_f, effect1) = aux options gamma f in
       let (name, tyclass, args) = match x with
-        | UnsugaredTree.TyClassVariable name ->
+        | DesugaredTree.TyClassVariable name ->
             let (tyclass, args) =
               GammaMap.Instance.find name gamma.Gamma.named_instances
             in
             (Ident.Instance.to_name name, tyclass, args)
-        | UnsugaredTree.TyClassInstance (tyclass, tys) ->
+        | DesugaredTree.TyClassInstance (tyclass, tys) ->
             let aux x = fst (Types.of_parse_tree_kind ~pure_arrow:`Allow options gamma x) in
             let tys = List.map aux tys in
             let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
@@ -229,16 +229,16 @@ let rec aux options gamma = function
       let f = App (f, Val name) in
       let f = wrap_typeclass_apps ~loc gamma ~tyclasses ~f Fun.id in
       (f, res, Effects.union3 effect1 effect2 eff_f)
-  | (loc, UnsugaredTree.Val name) ->
+  | (loc, DesugaredTree.Val name) ->
       let ty = GammaMap.Value.find name gamma.Gamma.values in
       let ty = get_non_rec_ty ~loc ty in
       (Val name, ty, Effects.empty)
-  | (_, UnsugaredTree.Var name) ->
+  | (_, DesugaredTree.Var name) ->
       let (idx, ty, len) =
         GammaMap.Variant.find name gamma.Gamma.variants
       in
       (Var (idx, len), ty, Effects.empty)
-  | (loc, UnsugaredTree.PatternMatching (t, patterns)) ->
+  | (loc, DesugaredTree.PatternMatching (t, patterns)) ->
       let loc_t = fst t in
       let (t, ty, effect1) = aux options gamma t in
       if not (Types.is_value ty) then
@@ -248,7 +248,7 @@ let rec aux options gamma = function
       in
       let effect = Effects.union effect1 effect2 in
       (PatternMatching (t, results, Unreachable, patterns), initial_ty, effect)
-  | (_, UnsugaredTree.Let (name, t, xs)) ->
+  | (_, DesugaredTree.Let (name, t, xs)) ->
       let loc_t = fst t in
       let ty = get_ty_from_nearest_annot t in
       let (t, ty_t, effect1) = aux options gamma t in
@@ -256,7 +256,7 @@ let rec aux options gamma = function
       let gamma = Gamma.add_value name ty_t gamma in
       let (xs, ty_xs, effect2) = aux options gamma xs in
       (Let (name, t, xs), ty_xs, Effects.union effect1 effect2)
-  | (loc, UnsugaredTree.Fail (ty, (exn, args))) ->
+  | (loc, DesugaredTree.Fail (ty, (exn, args))) ->
       let tys = GammaMap.Exn.find exn gamma.Gamma.exceptions in
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let (args, effects) =
@@ -275,7 +275,7 @@ let rec aux options gamma = function
       in
       let args = List.rev args in
       (Fail (exn, args), ty, Effects.add_exn exn effects)
-  | (_, UnsugaredTree.Try (e, branches)) ->
+  | (_, DesugaredTree.Try (e, branches)) ->
       let (e, ty, effect) = aux options gamma e in
       let (branches, effect) =
         let aux (branches, effect) ((name, args), t) =
@@ -297,19 +297,19 @@ let rec aux options gamma = function
       let (branches, effect) = List.fold_left aux ([], effect) branches in
       let branches = List.rev branches in
       (Try (e, try_to_pattern branches), ty, effect)
-  | (_, UnsugaredTree.Annot (t, ty)) ->
+  | (_, DesugaredTree.Annot (t, ty)) ->
       let loc_t = fst t in
       let (_, ty_t, effects) as res = aux options gamma t in
       check_type options ~loc_t ~ty ~ty_t ~effects gamma;
       res
-  | (loc, UnsugaredTree.Const const) ->
+  | (loc, DesugaredTree.Const const) ->
       let (const, ty) = get_const options const in
       (Const const, Types.ty ~loc gamma ty, Effects.empty)
 
 let transform_variants options ~datatype ~ty_args ~args gamma =
   let gamma' = List.fold_left (fun gamma (name, k) -> Gamma.add_type_var name k gamma) gamma args in
   let rec aux index = function
-    | UnsugaredTree.Variant (name, tys, ty) :: xs ->
+    | DesugaredTree.Variant (name, tys, ty) :: xs ->
         let tys = List.map (Types.of_parse_tree ~pure_arrow:`Allow options gamma') tys in
         let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
         let gamma = aux (succ index) xs in
@@ -414,31 +414,31 @@ let get_foreign_type ~loc options =
   aux []
 
 let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = function
-  | UnsugaredTree.Value value :: xs ->
+  | DesugaredTree.Value value :: xs ->
       let (value, _, has_main, gamma) = from_value ~current_module ~with_main ~has_main options gamma value in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       (Value value :: xs, has_main, gamma)
-  | UnsugaredTree.Type (name, ty) :: xs ->
+  | DesugaredTree.Type (name, ty) :: xs ->
       let ty = Types.of_parse_tree_kind ~pure_arrow:`Forbid options gamma ty in
       let gamma = Gamma.add_type name (Types.Alias ty) gamma in
       from_parse_tree ~current_module ~with_main ~has_main options gamma xs
-  | UnsugaredTree.Foreign (cname, name, ty) :: xs ->
+  | DesugaredTree.Foreign (cname, name, ty) :: xs ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let gamma = Gamma.add_value name ty gamma in
       let ty = get_foreign_type ~loc:(Ident.Name.loc name) options ty in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       (Foreign (cname, name, ty) :: xs, has_main, gamma)
-  | UnsugaredTree.Datatype (name, kind, args, variants) :: xs ->
+  | DesugaredTree.Datatype (name, kind, args, variants) :: xs ->
       let ty_args = List.map fst args in
       let gamma = Gamma.add_type name (Types.Abstract kind) gamma in
       let gamma = transform_variants options ~datatype:name ~ty_args ~args gamma variants in
       from_parse_tree ~current_module ~with_main ~has_main options gamma xs
-  | UnsugaredTree.Exception (name, args) :: xs ->
+  | DesugaredTree.Exception (name, args) :: xs ->
       let args = List.map (Types.of_parse_tree ~pure_arrow:`Forbid options gamma) args in
       let gamma = Gamma.add_exception name args gamma in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
       (Exception name :: xs, has_main, gamma)
-  | UnsugaredTree.Class (name, params, sigs) :: xs ->
+  | DesugaredTree.Class (name, params, sigs) :: xs ->
       let sigs =
         let gamma =
           let aux gamma (name, k) = Gamma.add_type_var name k gamma in
@@ -467,7 +467,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
         List.fold_left aux (0, xs) sigs
       in
       (xs, has_main, gamma)
-  | UnsugaredTree.Instance ((tyclass, tys), name, values) :: xs ->
+  | DesugaredTree.Instance ((tyclass, tys), name, values) :: xs ->
       let tyclass' = GammaMap.TyClass.find tyclass gamma.Gamma.tyclasses in
       let tys = List.map (Types.of_parse_tree_kind ~pure_arrow:`Forbid options gamma) tys in
       let values =

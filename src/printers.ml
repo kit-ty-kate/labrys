@@ -338,8 +338,8 @@ module ParseTree = struct
     string_of_doc doc
 end
 
-module UnsugaredTree = struct
-  open UnsugaredTree
+module DesugaredTree = struct
+  open DesugaredTree
 
   let dump_eff (_, x) =
     let aux = function

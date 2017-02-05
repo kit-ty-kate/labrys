@@ -52,7 +52,7 @@ let union = PrivateTypes.eff_union
 
 let add options gamma eff self =
   match eff with
-  | UnsugaredTree.EffTy (name, exns) ->
+  | DesugaredTree.EffTy (name, exns) ->
       let (k, has_args, self) =
         match GammaMap.Types.find name gamma.Gamma.types with
         | PrivateTypes.Abstract k ->
@@ -80,7 +80,7 @@ let add options gamma eff self =
       let exns = Exn_set.of_list exns in
       let exns = Exn_set.union exns self.exns in
       {self with exns}
-  | UnsugaredTree.EffTyVar name ->
+  | DesugaredTree.EffTyVar name ->
       let k = GammaMap.TypeVar.find name gamma.Gamma.type_vars in
       if not (Kinds.is_effect k) then
         Err.fail

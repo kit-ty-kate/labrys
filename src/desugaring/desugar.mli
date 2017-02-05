@@ -31,7 +31,7 @@ val create :
   Module.t list ->
   Imports.t ->
   ParseTree.top list ->
-  UnsugaredTree.top list
+  DesugaredTree.top list
 
 val create_interface :
   current_module:Module.t ->

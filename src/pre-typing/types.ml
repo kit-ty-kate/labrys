@@ -62,7 +62,7 @@ let handle_effects ~loc options (b, _) gamma = function
          explicit syntax '-[]->' instead"
 
 let rec of_parse_tree_kind ~pure_arrow options gamma = function
-  | (loc, UnsugaredTree.Fun (x, eff, y)) ->
+  | (loc, DesugaredTree.Fun (x, eff, y)) ->
       let loc_x = fst x in
       let loc_y = fst y in
       let pa = switch_pure_arrow pure_arrow in
@@ -74,24 +74,24 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
       if Kinds.not_star k2 then
         fail_not_star ~loc:loc_y "->";
       (Fun (x, eff, y), Kinds.Star)
-  | (_, UnsugaredTree.Ty name) ->
+  | (_, DesugaredTree.Ty name) ->
       begin match GammaMap.Types.find name gamma.Gamma.types with
       | Alias (ty, k) -> (ty, k) (* TODO: Fix variables if already exist *)
       | Abstract k -> (Ty name, k)
       end
-  | (_, UnsugaredTree.TyVar name) ->
+  | (_, DesugaredTree.TyVar name) ->
       let k = GammaMap.TypeVar.find name gamma.Gamma.type_vars in
       (TyVar name, k)
-  | (_, UnsugaredTree.Eff effects) ->
+  | (_, DesugaredTree.Eff effects) ->
       (Eff (Effects.of_list options gamma effects), Kinds.Eff)
-  | (_, UnsugaredTree.Forall ((name, k), ret)) ->
+  | (_, DesugaredTree.Forall ((name, k), ret)) ->
       let loc_ret = fst ret in
       let gamma = Gamma.add_type_var name k gamma in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow options gamma ret in
       if Kinds.not_star kx then
         fail_not_star ~loc:loc_ret "forall";
       (Forall (name, k, ret), Kinds.Star)
-  | (loc, UnsugaredTree.TyClass ((name, tyvars, args), eff, ret)) ->
+  | (loc, DesugaredTree.TyClass ((name, tyvars, args), eff, ret)) ->
       let loc_ret = fst ret in
       let (gamma, tyvars, args) =
         let tyclass = GammaMap.TyClass.find name gamma.Gamma.tyclasses in
@@ -111,11 +111,11 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
       if Kinds.not_star kx then
         fail_not_star ~loc:loc_ret "forall";
       (TyClass ((name, tyvars, args), eff, ret), Kinds.Star)
-  | (_, UnsugaredTree.AbsOnTy ((name, k), ret)) ->
+  | (_, DesugaredTree.AbsOnTy ((name, k), ret)) ->
       let gamma = Gamma.add_type_var name k gamma in
       let (ret, kret) = of_parse_tree_kind ~pure_arrow options gamma ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
-  | (loc, UnsugaredTree.AppOnTy (f, x)) ->
+  | (loc, DesugaredTree.AppOnTy (f, x)) ->
       let (f, kf) = of_parse_tree_kind ~pure_arrow options gamma f in
       let pa = switch_pure_arrow pure_arrow in
       let (x, kx) = of_parse_tree_kind ~pure_arrow:pa options gamma x in

@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 open Containers
 open Monomorphic.None
 
-open UnsugaredTree
+open DesugaredTree
 
 let new_upper_name_to_variant ~current_module (loc, `NewUpperName name) =
   Ident.Variant.create ~loc current_module name

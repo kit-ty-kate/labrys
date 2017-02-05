@@ -45,10 +45,10 @@ type matrix = (pattern list * code_index) list
 
 let create =
   let rec aux gamma ty' = function
-    | UnsugaredTree.Any name ->
+    | DesugaredTree.Any name ->
         let gamma = Gamma.add_value name ty' gamma in
         (MAny (name, fst (Types.head ty')), gamma)
-    | UnsugaredTree.TyConstr (loc, name, args) ->
+    | DesugaredTree.TyConstr (loc, name, args) ->
         let (head_ty, tail_ty) = Types.head ty' in
         let constructors = GammaMap.Constr.find head_ty gamma.Gamma.constructors in
         let (ty_args, constructors) = Option.get_lazy (fun () -> assert false) constructors in

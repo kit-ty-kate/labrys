@@ -32,14 +32,14 @@ val of_parse_tree_kind :
   pure_arrow:[< `Allow | `Partial | `Forbid] ->
   <lib_dir : string; ..> ->
   Gamma.t ->
-  UnsugaredTree.ty ->
+  DesugaredTree.ty ->
   (t * Kinds.t)
 
 val of_parse_tree :
   pure_arrow:[< `Allow | `Partial | `Forbid] ->
   <lib_dir : string; ..> ->
   Gamma.t ->
-  UnsugaredTree.ty ->
+  DesugaredTree.ty ->
   t
 
 val to_string : t -> string

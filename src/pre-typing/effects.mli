@@ -26,7 +26,7 @@ val empty : t
 val of_list :
   <lib_dir : string; ..> ->
   Gamma.t ->
-  UnsugaredTree.effects ->
+  DesugaredTree.effects ->
   t
 
 val is_empty : t -> bool

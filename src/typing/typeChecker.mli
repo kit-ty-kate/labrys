@@ -25,5 +25,5 @@ val check :
   with_main:bool ->
   <lib_dir : string; ..> ->
   Gamma.t ->
-  UnsugaredTree.top list ->
+  DesugaredTree.top list ->
   UntypedTree.top list

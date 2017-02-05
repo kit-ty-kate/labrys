@@ -32,10 +32,10 @@ val equal : t -> t -> bool
 
 val get_params :
   loc:Location.t ->
-  (Gamma.t -> UnsugaredTree.ty -> PrivateTypes.t * Kinds.t) ->
+  (Gamma.t -> DesugaredTree.ty -> PrivateTypes.t * Kinds.t) ->
   Gamma.t ->
   Kinds.t GammaMap.TypeVar.t ->
-  UnsugaredTree.ty list ->
+  DesugaredTree.ty list ->
   t ->
   (Gamma.t * PrivateTypes.t list)
 

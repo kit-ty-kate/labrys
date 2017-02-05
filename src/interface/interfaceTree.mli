@@ -25,10 +25,10 @@ type tyvar_name = Ident.TypeVar.t
 type exn_name = Ident.Exn.t
 type tyclass_name = Ident.TyClass.t
 type instance_name = Ident.Instance.t
-type ty = UnsugaredTree.ty
+type ty = DesugaredTree.ty
 type loc = Location.t
-type variant = UnsugaredTree.variant
-type tyclass_instance = UnsugaredTree.tyclass_instance
+type variant = DesugaredTree.variant
+type tyclass_instance = DesugaredTree.tyclass_instance
 
 type t =
   | Val of (name * ty)

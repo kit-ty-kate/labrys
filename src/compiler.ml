@@ -51,10 +51,10 @@ let rec build_intf options current_module =
   let module P = ParserHandler.Make(struct let get = Module.intf current_module end) in
   let (mimports, tree) = P.parse_intf () in
   let (mimports, tree) = Builtins.interface ~current_module options mimports tree in
-  let mimports = Unsugar.create_imports ~current_module options mimports in
+  let mimports = Desugar.create_imports ~current_module options mimports in
   let (imports, gamma) = build_imports_intf options mimports in
   let (imports, tree) =
-    Unsugar.create_interface ~current_module options mimports imports tree
+    Desugar.create_interface ~current_module options mimports imports tree
   in
   (imports, Interface.compile ~current_module options gamma tree)
 
@@ -74,10 +74,10 @@ let get_unsugared_tree options modul =
   let (mimports, parse_tree) =
     Builtins.tree ~current_module:modul options mimports parse_tree
   in
-  let mimports = Unsugar.create_imports ~current_module:modul options mimports in
+  let mimports = Desugar.create_imports ~current_module:modul options mimports in
   let (imports, gamma) = build_imports_intf options mimports in
   let unsugared_tree =
-    Unsugar.create ~current_module:modul options mimports imports parse_tree
+    Desugar.create ~current_module:modul options mimports imports parse_tree
   in
   (mimports, gamma, unsugared_tree)
 
@@ -176,7 +176,7 @@ let print_parse_tree options modul =
 let print_unsugared_tree options modul =
   let modul = Module.from_string options modul in
   let (_, _, unsugared_tree) = get_unsugared_tree options modul in
-  print_endline (Printers.UnsugaredTree.dump unsugared_tree)
+  print_endline (Printers.DesugaredTree.dump unsugared_tree)
 
 let print_untyped_tree options modul =
   let modul = Module.from_string options modul in

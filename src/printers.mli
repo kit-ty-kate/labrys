@@ -23,8 +23,8 @@ module ParseTree : sig
   val dump : ParseTree.top list -> string
 end
 
-module UnsugaredTree : sig
-  val dump : UnsugaredTree.top list -> string
+module DesugaredTree : sig
+  val dump : DesugaredTree.top list -> string
 end
 
 module UntypedTree : sig
