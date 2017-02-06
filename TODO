@@ -2,7 +2,7 @@
 
 == Before the first release (0.1) ==
 
-* Fix tests/errors/InvalidRec.sfw
+* Replace COPYING headers by a link to the LICENSE file
 * Fix typing (debunijn ?)
 * Rename Lambda.used_vars to Lambda.free_vars
 * Cleans

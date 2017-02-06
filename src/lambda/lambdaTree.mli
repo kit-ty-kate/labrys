@@ -50,13 +50,13 @@ type foreign_ret_type = UntypedTree.foreign_ret_type =
 
 type t =
   | Abs of (name * t)
-  | Rec of (name * t)
   | App of (name * name)
   | Val of name
   | Datatype of (index option * name list)
   | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
   | PatternMatching of (name * t list * t * tree)
   | Let of (name * t * t)
+  | LetRec of (name * t * t)
   | Fail of (eff_name * name list)
   | Try of (t * (name * t))
   | RecordGet of (name * index)

@@ -1,5 +1,5 @@
 (*
-Copyright (c) 2013-2015 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
+Copyright (c) 2013-2017 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,15 +19,4 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *)
 
-type module_name = string
-
-val compile_program : Options.program -> module_name -> unit
-val compile_module : Options.modul -> module_name -> unit
-val print_parse_tree : Options.print_parse_tree -> module_name -> unit
-val print_desugared_tree : Options.print_unsugared_tree -> module_name -> unit
-val print_untyped_tree : Options.print_untyped_tree -> module_name -> unit
-val print_lambda_tree : Options.print_lambda_tree -> module_name -> unit
-val print_flatten_tree : Options.print_optimized_tree -> module_name -> unit
-val print_optimized_tree : Options.print_optimized_tree -> module_name -> unit
-val print_early_llvm : Options.print_early_llvm -> module_name -> unit
-val print_llvm : Options.print_llvm -> module_name -> unit
+val pretype : DesugaredTree.top list -> PretypedTree.top list

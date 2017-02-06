@@ -97,9 +97,6 @@ let rec of_term = function
   | LambdaTree.Abs (name, t) ->
       let t = of_term t in
       ([], Abs (name, t))
-  | LambdaTree.Rec (name, t) ->
-      let (lets, t) = of_term t in
-      (lets, Rec (name, t))
   | LambdaTree.App (x, y) ->
       ([], App (x, y))
   | LambdaTree.Val name ->
@@ -116,6 +113,10 @@ let rec of_term = function
       let (lets_x, x) = of_term x in
       let (lets_t, t) = of_term t in
       (lets_x @ [(name, x)] @ lets_t, t)
+  | LambdaTree.LetRec (name, x, t) ->
+      let (lets_x, x) = of_term x in
+      let (lets_t, t) = of_term t in
+      (lets_x @ [(name, Rec (name, x))] @ lets_t, t)
   | LambdaTree.Fail (name, args) ->
       ([], Fail (name, args))
   | LambdaTree.Try (t, (name, t')) ->

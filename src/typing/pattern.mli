@@ -37,8 +37,8 @@ type t =
 
 val create :
   loc:Location.t ->
-  (Gamma.t -> DesugaredTree.t -> ('a * Types.t * Effects.t)) ->
+  (Gamma.t -> PretypedTree.t -> ('a * Types.t * Effects.t)) ->
   Gamma.t ->
   Types.t ->
-  (DesugaredTree.pattern * DesugaredTree.t) list ->
+  (PretypedTree.pattern * PretypedTree.t) list ->
   (t * ((PatternMatrix.var * name) list * 'a) list * Types.t * Effects.t)

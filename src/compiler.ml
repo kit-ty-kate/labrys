@@ -69,22 +69,27 @@ let get_parse_tree modul =
   let module P = ParserHandler.Make(struct let get = Module.impl modul end) in
   P.parse_impl ()
 
-let get_unsugared_tree options modul =
+let get_desugared_tree options modul =
   let (mimports, parse_tree) = get_parse_tree modul in
   let (mimports, parse_tree) =
     Builtins.tree ~current_module:modul options mimports parse_tree
   in
   let mimports = Desugar.create_imports ~current_module:modul options mimports in
   let (imports, gamma) = build_imports_intf options mimports in
-  let unsugared_tree =
+  let desugared_tree =
     Desugar.create ~current_module:modul options mimports imports parse_tree
   in
-  (mimports, gamma, unsugared_tree)
+  (mimports, gamma, desugared_tree)
+
+let get_pretyped_tree options modul =
+  let (imports, gamma, desugared_tree) = get_desugared_tree options modul in
+  let pretyped_tree = Pretyper.pretype desugared_tree in
+  (imports, gamma, pretyped_tree)
 
 let get_untyped_tree ~with_main ~interface options modul =
-  let (imports, gamma, unsugared_tree) = get_unsugared_tree options modul in
+  let (imports, gamma, pretyped_tree) = get_pretyped_tree options modul in
   let typed_tree =
-    TypeChecker.check ~modul ~interface ~with_main options gamma unsugared_tree
+    TypeChecker.check ~modul ~interface ~with_main options gamma pretyped_tree
   in
   (imports, gamma, typed_tree)
 
@@ -173,10 +178,10 @@ let print_parse_tree options modul =
   let (_, parse_tree) = get_parse_tree modul in
   print_endline (Printers.ParseTree.dump parse_tree)
 
-let print_unsugared_tree options modul =
+let print_desugared_tree options modul =
   let modul = Module.from_string options modul in
-  let (_, _, unsugared_tree) = get_unsugared_tree options modul in
-  print_endline (Printers.DesugaredTree.dump unsugared_tree)
+  let (_, _, desugared_tree) = get_desugared_tree options modul in
+  print_endline (Printers.DesugaredTree.dump desugared_tree)
 
 let print_untyped_tree options modul =
   let modul = Module.from_string options modul in

@@ -42,12 +42,12 @@ type foreign_ret_type =
 
 type t =
   | Abs of (name * t)
-  | Rec of (name * t)
   | App of (t * t)
   | Val of name
   | Var of (index * length)
   | PatternMatching of (t * (pattern_var list * t) list * t * Pattern.t)
   | Let of (name * t * t)
+  | LetRec of (name * t * t)
   | Fail of (eff_name * t list)
   | Try of (t * (name * t))
   | RecordGet of (t * int)

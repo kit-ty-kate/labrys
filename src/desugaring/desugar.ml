@@ -226,7 +226,7 @@ and unsugar_let imports options name is_rec (args, x) =
   let t = unsugar_args imports options args x in
   match is_rec with
   | ParseTree.NonRec -> (name, t)
-  | ParseTree.Rec -> (name, (fst t, Rec (name, t)))
+  | ParseTree.Rec -> (name, (fst t, LetRec (name, t, (Builtins.unknown_loc, Val name))))
 
 and unsugar_pat imports options (pattern, t) =
   (unsugar_pattern imports pattern, unsugar_t imports options t)

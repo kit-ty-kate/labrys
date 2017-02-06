@@ -402,9 +402,10 @@ module DesugaredTree = struct
     | TyClassVariable name -> dump_instance_name name
     | TyClassInstance instance -> dump_tyclass_instance instance
 
-  let rec dump_value name t =
+  let rec dump_value ~is_rec name t =
+    let is_rec = if is_rec then " rec" else "" in
     PPrint.group
-      (PPrint.string (fmt "let %s =" (dump_name name))
+      (PPrint.string (fmt "let%s %s =" is_rec (dump_name name))
        ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
       )
 
@@ -413,13 +414,6 @@ module DesugaredTree = struct
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string (fmt "λ (%s : %s) ->" (dump_name name) (dump_ty ty))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
-           ^^ PPrint.rparen
-          )
-    | (_, Rec (name, t)) ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ PPrint.string (fmt "μ %s ->" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
@@ -476,7 +470,17 @@ module DesugaredTree = struct
     | (_, Let (name, x, xs)) ->
         PPrint.group
           (PPrint.lparen
-           ^^ dump_value name x
+           ^^ dump_value ~is_rec:false name x
+           ^^ PPrint.break 1
+           ^^ PPrint.string "in"
+           ^^ PPrint.break 1
+           ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+    | (_, LetRec (name, x, xs)) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ dump_value ~is_rec:true name x
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
            ^^ PPrint.break 1
@@ -568,7 +572,7 @@ module DesugaredTree = struct
 
   let dump = function
     | Value (name, t) ->
-        dump_value name t
+        dump_value ~is_rec:false name t
     | Type (name, ty) ->
         PPrint.string (fmt "type alias %s = %s" (dump_t_name name) (dump_ty ty))
     | Foreign (cname, name, ty) ->
@@ -590,7 +594,7 @@ module DesugaredTree = struct
         in
         PPrint.string (fmt "instance %s%s =" (dump_opt_instance_name name) (dump_tyclass_instance instance))
         ^^ PPrint.break 1
-        ^^ PPrint.nest 2 (List.fold_left (fun acc (name, x) -> acc ^^ dump_value name x ^^ PPrint.break 1) PPrint.empty values)
+        ^^ PPrint.nest 2 (List.fold_left (fun acc (name, x) -> acc ^^ dump_value ~is_rec:false name x ^^ PPrint.break 1) PPrint.empty values)
         ^^ PPrint.string "end"
 
   let dump top =
@@ -657,13 +661,6 @@ module UntypedTree = struct
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
-    | Rec (name, t) ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ PPrint.string (fmt "μ %s ->" (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
-           ^^ PPrint.rparen
-          )
     | App (f, x) ->
         PPrint.group
           (PPrint.lparen
@@ -687,6 +684,17 @@ module UntypedTree = struct
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string (fmt "let %s =" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.break 1
+           ^^ PPrint.string "in"
+           ^^ PPrint.break 1
+           ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+    | LetRec (name, t, xs) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "let rec %s =" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"
@@ -852,14 +860,6 @@ module LambdaTree = struct
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )
-    | Rec (name, t) ->
-        PPrint.group
-          (PPrint.lparen
-           ^^ PPrint.string
-                (fmt "μ %s ->" (dump_name name))
-           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
-           ^^ PPrint.rparen
-          )
     | App (f, x) ->
         PPrint.group
           (PPrint.lparen
@@ -895,6 +895,17 @@ module LambdaTree = struct
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string (fmt "let %s =" (dump_name name))
+           ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
+           ^^ PPrint.break 1
+           ^^ PPrint.string "in"
+           ^^ PPrint.break 1
+           ^^ dump_t xs
+           ^^ PPrint.rparen
+          )
+    | LetRec (name, t, xs) ->
+        PPrint.group
+          (PPrint.lparen
+           ^^ PPrint.string (fmt "let rec %s =" (dump_name name))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.break 1
            ^^ PPrint.string "in"

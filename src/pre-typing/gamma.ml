@@ -23,7 +23,7 @@ open Containers
 open Monomorphic.None
 
 type t =
-  { values : PrivateTypes.rec_ty GammaMap.Value.t
+  { values : PrivateTypes.t GammaMap.Value.t
   ; variants : (int * PrivateTypes.t * int) GammaMap.Variant.t
   ; types : PrivateTypes.visibility GammaMap.Types.t
   ; type_vars : Kinds.t GammaMap.TypeVar.t
@@ -44,8 +44,7 @@ let empty =
   ; named_instances = GammaMap.Instance.empty
   }
 
-let add_value k x self = {self with values = GammaMap.Value.add k (PrivateTypes.Type x) self.values}
-let add_rec_value k x self = {self with values = GammaMap.Value.add k (PrivateTypes.PreRec x) self.values}
+let add_value k x self = {self with values = GammaMap.Value.add k x self.values}
 let add_variant k x self = {self with variants = GammaMap.Variant.add k x self.variants}
 let add_type k x self = {self with types = GammaMap.Types.add k x self.types}
 let add_type_var k x self = {self with type_vars = GammaMap.TypeVar.add k x self.type_vars}
@@ -53,14 +52,6 @@ let add_constr k k2 args x self = {self with constructors = GammaMap.Constr.add 
 let add_exception k x self = {self with exceptions = GammaMap.Exn.add k x self.exceptions}
 let add_tyclass k x self = {self with tyclasses = GammaMap.TyClass.add k x self.tyclasses}
 let add_named_instance k x self = {self with named_instances = GammaMap.Instance.add k x self.named_instances}
-
-let include_rec_values self =
-  let aux name = function
-    | PrivateTypes.PreRec ty -> GammaMap.Value.add name (PrivateTypes.Type ty)
-    | PrivateTypes.Type _ as x -> GammaMap.Value.add name x
-  in
-  let values = GammaMap.Value.fold aux self.values GammaMap.Value.empty in
-  {self with values}
 
 let replace_tyclass k x self = {self with tyclasses = GammaMap.TyClass.replace k x self.tyclasses}
 
@@ -101,10 +92,6 @@ let idx_equal (x, y) (x', y') = List.equal PrivateTypes.ty_equal x x' && Int.equ
 let constr_equal (x, y) (x', y') =
   List.equal Ident.TypeVar.equal x x' && GammaMap.Index.equal idx_equal y y'
 
-let ty_rec_eq x y = match x, y with
-  | PrivateTypes.Type x, PrivateTypes.Type y -> PrivateTypes.ty_equal x y
-  | PrivateTypes.PreRec _, _ | _, PrivateTypes.PreRec _ -> assert false
-
 let named_instances_equal (name1, args1) (name2, args2) =
   (* TODO: Allow forall a. Class a ? *)
   let map_args = List.map (fun arg -> ([], arg)) in
@@ -114,7 +101,7 @@ let named_instances_equal (name1, args1) (name2, args2) =
 let is_subset_of a b =
   check_toplevel_type_vars a.type_vars;
   check_toplevel_type_vars b.type_vars;
-  GammaMap.Value.diff ~eq:ty_rec_eq a.values b.values
+  GammaMap.Value.diff ~eq:PrivateTypes.ty_equal a.values b.values
   @ GammaMap.Variant.diff ~eq:variant_equal a.variants b.variants
   @ GammaMap.Types.diff ~eq:ty_equal a.types b.types
   @ GammaMap.Constr.diff ~eq:constr_equal a.constructors b.constructors

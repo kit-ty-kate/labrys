@@ -1,5 +1,5 @@
 (*
-Copyright (c) 2013-2015 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
+Copyright (c) 2013-2017 Jacques-Pascal Deplaix <jp.deplaix@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -31,7 +31,7 @@ type loc = Location.t
 
 type t_value = (tyvar_name * Kinds.t)
 
-type effect_name =
+type effect_name = DesugaredTree.effect_name =
   | EffTy of (t_name * exn_name list)
   | EffTyVar of tyvar_name
 
@@ -39,7 +39,7 @@ type effects = (loc * effect_name list)
 
 type tyclass = (tyclass_name * t_value list * ty list)
 
-and ty' =
+and ty' = DesugaredTree.ty' =
   | Fun of (ty * effects option * ty)
   | Ty of t_name
   | TyVar of tyvar_name
@@ -54,15 +54,15 @@ and ty = (loc * ty')
 type ty_annot = (ty * effects option)
 type tyclass_instance = (tyclass_name * ty list)
 
-type tyclass_app_arg =
+type tyclass_app_arg = DesugaredTree.tyclass_app_arg =
   | TyClassVariable of instance_name
   | TyClassInstance of tyclass_instance
 
-type pattern =
+type pattern = DesugaredTree.pattern =
   | TyConstr of (loc * variant_name * pattern list)
   | Any of name
 
-type const =
+type const = DesugaredTree.const =
   | Int of int
   | Float of float
   | Char of Uchar.t
@@ -79,7 +79,7 @@ type t' =
   | Var of variant_name
   | PatternMatching of (t * (pattern * t) list)
   | Let of (name * t * t)
-  | LetRec of (name * t * t)
+  | LetRec of (name * ty * t * t)
   | Fail of (ty * (exn_name * t list))
   | Try of (t * ((exn_name * name list) * t) list)
   | Annot of (t * ty_annot)
@@ -87,7 +87,7 @@ type t' =
 
 and t = (loc * t')
 
-type variant = Variant of (variant_name * ty list * ty)
+type variant = DesugaredTree.variant = Variant of (variant_name * ty list * ty)
 
 type top =
   | Value of (name * t)

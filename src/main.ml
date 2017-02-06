@@ -71,7 +71,7 @@ let start_print_unsugared_tree modul src_dir build_dir lib_dir no_prelude =
     method lib_dir = lib_dir
     method no_prelude = no_prelude
   end in
-  start Compiler.print_unsugared_tree options modul
+  start Compiler.print_desugared_tree options modul
 
 let start_print_untyped_tree modul src_dir build_dir lib_dir no_prelude =
   let options = object

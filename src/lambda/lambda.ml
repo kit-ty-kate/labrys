@@ -127,18 +127,16 @@ and of_typed_term gamma = function
       let (name, gamma) = gamma_add name gamma in
       let t' = of_typed_term gamma t' in
       Try (t, (name, t'))
-  | UntypedTree.Let (name, UntypedTree.Rec (_, t), xs) ->
-      let (name, gamma) = gamma_add name gamma in
-      let t = of_typed_term gamma t in
-      let xs = of_typed_term gamma xs in
-      Let (name, Rec (name, t), xs)
   | UntypedTree.Let (name, t, xs) ->
       let t = of_typed_term gamma t in
       let (name, gamma) = gamma_add name gamma in
       let xs = of_typed_term gamma xs in
       Let (name, t, xs)
-  | UntypedTree.Rec _ ->
-      assert false
+  | UntypedTree.LetRec (name, t, xs) ->
+      let (name, gamma) = gamma_add name gamma in
+      let t = of_typed_term gamma t in
+      let xs = of_typed_term gamma xs in
+      LetRec (name, t, xs)
   | UntypedTree.Fail (name, args) ->
       of_args gamma (fun names -> Fail (name, names)) args
   | UntypedTree.RecordGet (t, n) ->
@@ -185,11 +183,6 @@ let gamma_add mset name gamma =
   (id, mset, gamma, linkage)
 
 let rec of_typed_tree mset gamma = function
-  | UntypedTree.Value (name, UntypedTree.Rec (_, t)) :: xs ->
-      let (name, mset, gamma, linkage) = gamma_add mset name gamma in
-      let t = of_typed_term gamma t in
-      let xs = of_typed_tree mset gamma xs in
-      Value (name, Rec (name, t), linkage) :: xs
   | UntypedTree.Value (name, t) :: xs ->
       let t = of_typed_term gamma t in
       let (name, mset, gamma, linkage) = gamma_add mset name gamma in

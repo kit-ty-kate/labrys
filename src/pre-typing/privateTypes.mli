@@ -47,10 +47,6 @@ type visibility =
   | Abstract of Kinds.t
   | Alias of (t * Kinds.t)
 
-type rec_ty =
-  | PreRec of t
-  | Type of t
-
 val ty_equal : t -> t -> bool
 
 val ty_is_subset_of : t -> t -> bool
