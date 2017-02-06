@@ -24,31 +24,17 @@ open Monomorphic.None
 
 open PretypedTree
 
-let rec get_ty_from_nearest_annot = function
-  | (_, Annot (_, (ty, _))) ->
-      Some ty
-  | (_, LetRec (_, _, _, t))
-  | (_, Let (_, _, t)) ->
-      get_ty_from_nearest_annot t
-  | (_, CAbs _)
-  | (_, Abs _)
-  | (_, TAbs _)
-  | (_, App _)
-  | (_, TApp _)
-  | (_, CApp _)
-  | (_, Val _)
-  | (_, Var _)
-  | (_, Const _)
-  | (_, PatternMatching _)
-  | (_, Fail _)
-  | (_, Try _) ->
-      None
-
-let get_rec_ty ~name t =
-  match get_ty_from_nearest_annot t with
-  | Some ty ->
+let rec get_rec_ty ~name t = match snd t with
+  | Annot (_, (ty, _)) ->
       ty
-  | None ->
+  | Let (_, _, t)
+  | LetRec (_, _, _, t) ->
+      get_rec_ty ~name t
+  | Abs _ | TAbs _ | CAbs _
+  | App _ | TApp _ | CApp _
+  | Val _ | Var _ | Const _
+  | PatternMatching _
+  | Fail _ | Try _ ->
       let loc = Ident.Name.loc name in
       Err.fail ~loc "Recursive functions must have explicit return types"
 
