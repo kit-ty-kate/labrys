@@ -76,11 +76,11 @@ let try_to_pattern l =
       | [] ->
           ([], [])
       | ((exn, args), t)::xs ->
-          let used_vars =
+          let free_vars =
             List.mapi (fun i x -> (PatternMatrix.exn_var i, x)) args
           in
           let (branches, patterns) = aux (succ i) xs in
-          ((used_vars, t) :: branches, (exn, Pattern.Leaf i) :: patterns)
+          ((free_vars, t) :: branches, (exn, Pattern.Leaf i) :: patterns)
     in
     aux 0 l
   in

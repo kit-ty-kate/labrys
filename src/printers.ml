@@ -647,11 +647,11 @@ module UntypedTree = struct
          in
          dump_patterns' f pat
 
-  let dump_used_vars used_vars =
+  let dump_free_vars free_vars =
     let aux acc (var, name) =
       fmt "%s (%s = %s)" acc (dump_name name) (dump_var var)
     in
-    List.fold_left aux "Ø" used_vars
+    List.fold_left aux "Ø" free_vars
 
   let rec dump_t = function
     | Abs (name, t) ->
@@ -746,11 +746,11 @@ module UntypedTree = struct
         PPrint.string (fmt "reraise %s" (dump_name e))
 
   and dump_results results =
-    let aux doc i (used_vars, result) =
+    let aux doc i (free_vars, result) =
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %d with %s ->" i (dump_used_vars used_vars))
+           (PPrint.string (fmt "| %d with %s ->" i (dump_free_vars free_vars))
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
            )
     in
@@ -1218,11 +1218,11 @@ module OptimizedTree = struct
          in
          dump_patterns' f pat
 
-  let dump_used_vars used_vars =
+  let dump_free_vars free_vars =
     let aux acc _ name =
       fmt "%s %s" acc (dump_name name)
     in
-    GammaSet.MIDValue.fold used_vars "Ø" aux
+    GammaSet.MIDValue.fold free_vars "Ø" aux
 
   let dump_args_ty l =
     let aux = function
@@ -1244,11 +1244,11 @@ module OptimizedTree = struct
     | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
 
   let rec dump_t' = function
-    | Abs (name, used_vars, t) ->
+    | Abs (name, free_vars, t) ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string
-                (fmt "λ %s [%s] ->" (dump_name name) (dump_used_vars used_vars))
+                (fmt "λ %s [%s] ->" (dump_name name) (dump_free_vars free_vars))
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
            ^^ PPrint.rparen
           )

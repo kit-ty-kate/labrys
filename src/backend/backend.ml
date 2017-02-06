@@ -213,12 +213,12 @@ module Make (I : I) = struct
     let (_, b, c) = LIdent.Map.fold aux gamma (1, [], LIdent.Map.empty) in
     (List.rev b, c)
 
-  let create_closure ~isrec ~used_vars gamma builder =
-    let gamma = LIdent.Map.filter (fun x _ -> Set.mem used_vars x) gamma in
+  let create_closure ~isrec ~free_vars gamma builder =
+    let gamma = LIdent.Map.filter (fun x _ -> Set.mem free_vars x) gamma in
     let (values, gamma) = fold_env gamma builder in
     let env_size = List.length values in
     let gamma = match isrec with
-      | Some rec_name when Set.mem used_vars rec_name ->
+      | Some rec_name when Set.mem free_vars rec_name ->
           LIdent.Map.add rec_name RecFun gamma
       | Some _ | None ->
           gamma
@@ -361,9 +361,9 @@ module Make (I : I) = struct
     Llvm.build_ret v builder
 
   and lambda' ~isrec ~jmp_buf gamma builder = function
-    | OptimizedTree.Abs (name, used_vars, t) ->
+    | OptimizedTree.Abs (name, free_vars, t) ->
         let (builder', closure, gamma) =
-          create_closure ~isrec ~used_vars gamma builder
+          create_closure ~isrec ~free_vars gamma builder
         in
         abs ~name t gamma builder';
         (closure, builder)
