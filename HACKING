@@ -1,0 +1,9 @@
+Compilation phases (by sub-directories of "src"):
+  1) parsing: Transforms the source file into an AST
+  2) desugaring: Decomposes syntactic sugars from the parse-tree
+  3) pre-typing: Fixes the type of recursive values (mandatory) and check that recursive values are not referenced before the first abstraction (forbidden/unsafe)
+  4) typing: Type-checks everything (we don't need types anymore after that)
+  5) lambda: Gives a unique name to all values (LIdent + Lambda.scan), encode variants and foreign declarations
+  6) flatten: WIP
+  7) optimization: WIP
+  8) backend: Transforms AST to LLVM-IR using setjmp/longjmp to encode exceptions and one-argument functions to encode lambdas
