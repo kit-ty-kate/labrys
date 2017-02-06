@@ -1,9 +1,25 @@
 Compilation phases (by sub-directories of "src"):
-  1) parsing: Transforms the source file into an AST
-  2) desugaring: Decomposes syntactic sugars from the parse-tree
-  3) pre-typing: Fixes the type of recursive values (mandatory) and check that recursive values are not referenced before the first abstraction (forbidden/unsafe)
-  4) typing: Type-checks everything (we don't need types anymore after that)
-  5) lambda: Gives a unique name to all values (LIdent + Lambda.scan), encode variants and foreign declarations
-  6) flatten: WIP
-  7) optimization: WIP
-  8) backend: Transforms AST to LLVM-IR using setjmp/longjmp to encode exceptions and one-argument functions to encode lambdas
+  1) parsing:
+    * Transforms the source file into an AST
+  2) desugaring:
+    * Decomposes syntactic sugars from the parse-tree
+  3) pre-typing:
+    * Fixes the type of recursive values (mandatory)
+    * Check that recursive values are not referenced before the first abstraction (forbidden/unsafe)
+  4) typing:
+    * Type-checks everything (we don't need types anymore after that)
+    * Compile pattern matching using Maranget's algorithm: http://moscova.inria.fr/~maranget/papers/ml05e-maranget.pdf
+  5) lambda:
+    * Gives a unique name to all values (LIdent + Lambda.scan)
+    * Encode variants and foreign declarations
+    * Introduces lets instead of recursing over the AST
+  6) flatten:
+    * Set all lets to the same level for each function (no nested lets)
+    * Propagate abstractions to applications [a = (λx.t); b = a y] --> [x = y; a = (λx.t); b = t]
+    * Propagate names [a = b; c = a] --> [c = b]
+  7) optimization:
+    * Fixes free variables on λ-abstractions
+  8) backend:
+    * Transforms AST to LLVM-IR using:
+      * setjmp/longjmp to encode exceptions
+      * one-argument functions to encode lambdas
