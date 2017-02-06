@@ -13,7 +13,6 @@
     * Preload all parameters/variables taken by the closure
     * Remove the gamma type
     * If fv is empty then make it constant
-* Replace COPYING headers by a link to the LICENSE file
 * Fix typing (debunijn ?)
 * Cleans
   * pre-typing
