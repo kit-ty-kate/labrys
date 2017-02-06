@@ -2,6 +2,17 @@
 
 == Before the first release (0.1) ==
 
+* Remove PatternMatching if List.length args = 1
+* Remove Rec
+* Rename Gamma --> Env
+* Create a new compilation phase: FirstOrderTree
+  * Abs (name * {fv} * t) --> Value (fresh, Abs (name * {fv} * t))
+  * Datatype [c1 .. cn] --> ConstAlloc [c1 .. cn]
+  * PatternMatching --> branches + jmp + simple patterns
+  * In the backend:
+    * Preload all parameters/variables taken by the closure
+    * Remove the gamma type
+    * If fv is empty then make it constant
 * Replace COPYING headers by a link to the LICENSE file
 * Fix typing (debunijn ?)
 * Rename Lambda.used_vars to Lambda.free_vars
