@@ -11,6 +11,9 @@ TESTS = \
 all:
 	ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild-pkg)" cervoise
 
+src/%:
+	ocamlbuild -use-ocamlfind -no-plugin "$@"
+
 clean:
 	ocamlbuild -clean
 
