@@ -615,7 +615,7 @@ module UntypedTree = struct
         PPrint.break 1
         ^^ PPrint.OCaml.int i
     | Pattern.Node (idx, cases) ->
-        dump_pattern_matching (PPrint.string (Option.maybe string_of_int "<CURRENT>" idx)) (dump_cases f cases)
+        dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
 
   let dump_patterns = function
     | Pattern.Idx pat ->
@@ -736,7 +736,7 @@ module UntypedTree = struct
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
            )
     in
-    List.Idx.foldi aux PPrint.empty results
+    List.foldi aux PPrint.empty results
 
   and dump_exn_args args =
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
@@ -800,7 +800,7 @@ module LambdaTree = struct
         PPrint.break 1
         ^^ PPrint.OCaml.int i
     | Node (idx, cases) ->
-        dump_pattern_matching (PPrint.string (Option.maybe string_of_int "<CURRENT>" idx)) (dump_cases f cases)
+        dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
 
   let dump_patterns = function
     | IdxTree pat ->
@@ -856,7 +856,7 @@ module LambdaTree = struct
         PPrint.group
           (PPrint.lbracket
            ^^ PPrint.break 1
-           ^^ PPrint.string (Option.maybe string_of_int "" index)
+           ^^ PPrint.string (Option.map_or ~default:"" string_of_int index)
            ^^ PPrint.break 1
            ^^ PPrint.bar
            ^^ PPrint.break 1
@@ -940,7 +940,7 @@ module LambdaTree = struct
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
            )
     in
-    List.Idx.foldi aux PPrint.empty results
+    List.foldi aux PPrint.empty results
 
   and dump_args args =
     let aux doc name = doc ^^ PPrint.break 1 ^^ PPrint.string (dump_name name) in
@@ -993,7 +993,7 @@ module FlattenTree = struct
         PPrint.break 1
         ^^ PPrint.OCaml.int i
     | Node (idx, cases) ->
-        dump_pattern_matching (PPrint.string (Option.maybe string_of_int "<CURRENT>" idx)) (dump_cases f cases)
+        dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
 
   let dump_patterns = function
     | IdxTree pat ->
@@ -1057,7 +1057,7 @@ module FlattenTree = struct
         PPrint.group
           (PPrint.lbracket
            ^^ PPrint.break 1
-           ^^ PPrint.string (Option.maybe string_of_int "" index)
+           ^^ PPrint.string (Option.map_or ~default:"" string_of_int index)
            ^^ PPrint.break 1
            ^^ PPrint.bar
            ^^ PPrint.break 1
@@ -1133,7 +1133,7 @@ module FlattenTree = struct
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
            )
     in
-    List.Idx.foldi aux PPrint.empty results
+    List.foldi aux PPrint.empty results
 
   and dump_args args =
     let aux doc name = doc ^^ PPrint.break 1 ^^ PPrint.string (dump_name name) in
@@ -1186,7 +1186,7 @@ module OptimizedTree = struct
         PPrint.break 1
         ^^ PPrint.OCaml.int i
     | Node (idx, cases) ->
-        dump_pattern_matching (PPrint.string (Option.maybe string_of_int "<CURRENT>" idx)) (dump_cases f cases)
+        dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
 
   let dump_patterns = function
     | IdxTree pat ->
@@ -1256,7 +1256,7 @@ module OptimizedTree = struct
         PPrint.group
           (PPrint.lbracket
            ^^ PPrint.space
-           ^^ PPrint.string (Option.maybe string_of_int "" index)
+           ^^ PPrint.string (Option.map_or ~default:"" string_of_int index)
            ^^ PPrint.space
            ^^ PPrint.bar
            ^^ PPrint.space
@@ -1333,7 +1333,7 @@ module OptimizedTree = struct
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
            )
     in
-    List.Idx.foldi aux PPrint.empty results
+    List.foldi aux PPrint.empty results
 
   and dump_args args =
     let aux doc name = doc ^^ PPrint.break 1 ^^ PPrint.string (dump_name name) in

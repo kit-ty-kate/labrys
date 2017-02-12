@@ -9,7 +9,7 @@ module Imports = struct
 
   let empty = []
   let add k x self = (k, x) :: self
-  let find k self = List.Assoc.get_exn ~eq:(List.equal String.equal) self k
+  let find k self = List.Assoc.get_exn ~eq:(List.equal String.equal) k self
   let foldr f self acc = List.fold_right (fun (k, x) acc -> f k x acc) self acc
   let union a b = a @ b
 end

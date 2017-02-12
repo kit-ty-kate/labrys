@@ -28,7 +28,7 @@ let compile ~current_module options gamma =
             let gamma = Gamma.add_variant name (i, ty, List.length tys) gamma in
             Gamma.add_constr datatype name ty_args (tys, i) gamma
           in
-          List.Idx.foldi (aux ~datatype:name) gamma variants
+          List.foldi (aux ~datatype:name) gamma variants
         in
         compile ~gamma ~local_gamma xs
     | TypeAlias (name, ty) :: xs ->

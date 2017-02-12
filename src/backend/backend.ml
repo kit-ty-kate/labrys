@@ -130,7 +130,7 @@ module Make (I : I) = struct
 
   let init ptr ty values builder =
     let aux acc i x = Llvm.build_insertvalue acc x i "" builder in
-    let values = List.Idx.foldi aux (Llvm.undef ty) values in
+    let values = List.foldi aux (Llvm.undef ty) values in
     Llvm.build_store values ptr builder
 
   let malloc_and_init size values builder =

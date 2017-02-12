@@ -305,7 +305,7 @@ let get_foreign_type ~loc options =
   let rec aux acc = function
     | PrivateTypes.Fun (PrivateTypes.Ty name, eff, t) ->
         let x =
-          match List.Assoc.get ~eq:Ident.Type.equal arg_ty_map name with
+          match List.Assoc.get ~eq:Ident.Type.equal name arg_ty_map with
           | Some x -> x
           | None -> fail (Ident.Type.loc name)
         in
@@ -322,7 +322,7 @@ let get_foreign_type ~loc options =
                 ~loc
                 "Bindings cannot be pure. \
                  All bindings have to use the IO effect on the final arrow";
-            begin match List.Assoc.get ~eq:Ident.Type.equal ret_ty_map name with
+            begin match List.Assoc.get ~eq:Ident.Type.equal name ret_ty_map with
             | Some y -> (y, List.rev (x :: acc))
             | None -> fail (Ident.Type.loc name)
             end
@@ -426,7 +426,7 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
         let fields = List.map (fun (x, _) -> Val x) values in
         List.fold_right aux values (RecordCreate fields)
       in
-      let xs = Option.maybe (fun name -> Value (Ident.Instance.to_name name, Val name') :: xs) xs name in
+      let xs = Option.map_or ~default:xs (fun name -> Value (Ident.Instance.to_name name, Val name') :: xs) name in
       (Value (name', values) :: xs, has_main, gamma)
   | [] ->
       ([], has_main, gamma)

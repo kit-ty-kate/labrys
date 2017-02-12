@@ -77,7 +77,7 @@ let new_lower_name_to_type_var = function
   | (loc, `Underscore) ->
       Builtins.underscore_type_var_loc loc
 
-let unsugar_kind = Option.get Kinds.Star
+let unsugar_kind = Option.get_or ~default:Kinds.Star
 
 let unsugar_eff imports (loc, l) =
   let aux = function
