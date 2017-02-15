@@ -327,7 +327,7 @@ exn_pattern:
 
 variant:
   | name = newUpperName tys = typeExprClosed*
-      { ParseTree.Variant (name, tys) }
+      { (name, tys) }
 
 kindopt:
   | { None }

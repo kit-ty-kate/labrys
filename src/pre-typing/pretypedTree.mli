@@ -69,7 +69,7 @@ type t' =
 
 and t = (loc * t')
 
-type variant = DesugaredTree.variant = Variant of (variant_name * ty list * ty)
+type variant = (variant_name * ty list * ty)
 
 type top =
   | Value of (name * t)

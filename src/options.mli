@@ -39,7 +39,7 @@ class type print_parse_tree = object
   inherit restrained_base
 end
 
-class type print_unsugared_tree = object
+class type print_desugared_tree = object
   inherit base
 end
 

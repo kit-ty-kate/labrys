@@ -245,7 +245,7 @@ let rec aux options gamma = function
 let transform_variants options ~datatype ~ty_args ~args gamma =
   let gamma' = List.fold_left (fun gamma (name, k) -> Gamma.add_type_var name k gamma) gamma args in
   let rec aux index = function
-    | PretypedTree.Variant (name, tys, ty) :: xs ->
+    | (name, tys, ty) :: xs ->
         let tys = List.map (Types.of_parse_tree ~pure_arrow:`Allow options gamma') tys in
         let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
         let gamma = aux (succ index) xs in

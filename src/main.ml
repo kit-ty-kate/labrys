@@ -46,7 +46,7 @@ let start_print_parse_tree modul src_dir build_dir =
   end in
   start Compiler.print_parse_tree options modul
 
-let start_print_unsugared_tree modul src_dir build_dir lib_dir no_prelude =
+let start_print_desugared_tree modul src_dir build_dir lib_dir no_prelude =
   let options = object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -152,10 +152,10 @@ let print_parse_tree =
   let args = restrained_base args in
   (args, Term.info "print-parse-tree")
 
-let print_unsugared_tree =
-  let args = Term.pure start_print_unsugared_tree in
+let print_desugared_tree =
+  let args = Term.pure start_print_desugared_tree in
   let args = base args in
-  (args, Term.info "print-unsugared-tree")
+  (args, Term.info "print-desugared-tree")
 
 let print_untyped_tree =
   let args = Term.pure start_print_untyped_tree in
@@ -195,7 +195,7 @@ let cmds =
   [ program
   ; library
   ; print_parse_tree
-  ; print_unsugared_tree
+  ; print_desugared_tree
   ; print_untyped_tree
   ; print_lambda_tree
   ; print_flatten_tree

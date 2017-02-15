@@ -81,7 +81,7 @@ and t' =
 
 and t = (loc * t')
 
-type variant = Variant of (new_upper_name * ty list)
+type variant = (new_upper_name * ty list)
 
 type import =
   | Source of upper_name

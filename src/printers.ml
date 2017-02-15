@@ -268,7 +268,7 @@ module ParseTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
     List.fold_left aux PPrint.empty args
 
-  let dump_variants (Variant (name, tys)) =
+  let dump_variants (name, tys) =
     PPrint.string (fmt "| %s %s" (dump_name name) (String.concat " " (List.map dump_ty tys)))
 
   let dump_variants variants =
@@ -542,7 +542,7 @@ module DesugaredTree = struct
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
     List.fold_left aux PPrint.empty args
 
-  let dump_variants (Variant (name, tys, ty)) =
+  let dump_variants (name, tys, ty) =
     PPrint.string (fmt "| %s %s : %s" (dump_variant_name name) (String.concat " " (List.map dump_ty tys)) (dump_ty ty))
 
   let dump_variants variants =
