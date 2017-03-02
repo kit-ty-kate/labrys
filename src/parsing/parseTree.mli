@@ -21,7 +21,7 @@ type is_rec =
   | Rec
   | NonRec
 
-and tyclass = (upper_name * ty_arg list * ty list)
+type tyclass = (upper_name * ty_arg list * ty list)
 
 and ty' =
   | Fun of (ty * effects option * ty)

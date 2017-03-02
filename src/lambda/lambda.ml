@@ -64,6 +64,31 @@ let rec of_results gamma var m =
   in
   List.map aux m
 
+and get_lets gamma t = function
+  | (name, x)::xs ->
+      let (name, gamma) = gamma_add name gamma in
+      Let (name, x, get_lets gamma t xs)
+  | [] ->
+      of_typed_term gamma t
+
+and of_try_pattern gamma var l =
+  let (branches, patterns) =
+    let rec aux i = function
+      | [] ->
+          ([], [])
+      | ((exn, args), t)::xs ->
+          let (branches, patterns) = aux (succ i) xs in
+          let t =
+            List.mapi (fun i x -> (x, RecordGet (var, i))) args
+            |> get_lets gamma t
+          in
+          (t :: branches, (exn, Leaf i) :: patterns)
+    in
+    aux 0 l
+  in
+  let pattern = PtrTree (Node (None, patterns)) in
+  PatternMatching (var, branches, Reraise var, pattern)
+
 and of_args gamma f args =
   let args =
     let aux t =
@@ -104,10 +129,10 @@ and of_typed_term gamma = function
       let default = of_typed_term gamma default in
       let pat = PatternMatching (name, results, default, patterns) in
       Let (name, t, pat)
-  | UntypedTree.Try (t, (name, t')) ->
+  | UntypedTree.Try (t, branches) ->
       let t = of_typed_term gamma t in
-      let (name, gamma) = gamma_add name gamma in
-      let t' = of_typed_term gamma t' in
+      let name = create_fresh_name () in
+      let t' = of_try_pattern gamma name branches in
       Try (t, (name, t'))
   | UntypedTree.Let (name, t, xs) ->
       let t = of_typed_term gamma t in
@@ -131,8 +156,6 @@ and of_typed_term gamma = function
       Const const
   | UntypedTree.Unreachable ->
       Unreachable
-  | UntypedTree.Reraise e ->
-      Reraise (get_name e gamma)
 
 let create_dyn_functions cname (ret, args) =
   match args with
@@ -177,12 +200,22 @@ let rec of_typed_tree mset gamma = function
   | UntypedTree.Exception name :: xs ->
       let xs = of_typed_tree mset gamma xs in
       Exception name :: xs
+  | UntypedTree.Instance (name, values) :: xs ->
+      (* TODO: Improve *)
+      let values =
+        let aux (name, x) t = UntypedTree.Let (name, x, t) in
+        let fields = List.map (fun (x, _) -> UntypedTree.Val x) values in
+        List.fold_right aux values (UntypedTree.RecordCreate fields)
+      in
+      let xs = UntypedTree.Value (name, values) :: xs in
+      of_typed_tree mset gamma xs
   | [] ->
       []
 
 let rec scan mset = function
   | UntypedTree.Value (name, _) :: xs
-  | UntypedTree.Foreign (_, name, _) :: xs ->
+  | UntypedTree.Foreign (_, name, _) :: xs
+  | UntypedTree.Instance (name, _) :: xs ->
       scan (GammaSet.MValue.add mset name) xs
   | UntypedTree.Exception _ :: xs ->
       scan mset xs

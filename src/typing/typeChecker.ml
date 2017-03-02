@@ -52,26 +52,6 @@ let wrap_typeclass_apps ~loc gamma ~tyclasses ~f g =
   in
   aux f 1 tyclasses
 
-let try_to_pattern l =
-  let (branches, patterns) =
-    let rec aux i = function
-      | [] ->
-          ([], [])
-      | ((exn, args), t)::xs ->
-          let free_vars =
-            List.mapi (fun i x -> (PatternMatrix.exn_var i, x)) args
-          in
-          let (branches, patterns) = aux (succ i) xs in
-          ((free_vars, t) :: branches, (exn, Pattern.Leaf i) :: patterns)
-    in
-    aux 0 l
-  in
-  let pattern =
-    Pattern.Ptr (Pattern.Node (None, patterns))
-  in
-  let name = Ident.Name.local_create ~loc:Builtins.unknown_loc ".exn" in
-  (name, PatternMatching (Val name, branches, Reraise name, pattern))
-
 let rec aux options gamma = function
   | (_, PretypedTree.Abs ((name, ty), t)) ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
@@ -184,9 +164,7 @@ let rec aux options gamma = function
   | (_, PretypedTree.LetRec (name, ty, t, xs)) ->
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let gamma = Gamma.add_value name ty gamma in
-      let (t, _, effect1) =
-        aux options gamma t
-      in
+      let (t, _, effect1) = aux options gamma t in
       (* NOTE: We doesn't need to check the type of "t" here because it has
          already been checked by an Annot (as it is mandatory for recursive
          values) *)
@@ -232,7 +210,7 @@ let rec aux options gamma = function
       in
       let (branches, effect) = List.fold_left aux ([], effect) branches in
       let branches = List.rev branches in
-      (Try (e, try_to_pattern branches), ty, effect)
+      (Try (e, branches), ty, effect)
   | (_, PretypedTree.Annot (t, ty)) ->
       let loc_t = fst t in
       let (_, ty_t, effects) as res = aux options gamma t in
@@ -421,13 +399,8 @@ let rec from_parse_tree ~current_module ~with_main ~has_main options gamma = fun
       let gamma = Gamma.replace_tyclass tyclass tyclass' gamma in
       let values = Class.get_values ~loc:(Ident.TyClass.loc tyclass) tys values tyclass' in
       let (xs, has_main, gamma) = from_parse_tree ~current_module ~with_main ~has_main options gamma xs in
-      let values =
-        let aux (name, x) t = Let (name, x, t) in
-        let fields = List.map (fun (x, _) -> Val x) values in
-        List.fold_right aux values (RecordCreate fields)
-      in
       let xs = Option.map_or ~default:xs (fun name -> Value (Ident.Instance.to_name name, Val name') :: xs) name in
-      (Value (name', values) :: xs, has_main, gamma)
+      (Instance (name', values) :: xs, has_main, gamma)
   | [] ->
       ([], has_main, gamma)
 

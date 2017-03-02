@@ -693,7 +693,7 @@ module UntypedTree = struct
            ^^ dump_exn_args args
            ^^ PPrint.rparen
           )
-    | Try (t, (name, t')) ->
+    | Try (t, branches) ->
         PPrint.group
           (PPrint.string "try"
            ^^ PPrint.break 1
@@ -701,8 +701,7 @@ module UntypedTree = struct
            ^^ PPrint.break 1
            ^^ PPrint.string "with"
           )
-        ^^ PPrint.string (fmt "| %s -> " (dump_name name))
-        ^^ dump_t t'
+        ^^ dump_exn_branches branches
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
     | RecordGet (t, n) ->
@@ -724,8 +723,6 @@ module UntypedTree = struct
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
         PPrint.string "UNREACHABLE"
-    | Reraise e ->
-        PPrint.string (fmt "reraise %s" (dump_name e))
 
   and dump_results results =
     let aux doc i (free_vars, result) =
@@ -737,6 +734,20 @@ module UntypedTree = struct
            )
     in
     List.foldi aux PPrint.empty results
+
+  and dump_exn_branches branches =
+    let dump_args args =
+      String.concat " " (List.map Ident.Name.to_string args)
+    in
+    let aux doc ((name, args), t) =
+      doc
+      ^^ PPrint.break 1
+      ^^ PPrint.group
+           (PPrint.string (fmt "| %s %s ->" (dump_exn_name name) (dump_args args))
+            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
+           )
+    in
+    List.fold_left aux PPrint.empty branches
 
   and dump_exn_args args =
     let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
@@ -755,16 +766,25 @@ module UntypedTree = struct
   let dump_args_ty l =
     fmt "(%s)" (String.concat ", " (List.map dump_tag_ty l))
 
+  let dump_value name t =
+    PPrint.group
+      (PPrint.string (fmt "let %s =" (dump_name name))
+       ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
+      )
+
   let dump = function
     | Value (name, t) ->
-        PPrint.group
-          (PPrint.string (fmt "let %s =" (dump_name name))
-           ^^ (PPrint.nest 2 (PPrint.break 1 ^^ dump_t t))
-          )
+        dump_value name t
     | Foreign (cname, name, (ret, args)) ->
         PPrint.string (fmt "foreign \"%s\" %s : (%s, %s)" cname (dump_name name) (dump_ret_ty ret) (dump_args_ty args))
     | Exception name ->
         PPrint.string (fmt "exception %s" (dump_exn_name name))
+    | Instance (name, values) ->
+        PPrint.string (fmt "instance %s =" (dump_name name))
+        ^^ PPrint.break 1
+        ^^ PPrint.nest 2 (List.fold_left (fun acc (name, x) -> acc ^^ dump_value name x ^^ PPrint.break 1) PPrint.empty values)
+        ^^ PPrint.string "end"
+
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in

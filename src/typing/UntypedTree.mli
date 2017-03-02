@@ -2,7 +2,7 @@
 (* See the LICENSE file at the top-level directory. *)
 
 type name = Ident.Name.t
-type eff_name = Ident.Exn.t
+type exn_name = Ident.Exn.t
 type ty_size = int
 type pattern_var = (PatternMatrix.var * name)
 type index = int
@@ -30,17 +30,17 @@ type t =
   | PatternMatching of (t * (pattern_var list * t) list * t * Pattern.t)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
-  | Fail of (eff_name * t list)
-  | Try of (t * (name * t))
+  | Fail of (exn_name * t list)
+  | Try of (t * ((exn_name * name list) * t) list)
   | RecordGet of (t * int)
   | RecordCreate of t list
   | Const of const
   | Unreachable
-  | Reraise of name
 
 type foreign_fun_type = (foreign_ret_type * tag_ty list)
 
 type top =
   | Value of (name * t)
   | Foreign of (string * name * foreign_fun_type)
-  | Exception of eff_name
+  | Exception of exn_name
+  | Instance of (name * (name * t) list)

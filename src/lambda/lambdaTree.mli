@@ -7,6 +7,7 @@ type index = int
 type constr = int
 type arity = int
 type length = int
+type branch = int
 
 type ('int, 'float, 'char, 'string) ty =
   ('int, 'float, 'char, 'string) UntypedTree.ty =
@@ -18,9 +19,10 @@ type ('int, 'float, 'char, 'string) ty =
 type tag_ty = (unit, unit, unit, unit) ty
 type const = (int, float, Uchar.t, string) ty
 
+(* TODO: What is this int option ?? *)
 type 'a tree' =
   | Node of (int option * ('a * 'a tree') list)
-  | Leaf of int
+  | Leaf of branch
 
 type tree =
   | IdxTree of constr tree'
