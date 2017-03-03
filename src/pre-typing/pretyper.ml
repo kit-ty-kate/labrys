@@ -6,6 +6,8 @@ open Monomorphic.None
 
 open PretypedTree
 
+module ForbiddenEnv = GammaSet.Value
+
 let rec get_rec_ty ~name t = match snd t with
   | Annot (_, (ty, _)) ->
       ty
@@ -22,7 +24,7 @@ let rec get_rec_ty ~name t = match snd t with
 
 let rec pretype_abs ~last_let forbidden_env t =
   let forbidden_env = match last_let with
-    | Some last_let -> GammaSet.Value.remove last_let forbidden_env
+    | Some last_let -> ForbiddenEnv.remove last_let forbidden_env
     | None -> forbidden_env
   in
   pretype_term forbidden_env t
@@ -48,7 +50,7 @@ and pretype_term ?last_let forbidden_env = function
       let f = pretype_term forbidden_env f in
       (loc, CApp (f, x))
   | (loc, DesugaredTree.Val name) ->
-      if GammaSet.Value.mem name forbidden_env then
+      if ForbiddenEnv.mem name forbidden_env then
         Err.fail ~loc "This recursive value cannot be used here"
       else
         (loc, Val name)
@@ -67,7 +69,7 @@ and pretype_term ?last_let forbidden_env = function
       (loc, Let (name, t, xs))
   | (loc, DesugaredTree.LetRec (name, t, xs)) ->
       let t =
-        let forbidden_env = GammaSet.Value.add name forbidden_env in
+        let forbidden_env = ForbiddenEnv.add name forbidden_env in
         pretype_term ~last_let:name forbidden_env t
       in
       let ty = get_rec_ty ~name t in
@@ -89,9 +91,11 @@ and pretype_term ?last_let forbidden_env = function
   | (loc, DesugaredTree.Const const) ->
       (loc, Const const)
 
+let forbidden_env = ForbiddenEnv.empty
+
 let pretype_top = function
   | DesugaredTree.Value (name, t) ->
-      let t = pretype_term GammaSet.Value.empty t in
+      let t = pretype_term forbidden_env t in
       Value (name, t)
   | DesugaredTree.Type ty ->
       Type ty
@@ -105,7 +109,7 @@ let pretype_top = function
       Class cl
   | DesugaredTree.Instance (tyclass, name, values) ->
       let values =
-        let aux (name, t) = (name, pretype_term GammaSet.Value.empty t) in
+        let aux (name, t) = (name, pretype_term forbidden_env t) in
         List.map aux values
       in
       Instance (tyclass, name, values)
