@@ -16,7 +16,7 @@ opam lint
 
 # Install
 opam pin add -y --no-action --kind=git cervoise .
-opam install -y "llvm.$LLVM_VERSION" cervoise
+opam install -y "llvm.${LLVM_VERSION}${LLVM_VERSION_MICRO}" cervoise
 
 # Run tests
 make
