@@ -3,24 +3,30 @@ DOC = doc
 LLVM_VERSION ?= 3.8
 
 TESTS = \
-	tests/basic/basic.t \
-	tests/old-examples/old-examples.t \
-	tests/examples/examples.t \
-	tests/errors/errors.t \
+    tests/basic/basic.t \
+    tests/old-examples/old-examples.t \
+    tests/examples/examples.t \
+    tests/errors/errors.t \
 
-all:
-	ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild-pkg)" cervoise
+DOCS = \
+    $(DOC)/semantics.pdf \
+    $(DOC)/system-f-omega.pdf \
 
 src/%:
 	ocamlbuild -use-ocamlfind -no-plugin "$@"
 
-clean:
-	ocamlbuild -clean
-
-semantics: $(DOC)/semantics.ott
+%.pdf: %.ott
 	ott -i $< -o $(<:.ott=.tex) -tex_show_meta false \
 	    && rubber --pdf --into $(DOC) $(<:.ott=.tex) \
 	    && $(RM) $(<:.ott=.aux) $(<:.ott=.log) $(<:.ott=.tex)
+
+all:
+	ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild-pkg)" cervoise
+
+clean:
+	ocamlbuild -clean
+
+docs: $(DOCS)
 
 stdlib:
 	./main.native build-module --no-prelude --src-dir stdlib Prelude
@@ -31,4 +37,4 @@ tests:
 check:
 	dead_code_analyzer.opt --all -S -bind-seq --exclude _build/src/parsing/parser.ml _build/src
 
-.PHONY: all clean semantics stdlib tests check
+.PHONY: all clean docs stdlib tests check
