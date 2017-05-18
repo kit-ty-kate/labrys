@@ -1,4 +1,4 @@
-% Cervoise's semantics
+% System Fω
 
 metavar x ::= {{ com term variable }}
 metavar a ::= {{ tex \alpha }} {{ com type variable }}
