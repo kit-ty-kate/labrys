@@ -18,7 +18,7 @@ clean:
 	ocamlbuild -clean
 
 semantics: $(DOC)/semantics.ott
-	ott -i $< -o $(<:.ott=.tex) \
+	ott -i $< -o $(<:.ott=.tex) -tex_show_meta false \
 	    && rubber --pdf --into $(DOC) $(<:.ott=.tex) \
 	    && $(RM) $(<:.ott=.aux) $(<:.ott=.log) $(<:.ott=.tex)
 
