@@ -1,15 +1,14 @@
 % System Fω
 
-metavar x ::= {{ com term variable }}
-metavar a ::= {{ tex \alpha }} {{ com type variable }}
-metavar X ::= {{ tex T }} {{ com type }}
-indexvar n ::=
+metavar x ::=                     {{ com term variable }}
+metavar a {{ tex \alpha }} ::=    {{ com type variable }}
+metavar X {{ tex T }} ::=         {{ com type }}
 
 grammar
   t :: t_ ::=                                                            {{ com term }}
     | x                                          ::   :: Var               {{ com variable }}
-    | \ ( x : T ) -> t                           ::   :: Lam               {{ com abstraction }}
-    | \ { a : K } -> t                           ::   :: TLam              {{ com type abstraction }}
+    | \ ( x : T ) -> t                           ::   :: Abs               {{ com abstraction }}
+    | \ { a : K } -> t                           ::   :: TAbs              {{ com type abstraction }}
     | t1 t2                                      ::   :: App               {{ com application }}
     | t [ T ]                                    ::   :: TApp              {{ com type application }}
     | t : T                                      ::   :: Annot             {{ com type annotation }}
