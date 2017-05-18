@@ -10,6 +10,8 @@ The git repository is located at: https://github.com/jpdeplaix/cervoise
 * Clang
 * The latest OPAM and the latest OCaml (https://opam.ocaml.org/)
 * Cram (for tests only)
+* Ott (for building documentation only)
+* Rubber (for building documentation only)
 
 ### Installation
 
