@@ -55,7 +55,7 @@ grammar
     | G , x : T                                  ::   :: var               {{ com variable }}
     | G , X : K                                  ::   :: type              {{ com abstract type }}
     | G , a : K                                  ::   :: tyvar             {{ com type variable }}
-    | G , c : c1 ~ c2                            ::   :: cvar              {{ com coercion variable }}
+    | G , c : T1 ~ T2                            ::   :: cvar              {{ com coercion variable }}
 
 % Ott meta rules
 
@@ -156,15 +156,20 @@ defns
     ------------------------------ :: Abs
     G |- \(x : T1) => t : T1 -> T2
 
-    G |- t1 : T2 -> T1
-    G |- t2 : T2
-    ------------------ :: App
-    G |- t1 t2 : T1
-
     G, a : K |- t : T
     a notin G
     -------------------------------------- :: TyAbs
     G |- \{a : K} => t : forall (a : K), T
+
+    G, c : T1 ~ T2 |- t : T3
+    ------------------------------------------ :: CAbs
+    G |- \{c : T1 ~ T2} => t : {T1 ~ T2} -> T3
+
+    G |- t1 : T2 -> T1
+    T2 == T2'
+    G |- t2 : T2'
+    ------------------ :: App
+    G |- t1 t2 : T1
 
     G |- t : forall (a : K), T2
     G |- T1 : K
@@ -172,10 +177,43 @@ defns
     --------------------------- :: TyApp
     G |- t [T1] : T2'
 
+    G |- t : {T1 ~ T2} -> T3
+    T1 == T1'
+    T2 == T2'
+    G |- C : T1' ~ T2'
+    ------------------------ :: CApp
+    G |- t ~[C] : T3
+
     G |- t : T2
     T1 == T2
     ------------------ :: Annot
     G |- (t : T1) : T1
+
+    G |- C : T1 ~ T2
+    T1 == T1'
+    G |- t : T1'
+    ---------------- :: Coerce
+    G |- t :> C : T2
+
+defns
+  JCoerce :: '' ::=
+
+  defn
+    G |- C : T1 ~ T2 :: :: GC :: C_ {{ com Coercion typing }} by
+
+    c : T1 ~ T2 isin G
+    ------------------ :: Var
+    G |- c : T1 ~ T2
+
+
+    ------------------- :: Refl
+    G |- refl T : T ~ T
+
+    G |- C : T2 ~ T1
+    -------------------- :: Sym
+    G |- sym C : T1 ~ T2
+
+    % TODO
 
 defns
   Jkind :: '' ::=
@@ -204,6 +242,12 @@ defns
     G |- T2 : *
     ----------------- :: Arrow
     G |- T1 -> T2 : *
+
+    G |- T1 : K
+    G |- T2 : K
+    G |- T3 : *
+    ------------------------ :: CArrow
+    G |- {T1 ~ T2} -> T3 : *
 
     G, a : K |- T : *
     -------------------------- :: Forall
@@ -240,6 +284,12 @@ defns
     T2 == T2'
     ---------------------- :: Arrow
     T1 -> T2 == T1' -> T2'
+
+    T1 == T1'
+    T2 == T2'
+    T3 == T3'
+    ------------------------------------- :: CArrow
+    {T1 ~ T2} -> T3 == {T1' ~ T2'} -> T3'
 
     T1 == T2
     ---------------------------------------- :: Forall
