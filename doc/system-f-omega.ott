@@ -20,7 +20,7 @@ grammar
   K {{ tex \kappa }} :: K_ ::=                                           {{ com kind }}
     | *                                          ::   :: Star              {{ com star }}
     | K1 -> K2                                   ::   :: KArrow            {{ com kind arrow }}
-    | ( t )                                      :: S :: Paren             {{ com parenthesis }}
+    | ( K )                                      :: S :: Paren             {{ com parenthesis }}
 
   T {{ tex \tau }} :: T_ ::=                                             {{ com type }}
     | a                                          ::   :: var               {{ com type variable }}
