@@ -15,10 +15,13 @@ DOCS = \
 src/%:
 	ocamlbuild -use-ocamlfind -no-plugin "$@"
 
+# NOTE: SOURCE_DATE_EPOCH is set to a custom value for making reproducible builds (see pdflatex(1))
+
 %.pdf: %.ott
-	ott -i $< -o $(<:.ott=.tex) -tex_show_meta false \
-	    && rubber --pdf --into $(DOC) $(<:.ott=.tex) \
-	    && $(RM) $(<:.ott=.aux) $(<:.ott=.log) $(<:.ott=.tex)
+	ott -i $< -o $(<:.ott=.tex) -tex_show_meta false
+	SOURCE_DATE_EPOCH=0 rubber --pdf --into $(DOC) $(<:.ott=.tex)
+	rubber --clean --into $(DOC) $(<:.ott=.tex)
+	$(RM) $(<:.ott=.tex)
 
 all:
 	ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild-pkg)" cervoise
@@ -27,6 +30,9 @@ clean:
 	ocamlbuild -clean
 
 docs: $(DOCS)
+
+clean-docs:
+	$(RM) $(DOCS)
 
 stdlib:
 	./main.native build-module --no-prelude --src-dir stdlib Prelude
