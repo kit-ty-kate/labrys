@@ -11,6 +11,7 @@ TESTS = \
 DOCS = \
     $(DOC)/semantics.pdf \
     $(DOC)/system-f-omega.pdf \
+    $(DOC)/system-fcw.pdf \
 
 src/%:
 	ocamlbuild -use-ocamlfind -no-plugin "$@"
