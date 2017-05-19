@@ -30,7 +30,7 @@ grammar
     | a                                          ::   :: var               {{ com type variable }}
     | X                                          ::   :: type              {{ com type }}
     | T1 -> T2                                   ::   :: arrow             {{ com arrow }}
-    | { T1 ~ T2 } ~> T3                          ::   :: carrow            {{ com coercion arrow }}
+    | { T1 ~ T2 } -> T3                          ::   :: carrow            {{ com coercion arrow }}
     | \ ( a : K ) , T                            ::   :: abs               {{ com operator abstraction }}
     | forall ( a : K ) , T                       ::   :: forall            {{ com forall }}
     | T1 T2                                      ::   :: app               {{ com operator application }}
@@ -42,7 +42,7 @@ grammar
     | sym C                                      ::   :: sym               {{ com symmetry }}
     | C1 . C2                                    ::   :: comp              {{ com composition }}
     | C1 -> C2                                   ::   :: arrow             {{ com arrow introduction }}
-    | { T1 ~ T2 } ~> C                           ::   :: carrow            {{ com coercion arrow introduction }}
+    | { T1 ~ T2 } -> C                           ::   :: carrow            {{ com coercion arrow introduction }}
     | \ ( a : K ) , C                            ::   :: abs               {{ com operator abstraction introduction }}
     | forall ( a : K ) , C                       ::   :: forall            {{ com forall introduction }}
     | C1 C2                                      ::   :: app               {{ com application introduction }}
@@ -66,7 +66,6 @@ grammar
     | -->                 ::   :: red        {{ tex \longrightarrow }}
     | =>                  ::   :: earrow     {{ tex \Rightarrow }}
     | ->                  ::   :: arrow      {{ tex \rightarrow }}
-    | ~>                  ::   :: carrow     {{ tex \leadsto }}
     | |-                  ::   :: turnstile  {{ tex \vdash }}
     | |->                 ::   :: mapsto     {{ tex \mapsto }}
     | |>                  ::   :: rhd        {{ tex \rhd }}
@@ -106,7 +105,7 @@ defns
     ------------------- :: Var2
     [a1 |-> T] a2 |> a2
 
-    
+
     ---------------- :: Type
     [a |-> T] X |> X
 
@@ -114,6 +113,12 @@ defns
     [a |-> T1] T3 |> T3'
     --------------------------------- :: Arrow
     [a |-> T1] T2 -> T3 |> T2' -> T3'
+
+    [a |-> T1] T2 |> T2'
+    [a |-> T1] T3 |> T3'
+    [a |-> T1] T4 |> T4'
+    ------------------------------------------------ :: CArrow
+    [a |-> T1] {T2 ~ T3} -> T4 |> {T2' ~ T3'} -> T4'
 
 
     --------------------------------------- :: Abs1
