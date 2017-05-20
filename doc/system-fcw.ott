@@ -42,7 +42,7 @@ grammar
     | sym C                                      ::   :: sym               {{ com symmetry }}
     | C1 . C2                                    ::   :: comp              {{ com composition }}
     | C1 -> C2                                   ::   :: arrow             {{ com arrow introduction }}
-    | { T1 ~ T2 } -> C                           ::   :: carrow            {{ com coercion arrow introduction }}
+    | { C1 ~ C2 } -> C3                          ::   :: carrow            {{ com coercion arrow introduction }}
     | \ ( a : K ) , C                            ::   :: abs               {{ com operator abstraction introduction }}
     | forall ( a : K ) , C                       ::   :: forall            {{ com forall introduction }}
     | C1 C2                                      ::   :: app               {{ com application introduction }}
@@ -223,31 +223,29 @@ defns
 
     G |- C1 : T1 ~ T1'
     G |- C2 : T2 ~ T2'
-    G |- T1 : *
-    G |- T2 : *
+    G |- T1 -> T2 : *
     ------------------------------------- :: Arrow
     G |- C1 -> C2 : T1 -> T2 ~ T1' -> T2'
 
-    G |- T1 : K
-    G |- T2 : K
-    G |- T3 : *
-    G |- C : T3 ~ T3'
-    -------------------------------------------------------- :: CArrow
-    G |- {T1 ~ T2} -> C : {T1 ~ T2} -> T3 ~ {T1 ~ T2} -> T3'
+    G |- C1 : T1 ~ T1'
+    G |- C2 : T2 ~ T2'
+    G |- C3 : T3 ~ T3'
+    G |- {T1 ~ T2} -> T3 : *
+    ----------------------------------------------------------- :: CArrow
+    G |- {C1 ~ C2} -> C3 : {T1 ~ T2} -> T3 ~ {T1' ~ T2'} -> T3'
 
     G, a : K |- C : T1 ~ T2
     ---------------------------------------------- :: Abs
     G |- \(a : K), C : \(a : K), T1 ~ \(a : K), T2
 
-    G |- T1 : *
     G, a : K |- C : T1 ~ T2
+    G |- forall (a : K), T1 : *
     ---------------------------------------------------------------- :: Forall
     G |- forall (a : K), C : forall (a : K), T1 ~ forall (a : K), T2
 
     G |- C1 : T1 ~ T1'
     G |- C2 : T2 ~ T2'
-    G |- T1 : K2 -> K1
-    G |- T2 : K2
+    G |- T1 T2 : K
     ----------------------------------- :: App
     G |- C1 C2 : T1 T2 ~ T1' T2'
 
@@ -264,8 +262,6 @@ defns
     G |- right C : T2 ~ T2'
 
     G |- C : {T1 ~ T2} -> T3 ~ {T1' ~ T2'} -> T3'
-    T1 == T1'
-    T2 == T2'
     --------------------------------------------- :: Right2
     G |- right C : T3 ~ T3'
 
