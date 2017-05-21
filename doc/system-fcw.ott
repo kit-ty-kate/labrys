@@ -2,7 +2,7 @@
 
 metavar x ::=                     {{ com term variable }}
 metavar a {{ tex \alpha }} ::=    {{ com type variable }}
-metavar X {{ tex T }} ::=         {{ com type }}
+metavar X {{ tex T }} ::=         {{ com abstract type }}
 metavar c ::=                     {{ com coercion variable }}
 
 grammar
@@ -28,7 +28,7 @@ grammar
 
   T {{ tex \tau }} :: T_ ::=                                             {{ com type }}
     | a                                          ::   :: var               {{ com type variable }}
-    | X                                          ::   :: type              {{ com type }}
+    | X                                          ::   :: type              {{ com abstract type }}
     | T1 -> T2                                   ::   :: arrow             {{ com arrow }}
     | { T1 ~ T2 } -> T3                          ::   :: carrow            {{ com coercion arrow }}
     | \ ( a : K ) , T                            ::   :: abs               {{ com operator abstraction }}
