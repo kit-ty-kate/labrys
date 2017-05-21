@@ -45,4 +45,4 @@ tests:
 check:
 	dead_code_analyzer.opt --all -S -bind-seq --exclude _build/src/parsing/parser.ml _build/src
 
-.PHONY: all clean docs stdlib tests check
+.PHONY: all clean docs clean-docs stdlib tests check
