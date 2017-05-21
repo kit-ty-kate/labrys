@@ -29,7 +29,7 @@ grammar
   T {{ tex \tau }} :: T_ ::=                                             {{ com type }}
     | a                                          ::   :: var               {{ com type variable }}
     | X                                          ::   :: type              {{ com abstract type }}
-    | T1 -> T2                                   ::   :: arrow             {{ com arrow }}
+    | T1 -> T2                                   :: S :: arrow             {{ com $\equiv$ ($\rightarrow$) $\tau_\mathrm{1}$ $\tau_\mathrm{2}$ where ($\rightarrow$) : * $\rightarrow$ * $\rightarrow$ * }}
     | { T1 ~ T2 } -> T3                          ::   :: carrow            {{ com coercion arrow }}
     | \ ( a : K ) , T                            ::   :: abs               {{ com operator abstraction }}
     | forall ( a : K ) , T                       ::   :: forall            {{ com forall }}
@@ -41,7 +41,7 @@ grammar
     | refl T                                     ::   :: refl              {{ com reflexivity }}
     | sym C                                      ::   :: sym               {{ com symmetry }}
     | C1 . C2                                    ::   :: comp              {{ com composition }}
-    | C1 -> C2                                   ::   :: arrow             {{ com arrow introduction }}
+    | C1 -> C2                                   :: S :: arrow             {{ com $\equiv$ ($\rightarrow$) $\gamma_\mathrm{1}$ $\gamma_\mathrm{2}$ }}
     | { C1 ~ C2 } -> C3                          ::   :: carrow            {{ com coercion arrow introduction }}
     | \ ( a : K ) , C                            ::   :: abs               {{ com operator abstraction introduction }}
     | forall ( a : K ) , C                       ::   :: forall            {{ com forall introduction }}
@@ -108,11 +108,6 @@ defns
 
     ---------------- :: Type
     [a |-> T] X |> X
-
-    [a |-> T1] T2 |> T2'
-    [a |-> T1] T3 |> T3'
-    --------------------------------- :: Arrow
-    [a |-> T1] T2 -> T3 |> T2' -> T3'
 
     [a |-> T1] T2 |> T2'
     [a |-> T1] T3 |> T3'
@@ -223,12 +218,6 @@ defns
 
     G |- C1 : T1 ~ T1'
     G |- C2 : T2 ~ T2'
-    G |- T1 -> T2 : *
-    ------------------------------------- :: Arrow
-    G |- C1 -> C2 : T1 -> T2 ~ T1' -> T2'
-
-    G |- C1 : T1 ~ T1'
-    G |- C2 : T2 ~ T2'
     G |- C3 : T3 ~ T3'
     G |- {T1 ~ T2} -> T3 : *
     ----------------------------------------------------------- :: CArrow
@@ -292,11 +281,6 @@ defns
     ------------------ :: App
     G |- T1 T2 : K1
 
-    G |- T1 : *
-    G |- T2 : *
-    ----------------- :: Arrow
-    G |- T1 -> T2 : *
-
     G |- T1 : K
     G |- T2 : K
     G |- T3 : *
@@ -333,11 +317,6 @@ defns
 
     ------ :: AbsType
     X == X
-
-    T1 == T1'
-    T2 == T2'
-    ---------------------- :: Arrow
-    T1 -> T2 == T1' -> T2'
 
     T1 == T1'
     T2 == T2'
