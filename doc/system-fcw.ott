@@ -41,7 +41,7 @@ grammar
     | refl T                                     ::   :: refl              {{ com reflexivity }}
     | sym C                                      ::   :: sym               {{ com symmetry }}
     | C1 . C2                                    ::   :: comp              {{ com composition }}
-    | C1 -> C2                                   :: S :: arrow             {{ com $\equiv$ ($\rightarrow$) $\gamma_\mathrm{1}$ $\gamma_\mathrm{2}$ }}
+    | C1 -> C2                                   :: S :: arrow             {{ com $\equiv$ ($\rightarrow$) $\gamma_\mathrm{1}$ $\gamma_\mathrm{2}$ where ($\rightarrow$) : refl ($\rightarrow$) }}
     | { C1 ~ C2 } -> C3                          ::   :: carrow            {{ com coercion arrow introduction }}
     | \ ( a : K ) , C                            ::   :: abs               {{ com operator abstraction introduction }}
     | forall ( a : K ) , C                       ::   :: forall            {{ com forall introduction }}
