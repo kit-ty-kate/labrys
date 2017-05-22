@@ -2,20 +2,20 @@
 
 metavar x ::=                     {{ com term variable }}
 metavar a {{ tex \alpha }} ::=    {{ com type variable }}
-metavar X {{ tex T }} ::=         {{ com type }}
+metavar X {{ tex T }} ::=         {{ com abstract type }}
 
 grammar
   t :: t_ ::=                                                            {{ com term }}
     | x                                          ::   :: Var               {{ com variable }}
-    | \ ( x : T ) -> t                           ::   :: Abs               {{ com abstraction }}
-    | \ { a : K } -> t                           ::   :: TAbs              {{ com type abstraction }}
+    | \ ( x : T ) => t                           ::   :: Abs               {{ com abstraction }}
+    | \ { a : K } => t                           ::   :: TAbs              {{ com type abstraction }}
     | t1 t2                                      ::   :: App               {{ com application }}
     | t [ T ]                                    ::   :: TApp              {{ com type application }}
     | t : T                                      ::   :: Annot             {{ com type annotation }}
     | ( t )                                      :: S :: Paren             {{ com parenthesis }}
 
   v :: v_ ::=                                                            {{ com value }}
-    | \ ( x : T ) -> t                           ::   :: Lam               {{ com abstraction }}
+    | \ ( x : T ) => t                           ::   :: Lam               {{ com abstraction }}
 
   K {{ tex \kappa }} :: K_ ::=                                           {{ com kind }}
     | *                                          ::   :: Star              {{ com star }}
@@ -24,10 +24,10 @@ grammar
 
   T {{ tex \tau }} :: T_ ::=                                             {{ com type }}
     | a                                          ::   :: var               {{ com type variable }}
-    | X                                          ::   :: type              {{ com type }}
-    | T1 -> T2                                   ::   :: arrow             {{ com arrow }}
+    | X                                          ::   :: type              {{ com abstract type }}
+    | T1 -> T2                                   :: S :: arrow             {{ com $\equiv$ ($\rightarrow$) $\tau_\mathrm{1}$ $\tau_\mathrm{2}$ where ($\rightarrow$) : * $\rightarrow$ * $\rightarrow$ * }}
     | \ ( a : K ) , T                            ::   :: abs               {{ com operator abstraction }}
-    | forall ( a : K ) , T                       ::   :: forall            {{ com forall }}
+    | forall ( a : K ) , T                       ::   :: forall            {{ com universal quantification }}
     | T1 T2                                      ::   :: app               {{ com operator application }}
     | ( T )                                      :: S :: paren             {{ com parenthesis }}
 
@@ -42,11 +42,13 @@ grammar
   terminals :: terminals_ ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
     | -->                 ::   :: red        {{ tex \longrightarrow }}
+    | =>                  ::   :: earrow     {{ tex \Rightarrow }}
     | ->                  ::   :: arrow      {{ tex \rightarrow }}
     | |-                  ::   :: turnstile  {{ tex \vdash }}
     | |->                 ::   :: mapsto     {{ tex \mapsto }}
     | |>                  ::   :: rhd        {{ tex \rhd }}
     | ==                  ::   :: equiv      {{ tex \equiv }}
+    | [                   ::   :: bracket    {{ tex ~[ }}
     | isin                ::   :: isin       {{ tex \in }}
     | notin               ::   :: notin      {{ tex \notin }}
     | forall              ::   :: forall     {{ tex \forall }}
@@ -78,14 +80,9 @@ defns
     ------------------- :: Var2
     [a1 |-> T] a2 |> a2
 
-    
+
     ---------------- :: Type
     [a |-> T] X |> X
-
-    [a |-> T1] T2 |> T2'
-    [a |-> T1] T3 |> T3'
-    --------------------------------- :: Arrow
-    [a |-> T1] T2 -> T3 |> T2' -> T3'
 
 
     --------------------------------------- :: Abs1
@@ -121,17 +118,18 @@ defns
     G, x : T1 |- t : T2
     G |- T1 : *
     ------------------------------ :: Abs
-    G |- \(x : T1) -> t : T1 -> T2
-
-    G |- t1 : T2 -> T1
-    G |- t2 : T2
-    ------------------ :: App
-    G |- t1 t2 : T1
+    G |- \(x : T1) => t : T1 -> T2
 
     G, a : K |- t : T
     a notin G
     -------------------------------------- :: TyAbs
-    G |- \{a : K} -> t : forall (a : K), T
+    G |- \{a : K} => t : forall (a : K), T
+
+    G |- t1 : T2 -> T1
+    T2 == T2'
+    G |- t2 : T2'
+    ------------------ :: App
+    G |- t1 t2 : T1
 
     G |- t : forall (a : K), T2
     G |- T1 : K
@@ -167,11 +165,6 @@ defns
     ------------------ :: App
     G |- T1 T2 : K1
 
-    G |- T1 : *
-    G |- T2 : *
-    ----------------- :: Arrow
-    G |- T1 -> T2 : *
-
     G, a : K |- T : *
     -------------------------- :: Forall
     G |- forall (a : K), T : *
@@ -202,11 +195,6 @@ defns
 
     ------ :: AbsType
     X == X
-
-    T1 == T1'
-    T2 == T2'
-    ---------------------- :: Arrow
-    T1 -> T2 == T1' -> T2'
 
     T1 == T2
     ---------------------------------------- :: Forall
@@ -241,15 +229,15 @@ defns
 
 
     ---------------------------------------- :: Abs1
-    [x |-> v] \(x : T) -> t |> \(x : T) -> t
+    [x |-> v] \(x : T) => t |> \(x : T) => t
 
     [x1 |-> v] t1 |> t2
     --------------------------------------------- :: Abs2
-    [x1 |-> v] \(x2 : T) -> t1 |> \(x2 : T) -> t2
+    [x1 |-> v] \(x2 : T) => t1 |> \(x2 : T) => t2
 
     [x |-> v] t1 |> t2
     ------------------------------------------ :: TAbs
-    [x |-> v] \{a : K} -> t1 |> \{a : K} -> t2
+    [x |-> v] \{a : K} => t1 |> \{a : K} => t2
 
     [x |-> v] t1 |> t1'
     [x |-> v] t2 |> t2'
@@ -281,16 +269,16 @@ defns
     [x |-> v] t |> t'
     t' --> t''
     ------------------------- :: AppAbs
-    (\(x : T) -> t) v --> t''
+    (\(x : T) => t) v --> t''
 
     t --> t'
     -------------------- :: TAbs
-    \{a : K} -> t --> t'
+    \{a : K} => t --> t'
 
     t --> t'
     ------------ :: TApp
     t [T] --> t'
 
     t --> t'
-    -------------- :: Annot
-    (t : T) --> t'
+    ------------ :: Annot
+    t : T --> t'

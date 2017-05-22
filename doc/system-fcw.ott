@@ -32,7 +32,7 @@ grammar
     | T1 -> T2                                   :: S :: arrow             {{ com $\equiv$ ($\rightarrow$) $\tau_\mathrm{1}$ $\tau_\mathrm{2}$ where ($\rightarrow$) : * $\rightarrow$ * $\rightarrow$ * }}
     | { T1 ~ T2 } -> T3                          ::   :: carrow            {{ com coercion arrow }}
     | \ ( a : K ) , T                            ::   :: abs               {{ com operator abstraction }}
-    | forall ( a : K ) , T                       ::   :: forall            {{ com forall }}
+    | forall ( a : K ) , T                       ::   :: forall            {{ com universal quantification }}
     | T1 T2                                      ::   :: app               {{ com operator application }}
     | ( T )                                      :: S :: paren             {{ com parenthesis }}
 
@@ -44,7 +44,7 @@ grammar
     | C1 -> C2                                   :: S :: arrow             {{ com $\equiv$ ($\rightarrow$) $\gamma_\mathrm{1}$ $\gamma_\mathrm{2}$ where ($\rightarrow$) : refl ($\rightarrow$) }}
     | { C1 ~ C2 } -> C3                          ::   :: carrow            {{ com coercion arrow introduction }}
     | \ ( a : K ) , C                            ::   :: abs               {{ com operator abstraction introduction }}
-    | forall ( a : K ) , C                       ::   :: forall            {{ com forall introduction }}
+    | forall ( a : K ) , C                       ::   :: forall            {{ com universal quantification introduction }}
     | C1 C2                                      ::   :: app               {{ com application introduction }}
     | left C                                     ::   :: cleft             {{ com left elimination }}
     | right C                                    ::   :: cright            {{ com right elimination }}
