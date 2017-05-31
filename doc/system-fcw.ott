@@ -1,9 +1,10 @@
 % System Fcω
 
-metavar x ::=                     {{ com term variable }}
-metavar a {{ tex \alpha }} ::=    {{ com type variable }}
-metavar X {{ tex T }} ::=         {{ com type constructor }}
-metavar c ::=                     {{ com coercion variable }}
+metavar x ::=                           {{ com term variable }}
+metavar a {{ tex \alpha }} ::=          {{ com type variable }}
+metavar X {{ tex T }} ::=               {{ com type constructor }}
+metavar c ::=                           {{ com coercion variable }}
+indexvar i ::=                          {{ com index metavariable }}
 
 grammar
   t :: t_ ::=                                                            {{ com term }}
@@ -43,8 +44,8 @@ grammar
     | \ ( a : K ) , C                            ::   :: abs               {{ com operator abstraction introduction }}
     | forall ( a : K ) , C                       ::   :: forall            {{ com universal quantification introduction }}
     | C1 C2                                      ::   :: app               {{ com application introduction }}
-    | left C                                     ::   :: cleft             {{ com left elimination }}
-    | right C                                    ::   :: cright            {{ com right elimination }}
+    | C @ T                                      ::   :: inst              {{ com instantiation (quantification elimination) }}
+    | elim C                                     ::   :: elim              {{ com generalized elimination }}
     | ( C )                                      :: M :: paren             {{ com parenthesis }}
 
   G {{ tex \Gamma }} :: G_ ::=                                           {{ com typing environment }}
@@ -75,6 +76,8 @@ grammar
     | ~                   ::   :: tilde      {{ tex \sim }}
     | \                   ::   :: lambda     {{ tex \lambda }}
     | &                   ::   :: jspace     {{ tex \qquad\quad }}
+    | @                   ::   :: at         {{ tex ~@~ }}
+    | >>                  ::   :: fillspace  {{ tex \quad }}
     | -->                 ::   :: red        {{ tex \longrightarrow }}
     | =>                  ::   :: earrow     {{ tex \Rightarrow }}
     | ->                  ::   :: arrow      {{ tex \rightarrow }}
@@ -86,6 +89,7 @@ grammar
     | ==                  ::   :: equiv      {{ tex \equiv }}
     | @[                  ::   :: lbracket   {{ tex ~[ }}
     | ~[                  ::   :: tildeL     {{ tex ~{\sim}[ }}
+    | elim                ::   :: elim       {{ tex \bold{elim}_{\mathrm{i} } }}
     | isin                ::   :: isin       {{ tex \in }}
     | notin               ::   :: notin      {{ tex \notin }}
     | forall              ::   :: forall     {{ tex \forall }}
@@ -94,6 +98,7 @@ grammar
   formula :: formula_ ::=
     | judgement                         ::   :: judgement
     | formula1 & formula2               ::   :: inlineJudgements
+    | >> formula                        ::   :: fillSpace
     | x : T isin G                      ::   :: xIsInG
     | X : K isin G                      ::   :: XIsInG
     | a : K isin G                      ::   :: aIsInG
@@ -102,6 +107,8 @@ grammar
     | a1 /= a2                          ::   :: aNEq
     | x1 /= x2                          ::   :: xNEq
     | c1 /= c2                          ::   :: cNEq
+    | i isin {1, 2}                     ::   :: i12
+    | i isin {1, 2, 3}                  ::   :: i123
 
 subrules
   tv <:: t
@@ -184,8 +191,9 @@ defns
     -------------------------------------------------------------- :: Comp
     G |- C1 . C2 : T1 ~ T3
 
-    G |- C1 : T1 ~ T1'    &    G |- C2 : T2 ~ T2'    &    G |- C3 : T3 ~ T3'    &    G |- {T1 ~ T2} -> T3 : *
-    --------------------------------------------------------------------------------------------------------- :: CArrow
+    G |- C1 : T1 ~ T1'    &    G |- C2 : T2 ~ T2'    &    G |- C3 : T3 ~ T3'
+    >> >> >> >> >> >> >> >> G |- {T1 ~ T2} -> T3 : *
+    ------------------------------------------------------------------------ :: CArrow
     G |- ({C1 ~ C2} -> C3) : ({T1 ~ T2} -> T3) ~ ({T1' ~ T2'} -> T3')
 
     a notin G    &    G, a : K |- C : T1 ~ T2
@@ -200,25 +208,18 @@ defns
     -------------------------------------------------------------------- :: App
     G |- C1 C2 : T1 T2 ~ T1' T2'
 
-    G |- C : T1 -> T2 ~ T1' -> T2'
-    ----------------------------------- :: Left1
-    G |- left C : T1 ~ T1'
+    G |- T1 : K    &    G |- C : (forall (a1 : K), T2) ~ (forall (a2 : K), T3)
+    >> >> >> [a1 |-> T1] T2 |> T2'    &    [a2 |-> T1] T3 |> T3'
+    -------------------------------------------------------------------------- :: Inst
+    G |- C @ T1 : T2' ~ T3'
 
-    G |- C : T1 T2 ~ T1' T2'
-    ----------------------------------- :: Left2
-    G |- left C : T1 ~ T1'
+    i isin {1, 2}    &    G |- C : T1 T2 ~ T1' T2'
+    ---------------------------------------------- :: ElimApp
+    G |- elim C : Ti ~ Ti'
 
-    G |- C : T1 -> T2 ~ T1' -> T2'
-    ----------------------------------- :: Right1
-    G |- right C : T2 ~ T2'
-
-    G |- C : {T1 ~ T2} -> T3 ~ {T1' ~ T2'} -> T3'
-    --------------------------------------------- :: Right2
-    G |- right C : T3 ~ T3'
-
-    G |- C : T1 T2 ~ T1' T2'
-    ----------------------------------- :: Right3
-    G |- right C : T2 ~ T2'
+    i isin {1, 2, 3}    &    G |- C : ({T1 ~ T2} -> T3) ~ ({T1' ~ T2'} -> T3')
+    -------------------------------------------------------------------------- :: ElimCArrow
+    G |- elim C : Ti ~ Ti'
 
 defns
   Jkind :: '' ::=
@@ -544,13 +545,14 @@ defns
     ----------------------------------------------- :: App
     [a |-> T] (C1 C2) |> C1' C2'
 
-    [a |-> T] C1 |> C2
-    ------------------------------ :: Left
-    [a |-> T] (left C1) |> left C2
+    [a |-> T1] C1 |> C2
+    [a |-> T1] T2 |> T3
+    ------------------------------- :: Inst
+    [a |-> T1] (C1 @ T2) |> C2 @ T3
 
     [a |-> T] C1 |> C2
-    -------------------------------- :: Right
-    [a |-> T] (right C1) |> right C2
+    ------------------------------ :: Elim
+    [a |-> T] (elim C1) |> elim C2
 
 defns
   JCtSubst :: '' ::=
@@ -641,9 +643,9 @@ defns
     [c |-> C1] (C2 C3) |> C2' C3'
 
     [c |-> C1] C2 |> C3
-    ------------------------------- :: Left
-    [c |-> C1] (left C2) |> left C3
+    ----------------------------- :: Inst
+    [c |-> C1] (C2 @ T) |> C3 @ T
 
     [c |-> C1] C2 |> C3
-    --------------------------------- :: Right
-    [c |-> C1] (right C2) |> right C3
+    ------------------------------- :: Elim
+    [c |-> C1] (elim C2) |> elim C3
