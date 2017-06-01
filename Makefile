@@ -12,6 +12,7 @@ DOCS = \
     $(DOC)/semantics.pdf \
     $(DOC)/system-fw.pdf \
     $(DOC)/system-fcw.pdf \
+    $(DOC)/system-fw-with-effects.pdf \
 
 src/%:
 	ocamlbuild -use-ocamlfind -no-plugin "$@"
