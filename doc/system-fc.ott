@@ -1,0 +1,574 @@
+% System Fc
+
+metavar x ::=                           {{ com term variable }}
+metavar a {{ tex \alpha }} ::=          {{ com type variable }}
+metavar X {{ tex T }} ::=               {{ com type constructor }}
+metavar c ::=                           {{ com coercion variable }}
+indexvar i ::=                          {{ com index metavariable }}
+
+grammar
+  t :: t_ ::=                                                            {{ com term }}
+    | x                                          ::   :: Var               {{ com variable }}
+    | \ ( x : T ) => t                           ::   :: Abs               {{ com abstraction }}
+    | \ { a } => t                               ::   :: TAbs              {{ com type abstraction }}
+    | \ { c : T1 ~ T2 } => t                     ::   :: CAbs              {{ com coercion abstraction }}
+    | t1 t2                                      ::   :: App               {{ com application }}
+    | t @[ T ]                                   ::   :: TApp              {{ com type application }}
+    | t ~[ C ]                                   ::   :: CApp              {{ com coercion application }}
+    | t : T                                      ::   :: Annot             {{ com type annotation }}
+    | t :> C                                     ::   :: Coerce            {{ com coercion }}
+    | ( t )                                      :: M :: Paren             {{ com parenthesis }}
+
+  T {{ tex \tau }} :: T_ ::=                                             {{ com type }}
+    | a                                          ::   :: var               {{ com type variable }}
+    | X                                          ::   :: type              {{ com type constructor }}
+    | T1 -> T2                                   ::   :: arrow             {{ com arrow }}
+    | { T1 ~ T2 } -> T3                          ::   :: carrow            {{ com coercion arrow }}
+    | forall a , T                               ::   :: forall            {{ com universal quantification }}
+    | ( T )                                      :: M :: paren             {{ com parenthesis }}
+
+  C {{ tex \gamma }} :: C_ ::=                                           {{ com coercion proof term }}
+    | c                                          ::   :: var               {{ com variable }}
+    | refl T                                     ::   :: refl              {{ com reflexivity }}
+    | sym C                                      ::   :: sym               {{ com symmetry }}
+    | C1 . C2                                    ::   :: comp              {{ com composition }}
+    | C1 -> C2                                   ::   :: arrow             {{ com arrow introduction }}
+    | { C1 ~ C2 } -> C3                          ::   :: carrow            {{ com coercion arrow introduction }}
+    | forall a , C                               ::   :: forall            {{ com universal quantification introduction }}
+    | C @ T                                      ::   :: inst              {{ com instantiation (quantification elimination) }}
+    | elim C                                     ::   :: elim              {{ com generalized elimination }}
+    | ( C )                                      :: M :: paren             {{ com parenthesis }}
+
+  G {{ tex \Gamma }} :: G_ ::=                                           {{ com typing environment }}
+    | empty                                      ::   :: empty             {{ com empty }}
+    | G , x : T                                  ::   :: var               {{ com variable }}
+    | G , X                                      ::   :: type              {{ com type constructor }}
+    | G , a                                      ::   :: tyvar             {{ com type variable }}
+    | G , c : T1 ~ T2                            ::   :: cvar              {{ com coercion variable }}
+
+  tv :: tv_ ::=                                                          {{ com typed value }}
+    | \ ( x : T ) => t                           ::   :: Abs               {{ com abstraction }}
+    | \ { a } => tv                              ::   :: TAbs              {{ com type abstraction }}
+    | \ { c : T1 ~ T2 } => tv                    ::   :: CAbs              {{ com coercion abstraction }}
+    | tv @[ T ]                                  ::   :: TApp              {{ com type application }}
+    | tv ~[ C ]                                  ::   :: CApp              {{ com coercion application }}
+    | tv : T                                     ::   :: Annot             {{ com type annotation }}
+    | tv :> C                                    ::   :: Coerce            {{ com coercion }}
+    | ( t )                                      :: M :: Paren             {{ com parenthesis }}
+
+  v :: v_ ::=                                                            {{ com value }}
+    | \ x => t                                   ::   :: Abs               {{ com abstraction }}
+    | ( v )                                      :: M :: Paren             {{ com parenthesis }}
+
+% Ott meta rules
+
+  terminals :: terminals_ ::=
+    | .                   ::   :: comp       {{ tex \circ }}
+    | ~                   ::   :: tilde      {{ tex \sim }}
+    | \                   ::   :: lambda     {{ tex \lambda }}
+    | &                   ::   :: jspace     {{ tex \qquad\quad }}
+    | @                   ::   :: at         {{ tex ~@~ }}
+    | >>                  ::   :: fillspace  {{ tex \quad }}
+    | -->                 ::   :: red        {{ tex \longrightarrow }}
+    | =>                  ::   :: earrow     {{ tex \Rightarrow }}
+    | ->                  ::   :: arrow      {{ tex \rightarrow }}
+    | |-                  ::   :: turnstile  {{ tex \vdash }}
+    | |->                 ::   :: mapsto     {{ tex \mapsto }}
+    | |>                  ::   :: rhd        {{ tex \rhd }}
+    | /=                  ::   :: neq        {{ tex \neq }}
+    | :>                  ::   :: coerce     {{ tex \blacktriangleright }}
+    | ==                  ::   :: equiv      {{ tex \equiv }}
+    | @[                  ::   :: lbracket   {{ tex ~[ }}
+    | ~[                  ::   :: tildeL     {{ tex ~{\sim}[ }}
+    | elim                ::   :: elim       {{ tex \bold{elim}_{\mathrm{i} } }}
+    | isin                ::   :: isin       {{ tex \in }}
+    | notin               ::   :: notin      {{ tex \notin }}
+    | forall              ::   :: forall     {{ tex \forall }}
+    | empty               ::   :: empty      {{ tex \emptyset }}
+
+  formula :: formula_ ::=
+    | judgement                         ::   :: judgement
+    | formula1 & formula2               ::   :: inlineJudgements
+    | >> formula                        ::   :: fillSpace
+    | x : T isin G                      ::   :: xIsInG
+    | X isin G                          ::   :: XIsInG
+    | a isin G                          ::   :: aIsInG
+    | c : T1 ~ T2 isin G                ::   :: cIsInG
+    | a notin G                         ::   :: aNotInG
+    | a1 /= a2                          ::   :: aNEq
+    | x1 /= x2                          ::   :: xNEq
+    | c1 /= c2                          ::   :: cNEq
+    | i isin {1, 2}                     ::   :: i12
+    | i isin {1, 2, 3}                  ::   :: i123
+
+subrules
+  tv <:: t
+
+% Semantics
+
+embed
+  {{ tex \begin{tabular}{lcl} }}
+  {{ tex \hline\hline }}
+  {{ tex & & \\ }}
+  {{ tex Initial environment: & $\Gamma$ = & $\emptyset$\\ }}
+  {{ tex & & \\ }}
+  {{ tex \hline\hline }}
+  {{ tex \end{tabular} }}
+  {{ tex \\\\\\ }}
+
+defns
+  Jtype :: '' ::=
+
+  defn
+    G |- t : T :: :: GtT :: T_ {{ com Typing rules }} by
+
+    x : T isin G
+    ------------ :: Var
+    G |- x : T
+
+    G, x : T1 |- t : T2    &    G |- T1
+    ----------------------------------- :: Abs
+    G |- (\(x : T1) => t) : T1 -> T2
+
+    a notin G    &    G, a |- t : T
+    ------------------------------- :: TyAbs
+    G |- (\{a} => t) : forall a, T
+
+    G, c : T1 ~ T2 |- t : T3    &    G |- T1    &    G |- T2
+    -------------------------------------------------------- :: CAbs
+    G |- (\{c : T1 ~ T2} => t) : {T1 ~ T2} -> T3
+
+    G |- t1 : T2 -> T1    &    G |- t2 : T2
+    --------------------------------------- :: App
+    G |- t1 t2 : T1
+
+    G |- t : forall a, T2    &    G |- T1    &    [a |-> T1] T2 |> T2'
+    ------------------------------------------------------------------ :: TyApp
+    G |- t @[T1] : T2'
+
+    G |- t : {T1 ~ T2} -> T3    &    G |- C : T1 ~ T2
+    ------------------------------------------------- :: CApp
+    G |- t ~[C] : T3
+
+    G |- t : T1
+    ------------------ :: Annot
+    G |- (t : T1) : T1
+
+    G |- C : T1 ~ T2    &    G |- t : T1
+    ------------------------------------ :: Coerce
+    G |- (t :> C) : T2
+
+defns
+  JCoerce :: '' ::=
+
+  defn
+    G |- C : T1 ~ T2 :: :: GC :: C_ {{ com Coercion typing }} by
+
+    c : T1 ~ T2 isin G
+    ------------------ :: Var
+    G |- c : T1 ~ T2
+
+    G |- T
+    ------------------- :: Refl
+    G |- refl T : T ~ T
+
+    G |- C : T2 ~ T1
+    -------------------- :: Sym
+    G |- sym C : T1 ~ T2
+
+    G |- C1 : T1 ~ T2    &    G |- C2 : T2 ~ T3
+    ------------------------------------------- :: Comp
+    G |- C1 . C2 : T1 ~ T3
+
+    G |- C1 : T1 ~ T1'    &    G |- C2 : T2 ~ T2'    &    G |- T1 -> T2
+    ------------------------------------------------------------------- :: Arrow
+    G |- (C1 -> C2) : (T1 -> T2) ~ (T1' -> T2')
+
+    G |- C1 : T1 ~ T1'    &    G |- C2 : T2 ~ T2'    &    G |- C3 : T3 ~ T3'
+    >> >> >> >> >> >> >> >> G |- {T1 ~ T2} -> T3
+    ------------------------------------------------------------------------ :: CArrow
+    G |- ({C1 ~ C2} -> C3) : ({T1 ~ T2} -> T3) ~ ({T1' ~ T2'} -> T3')
+
+    a notin G    &    G, a |- C : T1 ~ T2    &    G |- forall a, T1
+    --------------------------------------------------------------- :: Forall
+    G |- (forall a, C) : (forall a, T1) ~ (forall a, T2)
+
+    G |- T1    &    G |- C : (forall a1, T2) ~ (forall a2, T3)
+    >> >> >> [a1 |-> T1] T2 |> T2'    &    [a2 |-> T1] T3 |> T3'
+    ------------------------------------------------------------ :: Inst
+    G |- C @ T1 : T2' ~ T3'
+
+    i isin {1, 2}    &    G |- C : (T1 -> T2) ~ (T1' -> T2')
+    -------------------------------------------------------- :: ElimArrow
+    G |- elim C : Ti ~ Ti'
+
+    i isin {1, 2, 3}    &    G |- C : ({T1 ~ T2} -> T3) ~ ({T1' ~ T2'} -> T3')
+    -------------------------------------------------------------------------- :: ElimCArrow
+    G |- elim C : Ti ~ Ti'
+
+defns
+  Jkind :: '' ::=
+
+  defn
+    G |- T :: :: GT :: K_ {{ com Type [[T]] is well formed }} by
+
+    a isin G
+    -------- :: Var
+    G |- a
+
+    X isin G
+    -------- :: TypeConstr
+    G |- X
+
+    G |- T1    &    G |- T2
+    ----------------------- :: Arrow
+    G |- T1 -> T2
+
+    G |- T1    &    G |- T2    &    G |- T3
+    --------------------------------------------------- :: CArrow
+    G |- {T1 ~ T2} -> T3
+
+    a notin G    &    G, a |- T
+    --------------------------- :: Forall
+    G |- forall a, T
+
+defns
+  Jop :: '' ::=
+
+  defn
+    t --> tv ::  :: reduce :: E_ {{ com Operational semantics }} by
+
+    t2 --> tv2    &    t1 tv2 --> tv3
+    --------------------------------- :: App1
+    t1 t2 --> tv3
+
+    t --> tv1    &    tv1 tv2 --> tv3
+    --------------------------------- :: App2
+    t tv2 --> tv3
+
+    [x |-> tv1] t |> t'    &    t' --> tv2
+    -------------------------------------- :: AppAbs
+    (\(x : T) => t) tv1 --> tv2
+
+    t --> tv
+    ---------------------------- :: TAbs
+    (\{a} => t) --> (\{a} => tv)
+
+    t --> tv
+    ------------------------------------------------ :: CAbs
+    (\{c : T1 ~ T2} => t) --> (\{c : T1 ~ T2} => tv)
+
+    t --> tv
+    ------------------ :: TApp
+    t @[T] --> tv @[T]
+
+    [a |-> T] t |> t'    &    t' --> tv
+    ----------------------------------- :: TAppAbs
+    (\{a} => t) @[T] --> tv
+
+    t --> tv
+    ------------------ :: CApp
+    t ~[C] --> tv ~[C]
+
+    [c |-> C] t |> t'    &    t' --> tv
+    ----------------------------------- :: CAppAbs
+    (\{c : T1 ~ T2} => t) ~[C] --> tv
+
+    t --> tv
+    -------------------- :: Annot
+    (t : T) --> (tv : T)
+
+    t --> tv
+    ---------------------- :: Coerce
+    (t :> C) --> (tv :> C)
+
+defns
+  JTyErase :: '' ::=
+
+  defn
+    tv --> v ::  :: typeErase :: Erase_ {{ com type erasure }} by
+
+
+    ----------------------------- :: Abs
+    (\(x : T) => t) --> (\x => t)
+
+    tv --> v
+    ------------------ :: TAbs
+    (\{a} => tv) --> v
+
+    tv --> v
+    ---------------------------- :: CAbs
+    (\{c : T1 ~ T2} => tv) --> v
+
+    tv --> v
+    --------------- :: TApp
+    (tv @[T]) --> v
+
+    tv --> v
+    --------------- :: CApp
+    (tv ~[C]) --> v
+
+    tv --> v
+    -------------- :: Annot
+    (tv : T) --> v
+
+    tv --> v
+    --------------- :: Coerce
+    (tv :> C) --> v
+
+defns
+  JSubstT :: '' ::=
+
+  defn
+    [ a |-> T1 ] T2 |> T3 :: :: SubstT :: SubstT_ {{ com Type substitution }} by
+
+
+    ---------------- :: Var1
+    [a |-> T] a |> T
+
+    a1 /= a2
+    ------------------- :: Var2
+    [a1 |-> T] a2 |> a2
+
+
+    ------------------ :: Type
+    [a |-> T] X |> X
+
+    [a |-> T1] T2 |> T2'    &    [a |-> T1] T3 |> T3'
+    ------------------------------------------------- :: Arrow
+    [a |-> T1] (T2 -> T3) |> T2' -> T3'
+
+    [a |-> T1] T2 |> T2'    &    [a |-> T1] T3 |> T3'    &    [a |-> T1] T4 |> T4'
+    ------------------------------------------------------------------------------ :: CArrow
+    [a |-> T1] ({T2 ~ T3} -> T4) |> ({T2' ~ T3'} -> T4')
+
+    a1 /= a2    &    [a1 |-> T1] T2 |> T2'
+    ----------------------------------------------- :: Forall
+    [a1 |-> T1] (forall a2, T2) |> (forall a2, T2')
+
+defns
+  JSubst :: '' ::=
+
+  defn
+    [ x |-> tv ] t1 |> t2 :: :: Subst :: Subst_ {{ com substitution }} by
+
+
+    ------------------ :: Var1
+    [x |-> tv] x |> tv
+
+    x1 /= x2
+    -------------------- :: Var2
+    [x1 |-> tv] x2 |> x2
+
+
+    --------------------------------------------- :: Abs1
+    [x |-> tv] (\(x : T) => t) |> (\(x : T) => t)
+
+    x1 /= x2    &    [x1 |-> tv] t1 |> t2
+    -------------------------------------------------- :: Abs2
+    [x1 |-> tv] (\(x2 : T) => t1) |> (\(x2 : T) => t2)
+
+    [x |-> tv] t1 |> t2
+    --------------------------------------- :: TAbs
+    [x |-> tv] (\{a} => t1) |> (\{a} => t2)
+
+    [x |-> tv] t1 |> t2
+    ----------------------------------------------------------- :: CAbs
+    [x |-> tv] (\{c : T1 ~ T2} => t1) |> (\{c : T1 ~ T2} => t2)
+
+    [x |-> tv] t1 |> t1'    &    [x |-> tv] t2 |> t2'
+    ------------------------------------------------- :: App
+    [x |-> tv] (t1 t2) |> t1' t2'
+
+    [x |-> tv] t1 |> t2
+    --------------------------------- :: TApp
+    [x |-> tv] (t1 @[T]) |> (t2 @[T])
+
+    [x |-> tv] t1 |> t2
+    --------------------------------- :: CApp
+    [x |-> tv] (t1 ~[C]) |> (t2 ~[C])
+
+    [x |-> tv] t1 |> t2
+    ------------------------------- :: Annot
+    [x |-> tv] (t1 : T) |> (t2 : T)
+
+    [x |-> tv] t1 |> t2
+    --------------------------------- :: Coerce
+    [x |-> tv] (t1 :> C) |> (t2 :> C)
+
+defns
+  JTtSubst :: '' ::=
+
+  defn
+    [ a |-> T ] t1 |> t2 :: :: TtSubst :: TtSubst_ {{ com substitution of type variable in term }} by
+
+
+    ---------------- :: Var
+    [a |-> T] x |> x
+
+    [a |-> T1] T2 |> T2'    &    [a |-> T1] t1 |> t2
+    -------------------------------------------------- :: Abs
+    [a |-> T1] (\(x : T2) => t1) |> (\(x : T2') => t2)
+
+    a1 /= a2    &    [a1 |-> T] t1 |> t2
+    ----------------------------------------- :: TAbs
+    [a1 |-> T] (\{a2} => t1) |> (\{a2} => t2)
+
+    [a |-> T1] T2 |> T2'    &    [a |-> T1] T3 |> T3'    &    [a |-> T1] t1 |> t2
+    ----------------------------------------------------------------------------- :: CAbs
+    [a |-> T1] (\{c : T2 ~ T3} => t1) |> (\{c : T2' ~ T3'} => t2)
+
+    [a |-> T] t1 |> t1'    &    [a |-> T] t2 |> t2'
+    ----------------------------------------------- :: App
+    [a |-> T] (t1 t2) |> t1' t2'
+
+    [a |-> T1] t1 |> t2    &    [a |-> T1] T2 |> T2'
+    ------------------------------------------------ :: TApp
+    [a |-> T1] (t1 @[T2]) |> (t2 @[T2'])
+
+    [a |-> T] t1 |> t2    &    [a |-> T] C1 |> C2
+    --------------------------------------------- :: CApp
+    [a |-> T] (t1 ~[C1]) |> (t2 ~[C2])
+
+    [a |-> T1] t1 |> t2    &    [a |-> T1] T2 |> T2'
+    ------------------------------------------------ :: Annot
+    [a |-> T1] (t1 : T2) |> (t2 : T2')
+
+    [a |-> T] t1 |> t2    &    [a |-> T] C1 |> C2
+    --------------------------------------------- :: Coerce
+    [a |-> T] (t1 :> C1) |> (t2 :> C2)
+
+defns
+  JaCSubst :: '' ::=
+
+  defn
+    [ a |-> T ] C1 |> C2 :: :: aCSubst :: aCSubst_ {{ com substitution of type variable in coercion term }} by
+
+
+    ---------------- :: Var
+    [a |-> T] c |> c
+
+    [a |-> T1] T2 |> T2'
+    -------------------------------- :: Refl
+    [a |-> T1] (refl T2) |> refl T2'
+
+    [a |-> T] C1 |> C2
+    ---------------------------- :: Sym
+    [a |-> T] (sym C1) |> sym C2
+
+    [a |-> T] C1 |> C1'    &    [a |-> T] C2 |> C2'
+    ----------------------------------------------- :: Comp
+    [a |-> T] (C1 . C2) |> C1' . C2'
+
+    [a |-> T] C1 |> C1'    &    [a |-> T] C2 |> C2'
+    ----------------------------------------------- :: Arrow
+    [a |-> T] (C1 -> C2) |> C1' -> C2'
+
+    [a |-> T] C1 |> C1'    &    [a |-> T] C2 |> C2'    &    [a |-> T] C3 |> C3'
+    --------------------------------------------------------------------------- :: CArrow
+    [a |-> T] ({C1 ~ C2} -> C3) |> ({C1' ~ C2'} -> C3')
+
+    a1 /= a2    &    [a1 |-> T] C1 |> C2
+    --------------------------------------------- :: Forall
+    [a1 |-> T] (forall a2, C1) |> (forall a2, C2)
+
+    [a |-> T1] C1 |> C2
+    [a |-> T1] T2 |> T3
+    ------------------------------- :: Inst
+    [a |-> T1] (C1 @ T2) |> C2 @ T3
+
+    [a |-> T] C1 |> C2
+    ------------------------------ :: Elim
+    [a |-> T] (elim C1) |> elim C2
+
+defns
+  JCtSubst :: '' ::=
+
+  defn
+    [ c |-> C ] t1 |> t2 :: :: CtSubst :: CtSubst_ {{ com substitution of coercion variable in term }} by
+
+
+    ---------------- :: Var
+    [c |-> C] x |> x
+
+    [c |-> C] t1 |> t2
+    ---------------------------------------------- :: Abs
+    [c |-> C] (\(x : T) => t1) |> (\(x : T) => t2)
+
+    [c |-> C] t1 |> t2
+    -------------------------------------- :: TAbs
+    [c |-> C] (\{a} => t1) |> (\{a} => t2)
+
+
+    -------------------------------------------------------- :: CAbs1
+    [c |-> C] (\{c : T1 ~ T2} => t) |> (\{c : T1 ~ T2} => t)
+
+    c1 /= c2    &    [c1 |-> C] t1 |> t2
+    ------------------------------------------------------------- :: CAbs2
+    [c1 |-> C] (\{c2 : T1 ~ T2} => t1) |> (\{c2 : T1 ~ T2} => t2)
+
+    [c |-> C] t1 |> t1'    &    [c |-> C] t2 |> t2'
+    ----------------------------------------------- :: App
+    [c |-> C] (t1 t2) |> t1' t2'
+
+    [c |-> C] t1 |> t2
+    -------------------------------- :: TApp
+    [c |-> C] (t1 @[T]) |> (t2 @[T])
+
+    [c |-> C1] t1 |> t2    &    [c |-> C1] C2 |> C2'
+    ------------------------------------------------ :: CApp
+    [c |-> C1] (t1 ~[C2]) |> (t2 ~[C2'])
+
+    [c |-> C] t1 |> t2
+    ------------------------------ :: Annot
+    [c |-> C] (t1 : T) |> (t2 : T)
+
+    [c |-> C1] t1 |> t2    &    [c |-> C1] C2 |> C2'
+    ------------------------------------------------ :: Coerce
+    [c |-> C1] (t1 :> C2) |> (t2 :> C2')
+
+defns
+  JCCSubst :: '' ::=
+
+  defn
+    [ c |-> C1 ] C2 |> C3 :: :: CCSubst :: CCSubst_ {{ com substitution of coercion variable in coercion term }} by
+
+
+    ---------------- :: Var1
+    [c |-> C] c |> C
+
+    c1 /= c2
+    ------------------- :: Var2
+    [c1 |-> C] c2 |> c2
+
+
+    ---------------------------- :: Refl
+    [c |-> C] (refl T) |> refl T
+
+    [c |-> C1] C2 |> C3
+    ----------------------------- :: Sym
+    [c |-> C1] (sym C2) |> sym C3
+
+    [c |-> C1] C2 |> C2'    &    [c |-> C1] C3 |> C3'
+    ------------------------------------------------- :: Comp
+    [c |-> C1] (C2 . C3) |> C2' . C3'
+
+    [c |-> C1] C2 |> C2'    &    [c |-> C1] C3 |> C3'
+    ------------------------------------------------- :: Arrow
+    [c |-> C1] (C2 -> C3) |> C2' -> C3'
+
+    [c |-> C1] C2 |> C2'    &    [c |-> C1] C3 |> C3'    &    [c |-> C1] C4 |> C4'
+    ------------------------------------------------------------------------------ :: CArrow
+    [c |-> C1] ({C2 ~ C3} -> C4) |> ({C2' ~ C3'} -> C4')
+
+    [c |-> C1] C2 |> C3
+    ------------------------------------------------------- :: Forall
+    [c |-> C1] (forall a, C2) |> (forall a, C3)
+
+    [c |-> C1] C2 |> C3
+    ----------------------------- :: Inst
+    [c |-> C1] (C2 @ T) |> C3 @ T
+
+    [c |-> C1] C2 |> C3
+    ------------------------------- :: Elim
+    [c |-> C1] (elim C2) |> elim C3
