@@ -15,7 +15,6 @@ grammar
     | t1 t2                                      ::   :: App               {{ com application }}
     | t @[ T ]                                   ::   :: TApp              {{ com type application }}
     | t ~[ C ]                                   ::   :: CApp              {{ com coercion application }}
-    | t : T                                      ::   :: Annot             {{ com type annotation }}
     | t :> C                                     ::   :: Coerce            {{ com coercion }}
     | ( t )                                      :: M :: Paren             {{ com parenthesis }}
 
@@ -52,7 +51,6 @@ grammar
     | \ { c : T1 ~ T2 } => tv                    ::   :: CAbs              {{ com coercion abstraction }}
     | tv @[ T ]                                  ::   :: TApp              {{ com type application }}
     | tv ~[ C ]                                  ::   :: CApp              {{ com coercion application }}
-    | tv : T                                     ::   :: Annot             {{ com type annotation }}
     | tv :> C                                    ::   :: Coerce            {{ com coercion }}
     | ( t )                                      :: M :: Paren             {{ com parenthesis }}
 
@@ -149,10 +147,6 @@ defns
     G |- t : {T1 ~ T2} -> T3    &    G |- C : T1 ~ T2
     ------------------------------------------------- :: CApp
     G |- t ~[C] : T3
-
-    G |- t : T1
-    ------------------ :: Annot
-    G |- (t : T1) : T1
 
     G |- C : T1 ~ T2    &    G |- t : T1
     ------------------------------------ :: Coerce
@@ -275,10 +269,6 @@ defns
     (\{c : T1 ~ T2} => t) ~[C] --> tv
 
     t --> tv
-    -------------------- :: Annot
-    (t : T) --> (tv : T)
-
-    t --> tv
     ---------------------- :: Coerce
     (t :> C) --> (tv :> C)
 
@@ -307,10 +297,6 @@ defns
     tv --> v
     --------------- :: CApp
     (tv ~[C]) --> v
-
-    tv --> v
-    -------------- :: Annot
-    (tv : T) --> v
 
     tv --> v
     --------------- :: Coerce
@@ -389,10 +375,6 @@ defns
     [x |-> tv] (t1 ~[C]) |> (t2 ~[C])
 
     [x |-> tv] t1 |> t2
-    ------------------------------- :: Annot
-    [x |-> tv] (t1 : T) |> (t2 : T)
-
-    [x |-> tv] t1 |> t2
     --------------------------------- :: Coerce
     [x |-> tv] (t1 :> C) |> (t2 :> C)
 
@@ -429,10 +411,6 @@ defns
     [a |-> T] t1 |> t2    &    [a |-> T] C1 |> C2
     --------------------------------------------- :: CApp
     [a |-> T] (t1 ~[C1]) |> (t2 ~[C2])
-
-    [a |-> T1] t1 |> t2    &    [a |-> T1] T2 |> T2'
-    ------------------------------------------------ :: Annot
-    [a |-> T1] (t1 : T2) |> (t2 : T2')
 
     [a |-> T] t1 |> t2    &    [a |-> T] C1 |> C2
     --------------------------------------------- :: Coerce
@@ -518,10 +496,6 @@ defns
     [c |-> C1] t1 |> t2    &    [c |-> C1] C2 |> C2'
     ------------------------------------------------ :: CApp
     [c |-> C1] (t1 ~[C2]) |> (t2 ~[C2'])
-
-    [c |-> C] t1 |> t2
-    ------------------------------ :: Annot
-    [c |-> C] (t1 : T) |> (t2 : T)
 
     [c |-> C1] t1 |> t2    &    [c |-> C1] C2 |> C2'
     ------------------------------------------------ :: Coerce
