@@ -1,8 +1,7 @@
 % System Fω
 
-metavar x ::=                     {{ com term variable }}
-metavar a {{ tex \alpha }} ::=    {{ com type variable }}
-metavar X {{ tex T }} ::=         {{ com type constructor }}
+metavar x ::=                           {{ com term variable }}
+metavar a {{ tex \alpha }} ::=          {{ com type variable }}
 
 grammar
   t :: t_ ::=                                                            {{ com term }}
@@ -11,7 +10,6 @@ grammar
     | \ { a : K } => t                           ::   :: TAbs              {{ com type abstraction }}
     | t1 t2                                      ::   :: App               {{ com application }}
     | t @[ T ]                                   ::   :: TApp              {{ com type application }}
-    | t : T                                      ::   :: Annot             {{ com type annotation }}
     | ( t )                                      :: M :: Paren             {{ com parenthesis }}
 
   K {{ tex \kappa }} :: K_ ::=                                           {{ com kind }}
@@ -21,61 +19,70 @@ grammar
 
   T {{ tex \tau }} :: T_ ::=                                             {{ com type }}
     | a                                          ::   :: var               {{ com type variable }}
-    | X                                          ::   :: type              {{ com type constructor }}
     | T1 -> T2                                   ::   :: arrow             {{ com $\equiv$ ($\rightarrow$) $\tau_\mathrm{1}$ $\tau_\mathrm{2}$ }}
-    | \ ( a : K ) , T                            ::   :: abs               {{ com operator abstraction }}
     | forall ( a : K ) , T                       ::   :: forall            {{ com universal quantification }}
+    | \ ( a : K ) , T                            ::   :: abs               {{ com operator abstraction }}
     | T1 T2                                      ::   :: app               {{ com operator application }}
     | ( T )                                      :: M :: paren             {{ com parenthesis }}
 
   G {{ tex \Gamma }} :: G_ ::=                                           {{ com typing environment }}
     | empty                                      ::   :: empty             {{ com empty }}
     | G , x : T                                  ::   :: var               {{ com variable }}
-    | G , X : K                                  ::   :: type              {{ com type constructor }}
     | G , a : K                                  ::   :: tyvar             {{ com type variable }}
 
-  tv :: tv_ ::=                                                          {{ com typed value }}
-    | \ ( x : T ) => t                           ::   :: Abs               {{ com abstraction }}
-    | \ { a : K } => tv                          ::   :: TAbs              {{ com type abstraction }}
-    | tv @[ T ]                                  ::   :: TApp              {{ com type application }}
-    | tv : T                                     ::   :: Annot             {{ com type annotation }}
-    | ( t )                                      :: M :: Paren             {{ com parenthesis }}
-
   v :: v_ ::=                                                            {{ com value }}
-    | \ x => t                                   ::   :: Abs               {{ com abstraction }}
+    | \ ( x : T ) => t                           ::   :: Abs               {{ com abstraction }}
     | ( v )                                      :: M :: Paren             {{ com parenthesis }}
 
 % Ott meta rules
 
   terminals :: terminals_ ::=
+    | .                   ::   :: comp       {{ tex \circ }}
+    | ~                   ::   :: tilde      {{ tex \sim }}
+    | U                   ::   :: union      {{ tex \cup }}
     | \                   ::   :: lambda     {{ tex \lambda }}
     | &                   ::   :: jspace     {{ tex \qquad\quad }}
+    | @                   ::   :: at         {{ tex ~@~ }}
+    | >>                  ::   :: fillspace  {{ tex \quad }}
     | -->                 ::   :: red        {{ tex \longrightarrow }}
     | =>                  ::   :: earrow     {{ tex \Rightarrow }}
+    | ]->                 ::   :: rarrow     {{ tex ]\!\!\!\rightarrow }}
+    | -[                  ::   :: larrow     {{ tex -\!\!\mkern-2mu[ }}
     | ->                  ::   :: arrow      {{ tex \rightarrow }}
     | |-                  ::   :: turnstile  {{ tex \vdash }}
     | |->                 ::   :: mapsto     {{ tex \mapsto }}
     | |>                  ::   :: rhd        {{ tex \rhd }}
     | /=                  ::   :: neq        {{ tex \neq }}
+    | :>                  ::   :: coerce     {{ tex \blacktriangleright }}
     | ==                  ::   :: equiv      {{ tex \equiv }}
     | @[                  ::   :: lbracket   {{ tex ~[ }}
+    | ]]@                 ::   :: rdbracket  {{ tex ] ]~ }}
+    | ~[                  ::   :: tildeL     {{ tex ~{\sim}[ }}
+    | C=                  ::   :: subseteq   {{ tex \subseteq }}
+    | <:                  ::   :: subtype    {{ tex \prec }}
+    | @!                  ::   :: spaceeff   {{ tex \:! }}
+    | @..@                ::   :: spaceJ     {{ tex \quad..\quad }}
+    | elim                ::   :: elim       {{ tex \bold{elim}_{\mathrm{i} } }}
     | isin                ::   :: isin       {{ tex \in }}
     | notin               ::   :: notin      {{ tex \notin }}
     | forall              ::   :: forall     {{ tex \forall }}
+    | exists              ::   :: exists     {{ tex \exists }}
     | empty               ::   :: empty      {{ tex \emptyset }}
 
   formula :: formula_ ::=
     | judgement                         ::   :: judgement
+    | judgement1 @..@ judgementn        ::   :: judgements
     | formula1 & formula2               ::   :: inlineJudgements
+    | >> formula                        ::   :: fillSpace
     | x : T isin G                      ::   :: xIsInG
-    | X : K isin G                      ::   :: XIsInG
     | a : K isin G                      ::   :: aIsInG
     | a notin G                         ::   :: aNotInG
     | a1 /= a2                          ::   :: aNEq
     | x1 /= x2                          ::   :: xNEq
+    | exists ( T isin E ) , formula     ::   :: existsTE
 
 subrules
-  tv <:: t
+  v <:: t
 
 % Semantics
 
@@ -116,10 +123,6 @@ defns
     ---------------------------------------------------------------------------- :: TyApp
     G |- t @[T1] : T2'
 
-    G |- t : T2    &    T1 == T2
-    ---------------------------- :: Annot
-    G |- (t : T1) : T1
-
 defns
   Jkind :: '' ::=
 
@@ -129,10 +132,6 @@ defns
     a : K isin G
     ------------ :: Var
     G |- a : K
-
-    X : K isin G
-    ------------ :: TypeConstr
-    G |- X : K
 
     a notin G    &    G, a : K1 |- T : K2
     ------------------------------------- :: Abs
@@ -168,10 +167,6 @@ defns
     ------ :: Var
     a == a
 
-
-    ------ :: TypeConstr
-    X == X
-
     T1 == T2
     -------------------------------------------- :: Forall
     (forall (a : K), T1) == (forall (a : K), T2)
@@ -192,57 +187,31 @@ defns
   Jop :: '' ::=
 
   defn
-    t --> tv ::  :: reduce :: E_ {{ com Operational semantics }} by
+    t --> t' ::  :: reduce :: E_ {{ com Operational semantics }} by
 
-    t2 --> tv2    &    t1 tv2 --> tv3
-    --------------------------------- :: App1
-    t1 t2 --> tv3
+    t2 --> t2'
+    ---------------- :: App1
+    t1 t2 --> t1 t2'
 
-    t --> tv1    &    tv1 tv2 --> tv3
-    --------------------------------- :: App2
-    t tv2 --> tv3
+    t --> t'
+    ------------ :: App2
+    t v --> t' v
 
-    [x |-> tv1] t |> t'    &    t' --> tv2
-    -------------------------------------- :: AppAbs
-    (\(x : T) => t) tv1 --> tv2
+    [x |-> v] t |> t'
+    ------------------------ :: AppAbs
+    (\(x : T) => t) v --> t'
 
-    t --> tv
+    t --> t'
     ------------------------------------ :: TAbs
-    (\{a : K} => t) --> (\{a : K} => tv)
+    (\{a : K} => t) --> (\{a : K} => t')
 
-    t --> tv
+    t --> t'
     ------------------ :: TApp
-    t @[T] --> tv @[T]
+    t @[T] --> t' @[T]
 
-    [a |-> T] t |> t'    &    t' --> tv
-    ----------------------------------- :: TAppAbs
-    (\{a : K} => t) @[T] --> tv
-
-    t --> tv
-    -------------------- :: Annot
-    (t : T) --> (tv : T)
-
-defns
-  JTyErase :: '' ::=
-
-  defn
-    tv --> v ::  :: typeErase :: Erase_ {{ com type erasure }} by
-
-
-    ----------------------------- :: Abs
-    (\(x : T) => t) --> (\x => t)
-
-    tv --> v
-    ---------------------- :: TAbs
-    (\{a : K} => tv) --> v
-
-    tv --> v
-    --------------- :: TApp
-    (tv @[T]) --> v
-
-    tv --> v
-    -------------- :: Annot
-    (tv : T) --> v
+    [a |-> T] v |> v'
+    --------------------------- :: TAppAbs
+    (\{a : K} => v) @[T] --> v'
 
 defns
   JSubstT :: '' ::=
@@ -258,59 +227,51 @@ defns
     ------------------- :: Var2
     [a1 |-> T] a2 |> a2
 
-
-    ------------------ :: Type
-    [a |-> T] X |> X
-
     a1 /= a2    &    [a1 |-> T1] T2 |> T2'
     ----------------------------------------------- :: Abs
     [a1 |-> T1] (\(a2 : K), T2) |> (\(a2 : K), T2')
-
-    a1 /= a2    &    [a1 |-> T1] T2 |> T2'
-    ----------------------------------------------------------- :: Forall
-    [a1 |-> T1] (forall (a2 : K), T2) |> (forall (a2 : K), T2')
 
     [a |-> T1] T2 |> T2'    &    [a |-> T1] T3 |> T3'
     ------------------------------------------------- :: App
     [a |-> T1] (T2 T3) |> T2' T3'
 
+    a1 /= a2    &    [a1 |-> T1] T2 |> T2'
+    ----------------------------------------------------------- :: Forall
+    [a1 |-> T1] (forall (a2 : K), T2) |> (forall (a2 : K), T2')
+
 defns
   JSubst :: '' ::=
 
   defn
-    [ x |-> tv ] t1 |> t2 :: :: Subst :: Subst_ {{ com substitution }} by
+    [ x |-> v ] t1 |> t2 :: :: Subst :: Subst_ {{ com substitution }} by
 
 
-    ------------------ :: Var1
-    [x |-> tv] x |> tv
+    ---------------- :: Var1
+    [x |-> v] x |> v
 
     x1 /= x2
-    -------------------- :: Var2
-    [x1 |-> tv] x2 |> x2
+    ------------------- :: Var2
+    [x1 |-> v] x2 |> x2
 
 
-    --------------------------------------------- :: Abs1
-    [x |-> tv] (\(x : T) => t) |> (\(x : T) => t)
+    -------------------------------------------- :: Abs1
+    [x |-> v] (\(x : T) => t) |> (\(x : T) => t)
 
-    x1 /= x2    &    [x1 |-> tv] t1 |> t2
-    -------------------------------------------------- :: Abs2
-    [x1 |-> tv] (\(x2 : T) => t1) |> (\(x2 : T) => t2)
+    x1 /= x2    &    [x1 |-> v] t1 |> t2
+    ------------------------------------------------- :: Abs2
+    [x1 |-> v] (\(x2 : T) => t1) |> (\(x2 : T) => t2)
 
-    [x |-> tv] t1 |> t2
-    ----------------------------------------------- :: TAbs
-    [x |-> tv] (\{a : K} => t1) |> (\{a : K} => t2)
+    [x |-> v] t1 |> t2
+    ---------------------------------------------- :: TAbs
+    [x |-> v] (\{a : K} => t1) |> (\{a : K} => t2)
 
-    [x |-> tv] t1 |> t1'    &    [x |-> tv] t2 |> t2'
-    ------------------------------------------------- :: App
-    [x |-> tv] (t1 t2) |> t1' t2'
+    [x |-> v] t1 |> t1'    &    [x |-> v] t2 |> t2'
+    ----------------------------------------------- :: App
+    [x |-> v] (t1 t2) |> t1' t2'
 
-    [x |-> tv] t1 |> t2
-    --------------------------------- :: TApp
-    [x |-> tv] (t1 @[T]) |> (t2 @[T])
-
-    [x |-> tv] t1 |> t2
-    ------------------------------- :: Annot
-    [x |-> tv] (t1 : T) |> (t2 : T)
+    [x |-> v] t1 |> t2
+    -------------------------------- :: TApp
+    [x |-> v] (t1 @[T]) |> (t2 @[T])
 
 defns
   JTtSubst :: '' ::=
@@ -337,7 +298,3 @@ defns
     [a |-> T1] t1 |> t2    &    [a |-> T1] T2 |> T2'
     ------------------------------------------------ :: TApp
     [a |-> T1] (t1 @[T2]) |> (t2 @[T2'])
-
-    [a |-> T1] t1 |> t2    &    [a |-> T1] T2 |> T2'
-    ------------------------------------------------ :: Annot
-    [a |-> T1] (t1 : T2) |> (t2 : T2')
