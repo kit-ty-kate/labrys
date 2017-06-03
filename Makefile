@@ -10,6 +10,7 @@ TESTS = \
 
 DOCS = \
     $(DOC)/semantics.pdf \
+    $(DOC)/system-f.pdf \
     $(DOC)/system-fw.pdf \
     $(DOC)/system-fcw.pdf \
     $(DOC)/system-fw-with-effects.pdf \
