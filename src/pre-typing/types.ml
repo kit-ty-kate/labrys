@@ -132,7 +132,6 @@ let of_parse_tree ~pure_arrow options gamma ty =
 
 let to_string = PrivateTypes.ty_to_string
 
-let equal = PrivateTypes.ty_equal
 let is_subset_of = PrivateTypes.ty_is_subset_of
 
 let rec size = function
@@ -277,7 +276,7 @@ let match_tyclass ~loc_x ~tyclasses x ~ty_x =
           in
           List.partition_map aux xs
         in
-        if not (List.for_all (equal ty) l) then
+        if not (List.for_all (PrivateTypes.ty_equal ty) l) then
           Err.fail ~loc:loc_x "Type constraints doesn't match"; (* TODO: Improve error message *)
         aux (x' :: acc) xs
     | [] ->

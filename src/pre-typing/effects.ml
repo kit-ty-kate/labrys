@@ -22,7 +22,6 @@ let empty =
 
 let is_empty = PrivateTypes.eff_is_empty
 
-let equal = PrivateTypes.eff_equal
 let is_subset_of = PrivateTypes.eff_is_subset_of
 
 let has_io options {variables; effects; exns = _} =

@@ -26,8 +26,6 @@ val of_parse_tree :
 
 val to_string : t -> string
 
-val equal : t -> t -> bool
-
 val is_subset_of : t -> t -> bool
 
 val replace : from:tyvar_name -> ty:t -> t -> t

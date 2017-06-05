@@ -119,7 +119,8 @@ let create ~loc f gamma ty patterns =
       let (pattern, gamma) = Matrix.create gamma ty p in
       let (loc_t, _) = t in
       let (t, has, effect) = f gamma t in
-      if not (Types.equal has initial_ty) then
+      (* TODO: This should take the larger type, not only the fist one *)
+      if not (Types.is_subset_of has initial_ty) then
         Types.TyErr.fail ~loc_t ~has ~expected:initial_ty;
       ((pattern, t) :: patterns, Effects.union effect effects)
     in

@@ -13,8 +13,6 @@ val of_list :
 
 val is_empty : t -> bool
 
-val equal : (Ident.TypeVar.t * Ident.TypeVar.t) list -> t -> t -> bool
-
 val is_subset_of : (Ident.TypeVar.t * Ident.TypeVar.t) list -> t -> t -> bool
 
 val has_io : <lib_dir : string; ..> -> t -> bool

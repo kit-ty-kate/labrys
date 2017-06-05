@@ -43,12 +43,6 @@ let var_eq list_eq x y =
   in
   Variables.for_all aux x
 
-let eff_equal list_eq x y =
-  Int.equal (Variables.cardinal x.variables) (Variables.cardinal y.variables)
-  && var_eq list_eq x.variables y.variables
-  && Effects.equal x.effects y.effects
-  && Exn_set.equal x.exns y.exns
-
 let eff_is_subset_of list_eq x y =
   var_eq list_eq x.variables y.variables
   && Effects.subset x.effects y.effects
@@ -80,7 +74,7 @@ let eff_replace ~from ~ty self =
   in
   Variables.fold aux self.variables self
 
-let ty_equal' eff_eq eq_list x y =
+let ty_is_subset_of' eq_list x y =
   let rec aux eq_list = function
     | Ty x, Ty x' ->
         let eq = Ident.Type.equal in
@@ -89,10 +83,10 @@ let ty_equal' eff_eq eq_list x y =
         let eq = Ident.TypeVar.equal in
         eq x x' || List.exists (fun (y, y') -> eq x y && eq x' y') eq_list
     | Eff x, Eff x' ->
-        eff_eq eq_list x x'
+        eff_is_subset_of eq_list x x'
     | Fun (param, eff1, res), Fun (param', eff2, res') ->
         aux eq_list (param, param')
-        && eff_eq eq_list eff1 eff2
+        && eff_is_subset_of eq_list eff1 eff2
         && aux eq_list (res, res')
     | AppOnTy (f, x), AppOnTy (f', x') ->
         aux eq_list (f, f') && aux eq_list (x, x')
@@ -117,7 +111,7 @@ let ty_equal' eff_eq eq_list x y =
           in
           (* NOTE: no need to check kinds as it is already checked *)
           Ident.TyClass.equal name1 name2
-          && eff_eq eq_list eff1 eff2
+          && eff_is_subset_of eq_list eff1 eff2
           && aux (l @ eq_list) (t, t')
         with Not_found | Invalid_argument _ ->
           false
@@ -133,9 +127,10 @@ let ty_equal' eff_eq eq_list x y =
   in
   aux eq_list (x, y)
 
-let ty_is_subset_of = ty_equal' eff_is_subset_of []
+let ty_equal' l x y = ty_is_subset_of' l x y && ty_is_subset_of' l y x
+let ty_equal = ty_equal' []
 
-let ty_equal = ty_equal' eff_equal []
+let ty_is_subset_of = ty_is_subset_of' []
 
 let tyclass_args_equal args1 args2 =
   (* TODO: Check if correct. See comment above *)
@@ -143,7 +138,7 @@ let tyclass_args_equal args1 args2 =
     let eq_list =
       List.fold_left2 (fun acc x y -> (x, y) :: acc) [] tyvars1 tyvars2
     in
-    ty_equal' eff_equal eq_list ty1 ty2
+    ty_equal' eq_list ty1 ty2
   in (* TODO: DEBUJIN ? *)
   try List.for_all2 aux args1 args2 with Invalid_argument _ -> assert false
 

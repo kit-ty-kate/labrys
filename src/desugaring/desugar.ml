@@ -311,26 +311,10 @@ and desugar_args imports options args (annot, t) =
     | (loc, ParseTree.VArg (name, ty)) :: xs ->
         let name = new_lower_name_to_local_value ~allow_underscore:true name in
         let ty = desugar_ty imports ty in
-        let (ty_xs, xs) = aux xs in
-        let ty_xs =
-          let aux (ty_xs, eff) =
-            let ty_xs = Fun (ty, eff, ty_xs) in
-            ((loc, ty_xs), None)
-          in
-          Option.map aux ty_xs
-        in
-        (ty_xs, (loc, Abs ((name, ty), xs)))
+        (loc, Abs ((name, ty), aux xs))
     | (loc, ParseTree.TArg t_value) :: xs ->
         let t_value = desugar_t_value t_value in
-        let (ty_xs, xs) = aux xs in
-        let ty_xs =
-          let aux (ty_xs, eff) =
-            let ty_xs = Forall (t_value, ty_xs) in
-            ((loc, ty_xs), eff)
-          in
-          Option.map aux ty_xs
-        in
-        (ty_xs, (loc, TAbs (t_value, xs)))
+        (loc, TAbs (t_value, aux xs))
     | (loc, ParseTree.Unit) :: xs ->
         let x =
           ParseTree.VArg
@@ -340,27 +324,17 @@ and desugar_args imports options args (annot, t) =
     | (loc, ParseTree.TyClassArg (name, tyclass)) :: xs ->
         let name = new_lower_name_to_local_instance ~allow_underscore:true name in
         let tyclass = desugar_tyclass imports tyclass in
-        let (ty_xs, xs) = aux xs in
-        let ty_xs =
-          let aux (ty_xs, eff) =
-            let ty_xs = TyClass (tyclass, eff, ty_xs) in
-            ((loc, ty_xs), None)
-          in
-          Option.map aux ty_xs
-        in
-        (ty_xs, (loc, CAbs ((name, tyclass), xs)))
+        (loc, CAbs ((name, tyclass), aux xs))
     | [] ->
         begin match annot with
         | Some annot ->
             let annot = desugar_annot imports annot in
-            (Some annot, (fst t, Annot (desugar_t imports options t, annot)))
+            (fst t, Annot (desugar_t imports options t, annot))
         | None ->
-            (None, desugar_t imports options t)
+            desugar_t imports options t
         end
   in
-  match aux args with
-  | (Some ty, t) -> (fst t, Annot (t, ty))
-  | (None, t) -> t
+  aux args
 
 let desugar_variant ~current_module imports ~datatype ~args (name, tys) =
   let name = new_upper_name_to_variant ~current_module name in

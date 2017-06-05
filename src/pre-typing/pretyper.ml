@@ -8,13 +8,21 @@ open PretypedTree
 
 module ForbiddenEnv = GammaSet.Value
 
-let rec get_rec_ty ~name t = match snd t with
-  | Annot (_, (ty, _)) ->
+let rec get_rec_ty ~name (loc, t) = match t with
+  | Annot (_, ty) ->
       ty
   | Let (_, _, t)
   | LetRec (_, _, _, t) ->
       get_rec_ty ~name t
-  | Abs _ | TAbs _ | CAbs _
+  | Abs ((name, ty), t) ->
+      let (ty', eff) = get_rec_ty ~name t in
+      ((loc, Fun (ty, eff, ty')), None)
+  | TAbs ((tname, k), t) ->
+      let (ty', eff) = get_rec_ty ~name t in
+      ((loc, Forall ((tname, k), ty')), eff)
+  | CAbs ((_, cl), t) ->
+      let (ty', eff) = get_rec_ty ~name t in
+      ((loc, TyClass (cl, eff, ty')), None)
   | App _ | TApp _ | CApp _
   | Val _ | Var _ | Const _
   | PatternMatching _
@@ -74,7 +82,7 @@ and pretype_term ?last_let forbidden_env = function
       in
       let ty = get_rec_ty ~name t in
       let xs = pretype_term ?last_let forbidden_env xs in
-      (loc, LetRec (name, ty, t, xs))
+      (loc, LetRec (name, fst ty, (loc, Annot (t, ty)), xs))
   | (loc, DesugaredTree.Fail (ty, (exn, args))) ->
       let args = List.map (pretype_term forbidden_env) args in
       (loc, Fail (ty, (exn, args)))

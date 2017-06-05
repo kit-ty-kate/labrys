@@ -51,8 +51,6 @@ val eff_union_ty : from:Ident.TypeVar.t -> effects -> t -> effects
 
 val eff_replace : from:Ident.TypeVar.t -> ty:t -> effects -> effects
 
-val eff_equal : (tyvar_name * tyvar_name) list -> effects -> effects -> bool
-
 val eff_is_subset_of : (tyvar_name * tyvar_name) list -> effects -> effects -> bool
 
 val eff_is_empty : effects -> bool

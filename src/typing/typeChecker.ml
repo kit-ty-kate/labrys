@@ -8,12 +8,12 @@ open UntypedTree
 
 let check_type options ~loc_t ~ty:(ty, eff) ~ty_t ~effects gamma =
   let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
-  if not (Types.equal ty ty_t) then
+  if not (Types.is_subset_of ty_t ty) then
     Types.TyErr.fail ~loc_t ~has:ty_t ~expected:ty;
   begin match eff with
   | Some eff ->
       let eff = Effects.of_list options gamma eff in
-      if not (Effects.equal [] eff effects) then
+      if not (Effects.is_subset_of [] effects eff) then
         Err.fail
           ~loc:loc_t
           "This expression has the effect %s but expected the effect %s"
@@ -177,7 +177,7 @@ let rec aux options gamma = function
         let aux (acc, effects) ty_exn arg =
           let loc_arg = fst arg in
           let (arg, ty_arg, eff) = aux options gamma arg in
-          if not (Types.equal ty_arg ty_exn) then
+          if not (Types.is_subset_of ty_arg ty_exn) then
             Types.TyErr.fail ~loc_t:loc_arg ~has:ty_arg ~expected:ty_exn;
           (arg :: acc, Effects.union eff effects)
         in
@@ -203,8 +203,9 @@ let rec aux options gamma = function
       let aux (acc, effect) ((name, args), t) =
         let loc_t = fst t in
         let (t, ty', eff) = aux options gamma t in
-        (* TODO: Replace this pattern by Types.Check.equal *)
-        if not (Types.equal ty ty') then
+        (* TODO: Replace this pattern by Types.Check.is_subset_of *)
+        (* TODO: This should take the larger type, not only the fist one *)
+        if not (Types.is_subset_of ty' ty) then
           Types.TyErr.fail ~loc_t ~has:ty' ~expected:ty;
         (((name, args), t) :: acc, Effects.union eff effect)
       in
