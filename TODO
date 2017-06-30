@@ -2,6 +2,18 @@
 
 == Before the first release (0.1) ==
 
+* Recode the typechecker !!
+  * Write the semantics of System Fcω with effects, exceptions and typeclasses
+    * Add a new kind for exceptions
+    * Add a new kind for typeclasses (?)
+    * What about a new kind for type coercions ?
+    * Translate « type alias T = Unit -> T » into « type T : * » and « axiom T : T ~ (Unit -> T) »
+    * Translate « exception Fail Int Float » into « type Fail : ^ » and « Fail : Int -> Float -> [^Fail^] »
+    * Implement it
+  * Split the part about pattern matching
+  * Merge type and typevar ??
+* Remove arrow at desugaring
+  * What about typeclasses and coercion arrow ?
 * Remove PatternMatching if List.length args = 1
 * Remove Rec
 * Rename Gamma --> Env
@@ -13,24 +25,19 @@
     * Preload all parameters/variables taken by the closure
     * Remove the gamma type
     * If fv is empty then make it constant
-* Fix typing (debunijn ?)
-* Cleans
-  * pre-typing
-  * Fix TODO
-  * printers
-  * type-checker
+* Clean Printers
+  * Add a printer to PretypedTree
+* Fix TODOs
 * Stabilization (unit-tests)
-* Define a proper operational semantics
-  * Do the semantics of Γ
-  * Do the semantics of typeclasses
-* Add a printer to PretypedTree
+* Write the Cervoise complete semantics (pretyped-tree)
+* Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
 
 
 == Short term ==
 
+* Prove the soundness of System Fcω using Coq
 * Improve the FFI
   * Allow to pass and return abstract types
-* « exception NotFound » creates now an abstract type of kind φ --> so remove Exn [Things]
 * Records
   * Mixing instances & records ?
   * Accessors ?:
@@ -76,7 +83,9 @@
 
 == Long term ==
 
-* Do we change for System Fc ? (Recursive type aliases, GADTs, …)
+* Pattern-matching over types
+  * We could have builtin types that would tell us the current architecture for example
+  * To implement that nicely we could add a new kind "Range" that we allow some types to return a range of types
 * Have a real custom GC
 * Type inference
 * Parallelism
@@ -87,7 +96,6 @@
     * Local refs don't count as IO
     * Introduce a new effect: Ref (for refs, arrays, …)
 * Mutually recursive functions
-* Prove the type system correct
 * Document the different passes and optimizations
 * Use LLD (still experimental) as library to avoid relying on an external tool (Clang & implicitly LD)
 * Create a test tool to create correct (or incorrect) terms and check them
