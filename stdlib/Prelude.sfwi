@@ -1,3 +1,5 @@
+type Arrow : * -> ! -> * -> *
+
 type IO : !
 type Exn : !
 

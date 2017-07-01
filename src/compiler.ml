@@ -65,7 +65,7 @@ let get_desugared_tree options modul =
 
 let get_pretyped_tree options modul =
   let (imports, gamma, desugared_tree) = get_desugared_tree options modul in
-  let pretyped_tree = Pretyper.pretype desugared_tree in
+  let pretyped_tree = Pretyper.pretype options desugared_tree in
   (imports, gamma, pretyped_tree)
 
 let get_untyped_tree ~with_main ~interface options modul =

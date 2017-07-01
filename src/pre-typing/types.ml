@@ -13,7 +13,6 @@ type t = PrivateTypes.t =
   | Ty of name
   | TyVar of tyvar_name
   | Eff of PrivateTypes.effects
-  | Fun of (t * PrivateTypes.effects * t)
   | Forall of (tyvar_name * Kinds.t * t)
   | TyClass of ((Ident.TyClass.t * Kinds.t GammaMap.TypeVar.t * t list) * Effects.t * t)
   | AbsOnTy of (tyvar_name * Kinds.t * t)
@@ -29,33 +28,7 @@ let fail_not_star ~loc x =
 let reduce = PrivateTypes.ty_reduce
 let replace = PrivateTypes.ty_replace
 
-let switch_pure_arrow (_, pure_arrow) = match pure_arrow with
-  | `Allow -> (true, pure_arrow)
-  | `Partial | `Forbid -> (false, pure_arrow)
-
-let handle_effects ~loc options (b, _) gamma = function
-  | Some eff -> Effects.of_list options gamma eff
-  | None when b -> Effects.empty
-  | None ->
-      (* TODO: Be more precise *)
-      Err.fail
-        ~loc
-        "Pure arrows are forbidden here. If you really want one use the \
-         explicit syntax '-[]->' instead"
-
-let rec of_parse_tree_kind ~pure_arrow options gamma = function
-  | (loc, DesugaredTree.Fun (x, eff, y)) ->
-      let loc_x = fst x in
-      let loc_y = fst y in
-      let pa = switch_pure_arrow pure_arrow in
-      let (x, k1) = of_parse_tree_kind ~pure_arrow:pa options gamma x in
-      let eff = handle_effects ~loc options pure_arrow gamma eff in
-      let (y, k2) = of_parse_tree_kind ~pure_arrow options gamma y in
-      if Kinds.not_star k1 then
-        fail_not_star ~loc:loc_x "->";
-      if Kinds.not_star k2 then
-        fail_not_star ~loc:loc_y "->";
-      (Fun (x, eff, y), Kinds.Star)
+let rec of_parse_tree_kind options gamma = function
   | (_, DesugaredTree.Ty name) ->
       begin match GammaMap.Types.find name gamma.Gamma.types with
       | Alias (ty, k) -> (ty, k) (* TODO: Fix variables if already exist *)
@@ -69,7 +42,7 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
   | (_, DesugaredTree.Forall ((name, k), ret)) ->
       let loc_ret = fst ret in
       let gamma = Gamma.add_type_var name k gamma in
-      let (ret, kx) = of_parse_tree_kind ~pure_arrow options gamma ret in
+      let (ret, kx) = of_parse_tree_kind options gamma ret in
       if Kinds.not_star kx then
         fail_not_star ~loc:loc_ret "forall";
       (Forall (name, k, ret), Kinds.Star)
@@ -83,24 +56,23 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
         in
         let loc = Ident.TyClass.loc name in
         let (gamma, args) =
-          let f = of_parse_tree_kind ~pure_arrow:(false, `Forbid) options in
+          let f = of_parse_tree_kind options in
           Class.get_params ~loc f gamma tyvars args tyclass
         in
         (gamma, tyvars, args)
       in
-      let eff = handle_effects ~loc options pure_arrow gamma eff in
-      let (ret, kx) = of_parse_tree_kind ~pure_arrow options gamma ret in
+      let eff = Effects.of_list options gamma eff in
+      let (ret, kx) = of_parse_tree_kind options gamma ret in
       if Kinds.not_star kx then
         fail_not_star ~loc:loc_ret "forall";
       (TyClass ((name, tyvars, args), eff, ret), Kinds.Star)
   | (_, DesugaredTree.AbsOnTy ((name, k), ret)) ->
       let gamma = Gamma.add_type_var name k gamma in
-      let (ret, kret) = of_parse_tree_kind ~pure_arrow options gamma ret in
+      let (ret, kret) = of_parse_tree_kind options gamma ret in
       (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
   | (loc, DesugaredTree.AppOnTy (f, x)) ->
-      let (f, kf) = of_parse_tree_kind ~pure_arrow options gamma f in
-      let pa = switch_pure_arrow pure_arrow in
-      let (x, kx) = of_parse_tree_kind ~pure_arrow:pa options gamma x in
+      let (f, kf) = of_parse_tree_kind options gamma f in
+      let (x, kx) = of_parse_tree_kind options gamma x in
       let k =
         match kf with
         | Kinds.KFun (p, r) when Kinds.equal p kx ->
@@ -115,12 +87,7 @@ let rec of_parse_tree_kind ~pure_arrow options gamma = function
       (AppOnTy (f, x), k)
 
 let of_parse_tree_kind ~pure_arrow options gamma ty =
-  let pure_arrow = match pure_arrow with
-    | `Allow -> (true, `Allow)
-    | `Partial -> (true, `Partial)
-    | `Forbid -> (false, `Forbid)
-  in
-  let (ty, k) = of_parse_tree_kind ~pure_arrow options gamma ty in
+  let (ty, k) = of_parse_tree_kind options gamma ty in
   (reduce ty, k)
 
 let of_parse_tree ~pure_arrow options gamma ty =
@@ -135,14 +102,14 @@ let to_string = PrivateTypes.ty_to_string
 let is_subset_of = PrivateTypes.ty_is_subset_of
 
 let rec size = function
-  | Fun (_, _, t) | TyClass (_, _, t) -> succ (size t)
+  | TyClass (_, _, t) -> succ (size t)
   | AppOnTy _ | AbsOnTy _ | Eff _ | Ty _ | TyVar _ -> 0
   | Forall (_, _, t) -> size t
 
 let rec is_value = function
   | Ty _ | TyVar _ -> true
   | Eff _ | AbsOnTy _ -> assert false
-  | Fun _ | Forall _ | TyClass _ -> false
+  | Forall _ | TyClass _ -> false
   | AppOnTy (t, _) -> is_value t
 
 let rec head = function
@@ -153,7 +120,6 @@ let rec head = function
         "Cannot match over a type variable '%s'"
         (Ident.TypeVar.to_string name)
   | Eff _
-  | Fun _
   | Forall _
   | TyClass _
   | AbsOnTy _ -> assert false
@@ -216,11 +182,9 @@ let match_tyclass ~loc_x ~tyclasses ~tyclasses_x =
         ([], x, [(name, x)], x)
     | Ty _, Ty _ | TyVar _, TyVar _ ->
         ([], x, [], ty_x)
-    | Fun (x1, eff1, y1), Fun (x2, eff2, y2) ->
-        let (l1, x1, l1', x2) = aux x1 ~ty_x:x2 in
-        let (l2, eff1, l2', eff2) = Effects.match_tyclass ~is_tyclass ~is_tyclass_x eff1 ~eff_x:eff2 in
-        let (l3, y1, l3', y2) = aux y1 ~ty_x:y2 in
-        (l1 @ l2 @ l3, Fun (x1, eff1, y1), l1' @ l2' @ l3', Fun (x2, eff2, y2))
+    | Eff eff1, Eff eff2 ->
+        let (l1, eff1, l2, eff2) = Effects.match_tyclass ~is_tyclass ~is_tyclass_x eff1 ~eff_x:eff2 in
+        (l1, Eff eff1, l2, Eff eff2)
     | Forall (name1, k1, t1), Forall (name2, k2, t2) ->
         let (l, t1, l', t2) = aux t1 ~ty_x:t2 in
         (l, Forall (name1, k1, t1), l', Forall (name2, k2, t2))
@@ -234,12 +198,12 @@ let match_tyclass ~loc_x ~tyclasses ~tyclasses_x =
         (l1 @ l2, AppOnTy (f1, x1), l1' @ l2', AppOnTy (f2, x2))
     | Ty _, _
     | TyVar _, _
-    | Fun _, _
+    | Eff _, _
     | Forall _, _
     | TyClass _, _
     | AppOnTy _, _ ->
         TyErr.fail ~loc_t:loc_x ~has:ty_x ~expected:x
-    | Eff _, _ | AbsOnTy _, _ ->
+    | AbsOnTy _, _ ->
         assert false
   in
   aux
@@ -251,7 +215,7 @@ let extract_tyclasses =
   in
   let rec aux tyclasses set = function
     | TyClass (x, eff, t) -> aux ((x, eff) :: tyclasses) (add_to_set set x) t
-    | Ty _ | TyVar _ | Fun _ | Forall _ | AppOnTy _ as t -> (tyclasses, set, t)
+    | Ty _ | TyVar _ | Forall _ | AppOnTy _ as t -> (tyclasses, set, t)
     | AbsOnTy _ | Eff _ -> assert false
   in
   aux [] GammaSet.TypeVar.empty
@@ -318,7 +282,7 @@ let reconstruct_ty_typeclasses matched_tys tyclasses_list t eff =
 let apply ~loc_f ~loc_x ty_f ty_x =
   let (tyclasses_list, tyclasses, ty_f) = extract_tyclasses ty_f in
   match ty_f with
-  | Fun (x, eff, t) ->
+  | AppOnTy (AppOnTy (AppOnTy (Ty arr, x), Eff eff), t) when Builtins.is_arrow arr ->
       let (matched_tys, x, matched_tys_x, ty_x, tyclasses_x_list) =
         match_tyclass ~loc_x ~tyclasses ~ty_x x
       in
@@ -346,7 +310,7 @@ let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x =
         Kinds.Err.fail ~loc:loc_x ~has:kind_x ~expected:k
     | TyClass (x, eff, res) ->
         TyClass (x, eff, aux res)
-    | Fun _ | AppOnTy _ | Ty _ | TyVar _ as ty ->
+    | AppOnTy _ | Ty _ | TyVar _ as ty ->
         TyErr.forall_type ~loc_f ty
     | AbsOnTy _ | Eff _ ->
         assert false
@@ -361,11 +325,6 @@ let unify_tyclass_one ~loc_x ~is_new_tyvar =
         []
     | Eff eff1, Eff eff2 ->
         Effects.unify_tyclass ~is_new_tyvar eff1 ~eff_x:eff2
-    | Fun (x1, eff1, y1), Fun (x2, eff2, y2) ->
-        let l1 = aux x1 ~ty_x:x2 in
-        let l2 = Effects.unify_tyclass ~is_new_tyvar eff1 ~eff_x:eff2 in
-        let l3 = aux y1 ~ty_x:y2 in
-        l1 @ l2 @ l3
     | Forall (name1, k1, t1), Forall (name2, k2, t2) ->
         aux t1 ~ty_x:t2
     | TyClass (tyclass1, eff1, t1), TyClass (tyclass2, eff2, t2) ->
@@ -378,7 +337,7 @@ let unify_tyclass_one ~loc_x ~is_new_tyvar =
         l1 @ l2
     | AbsOnTy (_, _, t1), AbsOnTy (_, _, t2) ->
         aux t1 ~ty_x:t2
-    | (Ty _ | Eff _ | TyVar _ | Fun _ | Forall _ | TyClass _ | AppOnTy _ | AbsOnTy _), _ ->
+    | (Ty _ | Eff _ | TyVar _ | Forall _ | TyClass _ | AppOnTy _ | AbsOnTy _), _ ->
         TyErr.fail ~loc_t:loc_x ~has:ty_x ~expected:x
   in
   aux
@@ -408,29 +367,34 @@ let apply_tyclass ~loc_x ty tyclass args = match ty with
             (res, eff)
       in
       aux (res, eff) tyvars
-  | Ty _ | TyVar _ | Fun _ | Forall _ | AppOnTy _ as ty ->
+  | Ty _ | TyVar _ | Forall _ | AppOnTy _ as ty ->
       TyErr.tyclass_type ~loc:(Ident.TyClass.loc tyclass) ty
   | AbsOnTy _ | Eff _ ->
       assert false
 
-let rec has_io options = function
-  | Eff _ | AbsOnTy _ -> assert false
-  | AppOnTy _ | Ty _ | TyVar _ -> false
-  | Fun (_, eff, (AppOnTy _ | Ty _))
-  | TyClass (_, eff, (AppOnTy _ | Ty _)) -> Effects.has_io options eff
-  | Forall (_, _, ret)
-  | TyClass (_, _, ret)
-  | Fun (_, _, ret) -> has_io options ret
+let rec to_efffunlist = function
+  | AppOnTy (AppOnTy (AppOnTy (Ty arr, _), Eff eff), t) when Builtins.is_arrow arr ->
+      eff :: to_efffunlist t
+  | Ty _ | TyVar _ | Eff _
+  | AppOnTy _ | AbsOnTy _ | TyClass _ | Forall _ -> []
+
+let has_io options t =
+  let effs = to_efffunlist t in
+  begin match List.rev effs with
+  | [] -> false
+  | eff::_ -> Effects.has_io options eff
+  end
 
 let rec is_fun = function
-  | Fun _ | TyClass _ -> true
+  | AppOnTy (AppOnTy (AppOnTy (Ty arr, x), Eff eff), t) when Builtins.is_arrow arr -> true
+  | TyClass _ -> true
   | Forall (_, _, ret) -> is_fun ret
   | Ty _ | TyVar _ | AppOnTy _ -> false
   | AbsOnTy _ | Eff _ -> assert false
 
 let is_unit options = function
   | Ty name when Ident.Type.equal name (Builtins.unit options) -> true
-  | Ty _ | TyVar _ | Fun _ | Forall _ | TyClass _ | AppOnTy _ -> false
+  | Ty _ | TyVar _ | Forall _ | TyClass _ | AppOnTy _ -> false
   | AbsOnTy _ | Eff _ -> assert false
 
 let tyclass_wrap tyclass params ty =
@@ -448,10 +412,6 @@ let contains_free_tyvars =
     | Ty _ | Eff _ -> false
     | TyVar name when GammaSet.TypeVar.mem name gammaTV -> false
     | TyVar _ -> true
-    | Fun (x, eff, y) ->
-        aux gammaTV x
-        || Effects.contains_free_tyvars gammaTV eff
-        || aux gammaTV y
     | Forall (name, _, t) | AbsOnTy (name, _, t) ->
         aux (GammaSet.TypeVar.add name gammaTV) t
     | TyClass ((_, tyvars, args), eff, t) ->
@@ -472,13 +432,13 @@ let rec extract_filled_tyclasses = function
         (None :: tyclasses, eff', t)
       else
         (Some (tyclass, args) :: tyclasses, Effects.union eff eff', t')
-  | Ty _ | TyVar _ | Fun _ | Forall _ | AppOnTy _ as t -> ([], Effects.empty, t)
+  | Ty _ | TyVar _ | Forall _ | AppOnTy _ as t -> ([], Effects.empty, t)
   | Eff _ | AbsOnTy _ -> assert false
 
 let rec is_bound name = function
   | Ty _ | TyVar _ | Eff _ ->
       false
-  | Fun (x, _, y) | AppOnTy (x, y) ->
+  | AppOnTy (x, y) ->
       is_bound name x || is_bound name y
   | Forall (name', _, t) | AbsOnTy (name', _, t) ->
       Ident.TypeVar.equal name name' || is_bound name t

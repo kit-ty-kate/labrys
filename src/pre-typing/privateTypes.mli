@@ -19,7 +19,6 @@ type t =
   | Ty of ty_name
   | TyVar of tyvar_name
   | Eff of effects
-  | Fun of (t * effects * t)
   | Forall of (tyvar_name * Kinds.t * t)
   | TyClass of ((Ident.TyClass.t * Kinds.t GammaMap.TypeVar.t * t list) * effects * t)
   | AbsOnTy of (tyvar_name * Kinds.t * t)
@@ -56,6 +55,8 @@ val eff_is_subset_of : (tyvar_name * tyvar_name) list -> effects -> effects -> b
 val eff_is_empty : effects -> bool
 
 val eff_to_string : effects -> string
+
+val arrow : < lib_dir : string; .. > -> t -> effects -> t -> t
 
 module Instances : Utils.EQMAP with type key = t list
 

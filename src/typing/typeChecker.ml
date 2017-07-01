@@ -57,7 +57,7 @@ let rec aux options gamma = function
       let ty = Types.of_parse_tree ~pure_arrow:`Allow options gamma ty in
       let gamma = Gamma.add_value name ty gamma in
       let (expr, ty_expr, effect) = aux options gamma t in
-      let abs_ty = PrivateTypes.Fun (ty, effect, ty_expr) in
+      let abs_ty = PrivateTypes.arrow options ty effect ty_expr in
       (Abs (name, expr), abs_ty, Effects.empty)
   | (_, PretypedTree.TAbs ((name, k), t)) ->
       let gamma = Gamma.add_type_var name k gamma in
@@ -282,14 +282,14 @@ let get_foreign_type ~loc options =
     @ List.map (fun (k, x) -> (k, Alloc x)) arg_ty_map
   in
   let rec aux acc = function
-    | PrivateTypes.Fun (PrivateTypes.Ty name, eff, t) ->
+    | PrivateTypes.AppOnTy (PrivateTypes.AppOnTy (PrivateTypes.AppOnTy (PrivateTypes.Ty arr, PrivateTypes.Ty name), PrivateTypes.Eff eff), t) when Builtins.is_arrow arr ->
         let x =
           match List.Assoc.get ~eq:Ident.Type.equal name arg_ty_map with
           | Some x -> x
           | None -> fail (Ident.Type.loc name)
         in
         begin match t with
-        | PrivateTypes.Fun _ ->
+        | PrivateTypes.AppOnTy (PrivateTypes.AppOnTy (PrivateTypes.AppOnTy (PrivateTypes.Ty arr, _), _), _) when Builtins.is_arrow arr ->
             if not (Effects.is_empty eff) then
               Err.fail
                 ~loc
@@ -316,7 +316,6 @@ let get_foreign_type ~loc options =
         end
     | PrivateTypes.Ty _ ->
         Err.fail ~loc "Cannot bind a global variable. Too unsafe."
-    | PrivateTypes.Fun _
     | PrivateTypes.Eff _
     | PrivateTypes.Forall _
     | PrivateTypes.TyClass _

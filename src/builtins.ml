@@ -37,6 +37,10 @@ let underscore =
 let exn options = Ident.Type.create ~loc:unknown_loc (prelude options) "Exn"
 let io options = Ident.Type.create ~loc:unknown_loc (prelude options) "IO"
 
+let arrow options = Ident.Type.create ~loc:unknown_loc (prelude options) "Arrow"
+let is_arrow x = String.equal (Ident.Type.to_string x) "Prelude.Arrow"
+(* TODO: Enhance this ^ *)
+
 let main ~current_module =
   Ident.Name.create ~loc:unknown_loc current_module "main"
 

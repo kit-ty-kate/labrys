@@ -341,19 +341,21 @@ module DesugaredTree = struct
 
   and dump_ty =
     function
-    | (_, Fun (param, None, res)) ->
-        fmt "(%s -> %s)" (dump_ty param) (dump_ty res)
-    | (_, Fun (param, Some eff, res)) ->
-        fmt "(%s -[%s]-> %s)" (dump_ty param) (dump_eff eff) (dump_ty res)
+    | (_, AppOnTy ((_, AppOnTy ((_, AppOnTy ((_, Ty arr), x)), (_, Eff eff))), t)) when Builtins.is_arrow arr ->
+        if List.is_empty (snd eff) then
+          fmt "(%s -> %s)" (dump_ty x) (dump_ty t)
+        else
+          fmt "(%s -[%s]-> %s)" (dump_ty x) (dump_eff eff) (dump_ty t)
     | (_, Ty name) -> dump_t_name name
     | (_, TyVar name) -> dump_tyvar_name name
     | (_, Eff eff) -> dump_eff eff
     | (_, Forall ((name, k), res)) ->
         fmt "(forall %s : %s, %s)" (dump_tyvar_name name) (dump_k k) (dump_ty res)
-    | (_, TyClass (tyclass, None, res)) ->
-        fmt "({%s} => %s)" (dump_tyclass_value tyclass) (dump_ty res)
-    | (_, TyClass (tyclass, Some eff, res)) ->
-        fmt "({%s} =[%s]=> %s)" (dump_tyclass_value tyclass) (dump_eff eff) (dump_ty res)
+    | (_, TyClass (tyclass, eff, res)) ->
+        if List.is_empty (snd eff) then
+          fmt "({%s} => %s)" (dump_tyclass_value tyclass) (dump_ty res)
+        else
+          fmt "({%s} =[%s]=> %s)" (dump_tyclass_value tyclass) (dump_eff eff) (dump_ty res)
     | (_, AbsOnTy ((name, k), res)) ->
         fmt "(λ (%s : %s) -> %s)" (dump_tyvar_name name) (dump_k k) (dump_ty res)
     | (_, AppOnTy (f, x)) ->

@@ -104,16 +104,21 @@ let desugar_t_value (name, k) =
   let k = desugar_kind k in
   (name, k)
 
-let rec desugar_tyclass imports (name, tyvars, args) =
+let arrow ~loc options x e y =
+  let arr = Builtins.arrow options in
+  let e = Option.get_or ~default:(loc, []) e in
+  AppOnTy ((loc, AppOnTy ((loc, AppOnTy ((loc, Ty arr), x)), (loc, Eff e))), y)
+
+let rec desugar_tyclass options imports (name, tyvars, args) =
   let name = upper_name_to_tyclass imports name in
   let tyvars = List.map desugar_t_value tyvars in
-  let args = List.map (desugar_ty imports) args in
+  let args = List.map (desugar_ty options imports) args in
   (name, tyvars, args)
 
-and desugar_ty imports = function
+and desugar_ty options imports = function
   | (loc, ParseTree.Fun (x, eff, y)) ->
       let eff = Option.map (desugar_eff imports) eff in
-      (loc, Fun (desugar_ty imports x, eff, desugar_ty imports y))
+      (loc, arrow ~loc options (desugar_ty options imports x) eff (desugar_ty options imports y))
   | (loc, ParseTree.Ty name) ->
       let name = upper_name_to_type imports name in
       (loc, Ty name)
@@ -125,27 +130,30 @@ and desugar_ty imports = function
       (loc, Eff effects)
   | (loc, ParseTree.Forall (args, ty)) ->
       assert (not (List.is_empty args));
-      desugar_tys ~loc ~ty imports (fun x -> Forall x) args
+      desugar_tys ~loc ~ty options imports (fun x -> Forall x) args
   | (loc, ParseTree.TyClass (tyclass, eff, ty)) ->
-      let tyclass = desugar_tyclass imports tyclass in
-      let eff = Option.map (desugar_eff imports) eff in
-      (loc, TyClass (tyclass, eff, desugar_ty imports ty))
+      let tyclass = desugar_tyclass options imports tyclass in
+      let eff =
+        let uloc = Builtins.unknown_loc in
+        Option.map_or ~default:(uloc, []) (desugar_eff imports) eff
+      in
+      (loc, TyClass (tyclass, eff, desugar_ty options imports ty))
   | (loc, ParseTree.AbsOnTy (args, ty)) ->
       assert (not (List.is_empty args));
-      desugar_tys ~loc ~ty imports (fun x -> AbsOnTy x) args
+      desugar_tys ~loc ~ty options imports (fun x -> AbsOnTy x) args
   | (loc, ParseTree.AppOnTy (x, y)) ->
-      (loc, AppOnTy (desugar_ty imports x, desugar_ty imports y))
+      (loc, AppOnTy (desugar_ty options imports x, desugar_ty options imports y))
 
-and desugar_tys ~loc ~ty imports f = function
+and desugar_tys ~loc ~ty options imports f = function
   | t_value :: xs ->
       let t_value = desugar_t_value t_value in
-      let ty = desugar_tys ~loc ~ty imports f xs in
+      let ty = desugar_tys ~loc ~ty options imports f xs in
       (loc, f (t_value, ty))
   | [] ->
-      desugar_ty imports ty
+      desugar_ty options imports ty
 
-let desugar_annot imports (annot, eff) =
-  let annot = desugar_ty imports annot in
+let desugar_annot options imports (annot, eff) =
+  let annot = desugar_ty options imports annot in
   let eff = Option.map (desugar_eff imports) eff in
   (annot, eff)
 
@@ -158,17 +166,17 @@ let rec desugar_pattern imports = function
       let name = new_lower_name_to_local_value ~allow_underscore:true name in
       Any name
 
-let desugar_instance imports (name, tys) =
+let desugar_instance options imports (name, tys) =
   let name = upper_name_to_tyclass imports name in
-  let tys = List.map (desugar_ty imports) tys in
+  let tys = List.map (desugar_ty options imports) tys in
   (name, tys)
 
-let desugar_tyclass_app_arg imports = function
+let desugar_tyclass_app_arg options imports = function
   | ParseTree.TyClassVariable name ->
       let name = lower_name_to_instance imports name in
       TyClassVariable name
   | ParseTree.TyClassInstance instance ->
-      let instance = desugar_instance imports instance in
+      let instance = desugar_instance options imports instance in
       TyClassInstance instance
 
 let desugar_uchar_list ~loc s =
@@ -258,11 +266,11 @@ and desugar_t imports options = function
       (loc, App (f, x))
   | (loc, ParseTree.TApp (t, ty)) ->
       let t = desugar_t imports options t in
-      let ty = desugar_ty imports ty in
+      let ty = desugar_ty options imports ty in
       (loc, TApp (t, ty))
   | (loc, ParseTree.TyClassApp (t, x)) ->
       let t = desugar_t imports options t in
-      let x = desugar_tyclass_app_arg imports x in
+      let x = desugar_tyclass_app_arg options imports x in
       (loc, CApp (t, x))
   | (loc, ParseTree.LowerVal name) ->
       let name = lower_name_to_value imports name in
@@ -280,7 +288,7 @@ and desugar_t imports options = function
       let t = desugar_t imports options t in
       (loc, Let (name, x, t))
   | (loc, ParseTree.Fail (ty, (exn, args))) ->
-      let ty = desugar_ty imports ty in
+      let ty = desugar_ty options imports ty in
       let exn = upper_name_to_exn imports exn in
       let args = List.map (desugar_t imports options) args in
       (loc, Fail (ty, (exn, args)))
@@ -299,7 +307,7 @@ and desugar_t imports options = function
       (loc, Let (name, x, y))
   | (loc, ParseTree.Annot (t, ty)) ->
       let t = desugar_t imports options t in
-      let ty = desugar_annot imports ty in
+      let ty = desugar_annot options imports ty in
       (loc, Annot (t, ty))
   | (loc, ParseTree.Const c) ->
       let c = desugar_const ~loc c in
@@ -310,7 +318,7 @@ and desugar_args imports options args (annot, t) =
   let rec aux = function
     | (loc, ParseTree.VArg (name, ty)) :: xs ->
         let name = new_lower_name_to_local_value ~allow_underscore:true name in
-        let ty = desugar_ty imports ty in
+        let ty = desugar_ty options imports ty in
         (loc, Abs ((name, ty), aux xs))
     | (loc, ParseTree.TArg t_value) :: xs ->
         let t_value = desugar_t_value t_value in
@@ -323,12 +331,12 @@ and desugar_args imports options args (annot, t) =
         aux ((loc, x) :: xs)
     | (loc, ParseTree.TyClassArg (name, tyclass)) :: xs ->
         let name = new_lower_name_to_local_instance ~allow_underscore:true name in
-        let tyclass = desugar_tyclass imports tyclass in
+        let tyclass = desugar_tyclass options imports tyclass in
         (loc, CAbs ((name, tyclass), aux xs))
     | [] ->
         begin match annot with
         | Some annot ->
-            let annot = desugar_annot imports annot in
+            let annot = desugar_annot options imports annot in
             (fst t, Annot (desugar_t imports options t, annot))
         | None ->
             desugar_t imports options t
@@ -336,24 +344,24 @@ and desugar_args imports options args (annot, t) =
   in
   aux args
 
-let desugar_variant ~current_module imports ~datatype ~args (name, tys) =
+let desugar_variant ~current_module options imports ~datatype ~args (name, tys) =
   let name = new_upper_name_to_variant ~current_module name in
-  let tys = List.map (desugar_ty imports) tys in
+  let tys = List.map (desugar_ty options imports) tys in
   let ty =
     let uloc = Builtins.unknown_loc in
     let ty = (uloc, Ty datatype) in
     foldl (fun ty (arg, _) -> (uloc, AppOnTy (ty, (uloc, TyVar arg)))) ty args
-    |> foldr (fun x ty -> (uloc, Fun (x, None, ty))) tys
+    |> foldr (fun x ty -> (uloc, arrow ~loc:uloc options x None ty)) tys
     |> foldr (fun arg ty -> (uloc, Forall (arg, ty))) args
   in
   (name, tys, ty)
 
-let desugar_variants ~current_module imports ~datatype ~args =
-  List.map (desugar_variant ~current_module imports ~datatype ~args)
+let desugar_variants ~current_module options imports ~datatype ~args =
+  List.map (desugar_variant ~current_module options imports ~datatype ~args)
 
-let desugar_sig ~current_module imports (name, ty) =
+let desugar_sig ~current_module options imports (name, ty) =
   let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
-  let ty = desugar_ty imports ty in
+  let ty = desugar_ty options imports ty in
   (name, ty)
 
 let desugar_variant_args args =
@@ -398,13 +406,13 @@ let create ~current_module options mimports =
     | ParseTree.Type (name, ty) :: xs ->
         let imports = Imports.add_type ~export:false name current_module imports in
         let name = new_upper_name_to_type ~current_module name in
-        let ty = desugar_ty imports ty in
+        let ty = desugar_ty options imports ty in
         Type (name, ty) :: aux imports xs
     | ParseTree.Foreign (cname, name, ty) :: xs ->
         let cname = desugar_string ~loc:(fst name) cname in
         let imports' = Imports.add_value ~export:false name current_module imports in
         let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
-        let ty = desugar_ty imports ty in
+        let ty = desugar_ty options imports ty in
         Foreign (cname, name, ty) :: aux imports' xs
     | ParseTree.AbstractType (name, kind) :: xs ->
         let imports = Imports.add_type ~export:false name current_module imports in
@@ -418,7 +426,7 @@ let create ~current_module options mimports =
         let name = new_upper_name_to_type ~current_module name in
         let args = desugar_variant_args args in
         let imports = import_variants ~export:false ~current_module imports variants in
-        let variants = desugar_variants ~current_module imports ~datatype:name ~args variants in
+        let variants = desugar_variants ~current_module options imports ~datatype:name ~args variants in
         Datatype (name, kind, args, variants) :: aux imports xs
     | ParseTree.Exception (name, tys) :: xs ->
         if Int.(List.length tys > Config.max_fail_num_args) then
@@ -427,7 +435,7 @@ let create ~current_module options mimports =
             "Cannot define an exception with more than %d parameters"
             Config.max_fail_num_args;
         let name' = new_upper_name_to_exn ~current_module name in
-        let tys = List.map (desugar_ty imports) tys in
+        let tys = List.map (desugar_ty options imports) tys in
         let imports = Imports.add_exn ~export:false name current_module imports in
         Exception (name', tys) :: aux imports xs
     | ParseTree.Open import :: xs ->
@@ -439,12 +447,12 @@ let create ~current_module options mimports =
     | ParseTree.Class (name, params, sigs) :: xs ->
         let name' = new_upper_name_to_tyclass ~current_module name in
         let params = List.map desugar_t_value params in
-        let sigs' = List.map (desugar_sig ~current_module imports) sigs in
+        let sigs' = List.map (desugar_sig ~current_module options imports) sigs in
         let imports = Imports.add_tyclass ~export:false name current_module imports in
         let imports = import_sigs ~export:false ~current_module imports sigs in
         Class (name', params, sigs') :: aux imports xs
     | ParseTree.Instance (tyclass, name, values) :: xs ->
-        let tyclass = desugar_instance imports tyclass in
+        let tyclass = desugar_instance options imports tyclass in
         let values = List.map (desugar_value ~current_module imports options) values in
         let (name, imports) =
           let aux name = Imports.add_instance ~export:false name current_module in
@@ -469,7 +477,7 @@ let create_imports ~current_module options =
 let create_interface ~current_module options mimports imports interface =
   let rec aux imports local_imports acc = function
     | ParseTree.IVal ((name, _) as signature) :: xs ->
-        let value = desugar_sig ~current_module local_imports signature in
+        let value = desugar_sig ~current_module options local_imports signature in
         let imports = Imports.add_value ~export:true name current_module imports in
         aux imports local_imports (InterfaceTree.Val value :: acc) xs
     | ParseTree.IAbstractType (name, k) :: xs ->
@@ -484,17 +492,17 @@ let create_interface ~current_module options mimports imports interface =
         let name = new_upper_name_to_type ~current_module name in
         let args = desugar_variant_args args in
         let imports = import_variants ~export:true ~current_module imports variants in
-        let variants = desugar_variants ~current_module local_imports ~datatype:name ~args variants in
+        let variants = desugar_variants ~current_module options local_imports ~datatype:name ~args variants in
         aux imports local_imports (InterfaceTree.Datatype (name, kind, args, variants) :: acc) xs
     | ParseTree.ITypeAlias (name, ty) :: xs ->
         let imports = Imports.add_type ~export:true name current_module imports in
         let local_imports' = Imports.add_type ~export:false name current_module local_imports in
         let name = new_upper_name_to_type ~current_module name in
-        aux imports local_imports' (InterfaceTree.TypeAlias (name, desugar_ty local_imports ty) :: acc) xs
+        aux imports local_imports' (InterfaceTree.TypeAlias (name, desugar_ty options local_imports ty) :: acc) xs
     | ParseTree.IException (name, tys) :: xs ->
         let imports' = Imports.add_exn ~export:true name current_module imports in
         let name = new_upper_name_to_exn ~current_module name in
-        aux imports' local_imports (InterfaceTree.Exception (name, List.map (desugar_ty local_imports) tys) :: acc) xs
+        aux imports' local_imports (InterfaceTree.Exception (name, List.map (desugar_ty options local_imports) tys) :: acc) xs
     | ParseTree.IOpen import :: xs ->
         let (loc, modul', modul) = desugar_open ~current_module options import in
         if not (List.exists (Module.equal modul') mimports) then
@@ -507,11 +515,11 @@ let create_interface ~current_module options mimports imports interface =
         let name = new_upper_name_to_tyclass ~current_module name in
         let params = List.map desugar_t_value params in
         let imports = import_sigs ~export:true ~current_module imports sigs in
-        let sigs = List.map (desugar_sig ~current_module local_imports) sigs in
+        let sigs = List.map (desugar_sig ~current_module options local_imports) sigs in
         aux imports local_imports' (InterfaceTree.Class (name, params, sigs) :: acc) xs
     | ParseTree.IInstance (tyclass, name) :: xs ->
         (* NOTE: No need to add the name in the interfaces *)
-        let tyclass = desugar_instance local_imports tyclass in
+        let tyclass = desugar_instance options local_imports tyclass in
         let (name, (imports, local_imports)) =
           let aux name (imports, local_imports) =
             let imports = Imports.add_instance ~export:true name current_module imports in

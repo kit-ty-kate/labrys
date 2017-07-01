@@ -22,12 +22,11 @@ type effects = (loc * effect_name list)
 type tyclass = (tyclass_name * t_value list * ty list)
 
 and ty' = DesugaredTree.ty' =
-  | Fun of (ty * effects option * ty)
   | Ty of t_name
   | TyVar of tyvar_name
   | Eff of effects
   | Forall of (t_value * ty)
-  | TyClass of (tyclass * effects option * ty)
+  | TyClass of (tyclass * effects * ty)
   | AbsOnTy of (t_value * ty)
   | AppOnTy of (ty * ty)
 

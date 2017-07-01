@@ -1,6 +1,14 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
+val arrow :
+  loc:DesugaredTree.loc ->
+  < lib_dir : string; .. > ->
+  DesugaredTree.ty ->
+  DesugaredTree.effects option ->
+  DesugaredTree.ty ->
+  DesugaredTree.ty'
+
 val create_imports :
   current_module:Module.t ->
   <lib_dir : string; ..> ->

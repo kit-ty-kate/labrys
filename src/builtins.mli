@@ -19,6 +19,9 @@ val unknown_loc : Location.t
 val exn : <lib_dir : string; ..> -> Ident.Type.t
 val io : <lib_dir : string; ..> -> Ident.Type.t
 
+val arrow : <lib_dir : string; ..> -> Ident.Type.t
+val is_arrow : Ident.Type.t -> bool
+
 val main : current_module:Module.t -> Ident.Name.t
 
 val interface :

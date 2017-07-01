@@ -2,6 +2,7 @@
 
 == Before the first release (0.1) ==
 
+* Put back pure arrow checks
 * Recode the typechecker !!
   * Write the semantics of System Fcω with effects, exceptions and typeclasses
     * Add a new kind for exceptions
@@ -12,8 +13,7 @@
     * Implement it
   * Split the part about pattern matching
   * Merge type and typevar ??
-* Remove arrow at desugaring
-  * What about typeclasses and coercion arrow ?
+* Can we desugar typeclasses and coercion arrows to type applications like the arrow ?
 * Remove PatternMatching if List.length args = 1
 * Remove Rec
 * Rename Gamma --> Env

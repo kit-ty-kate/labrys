@@ -22,7 +22,6 @@ type t =
   | Ty of ty_name
   | TyVar of tyvar_name
   | Eff of effects
-  | Fun of (t * effects * t)
   | Forall of (tyvar_name * Kinds.t * t)
   | TyClass of ((Ident.TyClass.t * Kinds.t GammaMap.TypeVar.t * t list) * effects * t)
   | AbsOnTy of (tyvar_name * Kinds.t * t)
@@ -58,7 +57,7 @@ let eff_union_ty' self = function
   | Ty name -> {self with effects = Effects.add name self.effects}
   | TyVar name -> {self with variables = Variables.add name self.variables}
   | Eff eff -> eff_union self eff
-  | Fun _ | Forall _ | TyClass _ | AbsOnTy _ | AppOnTy _ -> assert false
+  | Forall _ | TyClass _ | AbsOnTy _ | AppOnTy _ -> assert false
 
 let eff_union_ty ~from self =
   let self = {self with variables = Variables.remove from self.variables} in
@@ -84,10 +83,6 @@ let ty_is_subset_of' eq_list x y =
         eq x x' || List.exists (fun (y, y') -> eq x y && eq x' y') eq_list
     | Eff x, Eff x' ->
         eff_is_subset_of eq_list x x'
-    | Fun (param, eff1, res), Fun (param', eff2, res') ->
-        aux eq_list (param, param')
-        && eff_is_subset_of eq_list eff1 eff2
-        && aux eq_list (res, res')
     | AppOnTy (f, x), AppOnTy (f', x') ->
         aux eq_list (f, f') && aux eq_list (x, x')
     | AbsOnTy (name1, k1, t), AbsOnTy (name2, k2, t') when Kinds.equal k1 k2 ->
@@ -122,8 +117,7 @@ let ty_is_subset_of' eq_list x y =
     | TyClass _, _
     | Ty _, _
     | TyVar _, _
-    | Eff _, _
-    | Fun _, _ -> false
+    | Eff _, _ -> false
   in
   aux eq_list (x, y)
 
@@ -141,6 +135,9 @@ let tyclass_args_equal args1 args2 =
     ty_equal' eq_list ty1 ty2
   in (* TODO: DEBUJIN ? *)
   try List.for_all2 aux args1 args2 with Invalid_argument _ -> assert false
+
+let arrow options x eff t =
+  AppOnTy (AppOnTy (AppOnTy (Ty (Builtins.arrow options), x), Eff eff), t)
 
 let eff_is_empty {variables; effects; exns} =
   Variables.is_empty variables
@@ -173,12 +170,13 @@ let rec ty_to_string =
   | Ty x -> Ident.Type.to_string x
   | TyVar x -> Ident.TypeVar.to_string x
   | Eff effects -> eff_to_string effects
-  | Fun (Ty x, eff, ret) when eff_is_empty eff ->
-      fmt "%s -> %s" (Ident.Type.to_string x) (ty_to_string ret)
-  | Fun (Ty x, eff, ret) ->
-      fmt "%s -%s-> %s" (Ident.Type.to_string x) (eff_to_string eff) (ty_to_string ret)
-  | Fun (x, eff, ret) ->
-      fmt "(%s) -%s-> %s" (ty_to_string x) (eff_to_string eff) (ty_to_string ret)
+  | AppOnTy (AppOnTy (AppOnTy (Ty arr, x), Eff eff), t) when Builtins.is_arrow arr ->
+      let x = match x with
+        | Ty x -> Ident.Type.to_string x
+        | x -> fmt "(%s)" (ty_to_string x)
+      in
+      let eff = if eff_is_empty eff then "" else fmt "-%s" (eff_to_string eff) in
+      fmt "%s %s-> %s" x eff (ty_to_string t)
   | Forall (x, k, t) ->
       fmt "forall %s : %s. %s" (Ident.TypeVar.to_string x) (Kinds.to_string k) (ty_to_string t)
   | TyClass ((name, _, args), eff, t) when eff_is_empty eff -> (* TODO: Display tyvars ? *)
@@ -197,10 +195,9 @@ let rec ty_reduce = function
       begin match ty_reduce t with
       | AbsOnTy (name, _, t) -> ty_reduce (ty_replace ~from:name ~ty t)
       | Ty _ | TyVar _ | AppOnTy _ as t -> AppOnTy (t, ty_reduce ty)
-      | Eff _ | Fun _ | Forall _ | TyClass _ -> assert false
+      | Eff _ | Forall _ | TyClass _ -> assert false
       end
   | Ty _ | TyVar _ | Eff _ as ty -> ty
-  | Fun (x, eff, y) -> Fun (ty_reduce x, eff, ty_reduce y)
   | Forall (x, k, t) -> Forall (x, k, ty_reduce t)
   | TyClass ((x, tyvars, args), eff, t) ->
       let args = List.map ty_reduce args in
@@ -212,8 +209,6 @@ and ty_replace ~from ~ty =
     | TyVar x when Ident.TypeVar.equal x from -> ty
     | TyVar _ | Ty _ as t -> t
     | Eff effects -> Eff (eff_replace ~from ~ty effects)
-    | Fun (param, eff, ret) ->
-        Fun (aux param, eff_replace ~from ~ty eff, aux ret)
     | Forall (x, k, t) -> Forall (x, k, aux t)
     | TyClass ((x, tyvars, args), eff, t) ->
         let args = List.map aux args in
