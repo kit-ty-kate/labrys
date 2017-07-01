@@ -24,22 +24,22 @@ let create params signature =
 
 let equal = PrivateTypes.class_equal
 
-let get_params ~loc f gamma tyvars args self =
-  let gamma =
-    GammaMap.TypeVar.fold Gamma.add_type_var tyvars gamma
+let get_params ~loc f env tyvars args self =
+  let env =
+    EnvMap.TypeVar.fold Env.add_type_var tyvars env
   in
   try
-    let aux (gamma, args) (_, k) ty =
+    let aux (env, args) (_, k) ty =
       let loc = fst ty in
-      let (ty, k') = f gamma ty in
+      let (ty, k') = f env ty in
       if not (Kinds.equal k k') then
         Kinds.Err.fail ~loc ~has:k' ~expected:k;
-      (gamma, ty :: args)
+      (env, ty :: args)
     in
-    let (gamma, args) =
-      List.fold_left2 aux (gamma, []) self.params args
+    let (env, args) =
+      List.fold_left2 aux (env, []) self.params args
     in
-    (gamma, List.rev args)
+    (env, List.rev args)
   with
   | Invalid_argument _ ->
       Err.fail

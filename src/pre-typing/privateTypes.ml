@@ -24,7 +24,7 @@ type t =
   | Eff of effects
   | Fun of (t * effects * t)
   | Forall of (tyvar_name * Kinds.t * t)
-  | TyClass of ((Ident.TyClass.t * Kinds.t GammaMap.TypeVar.t * t list) * effects * t)
+  | TyClass of ((Ident.TyClass.t * Kinds.t EnvMap.TypeVar.t * t list) * effects * t)
   | AbsOnTy of (tyvar_name * Kinds.t * t)
   | AppOnTy of (t * t)
 
@@ -99,7 +99,7 @@ let ty_is_subset_of' eq_list x y =
           let l =
             let aux acc ty1 ty2 =
               let eq_list =
-                let conv = GammaMap.TypeVar.bindings in
+                let conv = EnvMap.TypeVar.bindings in
                 let aux (name1, _) (name2, _) = (name1, name2) in
                 List.map2 aux (conv tyvars1) (conv tyvars2) @ eq_list
               in

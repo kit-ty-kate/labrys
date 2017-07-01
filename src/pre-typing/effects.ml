@@ -31,11 +31,11 @@ let has_io options {variables; effects; exns = _} =
 let union_ty = PrivateTypes.eff_union_ty'
 let union = PrivateTypes.eff_union
 
-let add options gamma eff self =
+let add options env eff self =
   match eff with
   | DesugaredTree.EffTy (name, exns) ->
       let (k, has_args, self) =
-        match GammaMap.Types.find name gamma.Gamma.types with
+        match EnvMap.Types.find name env.Env.types with
         | PrivateTypes.Abstract k ->
             if Ident.Type.equal name (Builtins.exn options) then
               (k, true, self)
@@ -62,7 +62,7 @@ let add options gamma eff self =
       let exns = Exn_set.union exns self.exns in
       {self with exns}
   | DesugaredTree.EffTyVar name ->
-      let k = GammaMap.TypeVar.find name gamma.Gamma.type_vars in
+      let k = EnvMap.TypeVar.find name env.Env.type_vars in
       if not (Kinds.is_effect k) then
         Err.fail
           ~loc:(Ident.TypeVar.loc name)
@@ -91,8 +91,8 @@ let remove_exn x self =
 
 let to_string = PrivateTypes.eff_to_string
 
-let of_list options gamma (_, l) =
-  let aux acc ty = add options gamma ty acc in
+let of_list options env (_, l) =
+  let aux acc ty = add options env ty acc in
   List.fold_left aux empty l
 
 let replace = PrivateTypes.eff_replace
@@ -139,6 +139,6 @@ let unify_tyclass ~is_new_tyvar eff ~eff_x =
   in
   Variables.fold aux eff.variables []
 
-let contains_free_tyvars gammaTV self =
-  let aux name = GammaSet.TypeVar.mem name gammaTV in
+let contains_free_tyvars envTV self =
+  let aux name = EnvSet.TypeVar.mem name envTV in
   Variables.for_all aux self.variables

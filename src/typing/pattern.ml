@@ -63,13 +63,13 @@ let rec var_to_idx = function
   | Matrix.VNode (idx, Matrix.VLeaf) -> Some idx
   | Matrix.VNode (_, var) -> var_to_idx var
 
-let create ~loc gammaD =
+let create ~loc envD =
   let rec aux m = match m with
     | ((Matrix.Any _ :: _ as row), code_index) :: _ when are_any row ->
         Leaf code_index
     | (Matrix.Any (var, (_, ty)) :: _, _) :: _
     | (Matrix.Constr (var, (_, ty), _) :: _, _) :: _->
-        let variants = GammaMap.Constr.find ty gammaD in
+        let variants = EnvMap.Constr.find ty envD in
         let (_, variants) =
           Option.get_lazy (fun () -> assert false) variants
         in
@@ -88,7 +88,7 @@ let create ~loc gammaD =
             in
             ((name, index), xs) :: acc
           in
-          GammaMap.Index.fold aux variants []
+          EnvMap.Index.fold aux variants []
         in
         Node (var_to_idx var, variants)
     | ([], _) :: _
@@ -103,22 +103,22 @@ let rec get_unused_cases results = function
   | Node (_, l) ->
       List.fold_left (fun r (_, p) -> get_unused_cases r p) results l
 
-let create ~loc f gamma ty patterns =
+let create ~loc f env ty patterns =
   let (head, tail) = match patterns with
     | [] -> assert false
     | x::xs -> (x, xs)
   in
   let (initial_pattern, initial_ty, effect) =
     let (head_p, head_t) = head in
-    let (pattern, gamma) = Matrix.create gamma ty head_p in
-    let (term, ty_term, effect) = f gamma head_t in
+    let (pattern, env) = Matrix.create env ty head_p in
+    let (term, ty_term, effect) = f env head_t in
     ([(pattern, term)], ty_term, effect)
   in
   let (patterns, effect) =
     let f (patterns, effects) (p, t) =
-      let (pattern, gamma) = Matrix.create gamma ty p in
+      let (pattern, env) = Matrix.create env ty p in
       let (loc_t, _) = t in
-      let (t, has, effect) = f gamma t in
+      let (t, has, effect) = f env t in
       (* TODO: This should take the larger type, not only the fist one *)
       if not (Types.is_subset_of has initial_ty) then
         Types.TyErr.fail ~loc_t ~has ~expected:initial_ty;
@@ -128,7 +128,7 @@ let create ~loc f gamma ty patterns =
   in
   let patterns = List.rev patterns in
   let (patterns, results) = Matrix.split patterns in
-  let patterns = create ~loc gamma.Gamma.constructors patterns in
+  let patterns = create ~loc env.Env.constructors patterns in
   let unused_cases =
     get_unused_cases (List.mapi (fun i _ -> i) results) patterns
   in

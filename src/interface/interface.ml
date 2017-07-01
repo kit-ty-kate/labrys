@@ -6,80 +6,80 @@ open Monomorphic.None
 
 open InterfaceTree
 
-let compile ~current_module options gamma =
-  let rec compile ~gamma ~local_gamma = function
+let compile ~current_module options env =
+  let rec compile ~env ~local_env = function
     | Val (name, ty) :: xs ->
-        let ty = Types.of_parse_tree ~pure_arrow:`Partial options local_gamma ty in
-        let gamma = Gamma.add_value name ty gamma in
-        compile ~gamma ~local_gamma xs
+        let ty = Types.of_parse_tree ~pure_arrow:`Partial options local_env ty in
+        let env = Env.add_value name ty env in
+        compile ~env ~local_env xs
     | AbstractType (name, k) :: xs ->
-        let gamma = Gamma.add_type name (Types.Abstract k) gamma in
-        let local_gamma = Gamma.add_type name (Types.Abstract k) local_gamma in
-        compile ~gamma ~local_gamma xs
+        let env = Env.add_type name (Types.Abstract k) env in
+        let local_env = Env.add_type name (Types.Abstract k) local_env in
+        compile ~env ~local_env xs
     | Datatype (name, k, args, variants) :: xs ->
         let ty_args = List.map fst args in
-        let gamma = Gamma.add_type name (Types.Abstract k) gamma in
-        let local_gamma = Gamma.add_type name (Types.Abstract k) local_gamma in
-        let gamma =
-          let local_gamma' = List.fold_left (fun local_gamma (name, k) -> Gamma.add_type_var name k local_gamma) local_gamma args in
-          let aux ~datatype gamma i (name, tys, ty) =
-            let tys = List.map (Types.of_parse_tree ~pure_arrow:`Partial options local_gamma') tys in
-            let ty = Types.of_parse_tree ~pure_arrow:`Partial options local_gamma ty in
-            let gamma = Gamma.add_variant name (i, ty, List.length tys) gamma in
-            Gamma.add_constr datatype name ty_args (tys, i) gamma
+        let env = Env.add_type name (Types.Abstract k) env in
+        let local_env = Env.add_type name (Types.Abstract k) local_env in
+        let env =
+          let local_env' = List.fold_left (fun local_env (name, k) -> Env.add_type_var name k local_env) local_env args in
+          let aux ~datatype env i (name, tys, ty) =
+            let tys = List.map (Types.of_parse_tree ~pure_arrow:`Partial options local_env') tys in
+            let ty = Types.of_parse_tree ~pure_arrow:`Partial options local_env ty in
+            let env = Env.add_variant name (i, ty, List.length tys) env in
+            Env.add_constr datatype name ty_args (tys, i) env
           in
-          List.foldi (aux ~datatype:name) gamma variants
+          List.foldi (aux ~datatype:name) env variants
         in
-        compile ~gamma ~local_gamma xs
+        compile ~env ~local_env xs
     | TypeAlias (name, ty) :: xs ->
-        let ty = Types.of_parse_tree_kind ~pure_arrow:`Forbid options local_gamma ty in
-        let gamma = Gamma.add_type name (Types.Alias ty) gamma in
-        let local_gamma = Gamma.add_type name (Types.Alias ty) local_gamma in
-        compile ~gamma ~local_gamma xs
+        let ty = Types.of_parse_tree_kind ~pure_arrow:`Forbid options local_env ty in
+        let env = Env.add_type name (Types.Alias ty) env in
+        let local_env = Env.add_type name (Types.Alias ty) local_env in
+        compile ~env ~local_env xs
     | Exception (name, args) :: xs ->
         let args =
-          List.map (Types.of_parse_tree ~pure_arrow:`Forbid options local_gamma) args
+          List.map (Types.of_parse_tree ~pure_arrow:`Forbid options local_env) args
         in
-        let gamma = Gamma.add_exception name args gamma in
-        let local_gamma = Gamma.add_exception name args local_gamma in
-        compile ~gamma ~local_gamma xs
+        let env = Env.add_exception name args env in
+        let local_env = Env.add_exception name args local_env in
+        compile ~env ~local_env xs
     | Class (name, params, sigs) :: xs ->
         let sigs =
-          let local_gamma =
-            let aux local_gamma (name, k) =
-              Gamma.add_type_var name k local_gamma
+          let local_env =
+            let aux local_env (name, k) =
+              Env.add_type_var name k local_env
             in
-            List.fold_left aux local_gamma params
+            List.fold_left aux local_env params
           in
           let aux (name, ty) =
-            (name, Types.of_parse_tree ~pure_arrow:`Forbid options local_gamma ty)
+            (name, Types.of_parse_tree ~pure_arrow:`Forbid options local_env ty)
           in
           List.map aux sigs
         in
         let tyclass = Class.create params sigs in
-        let gamma = Gamma.add_tyclass name tyclass gamma in
-        let local_gamma = Gamma.add_tyclass name tyclass local_gamma in
-        let gamma =
-          let aux gamma (name_sig, ty) =
+        let env = Env.add_tyclass name tyclass env in
+        let local_env = Env.add_tyclass name tyclass local_env in
+        let env =
+          let aux env (name_sig, ty) =
             let ty = Types.tyclass_wrap name params ty in
-            Gamma.add_value name_sig ty gamma
+            Env.add_value name_sig ty env
           in
-          List.fold_left aux gamma sigs
+          List.fold_left aux env sigs
         in
-        compile ~gamma ~local_gamma xs
+        compile ~env ~local_env xs
     | Instance ((tyclass, tys), name) :: xs ->
-        let tyclass' = GammaMap.TyClass.find tyclass local_gamma.Gamma.tyclasses in
-        let tys = List.map (Types.of_parse_tree_kind ~pure_arrow:`Forbid options local_gamma) tys in
+        let tyclass' = EnvMap.TyClass.find tyclass local_env.Env.tyclasses in
+        let tys = List.map (Types.of_parse_tree_kind ~pure_arrow:`Forbid options local_env) tys in
         let (_, tys, tyclass') = Class.add_instance ~tyclass ~current_module tys tyclass' in
-        let gamma = match name with
+        let env = match name with
           | Some name ->
-              Gamma.add_named_instance name (tyclass, tys) gamma
+              Env.add_named_instance name (tyclass, tys) env
           | None ->
-              gamma
+              env
         in
-        let gamma = Gamma.replace_tyclass tyclass tyclass' gamma in
-        compile ~gamma ~local_gamma xs
+        let env = Env.replace_tyclass tyclass tyclass' env in
+        compile ~env ~local_env xs
     | [] ->
-        gamma
+        env
   in
-  compile ~gamma:Gamma.empty ~local_gamma:gamma
+  compile ~env:Env.empty ~local_env:env

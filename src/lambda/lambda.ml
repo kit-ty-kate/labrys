@@ -6,9 +6,9 @@ open Monomorphic.None
 
 open LambdaTree
 
-let gamma_add name gamma =
+let env_add name env =
   let id = LIdent.create (Ident.Name.to_string name) in
-  (id, GammaMap.Value.add name id gamma)
+  (id, EnvMap.Value.add name id env)
 
 let rec of_patterns' f = function
   | Pattern.Leaf label ->
@@ -35,15 +35,15 @@ let create_dyn_functions f n =
 
 let create_fresh_name () = LIdent.create ".@fresh"
 
-let get_name name gamma =
-  match GammaMap.Value.find_opt name gamma with
+let get_name name env =
+  match EnvMap.Value.find_opt name env with
   | Some x -> x
   | None -> assert false (* NOTE: Every external values should be in the
                             environment *)
 
-let rec of_results gamma var m =
+let rec of_results env var m =
   let aux (wildcards, t) =
-    let rec aux gamma t = function
+    let rec aux env t = function
       | (idx, name)::xs ->
           let rec aux' var = function
             | PatternMatrix.VLeaf ->
@@ -55,23 +55,23 @@ let rec of_results gamma var m =
                    taken by its tag. *)
                 Let (name, RecordGet (var, succ idx), t)
           in
-          let (name, gamma) = gamma_add name gamma in
-          Let (name, aux' var idx, aux gamma t xs)
+          let (name, env) = env_add name env in
+          Let (name, aux' var idx, aux env t xs)
       | [] ->
-          of_typed_term gamma t
+          of_typed_term env t
     in
-    aux gamma t wildcards
+    aux env t wildcards
   in
   List.map aux m
 
-and get_lets gamma t = function
+and get_lets env t = function
   | (name, x)::xs ->
-      let (name, gamma) = gamma_add name gamma in
-      Let (name, x, get_lets gamma t xs)
+      let (name, env) = env_add name env in
+      Let (name, x, get_lets env t xs)
   | [] ->
-      of_typed_term gamma t
+      of_typed_term env t
 
-and of_try_pattern gamma var l =
+and of_try_pattern env var l =
   let (branches, patterns) =
     let rec aux i = function
       | [] ->
@@ -80,7 +80,7 @@ and of_try_pattern gamma var l =
           let (branches, patterns) = aux (succ i) xs in
           let t =
             List.mapi (fun i x -> (x, RecordGet (var, i))) args
-            |> get_lets gamma t
+            |> get_lets env t
           in
           (t :: branches, (exn, Leaf i) :: patterns)
     in
@@ -89,11 +89,11 @@ and of_try_pattern gamma var l =
   let pattern = PtrTree (Node (None, patterns)) in
   PatternMatching (var, branches, Reraise var, pattern)
 
-and of_args gamma f args =
+and of_args env f args =
   let args =
     let aux t =
       let name = create_fresh_name () in
-      let t = of_typed_term gamma t in
+      let t = of_typed_term env t in
       (name, t)
     in
     List.map aux args
@@ -104,54 +104,54 @@ and of_args gamma f args =
   in
   aux [] args
 
-and of_typed_term gamma = function
+and of_typed_term env = function
   | UntypedTree.Abs (name, t) ->
-      let (name, gamma) = gamma_add name gamma in
-      let t = of_typed_term gamma t in
+      let (name, env) = env_add name env in
+      let t = of_typed_term env t in
       Abs (name, t)
   | UntypedTree.App (f, x) ->
-      let f = of_typed_term gamma f in
-      let x = of_typed_term gamma x in
+      let f = of_typed_term env f in
+      let x = of_typed_term env x in
       let name_x = create_fresh_name () in
       let name_f = create_fresh_name () in
       Let (name_x, x, Let (name_f, f, App (name_f, name_x)))
   | UntypedTree.Val name ->
-      Val (get_name name gamma)
+      Val (get_name name env)
   | UntypedTree.Var (idx, len) ->
       create_dyn_functions
         (fun params -> Datatype (Some idx, params))
         len
   | UntypedTree.PatternMatching (t, results, default, patterns) ->
-      let t = of_typed_term gamma t in
+      let t = of_typed_term env t in
       let name = create_fresh_name () in
-      let results = of_results gamma name results in
+      let results = of_results env name results in
       let patterns = of_patterns patterns in
-      let default = of_typed_term gamma default in
+      let default = of_typed_term env default in
       let pat = PatternMatching (name, results, default, patterns) in
       Let (name, t, pat)
   | UntypedTree.Try (t, branches) ->
-      let t = of_typed_term gamma t in
+      let t = of_typed_term env t in
       let name = create_fresh_name () in
-      let t' = of_try_pattern gamma name branches in
+      let t' = of_try_pattern env name branches in
       Try (t, (name, t'))
   | UntypedTree.Let (name, t, xs) ->
-      let t = of_typed_term gamma t in
-      let (name, gamma) = gamma_add name gamma in
-      let xs = of_typed_term gamma xs in
+      let t = of_typed_term env t in
+      let (name, env) = env_add name env in
+      let xs = of_typed_term env xs in
       Let (name, t, xs)
   | UntypedTree.LetRec (name, t, xs) ->
-      let (name, gamma) = gamma_add name gamma in
-      let t = of_typed_term gamma t in
-      let xs = of_typed_term gamma xs in
+      let (name, env) = env_add name env in
+      let t = of_typed_term env t in
+      let xs = of_typed_term env xs in
       LetRec (name, t, xs)
   | UntypedTree.Fail (name, args) ->
-      of_args gamma (fun names -> Fail (name, names)) args
+      of_args env (fun names -> Fail (name, names)) args
   | UntypedTree.RecordGet (t, n) ->
       let name = create_fresh_name () in
-      let t = of_typed_term gamma t in
+      let t = of_typed_term env t in
       Let (name, t, RecordGet (name, n))
   | UntypedTree.RecordCreate fields ->
-      of_args gamma (fun names -> (Datatype (None, names))) fields
+      of_args env (fun names -> (Datatype (None, names))) fields
   | UntypedTree.Const const ->
       Const const
   | UntypedTree.Unreachable ->
@@ -177,28 +177,28 @@ let create_dyn_functions cname (ret, args) =
       let t = aux [(ty, name)] 1 args in
       Abs (name, t)
 
-let gamma_add mset name gamma =
-  let mset = GammaSet.MValue.remove mset name in
-  let (name', linkage) = match GammaSet.MValue.count mset name with
+let env_add mset name env =
+  let mset = EnvSet.MValue.remove mset name in
+  let (name', linkage) = match EnvSet.MValue.count mset name with
     | 0 -> (name, Public)
     | n -> (Ident.Name.unique name n, Private)
   in
   let id = LIdent.create (Ident.Name.to_string name') in
-  let gamma = GammaMap.Value.add name id gamma in
-  (id, mset, gamma, linkage)
+  let env = EnvMap.Value.add name id env in
+  (id, mset, env, linkage)
 
-let rec of_typed_tree mset gamma = function
+let rec of_typed_tree mset env = function
   | UntypedTree.Value (name, t) :: xs ->
-      let t = of_typed_term gamma t in
-      let (name, mset, gamma, linkage) = gamma_add mset name gamma in
-      let xs = of_typed_tree mset gamma xs in
+      let t = of_typed_term env t in
+      let (name, mset, env, linkage) = env_add mset name env in
+      let xs = of_typed_tree mset env xs in
       Value (name, t, linkage) :: xs
   | UntypedTree.Foreign (cname, name, ty) :: xs ->
-      let (name, mset, gamma, linkage) = gamma_add mset name gamma in
-      let xs = of_typed_tree mset gamma xs in
+      let (name, mset, env, linkage) = env_add mset name env in
+      let xs = of_typed_tree mset env xs in
       Value (name, create_dyn_functions cname ty, linkage) :: xs
   | UntypedTree.Exception name :: xs ->
-      let xs = of_typed_tree mset gamma xs in
+      let xs = of_typed_tree mset env xs in
       Exception name :: xs
   | UntypedTree.Instance (name, values) :: xs ->
       (* TODO: Improve *)
@@ -208,7 +208,7 @@ let rec of_typed_tree mset gamma = function
         List.fold_right aux values (UntypedTree.RecordCreate fields)
       in
       let xs = UntypedTree.Value (name, values) :: xs in
-      of_typed_tree mset gamma xs
+      of_typed_tree mset env xs
   | [] ->
       []
 
@@ -216,13 +216,13 @@ let rec scan mset = function
   | UntypedTree.Value (name, _) :: xs
   | UntypedTree.Foreign (_, name, _) :: xs
   | UntypedTree.Instance (name, _) :: xs ->
-      scan (GammaSet.MValue.add mset name) xs
+      scan (EnvSet.MValue.add mset name) xs
   | UntypedTree.Exception _ :: xs ->
       scan mset xs
   | [] ->
       mset
 
-let of_typed_tree gamma top =
-  let mset = scan GammaSet.MValue.empty top in
-  let gamma = Gamma.get_untyped_values gamma in
-  of_typed_tree mset gamma top
+let of_typed_tree env top =
+  let mset = scan EnvSet.MValue.empty top in
+  let env = Env.get_untyped_values env in
+  of_typed_tree mset env top

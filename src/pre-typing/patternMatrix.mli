@@ -21,9 +21,9 @@ type pattern = private
 type matrix = (pattern list * code_index) list
 
 val create :
-  Gamma.t ->
+  Env.t ->
   Types.t ->
   DesugaredTree.pattern ->
-  (mconstr * Gamma.t)
+  (mconstr * Env.t)
 
 val split : 'a t -> (matrix * ((var * name) list * 'a) list)

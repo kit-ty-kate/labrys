@@ -4,6 +4,6 @@
 val compile :
   current_module:Module.t ->
   <lib_dir : string; ..> ->
-  Gamma.t ->
+  Env.t ->
   InterfaceTree.t list ->
-  Gamma.t
+  Env.t

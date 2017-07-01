@@ -16,7 +16,6 @@
   * What about typeclasses and coercion arrow ?
 * Remove PatternMatching if List.length args = 1
 * Remove Rec
-* Rename Gamma --> Env
 * Create a new compilation phase: FirstOrderTree
   * Abs (name * {fv} * t) --> Value (fresh, Abs (name * {fv} * t))
   * Datatype [c1 .. cn] --> ConstAlloc [c1 .. cn]

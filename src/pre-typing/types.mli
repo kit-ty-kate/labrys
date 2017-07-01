@@ -13,14 +13,14 @@ type visibility = PrivateTypes.visibility =
 val of_parse_tree_kind :
   pure_arrow:[< `Allow | `Partial | `Forbid] ->
   <lib_dir : string; ..> ->
-  Gamma.t ->
+  Env.t ->
   DesugaredTree.ty ->
   (t * Kinds.t)
 
 val of_parse_tree :
   pure_arrow:[< `Allow | `Partial | `Forbid] ->
   <lib_dir : string; ..> ->
-  Gamma.t ->
+  Env.t ->
   DesugaredTree.ty ->
   t
 
@@ -76,6 +76,6 @@ val extract_filled_tyclasses :
 
 val forall : tyvar_name * Kinds.t * t -> t
 val tyclass :
-  (Ident.TyClass.t * Kinds.t GammaMap.TypeVar.t * PrivateTypes.t list) * PrivateTypes.effects * t ->
+  (Ident.TyClass.t * Kinds.t EnvMap.TypeVar.t * PrivateTypes.t list) * PrivateTypes.effects * t ->
   t
-val ty : loc:Location.t -> Gamma.t -> Ident.Type.t -> t
+val ty : loc:Location.t -> Env.t -> Ident.Type.t -> t

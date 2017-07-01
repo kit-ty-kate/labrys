@@ -3,9 +3,9 @@
 
 val check :
   modul:Module.t ->
-  interface:Gamma.t ->
+  interface:Env.t ->
   with_main:bool ->
   <lib_dir : string; ..> ->
-  Gamma.t ->
+  Env.t ->
   PretypedTree.top list ->
   UntypedTree.top list

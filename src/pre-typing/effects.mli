@@ -7,7 +7,7 @@ val empty : t
 
 val of_list :
   <lib_dir : string; ..> ->
-  Gamma.t ->
+  Env.t ->
   DesugaredTree.effects ->
   t
 
@@ -44,4 +44,4 @@ val unify_tyclass :
   eff_x:t ->
   (Ident.TypeVar.t * PrivateTypes.t) list (* TODO: replace by a Set *)
 
-val contains_free_tyvars : GammaSet.TypeVar.t -> t -> bool
+val contains_free_tyvars : EnvSet.TypeVar.t -> t -> bool

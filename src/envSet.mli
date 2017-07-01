@@ -3,7 +3,7 @@
 
 module Value : Utils.EQSET with type elt = Ident.Name.t
 
-module TypeVar = GammaMap.TypeVar.Set
+module TypeVar = EnvMap.TypeVar.Set
 
 module MValue : CCMultiSet.S with type elt = Ident.Name.t
 

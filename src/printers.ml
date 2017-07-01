@@ -1224,7 +1224,7 @@ module OptimizedTree = struct
     let aux acc _ name =
       fmt "%s %s" acc (dump_name name)
     in
-    GammaSet.MIDValue.fold free_vars "Ø" aux
+    EnvSet.MIDValue.fold free_vars "Ø" aux
 
   let dump_args_ty l =
     let aux = function

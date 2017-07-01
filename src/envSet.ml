@@ -8,7 +8,7 @@ module Value = struct
   include Utils.EqSet(Ident.Name)
 end
 
-module TypeVar = GammaMap.TypeVar.Set
+module TypeVar = EnvMap.TypeVar.Set
 
 module MValue = CCMultiSet.Make (Ident.Name)
 

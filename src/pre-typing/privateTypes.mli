@@ -21,7 +21,7 @@ type t =
   | Eff of effects
   | Fun of (t * effects * t)
   | Forall of (tyvar_name * Kinds.t * t)
-  | TyClass of ((Ident.TyClass.t * Kinds.t GammaMap.TypeVar.t * t list) * effects * t)
+  | TyClass of ((Ident.TyClass.t * Kinds.t EnvMap.TypeVar.t * t list) * effects * t)
   | AbsOnTy of (tyvar_name * Kinds.t * t)
   | AppOnTy of (t * t)
 

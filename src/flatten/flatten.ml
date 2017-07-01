@@ -10,45 +10,45 @@ type value =
   | Name of name
   | Abstr of (name * t)
 
-let rename gamma name =
-  match LIdent.Map.find name gamma with
+let rename env name =
+  match LIdent.Map.find name env with
   | Some (Name name) -> name
   | Some (Abstr _) | None -> name
 
-let rec propagate' gamma = function
+let rec propagate' env = function
   | Abs (name, t) ->
-      let t = propagate gamma t in
+      let t = propagate env t in
       ([], Abs (name, t))
   | Rec (name, t) ->
-      let (lets, t) = propagate' gamma t in
+      let (lets, t) = propagate' env t in
       (lets, Rec (name, t))
   | App (x, y) ->
-      let x = rename gamma x in
-      let y = rename gamma y in
-      begin match LIdent.Map.find x gamma with
-      | Some (Abstr (name, (lets, t))) -> propagate gamma ((name, Val y) :: lets, t)
+      let x = rename env x in
+      let y = rename env y in
+      begin match LIdent.Map.find x env with
+      | Some (Abstr (name, (lets, t))) -> propagate env ((name, Val y) :: lets, t)
       | Some (Name _) | None -> ([], App (x, y))
       end
   | Val name ->
-      let name = rename gamma name in
+      let name = rename env name in
       ([], Val name)
   | Datatype (idx, args) ->
       ([], Datatype (idx, args))
   | CallForeign (name, ret, args) ->
       ([], CallForeign (name, ret, args))
   | PatternMatching (name, branches, default, tree) ->
-      let name = rename gamma name in
-      let branches = List.map (propagate gamma) branches in
-      let default = propagate gamma default in
+      let name = rename env name in
+      let branches = List.map (propagate env) branches in
+      let default = propagate env default in
       ([], PatternMatching (name, branches, default, tree))
   | Fail (name, args) ->
       ([], Fail (name, args))
   | Try (t, (name, t')) ->
-      let t = propagate gamma t in
-      let t' = propagate gamma t' in
+      let t = propagate env t in
+      let t' = propagate env t' in
       ([], Try (t, (name, t')))
   | RecordGet (name, idx) ->
-      let name = rename gamma name in
+      let name = rename env name in
       ([], RecordGet (name, idx))
   | Const c ->
       ([], Const c)
@@ -57,22 +57,22 @@ let rec propagate' gamma = function
   | Reraise name ->
       ([], Reraise name)
 
-and propagate gamma (lets, t) =
-  let rec aux gamma = function
+and propagate env (lets, t) =
+  let rec aux env = function
     | (name, x)::xs ->
-        let (lets1, x) = propagate' gamma x in
-        let gamma = match x with
-          | Val x -> LIdent.Map.add name (Name x) gamma
-          | Abs x -> LIdent.Map.add name (Abstr x) gamma
-          | _ -> gamma
+        let (lets1, x) = propagate' env x in
+        let env = match x with
+          | Val x -> LIdent.Map.add name (Name x) env
+          | Abs x -> LIdent.Map.add name (Abstr x) env
+          | _ -> env
         in
-        let (gamma, lets2) = aux gamma xs in
-        (gamma, lets1 @ [(name, x)] @ lets2)
+        let (env, lets2) = aux env xs in
+        (env, lets1 @ [(name, x)] @ lets2)
     | [] ->
-        (gamma, [])
+        (env, [])
   in
-  let (gamma, lets) = aux gamma lets in
-  let (lets_t, t) = propagate' gamma t in
+  let (env, lets) = aux env lets in
+  let (lets_t, t) = propagate' env t in
   (lets @ lets_t, t)
 
 let rec of_term = function

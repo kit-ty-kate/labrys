@@ -2,14 +2,14 @@
 (* See the LICENSE file at the top-level directory. *)
 
 type t = private
-  { values : PrivateTypes.t GammaMap.Value.t
-  ; variants : (int * PrivateTypes.t * int) GammaMap.Variant.t
-  ; types : PrivateTypes.visibility GammaMap.Types.t
-  ; type_vars : Kinds.t GammaMap.TypeVar.t
-  ; constructors : (Ident.TypeVar.t list * (PrivateTypes.t list * int) GammaMap.Index.t) GammaMap.Constr.t
-  ; exceptions : PrivateTypes.t list GammaMap.Exn.t
-  ; tyclasses : PrivateTypes.class_t GammaMap.TyClass.t
-  ; named_instances : (Ident.TyClass.t * PrivateTypes.t list) GammaMap.Instance.t
+  { values : PrivateTypes.t EnvMap.Value.t
+  ; variants : (int * PrivateTypes.t * int) EnvMap.Variant.t
+  ; types : PrivateTypes.visibility EnvMap.Types.t
+  ; type_vars : Kinds.t EnvMap.TypeVar.t
+  ; constructors : (Ident.TypeVar.t list * (PrivateTypes.t list * int) EnvMap.Index.t) EnvMap.Constr.t
+  ; exceptions : PrivateTypes.t list EnvMap.Exn.t
+  ; tyclasses : PrivateTypes.class_t EnvMap.TyClass.t
+  ; named_instances : (Ident.TyClass.t * PrivateTypes.t list) EnvMap.Instance.t
   }
 
 val empty : t
@@ -29,4 +29,4 @@ val union : t -> t -> t
 
 val is_subset_of : t -> t -> string list
 
-val get_untyped_values : t -> LIdent.t GammaMap.Value.t
+val get_untyped_values : t -> LIdent.t EnvMap.Value.t

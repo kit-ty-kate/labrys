@@ -26,16 +26,16 @@ type pattern =
 type matrix = (pattern list * code_index) list
 
 let create =
-  let rec aux gamma ty' = function
+  let rec aux env ty' = function
     | DesugaredTree.Any name ->
-        let gamma = Gamma.add_value name ty' gamma in
-        (MAny (name, fst (Types.head ty')), gamma)
+        let env = Env.add_value name ty' env in
+        (MAny (name, fst (Types.head ty')), env)
     | DesugaredTree.TyConstr (loc, name, args) ->
         let (head_ty, tail_ty) = Types.head ty' in
-        let constructors = GammaMap.Constr.find head_ty gamma.Gamma.constructors in
+        let constructors = EnvMap.Constr.find head_ty env.Env.constructors in
         let (ty_args, constructors) = Option.get_lazy (fun () -> assert false) constructors in
-        let (tys, _) = GammaMap.Index.find ~head_ty name constructors in
-        let aux (args, tys, gamma) p =
+        let (tys, _) = EnvMap.Index.find ~head_ty name constructors in
+        let aux (args, tys, env) p =
           match tys with
           | [] ->
               Err.fail ~loc "Too many parameters to this type constructor"
@@ -51,14 +51,14 @@ let create =
                 in
                 aux ty (ty_args, tail_ty)
               in
-              let (arg, gamma) = aux gamma ty p in
-              (arg :: args, xs, gamma)
+              let (arg, env) = aux env ty p in
+              (arg :: args, xs, env)
         in
-        let (args, tys, gamma) = List.fold_left aux ([], tys, gamma) args in
+        let (args, tys, env) = List.fold_left aux ([], tys, env) args in
         if not (List.is_empty tys) then
           Err.fail ~loc "Not enough parameters to this type constructor";
         let args = List.rev args in
-        (MConstr ((name, head_ty), args), gamma)
+        (MConstr ((name, head_ty), args), env)
   in
   aux
 

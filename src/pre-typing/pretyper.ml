@@ -6,7 +6,7 @@ open Monomorphic.None
 
 open PretypedTree
 
-module ForbiddenEnv = GammaSet.Value
+module ForbiddenEnv = EnvSet.Value
 
 let rec get_rec_ty ~name (loc, t) = match t with
   | Annot (_, ty) ->

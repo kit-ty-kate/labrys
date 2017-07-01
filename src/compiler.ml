@@ -34,18 +34,18 @@ let rec build_intf options current_module =
   let (mimports, tree) = P.parse_intf () in
   let (mimports, tree) = Builtins.interface ~current_module options mimports tree in
   let mimports = Desugar.create_imports ~current_module options mimports in
-  let (imports, gamma) = build_imports_intf options mimports in
+  let (imports, env) = build_imports_intf options mimports in
   let (imports, tree) =
     Desugar.create_interface ~current_module options mimports imports tree
   in
-  (imports, Interface.compile ~current_module options gamma tree)
+  (imports, Interface.compile ~current_module options env tree)
 
 and build_imports_intf options imports =
-  let aux (imports, gamma) x =
-    let (imports', gamma') = build_intf options x in
-    (Imports.union imports imports', Gamma.union gamma' gamma)
+  let aux (imports, env) x =
+    let (imports', env') = build_intf options x in
+    (Imports.union imports imports', Env.union env' env)
   in
-  List.fold_left aux (Imports.empty, Gamma.empty) imports
+  List.fold_left aux (Imports.empty, Env.empty) imports
 
 let get_parse_tree modul =
   let module P = ParserHandler.Make(struct let get = Module.impl modul end) in
@@ -57,29 +57,29 @@ let get_desugared_tree options modul =
     Builtins.tree ~current_module:modul options mimports parse_tree
   in
   let mimports = Desugar.create_imports ~current_module:modul options mimports in
-  let (imports, gamma) = build_imports_intf options mimports in
+  let (imports, env) = build_imports_intf options mimports in
   let desugared_tree =
     Desugar.create ~current_module:modul options mimports imports parse_tree
   in
-  (mimports, gamma, desugared_tree)
+  (mimports, env, desugared_tree)
 
 let get_pretyped_tree options modul =
-  let (imports, gamma, desugared_tree) = get_desugared_tree options modul in
+  let (imports, env, desugared_tree) = get_desugared_tree options modul in
   let pretyped_tree = Pretyper.pretype desugared_tree in
-  (imports, gamma, pretyped_tree)
+  (imports, env, pretyped_tree)
 
 let get_untyped_tree ~with_main ~interface options modul =
-  let (imports, gamma, pretyped_tree) = get_pretyped_tree options modul in
+  let (imports, env, pretyped_tree) = get_pretyped_tree options modul in
   let typed_tree =
-    TypeChecker.check ~modul ~interface ~with_main options gamma pretyped_tree
+    TypeChecker.check ~modul ~interface ~with_main options env pretyped_tree
   in
-  (imports, gamma, typed_tree)
+  (imports, env, typed_tree)
 
 let get_lambda_tree ~with_main ~interface options modul =
-  let (imports, gamma, typed_tree) =
+  let (imports, env, typed_tree) =
     get_untyped_tree ~with_main ~interface options modul
   in
-  let lambda_tree = Lambda.of_typed_tree gamma typed_tree in
+  let lambda_tree = Lambda.of_typed_tree env typed_tree in
   (imports, lambda_tree)
 
 let get_flatten_tree ~with_main ~interface options modul =
@@ -135,7 +135,7 @@ and compile ?(with_main=false) imports_code interface options modul =
 
 let get_code options modul =
   let (imports_code, code) =
-    compile ~with_main:true Module.Map.empty Gamma.empty options modul
+    compile ~with_main:true Module.Map.empty Env.empty options modul
   in
   prerr_endline (fmt "Linking %s" (Module.to_string modul));
   Backend.link ~main_module_name:modul ~main_module:code imports_code
@@ -151,7 +151,7 @@ let compile_program options modul =
 let compile_module options modul =
   let modul = Module.from_string options modul in
   let (_, _) =
-    compile Module.Map.empty Gamma.empty options modul
+    compile Module.Map.empty Env.empty options modul
   in
   prerr_endline (fmt "Module %s compiled" (Module.to_string modul))
 
@@ -168,28 +168,28 @@ let print_desugared_tree options modul =
 let print_untyped_tree options modul =
   let modul = Module.from_string options modul in
   let (_, _, typed_tree) =
-    get_untyped_tree ~with_main:true ~interface:Gamma.empty options modul
+    get_untyped_tree ~with_main:true ~interface:Env.empty options modul
   in
   print_endline (Printers.UntypedTree.dump typed_tree)
 
 let print_lambda_tree options modul =
   let modul = Module.from_string options modul in
   let (_, lambda_tree) =
-    get_lambda_tree ~with_main:true ~interface:Gamma.empty options modul
+    get_lambda_tree ~with_main:true ~interface:Env.empty options modul
   in
   print_endline (Printers.LambdaTree.dump lambda_tree)
 
 let print_flatten_tree options modul =
   let modul = Module.from_string options modul in
   let (_, flatten_tree) =
-    get_flatten_tree ~with_main:true ~interface:Gamma.empty options modul
+    get_flatten_tree ~with_main:true ~interface:Env.empty options modul
   in
   print_endline (Printers.FlattenTree.dump flatten_tree)
 
 let print_optimized_tree options modul =
   let modul = Module.from_string options modul in
   let (_, optimized_tree) =
-    get_optimized_tree ~with_main:true ~interface:Gamma.empty options modul
+    get_optimized_tree ~with_main:true ~interface:Env.empty options modul
   in
   print_endline (Printers.OptimizedTree.dump optimized_tree)
 

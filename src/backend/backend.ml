@@ -4,7 +4,7 @@
 open Containers
 open Monomorphic.None
 
-module Set = GammaSet.MIDValue
+module Set = EnvSet.MIDValue
 
 module Llvm = struct
   include Llvm
@@ -38,10 +38,10 @@ module Type = struct
   (** Note: jmp_buf is a five word buffer (see the Llvm doc). *)
   let jmp_buf = Llvm.array_type star 5
   let jmp_buf_ptr = Llvm.pointer_type jmp_buf
-  let lambda ~env_size =
-    Llvm.function_type star [|star; closure_ptr env_size; jmp_buf_ptr|]
-  let lambda_ptr ~env_size =
-    Llvm.pointer_type (lambda ~env_size)
+  let lambda ~rt_env_size =
+    Llvm.function_type star [|star; closure_ptr rt_env_size; jmp_buf_ptr|]
+  let lambda_ptr ~rt_env_size =
+    Llvm.pointer_type (lambda ~rt_env_size)
   let init = Llvm.function_type void [|jmp_buf_ptr|]
   let unit_function = Llvm.function_type void [||]
   let main_function = Llvm.function_type i32 [||]
@@ -118,7 +118,7 @@ module Main (I : sig val main_module : Module.t end) = struct
 end
 
 module Make (I : I) = struct
-  type gamma =
+  type env =
     | Value of Llvm.llvalue
     | Env of int
     | RecFun
@@ -146,9 +146,9 @@ module Make (I : I) = struct
 
   let debug_trap = Llvm.declare_function "llvm.debugtrap" Type.unit_function m
 
-  let load_env builder =
-    let env = Llvm.current_param builder 1 in
-    Llvm.build_load env "" builder
+  let load_rt_env builder =
+    let rt_env = Llvm.current_param builder 1 in
+    Llvm.build_load rt_env "" builder
 
   let unreachable builder =
     if I.debug then
@@ -169,48 +169,48 @@ module Make (I : I) = struct
     Llvm.set_linkage Llvm.Linkage.Link_once_odr v;
     v
 
-  let fold_env gamma builder =
-    let aux name value (i, values, gamma) =
+  let fold_rt_env env builder =
+    let aux name value (i, values, env) =
       match value with
       | Value value ->
           let values = value :: values in
-          let gamma = LIdent.Map.add name (Env i) gamma in
-          (succ i, values, gamma)
+          let env = LIdent.Map.add name (Env i) env in
+          (succ i, values, env)
       | Env j ->
-          let env = load_env builder in
-          let value = Llvm.build_extractvalue env j "" builder in
+          let rt_env = load_rt_env builder in
+          let value = Llvm.build_extractvalue rt_env j "" builder in
           let values = value :: values in
-          let gamma = LIdent.Map.add name (Env i) gamma in
-          (succ i, values, gamma)
+          let env = LIdent.Map.add name (Env i) env in
+          (succ i, values, env)
       | RecFun ->
           let value = Llvm.current_param builder 1 in
           let value = Llvm.build_bitcast value Type.star "" builder in
           let values = value :: values in
-          let gamma = LIdent.Map.add name (Env i) gamma in
-          (succ i, values, gamma)
+          let env = LIdent.Map.add name (Env i) env in
+          (succ i, values, env)
       | Global value ->
-          let gamma = LIdent.Map.add name (Global value) gamma in
-          (i, values, gamma)
+          let env = LIdent.Map.add name (Global value) env in
+          (i, values, env)
     in
-    let (_, b, c) = LIdent.Map.fold aux gamma (1, [], LIdent.Map.empty) in
+    let (_, b, c) = LIdent.Map.fold aux env (1, [], LIdent.Map.empty) in
     (List.rev b, c)
 
-  let create_closure ~isrec ~free_vars gamma builder =
-    let gamma = LIdent.Map.filter (fun x _ -> Set.mem free_vars x) gamma in
-    let (values, gamma) = fold_env gamma builder in
-    let env_size = List.length values in
-    let gamma = match isrec with
+  let create_closure ~isrec ~free_vars env builder =
+    let env = LIdent.Map.filter (fun x _ -> Set.mem free_vars x) env in
+    let (values, env) = fold_rt_env env builder in
+    let rt_env_size = List.length values in
+    let env = match isrec with
       | Some rec_name when Set.mem free_vars rec_name ->
-          LIdent.Map.add rec_name RecFun gamma
+          LIdent.Map.add rec_name RecFun env
       | Some _ | None ->
-          gamma
+          env
     in
-    let env_size = succ env_size in
-    let (f, builder') = Llvm.define_function `Private c "__lambda" (Type.lambda ~env_size) m in
+    let rt_env_size = succ rt_env_size in
+    let (f, builder') = Llvm.define_function `Private c "__lambda" (Type.lambda ~rt_env_size) m in
     Llvm.set_linkage Llvm.Linkage.Private f;
     let f = Llvm.build_bitcast f Type.star "" builder in
     let closure = malloc_and_init (f :: values) builder in
-    (builder', closure, gamma)
+    (builder', closure, env)
 
   let get_exn name =
     let name = Ident.Exn.to_string name in
@@ -250,13 +250,13 @@ module Make (I : I) = struct
     unreachable builder;
     (undef, snd (Llvm.create_block c builder))
 
-  let get_value gamma builder name =
-    match LIdent.Map.find name gamma with
+  let get_value env builder name =
+    match LIdent.Map.find name env with
     | Some (Value value) ->
         value
     | Some (Env i) ->
-        let env = load_env builder in
-        Llvm.build_extractvalue env i "" builder
+        let rt_env = load_rt_env builder in
+        Llvm.build_extractvalue rt_env i "" builder
     | Some RecFun ->
         let value = Llvm.current_param builder 1 in
         let value = Llvm.build_bitcast value Type.star "" builder in
@@ -268,25 +268,25 @@ module Make (I : I) = struct
         let extern = Llvm.declare_global Type.star name m in
         Llvm.build_load extern "" builder
 
-  let map_args gamma builder = function
+  let map_args env builder = function
     | [] ->
         [||]
     | args ->
         let aux = function
           | (OptimizedTree.String (), name) ->
-              get_value gamma builder name
+              get_value env builder name
           | (ty, name) ->
               let ty = Llvm.pointer_type (llvm_ty_of_ty ty) in
-              let v = get_value gamma builder name in
+              let v = get_value env builder name in
               Llvm.build_load_cast v ty builder
         in
         Array.of_list (List.map aux args)
 
-  let rec build_if_chain ~default gamma builder value results f term cases =
+  let rec build_if_chain ~default env builder value results f term cases =
     let aux builder (constr, tree) =
       let if_branch =
         let (block, builder) = Llvm.create_block c builder in
-        create_tree' ~default gamma builder value results f tree;
+        create_tree' ~default env builder value results f tree;
         block
       in
       let (else_branch, else_builder) = Llvm.create_block c builder in
@@ -298,7 +298,7 @@ module Make (I : I) = struct
     let builder = List.fold_left aux builder cases in
     Llvm.build_br default builder
 
-  and create_tree' ~default gamma builder value results f = function
+  and create_tree' ~default env builder value results f = function
     | OptimizedTree.Leaf i ->
         let (block, _) = List.nth results i in
         Llvm.build_br block builder
@@ -306,10 +306,10 @@ module Make (I : I) = struct
         let term = llvalue_of_pattern_var value builder var in
         let term = Llvm.build_load_cast term (Type.variant_ptr 1) builder in
         let term = Llvm.build_extractvalue term 0 "" builder in
-        build_if_chain ~default gamma builder value results f term cases
+        build_if_chain ~default env builder value results f term cases
 
-  let create_tree ~default gamma builder value results =
-    let g f tree = create_tree' ~default gamma builder value results f tree in
+  let create_tree ~default env builder value results =
+    let g f tree = create_tree' ~default env builder value results f tree in
     let int_to_ptr i = Llvm.const_inttoptr (Llvm.const_int Type.i32 i) Type.star in
     function
     | OptimizedTree.IdxTree tree -> g int_to_ptr tree
@@ -329,51 +329,51 @@ module Make (I : I) = struct
         let value = Llvm.build_bitcast value Type.star "" builder in
         (value, builder)
 
-  let rec create_result ~jmp_buf ~next_block gamma builder result =
+  let rec create_result ~jmp_buf ~next_block env builder result =
     let (block, builder') = Llvm.create_block c builder in
-    let (v, builder'') = lambda ~jmp_buf gamma builder' result in
+    let (v, builder'') = lambda ~jmp_buf env builder' result in
     Llvm.build_br next_block builder'';
     (block, (v, Llvm.insertion_block builder''))
 
-  and abs ~name t gamma builder =
+  and abs ~name t env builder =
     let param = Llvm.current_param builder 0 in
     let jmp_buf = Llvm.current_param builder 2 in
-    let gamma = LIdent.Map.add name (Value param) gamma in
-    let (v, builder) = lambda ~jmp_buf gamma builder t in
+    let env = LIdent.Map.add name (Value param) env in
+    let (v, builder) = lambda ~jmp_buf env builder t in
     Llvm.build_ret v builder
 
-  and lambda' ~isrec ~jmp_buf gamma builder = function
+  and lambda' ~isrec ~jmp_buf env builder = function
     | OptimizedTree.Abs (name, free_vars, t) ->
-        let (builder', closure, gamma) =
-          create_closure ~isrec ~free_vars gamma builder
+        let (builder', closure, env) =
+          create_closure ~isrec ~free_vars env builder
         in
-        abs ~name t gamma builder';
+        abs ~name t env builder';
         (closure, builder)
     | OptimizedTree.App (f, x) ->
-        let closure = get_value gamma builder f in
-        let x = get_value gamma builder x in
+        let closure = get_value env builder f in
+        let x = get_value env builder x in
         let closure = Llvm.build_bitcast closure (Type.closure_ptr 1) "" builder in
         let f = Llvm.build_load closure "" builder in
         let f = Llvm.build_extractvalue f 0 "" builder in
-        let f = Llvm.build_bitcast f (Type.lambda_ptr ~env_size:1) "" builder in
+        let f = Llvm.build_bitcast f (Type.lambda_ptr ~rt_env_size:1) "" builder in
         (Llvm.build_call f [|x; closure; jmp_buf|] "" builder, builder)
     | OptimizedTree.PatternMatching (t, results, default, tree) ->
-        let t = get_value gamma builder t in
+        let t = get_value env builder t in
         let (next_block, next_builder) = Llvm.create_block c builder in
-        let results = List.map (create_result ~next_block ~jmp_buf gamma builder) results in
+        let results = List.map (create_result ~next_block ~jmp_buf env builder) results in
         let default =
           let (block, builder) = Llvm.create_block c builder in
-          let (_, builder') = lambda ~jmp_buf gamma builder default in
+          let (_, builder') = lambda ~jmp_buf env builder default in
           Llvm.build_unreachable builder';
           block
         in
-        create_tree ~default gamma builder t results tree;
+        create_tree ~default env builder t results tree;
         let results = List.map snd results in
         (Llvm.build_phi results "" next_builder, next_builder)
     | OptimizedTree.Val name ->
-        (get_value gamma builder name, builder)
+        (get_value env builder name, builder)
     | OptimizedTree.Datatype (index, params) ->
-        let values = List.map (get_value gamma builder) params in
+        let values = List.map (get_value env builder) params in
         let values = match index with
           | Some index -> Llvm.const_inttoptr (i32 index) Type.star :: values
           | None -> values
@@ -390,12 +390,12 @@ module Make (I : I) = struct
     | OptimizedTree.CallForeign (name, ret, args) ->
         let ty = Llvm.function_type (ret_type ret) (args_type args) in
         let f = Llvm.declare_function name ty m in
-        let args = map_args gamma builder args in
+        let args = map_args env builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret
     | OptimizedTree.Rec (name, t) ->
-        lambda' ~isrec:(Some name) ~jmp_buf gamma builder t
+        lambda' ~isrec:(Some name) ~jmp_buf env builder t
     | OptimizedTree.Fail (name, args) ->
-        let args = List.map (get_value gamma builder) args in
+        let args = List.map (get_value env builder) args in
         let tag = get_exn name in
         init exn_var Type.exn_glob (tag :: args) builder;
         create_fail jmp_buf builder
@@ -407,7 +407,7 @@ module Make (I : I) = struct
         let cond = Llvm.build_icmp Llvm.Icmp.Eq jmp_res (i32 0) "" builder in
         let (try_result, try_block) =
           let (block, builder) = Llvm.create_block c builder in
-          let (t, builder') = lambda ~jmp_buf:jmp_buf' gamma builder t in
+          let (t, builder') = lambda ~jmp_buf:jmp_buf' env builder t in
           Llvm.build_br next_block builder';
           ((t, Llvm.insertion_block builder'), block)
         in
@@ -417,15 +417,15 @@ module Make (I : I) = struct
           let exn' = Llvm.build_load exn_var "" builder in
           Llvm.build_store exn' exn builder;
           Llvm.build_store (Llvm.undef Type.exn_glob) exn_var builder;
-          let gamma = LIdent.Map.add name (Value exn) gamma in
-          let (t', builder') = lambda ~jmp_buf gamma builder t' in
+          let env = LIdent.Map.add name (Value exn) env in
+          let (t', builder') = lambda ~jmp_buf env builder t' in
           Llvm.build_br next_block builder';
           ((t', Llvm.insertion_block builder'), block)
         in
         Llvm.build_cond_br cond try_block catch_block builder;
         (Llvm.build_phi [try_result; catch_result] "" next_builder, next_builder)
     | OptimizedTree.RecordGet (name, n) ->
-        let t = get_value gamma builder name in
+        let t = get_value env builder name in
         let t = Llvm.build_load_cast t (Type.array_ptr (succ n)) builder in
         (Llvm.build_extractvalue t n "" builder, builder)
     | OptimizedTree.Const const ->
@@ -436,22 +436,22 @@ module Make (I : I) = struct
         unreachable builder;
         (undef, snd (Llvm.create_block c builder))
     | OptimizedTree.Reraise e ->
-        let e = get_value gamma builder e in
+        let e = get_value env builder e in
         let e = Llvm.build_load e "" builder in
         Llvm.build_store e exn_var builder;
         create_fail jmp_buf builder
 
-  and lambda ?isrec ~jmp_buf gamma builder (lets, t) =
-    let rec aux gamma builder = function
+  and lambda ?isrec ~jmp_buf env builder (lets, t) =
+    let rec aux env builder = function
       | (name, x)::xs ->
-          let (t, builder) = lambda' ~isrec ~jmp_buf gamma builder x in
-          let gamma = LIdent.Map.add name (Value t) gamma in
-          aux gamma builder xs
+          let (t, builder) = lambda' ~isrec ~jmp_buf env builder x in
+          let env = LIdent.Map.add name (Value t) env in
+          aux env builder xs
       | [] ->
-          (gamma, builder)
+          (env, builder)
     in
-    let (gamma, builder) = aux gamma builder lets in
-    lambda' ~isrec ~jmp_buf gamma builder t
+    let (env, builder) = aux env builder lets in
+    lambda' ~isrec ~jmp_buf env builder t
 
   let set_linkage v = function
     | OptimizedTree.Private -> Llvm.set_linkage Llvm.Linkage.Private v
@@ -472,12 +472,12 @@ module Make (I : I) = struct
     List.iter aux imports
 
   let make ~imports l =
-    let aux ~jmp_buf gamma builder = function
+    let aux ~jmp_buf env builder = function
       | OptimizedTree.Value (name, t, linkage) ->
           let name' = LIdent.to_string name in
           let global = Llvm.define_global name' null m in
           set_linkage global linkage;
-          let (value, builder) = lambda ~jmp_buf gamma builder t in
+          let (value, builder) = lambda ~jmp_buf env builder t in
           Llvm.build_store value global builder;
           builder
       | OptimizedTree.Exception name ->
@@ -487,9 +487,9 @@ module Make (I : I) = struct
           Llvm.set_global_constant true v;
           builder
       | OptimizedTree.Function (name, (name', t), linkage) ->
-          let (f, builder') = Llvm.define_function `Private c (".." ^ LIdent.to_string name) (Type.lambda ~env_size:0) m in
+          let (f, builder') = Llvm.define_function `Private c (".." ^ LIdent.to_string name) (Type.lambda ~rt_env_size:0) m in
           define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]);
-          abs ~name:name' t gamma builder';
+          abs ~name:name' t env builder';
           builder
     in
     let (f, builder) =

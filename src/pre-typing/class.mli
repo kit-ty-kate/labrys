@@ -14,12 +14,12 @@ val equal : t -> t -> bool
 
 val get_params :
   loc:Location.t ->
-  (Gamma.t -> DesugaredTree.ty -> PrivateTypes.t * Kinds.t) ->
-  Gamma.t ->
-  Kinds.t GammaMap.TypeVar.t ->
+  (Env.t -> DesugaredTree.ty -> PrivateTypes.t * Kinds.t) ->
+  Env.t ->
+  Kinds.t EnvMap.TypeVar.t ->
   DesugaredTree.ty list ->
   t ->
-  (Gamma.t * PrivateTypes.t list)
+  (Env.t * PrivateTypes.t list)
 
 val get_instance_name :
   loc:Location.t ->
