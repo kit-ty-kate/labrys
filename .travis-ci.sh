@@ -15,12 +15,13 @@ sudo apt-get install -qq python-cram
 opam lint
 
 # Install
-opam pin add -y --no-action --kind=git cervoise .
-opam install -y "llvm.${LLVM_VERSION}${LLVM_VERSION_MICRO}" cervoise
+PKG=cervoise
+opam pin add -y --no-action --kind=git $PKG .
+opam install -y "llvm.${LLVM_VERSION}${LLVM_VERSION_MICRO}" $PKG
 
 # Run tests
 make
 make LLVM_VERSION="$LLVM_VERSION" tests
 
 # Uninstall
-opam remove -y cervoise
+opam remove -y $PKG
