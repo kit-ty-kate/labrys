@@ -143,62 +143,62 @@ let get_code options modul =
 let get_optimized_code options modul =
   Backend.optimize options (get_code options modul)
 
-let compile_program options modul =
+let compile_program modul options =
   let modul = Module.from_string options modul in
   let code = get_optimized_code options modul in
   write ~o:options#o code
 
-let compile_module options modul =
+let compile_module modul options =
   let modul = Module.from_string options modul in
   let (_, _) =
     compile Module.Map.empty Env.empty options modul
   in
   prerr_endline (fmt "Module %s compiled" (Module.to_string modul))
 
-let print_parse_tree options modul =
+let print_parse_tree modul options =
   let modul = Module.from_string options modul in
   let (_, parse_tree) = get_parse_tree modul in
   print_endline (Printers.ParseTree.dump parse_tree)
 
-let print_desugared_tree options modul =
+let print_desugared_tree modul options =
   let modul = Module.from_string options modul in
   let (_, _, desugared_tree) = get_desugared_tree options modul in
   print_endline (Printers.DesugaredTree.dump desugared_tree)
 
-let print_untyped_tree options modul =
+let print_untyped_tree modul options =
   let modul = Module.from_string options modul in
   let (_, _, typed_tree) =
     get_untyped_tree ~with_main:true ~interface:Env.empty options modul
   in
   print_endline (Printers.UntypedTree.dump typed_tree)
 
-let print_lambda_tree options modul =
+let print_lambda_tree modul options =
   let modul = Module.from_string options modul in
   let (_, lambda_tree) =
     get_lambda_tree ~with_main:true ~interface:Env.empty options modul
   in
   print_endline (Printers.LambdaTree.dump lambda_tree)
 
-let print_flatten_tree options modul =
+let print_flatten_tree modul options =
   let modul = Module.from_string options modul in
   let (_, flatten_tree) =
     get_flatten_tree ~with_main:true ~interface:Env.empty options modul
   in
   print_endline (Printers.FlattenTree.dump flatten_tree)
 
-let print_optimized_tree options modul =
+let print_optimized_tree modul options =
   let modul = Module.from_string options modul in
   let (_, optimized_tree) =
     get_optimized_tree ~with_main:true ~interface:Env.empty options modul
   in
   print_endline (Printers.OptimizedTree.dump optimized_tree)
 
-let print_early_llvm options modul =
+let print_early_llvm modul options =
   let modul = Module.from_string options modul in
   let code = get_code options modul in
   print_endline (Backend.to_string code)
 
-let print_llvm options modul =
+let print_llvm modul options =
   let modul = Module.from_string options modul in
   let optimized_code = get_optimized_code options modul in
   print_endline (Backend.to_string optimized_code)

@@ -9,15 +9,8 @@ module Arg = Cmdliner.Arg
 
 let ($) = Term.($)
 
-let start f options modul =
-  try f options modul; None with
-  | Err.Exn x -> Some (Err.dump x)
-  | ParserHandler.ParseError x -> Some x
-  | Sys_error x -> Some x
-  | Module.Error x -> Some x
-
-let start_program modul src_dir build_dir lib_dir no_prelude debug lto opt o =
-  let options = object
+let program modul src_dir build_dir lib_dir no_prelude debug lto opt o () =
+  Compiler.compile_program modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
@@ -26,83 +19,74 @@ let start_program modul src_dir build_dir lib_dir no_prelude debug lto opt o =
     method lto = lto
     method opt = opt
     method o = o
-  end in
-  start Compiler.compile_program options modul
+  end)
 
-let start_module modul src_dir build_dir lib_dir no_prelude debug =
-  let options = object
+let modul modul src_dir build_dir lib_dir no_prelude debug () =
+  Compiler.compile_module modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
     method debug = debug
-  end in
-  start Compiler.compile_module options modul
+  end)
 
-let start_print_parse_tree modul src_dir build_dir =
-  let options = object
+let print_parse_tree modul src_dir build_dir () =
+  Compiler.print_parse_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-  end in
-  start Compiler.print_parse_tree options modul
+  end)
 
-let start_print_desugared_tree modul src_dir build_dir lib_dir no_prelude =
-  let options = object
-    method src_dir = src_dir
-    method build_dir = build_dir
-    method lib_dir = lib_dir
-    method no_prelude = no_prelude
-  end in
-  start Compiler.print_desugared_tree options modul
-
-let start_print_untyped_tree modul src_dir build_dir lib_dir no_prelude =
-  let options = object
+let print_desugared_tree modul src_dir build_dir lib_dir no_prelude () =
+  Compiler.print_desugared_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
-  end in
-  start Compiler.print_untyped_tree options modul
+  end)
 
-let start_print_flatten_tree modul src_dir build_dir lib_dir no_prelude =
-  let options = object
+let print_untyped_tree modul src_dir build_dir lib_dir no_prelude () =
+  Compiler.print_untyped_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
-  end in
-  start Compiler.print_flatten_tree options modul
+  end)
 
-let start_print_lambda_tree modul src_dir build_dir lib_dir no_prelude =
-  let options = object
+let print_flatten_tree modul src_dir build_dir lib_dir no_prelude () =
+  Compiler.print_flatten_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
-  end in
-  start Compiler.print_lambda_tree options modul
+  end)
 
-let start_print_optimized_tree modul src_dir build_dir lib_dir no_prelude =
-  let options = object
+let print_lambda_tree modul src_dir build_dir lib_dir no_prelude () =
+  Compiler.print_lambda_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
-  end in
-  start Compiler.print_optimized_tree options modul
+  end)
 
-let start_print_early_llvm modul src_dir build_dir lib_dir no_prelude debug =
-  let options = object
+let print_optimized_tree modul src_dir build_dir lib_dir no_prelude () =
+  Compiler.print_optimized_tree modul (object
+    method src_dir = src_dir
+    method build_dir = build_dir
+    method lib_dir = lib_dir
+    method no_prelude = no_prelude
+  end)
+
+let print_early_llvm modul src_dir build_dir lib_dir no_prelude debug () =
+  Compiler.print_early_llvm modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
     method debug = debug
-  end in
-  start Compiler.print_early_llvm options modul
+  end)
 
-let start_print_llvm modul src_dir build_dir lib_dir no_prelude debug lto opt =
-  let options = object
+let print_llvm modul src_dir build_dir lib_dir no_prelude debug lto opt () =
+  Compiler.print_llvm modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
@@ -110,8 +94,7 @@ let start_print_llvm modul src_dir build_dir lib_dir no_prelude debug lto opt =
     method debug = debug
     method lto = lto
     method opt = opt
-  end in
-  start Compiler.print_llvm options modul
+  end)
 
 let restrained_base args =
   let args = args $ Arg.(required & pos 0 (some string) None & info []) in
@@ -131,65 +114,58 @@ let base_llvm args =
   args
 
 let optimization args =
+  let args = base_llvm args in
   let args = args $ Arg.(value & flag & info ["lto"]) in
   let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
   args
 
-let program =
-  let args = Term.pure start_program in
-  let args = base_llvm args in
+let output args =
   let args = optimization args in
   let args = args $ Arg.(value & opt file "a.out" & info ["o"]) in
+  args
+
+let program =
+  let args = Term.pure program |> output in
   (args, Term.info "build-program")
 
 let library =
-  let args = Term.pure start_module in
-  let args = base_llvm args in
+  let args = Term.pure modul |> base_llvm in
   (args, Term.info "build-module")
 
 let print_parse_tree =
-  let args = Term.pure start_print_parse_tree in
-  let args = restrained_base args in
+  let args = Term.pure print_parse_tree |> restrained_base in
   (args, Term.info "print-parse-tree")
 
 let print_desugared_tree =
-  let args = Term.pure start_print_desugared_tree in
-  let args = base args in
+  let args = Term.pure print_desugared_tree |> base in
   (args, Term.info "print-desugared-tree")
 
 let print_untyped_tree =
-  let args = Term.pure start_print_untyped_tree in
-  let args = base args in
+  let args = Term.pure print_untyped_tree |> base in
   (args, Term.info "print-untyped-tree")
 
 let print_lambda_tree =
-  let args = Term.pure start_print_lambda_tree in
-  let args = base args in
+  let args = Term.pure print_lambda_tree |> base in
   (args, Term.info "print-lambda-tree")
 
 let print_flatten_tree =
-  let args = Term.pure start_print_flatten_tree in
-  let args = base args in
+  let args = Term.pure print_flatten_tree |> base in
   (args, Term.info "print-flatten-tree")
 
 let print_optimized_tree =
-  let args = Term.pure start_print_optimized_tree in
-  let args = base args in
+  let args = Term.pure print_optimized_tree |> base in
   (args, Term.info "print-optimized-tree")
 
 let print_early_llvm =
-  let args = Term.pure start_print_early_llvm in
-  let args = base_llvm args in
+  let args = Term.pure print_early_llvm |> base_llvm in
   (args, Term.info "print-early-llvm")
 
 let print_llvm =
-  let args = Term.pure start_print_llvm in
-  let args = base_llvm args in
-  let args = optimization args in
+  let args = Term.pure print_llvm |> optimization in
   (args, Term.info "print-llvm")
 
 let default_cmd =
-  (Term.pure None, Term.info ~version:Config.version "cervoise")
+  (Term.pure Fun.id, Term.info ~version:Config.version "cervoise")
 
 let cmds =
   [ program
@@ -206,8 +182,14 @@ let cmds =
 
 let () =
   match Term.eval_choice default_cmd cmds with
-  | `Help
-  | `Version
-  | `Ok None -> exit 0
-  | `Ok (Some x) -> prerr_endline x; exit 1
+  | `Help -> ()
+  | `Version -> ()
+  | `Ok f ->
+      begin try f (); exit 0 with
+      | Err.Exn x -> prerr_endline (Err.dump x)
+      | ParserHandler.ParseError x -> prerr_endline x
+      | Sys_error x -> prerr_endline x
+      | Module.Error x -> prerr_endline x
+      end;
+      exit 1
   | `Error _ -> exit 1

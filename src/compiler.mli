@@ -3,13 +3,13 @@
 
 type module_name = string
 
-val compile_program : Options.program -> module_name -> unit
-val compile_module : Options.modul -> module_name -> unit
-val print_parse_tree : Options.print_parse_tree -> module_name -> unit
-val print_desugared_tree : Options.print_desugared_tree -> module_name -> unit
-val print_untyped_tree : Options.print_untyped_tree -> module_name -> unit
-val print_lambda_tree : Options.print_lambda_tree -> module_name -> unit
-val print_flatten_tree : Options.print_optimized_tree -> module_name -> unit
-val print_optimized_tree : Options.print_optimized_tree -> module_name -> unit
-val print_early_llvm : Options.print_early_llvm -> module_name -> unit
-val print_llvm : Options.print_llvm -> module_name -> unit
+val compile_program : module_name -> Options.program -> unit
+val compile_module : module_name -> Options.modul -> unit
+val print_parse_tree : module_name -> Options.print_parse_tree -> unit
+val print_desugared_tree : module_name -> Options.print_desugared_tree -> unit
+val print_untyped_tree : module_name -> Options.print_untyped_tree -> unit
+val print_lambda_tree : module_name -> Options.print_lambda_tree -> unit
+val print_flatten_tree : module_name -> Options.print_optimized_tree -> unit
+val print_optimized_tree : module_name -> Options.print_optimized_tree -> unit
+val print_early_llvm : module_name -> Options.print_early_llvm -> unit
+val print_llvm : module_name -> Options.print_llvm -> unit
