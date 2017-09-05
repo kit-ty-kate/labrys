@@ -1,9 +1,6 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-open Containers
-open Monomorphic.None
-
 type t =
   { values : PrivateTypes.t EnvMap.Value.t
   ; variants : (int * PrivateTypes.t * int) EnvMap.Variant.t

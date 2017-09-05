@@ -26,6 +26,9 @@ true: package(containers)
 true: package(containers.data)
 true: package(monomorphic)
 
+true: open(Monomorphic.None)
+true: open(Containers)
+
 "src": include
 "src/parsing": include
 "src/desugaring": include

@@ -1,9 +1,6 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-open Containers
-open Monomorphic.None
-
 module Exn_set = PrivateTypes.Exn_set
 module Variables = PrivateTypes.Variables
 module Effects = PrivateTypes.Effects

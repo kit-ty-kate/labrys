@@ -1,9 +1,6 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-open Containers
-open Monomorphic.None
-
 let unknown_loc =
   let pos = Location.{pos_lnum = -1; pos_cnum = -1} in
   Location.{loc_start = pos; loc_end = pos; filename = "unknown"}

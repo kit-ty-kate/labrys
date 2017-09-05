@@ -1,16 +1,3 @@
-PKG cmdliner
-PKG pprint
-PKG llvm
-PKG containers
-PKG monomorphic
-PKG re
-PKG msgpack
-PKG uutf
-S src
-S src/*
-B _build/src
-B _build/src/*
-
 PKG ocamlbuild-pkg
 S .
 B _build

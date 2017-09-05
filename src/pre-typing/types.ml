@@ -3,9 +3,6 @@
 
 (* NOTE: Types are in normal form *)
 
-open Containers
-open Monomorphic.None
-
 type name = Ident.Type.t
 type tyvar_name = Ident.TypeVar.t
 

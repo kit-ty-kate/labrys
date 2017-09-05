@@ -1,9 +1,6 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-open Containers
-open Monomorphic.None
-
 type name = Ident.Name.t
 type tyvar_name = Ident.TypeVar.t
 
