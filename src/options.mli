@@ -3,6 +3,7 @@
 
 type file = string
 type directory = string
+type program_name = string
 
 class type restrained_base = object
   method src_dir : directory
@@ -29,6 +30,7 @@ class type program = object
   inherit base_llvm
   inherit optimization
   method o : file
+  method cc : program_name
 end
 
 class type modul = object

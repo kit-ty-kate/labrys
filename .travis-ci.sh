@@ -8,7 +8,7 @@ sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-$
 wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
 sudo apt-get update -qq
 sudo apt-get install -qq cmake
-sudo apt-get install -qq "llvm-$LLVM_VERSION" libgc-dev clang
+sudo apt-get install -qq "llvm-$LLVM_VERSION" libgc-dev
 sudo apt-get install -qq python-cram
 
 # Check OPAM package description

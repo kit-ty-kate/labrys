@@ -9,7 +9,7 @@ module Arg = Cmdliner.Arg
 
 let ($) = Term.($)
 
-let program modul src_dir build_dir lib_dir no_prelude debug lto opt o () =
+let program modul src_dir build_dir lib_dir no_prelude debug lto opt o cc () =
   Compiler.compile_program modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -19,6 +19,7 @@ let program modul src_dir build_dir lib_dir no_prelude debug lto opt o () =
     method lto = lto
     method opt = opt
     method o = o
+    method cc = cc
   end)
 
 let modul modul src_dir build_dir lib_dir no_prelude debug () =
@@ -122,6 +123,7 @@ let optimization args =
 let output args =
   let args = optimization args in
   let args = args $ Arg.(value & opt file "a.out" & info ["o"]) in
+  let args = args $ Arg.(value & opt string "cc" & info ["cc"]) in
   args
 
 let program =

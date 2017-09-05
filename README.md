@@ -4,10 +4,13 @@ The git repository is located at: https://github.com/jpdeplaix/cervoise
 
 [![Build Status](https://travis-ci.org/jpdeplaix/cervoise.png?branch=master)](https://travis-ci.org/jpdeplaix/cervoise)
 
-### Requirements
+### Runtime requirements
 
-* Boehm GC: libgc-dev on debian.
-* Clang
+* Boehm GC: `libgc-dev` on debian.
+* A C compiler: `cc` is used by default
+
+### Build-time requirements
+
 * The latest OPAM and the latest OCaml (https://opam.ocaml.org/)
 * Cram (for tests only)
 * Ott (for building documentation only)
