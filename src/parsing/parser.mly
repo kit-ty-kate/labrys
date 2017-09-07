@@ -354,18 +354,16 @@ patClosed:
       { ParseTree.Any name }
   | name = upperName
       { ParseTree.TyConstr (loc $startpos $endpos, name, []) }
+  | LParen p = pat RParen
+      { p }
 
 patUnclosed:
-  | name = upperName args = patProtected+
+  | name = upperName args = patClosed+
       { ParseTree.TyConstr (loc $startpos $endpos, name, args) }
 
 pat:
   | p = patClosed { p }
   | p = patUnclosed { p }
-
-patProtected:
-  | p = patClosed { p }
-  | LParen p = patUnclosed RParen { p }
 
 letSig:
   | Let name = newLowerName Colon ty = typeExpr
