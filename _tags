@@ -1,6 +1,9 @@
 not "src": -traverse
 not "src": not_hygienic
 
+# NOTE: Uncomment the line below to link statically with the LLVM library
+#true: predicate(llvm.static)
+
 true: use_menhir, explain
 true: safe_string
 true: bin_annot

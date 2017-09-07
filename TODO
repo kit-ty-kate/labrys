@@ -14,7 +14,6 @@
   * Merge type and typevar ??
 * Remove arrow at desugaring
   * What about typeclasses and coercion arrow ?
-* Remove PatternMatching if List.length args = 1
 * Remove Rec
 * Create a new compilation phase: FirstOrderTree
   * Abs (name * {fv} * t) --> Value (fresh, Abs (name * {fv} * t))
@@ -26,10 +25,12 @@
     * If fv is empty then make it constant
 * Clean Printers
   * Add a printer to PretypedTree
+  * Use the new printers as a replacement to the to_string function
 * Fix TODOs
 * Stabilization (unit-tests)
 * Write the Cervoise complete semantics (pretyped-tree)
 * Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
+* Kinds.t --> ParseTree.kind
 
 
 == Short term ==
@@ -50,6 +51,7 @@
 * Add a builtin « fmt » operator that binds sprintf such as « fmt "%s" » has type « {Show a} => a -> String »
 * Typeclasses
   * Allow tyclass constraints in classes & instances (inheritance)
+* Remove PatternMatching if List.length args = 1
 
 
 == Medium term ==
