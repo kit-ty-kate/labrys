@@ -160,7 +160,7 @@ termClosed:
       { (loc $startpos $endpos, ParseTree.UpperVal name) }
   | Match t = term With Pipe? p = separated_nonempty_list(Pipe, pattern) End
       { (loc $startpos $endpos, ParseTree.PatternMatching (t, p)) }
-  | Try t = term With Pipe? p = separated_nonempty_list(Pipe, exn_pattern) End
+  | Try t = term With Pipe? p = separated_nonempty_list(Pipe, pattern) End
       { (loc $startpos $endpos, ParseTree.Try (t, p)) }
   | n = Int
       { (loc $startpos $endpos, ParseTree.Const (ParseTree.Int n)) }
@@ -320,10 +320,6 @@ exceptionValueArgs:
       { x :: xs }
   | x = termClosed
       { [x] }
-
-exn_pattern:
-  | exn = upperName args = newLowerName* Arrow t = term
-      { ((exn, args), t) }
 
 variant:
   | name = newUpperName tys = typeExprClosed*

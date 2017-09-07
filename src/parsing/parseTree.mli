@@ -74,7 +74,7 @@ and t' =
   | PatternMatching of (t * (pattern * t) list)
   | Let of (value * t)
   | Fail of (ty * (upper_name * t list))
-  | Try of (t * ((upper_name * new_lower_name list) * t) list)
+  | Try of (t * (pattern * t) list)
   | Seq of (t * t)
   | Annot of (t * ty_annot)
   | Const of const
