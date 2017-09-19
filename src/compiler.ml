@@ -155,7 +155,7 @@ let compile_module modul options =
 let print_parse_tree modul options =
   let modul = Module.from_string options modul in
   let (_, parse_tree) = get_parse_tree modul in
-  print_endline (Printers.ParseTree.dump parse_tree)
+  print_endline (Utils.string_of_doc (ParseTreePrinter.dump parse_tree))
 
 let print_desugared_tree modul options =
   let modul = Module.from_string options modul in

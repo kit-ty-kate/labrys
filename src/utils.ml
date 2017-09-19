@@ -3,6 +3,11 @@
 
 let fmt = Printf.sprintf
 
+let string_of_doc doc =
+  let buf = Buffer.create 1024 in
+  PPrint.ToBuffer.pretty 0.9 80 buf doc;
+  Buffer.contents buf
+
 let rec string_of_list f = function
   | [] -> ""
   | x::[] -> f x
@@ -252,4 +257,18 @@ module CCIO = struct
 
   let with_out ?mode ?(flags=[Open_wronly; Open_creat; Open_trunc; Open_text]) filename f =
     with_out ?mode ~flags filename f
+end
+
+module PPrint = struct
+  include PPrint
+
+  let check_empty f x y =
+    if x == empty then y
+    else if y == empty then x
+    else f x y
+
+  let str = string
+  let (^^^) = check_empty (fun x y -> x ^^ space ^^ y)
+  let (^/^) = check_empty (^/^)
+  let (^//^) = check_empty (^//^)
 end

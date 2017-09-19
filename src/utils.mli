@@ -1,6 +1,8 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
+val string_of_doc : PPrint.document -> string
+
 val string_of_list : ('a -> string) -> 'a list -> string
 
 val mkdir : string -> unit
@@ -72,3 +74,10 @@ module EqMap (I : EQ) : EQMAP with type key = I.t
 module EqSet (I : EQ) : EQSET with type elt = I.t
 
 module CCIO : module type of CCIO
+
+module PPrint : sig
+  include module type of PPrint
+
+  val str : string -> document
+  val (^^^) : document -> document -> document
+end
