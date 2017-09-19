@@ -279,13 +279,13 @@ tyApp:
 
 kindUnclosed:
   | k1 = kindClosed Arrow k2 = kind
-      { Kinds.KFun (k1, k2) }
+      { ParseTree.KFun (k1, k2) }
 
 kindClosed:
   | Star
-      { Kinds.Star }
+      { ParseTree.KStar }
   | Eff
-      { Kinds.Eff }
+      { ParseTree.KEff }
   | LParen x = kind RParen
       { x }
 

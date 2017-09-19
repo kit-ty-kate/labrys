@@ -11,7 +11,12 @@ type instance_name = Ident.Instance.t
 type module_name = Module.t
 type loc = Location.t
 
-type t_value = (tyvar_name * Kinds.t)
+type kind = ParseTree.kind =
+  | KStar
+  | KEff
+  | KFun of (kind * kind)
+
+type t_value = (tyvar_name * kind)
 
 type effect_name = DesugaredTree.effect_name =
   | EffTy of (t_name * exn_name list)
@@ -75,7 +80,7 @@ type top =
   | Value of (name * t)
   | Type of (t_name * ty)
   | Foreign of (string * name * ty)
-  | Datatype of (t_name * Kinds.t * (tyvar_name * Kinds.t) list * variant list)
+  | Datatype of (t_name * kind * (tyvar_name * kind) list * variant list)
   | Exception of (exn_name * ty list)
   | Class of (tyclass_name * t_value list * (name * ty) list)
   | Instance of (tyclass_instance * instance_name option * (name * t) list)

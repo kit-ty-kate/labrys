@@ -15,19 +15,24 @@ type effects =
   ; exns : Exn_set.t
   }
 
+type kind = PretypedTree.kind =
+  | KStar
+  | KEff
+  | KFun of (kind * kind)
+
 type t =
   | Ty of ty_name
   | TyVar of tyvar_name
   | Eff of effects
   | Fun of (t * effects * t)
-  | Forall of (tyvar_name * Kinds.t * t)
-  | TyClass of ((Ident.TyClass.t * Kinds.t EnvMap.TypeVar.t * t list) * effects * t)
-  | AbsOnTy of (tyvar_name * Kinds.t * t)
+  | Forall of (tyvar_name * kind * t)
+  | TyClass of ((Ident.TyClass.t * kind EnvMap.TypeVar.t * t list) * effects * t)
+  | AbsOnTy of (tyvar_name * kind * t)
   | AppOnTy of (t * t)
 
 type visibility =
-  | Abstract of Kinds.t
-  | Alias of (t * Kinds.t)
+  | Abstract of kind
+  | Alias of (t * kind)
 
 let fmt = Printf.sprintf
 
@@ -71,6 +76,14 @@ let eff_replace ~from ~ty self =
   in
   Variables.fold aux self.variables self
 
+let rec kind_equal x y = match x, y with
+  | KEff, KEff
+  | KStar, KStar -> true
+  | KFun (p1, r1), KFun (p2, r2) -> kind_equal p1 p2 && kind_equal r1 r2
+  | KStar, _
+  | KFun _, _
+  | KEff, _ -> false
+
 let ty_is_subset_of' eq_list x y =
   let rec aux eq_list = function
     | Ty x, Ty x' ->
@@ -87,9 +100,9 @@ let ty_is_subset_of' eq_list x y =
         && aux eq_list (res, res')
     | AppOnTy (f, x), AppOnTy (f', x') ->
         aux eq_list (f, f') && aux eq_list (x, x')
-    | AbsOnTy (name1, k1, t), AbsOnTy (name2, k2, t') when Kinds.equal k1 k2 ->
+    | AbsOnTy (name1, k1, t), AbsOnTy (name2, k2, t') when kind_equal k1 k2 ->
         aux ((name1, name2) :: eq_list) (t, t')
-    | Forall (name1, k1, t), Forall (name2, k2, t') when Kinds.equal k1 k2 ->
+    | Forall (name1, k1, t), Forall (name2, k2, t') when kind_equal k1 k2 ->
         aux ((name1, name2) :: eq_list) (t, t')
     | TyClass ((name1, tyvars1, args1), eff1, t), TyClass ((name2, tyvars2, args2), eff2, t') ->
         begin try
@@ -177,13 +190,13 @@ let rec ty_to_string =
   | Fun (x, eff, ret) ->
       fmt "(%s) -%s-> %s" (ty_to_string x) (eff_to_string eff) (ty_to_string ret)
   | Forall (x, k, t) ->
-      fmt "forall %s : %s. %s" (Ident.TypeVar.to_string x) (Kinds.to_string k) (ty_to_string t)
+      fmt "forall %s : %s. %s" (Ident.TypeVar.to_string x) (Utils.string_of_doc (ParseTreePrinter.dump_kind k)) (ty_to_string t)
   | TyClass ((name, _, args), eff, t) when eff_is_empty eff -> (* TODO: Display tyvars ? *)
       fmt "{%s %s} => %s" (Ident.TyClass.to_string name) (tyclass_args_to_string args) (ty_to_string t)
   | TyClass ((name, _, args), eff, t) -> (* TODO: Display tyvars ? *)
       fmt "{%s %s} =%s=> %s" (Ident.TyClass.to_string name) (tyclass_args_to_string args) (eff_to_string eff) (ty_to_string t)
   | AbsOnTy (name, k, t) ->
-      fmt "λ%s : %s. %s" (Ident.TypeVar.to_string name) (Kinds.to_string k) (ty_to_string t)
+      fmt "λ%s : %s. %s" (Ident.TypeVar.to_string name) (Utils.string_of_doc (ParseTreePrinter.dump_kind k)) (ty_to_string t)
   | AppOnTy (Ty f, Ty x) -> fmt "%s %s" (Ident.Type.to_string f) (Ident.Type.to_string x)
   | AppOnTy (Ty f, x) -> fmt "%s (%s)" (Ident.Type.to_string f) (ty_to_string x)
   | AppOnTy (f, Ty x) -> fmt "(%s) %s" (ty_to_string f) (Ident.Type.to_string x)
@@ -231,14 +244,14 @@ module Instances = Utils.EqMap(struct
 
 (* TODO: Handle contraints *)
 type class_t =
-  { params : (tyvar_name * Kinds.t) list
+  { params : (tyvar_name * kind) list
   ; signature : (name * t) list
   ; instances : name Instances.t
   }
 
 let params_equal (name1, k1) (name2, k2) =
   (* TODO: Do not test typevar equality *)
-  Ident.TypeVar.equal name1 name2 && Kinds.equal k1 k2
+  Ident.TypeVar.equal name1 name2 && kind_equal k1 k2
 
 let signature_equal (name1, ty1) (name2, ty2) =
   Ident.Name.equal name1 name2
@@ -248,3 +261,23 @@ let class_equal a b =
   List.equal params_equal a.params b.params
   && List.equal signature_equal a.signature b.signature
   && Instances.equal Ident.Name.equal a.instances b.instances
+
+let kind_is_star = function
+  | KStar -> true
+  | KFun _ | KEff -> false
+
+let kind_is_effect = function
+  | KEff -> true
+  | KStar | KFun _ -> false
+
+module Err = struct
+  let kind ~loc ~has ~expected =
+    let open Utils.PPrint in
+    Err.fail_doc
+      ~loc
+      (str "Error:" ^//^ str "This type has kind" ^^^
+       squotes (ParseTreePrinter.dump_kind has) ^^^
+       str "but a type was expected of kind" ^^^
+       squotes (ParseTreePrinter.dump_kind expected) ^^
+       dot)
+end

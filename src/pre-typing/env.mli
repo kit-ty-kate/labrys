@@ -5,7 +5,7 @@ type t = private
   { values : PrivateTypes.t EnvMap.Value.t
   ; variants : (int * PrivateTypes.t * int) EnvMap.Variant.t
   ; types : PrivateTypes.visibility EnvMap.Types.t
-  ; type_vars : Kinds.t EnvMap.TypeVar.t
+  ; type_vars : PrivateTypes.kind EnvMap.TypeVar.t
   ; constructors : (Ident.TypeVar.t list * (PrivateTypes.t list * int) EnvMap.Index.t) EnvMap.Constr.t
   ; exceptions : PrivateTypes.t list EnvMap.Exn.t
   ; tyclasses : PrivateTypes.class_t EnvMap.TyClass.t
@@ -17,7 +17,7 @@ val empty : t
 val add_value : Ident.Name.t -> PrivateTypes.t -> t -> t
 val add_variant : Ident.Variant.t -> (int * PrivateTypes.t * int) -> t -> t
 val add_type : Ident.Type.t -> PrivateTypes.visibility -> t -> t
-val add_type_var : Ident.TypeVar.t -> Kinds.t -> t -> t
+val add_type_var : Ident.TypeVar.t -> PrivateTypes.kind -> t -> t
 val add_constr : Ident.Type.t -> Ident.Variant.t -> Ident.TypeVar.t list -> (PrivateTypes.t list * int) -> t -> t
 val add_exception : Ident.Exn.t -> PrivateTypes.t list -> t -> t
 val add_tyclass : Ident.TyClass.t -> PrivateTypes.class_t -> t -> t

@@ -79,7 +79,7 @@ let new_lower_name_to_type_var = function
   | (loc, `Underscore) ->
       Builtins.underscore_type_var_loc loc
 
-let desugar_kind = Option.get_or ~default:Kinds.Star
+let desugar_kind = Option.get_or ~default:KStar
 
 let desugar_eff imports (loc, l) =
   let l =
@@ -388,6 +388,10 @@ let desugar_instance_name ~current_module f x = function
   | None ->
       (None, x)
 
+let rec desugar_kind_from_args = function
+  | [] -> KStar
+  | (_, k)::ks -> KFun (desugar_kind k, desugar_kind_from_args ks)
+
 let create ~current_module options mimports =
   let rec aux imports = function
     | ParseTree.Value ((name, ParseTree.NonRec, _) as value) :: xs ->
@@ -416,8 +420,7 @@ let create ~current_module options mimports =
         Datatype (name, kind, [], []) :: aux imports xs
     | ParseTree.Datatype (name, args, variants) :: xs ->
         let imports = Imports.add_type ~export:false name current_module imports in
-        let kind = List.map (fun (_, k) -> desugar_kind k) args in
-        let kind = Kinds.from_list kind in
+        let kind = desugar_kind_from_args args in
         let name = new_upper_name_to_type ~current_module name in
         let args = desugar_variant_args args in
         let imports = import_variants ~export:false ~current_module imports variants in
@@ -483,7 +486,7 @@ let create_interface ~current_module options mimports imports interface =
     | ParseTree.IDatatype (name, args, variants) :: xs ->
         let imports = Imports.add_type ~export:true name current_module imports in
         let local_imports = Imports.add_type ~export:false name current_module local_imports in
-        let kind = Kinds.from_list (List.map (fun (_, k) -> desugar_kind k) args) in
+        let kind = desugar_kind_from_args args in
         let name = new_upper_name_to_type ~current_module name in
         let args = desugar_variant_args args in
         let imports = import_variants ~export:true ~current_module imports variants in

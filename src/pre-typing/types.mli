@@ -5,17 +5,18 @@ type name = Ident.Type.t
 type tyvar_name = Ident.TypeVar.t
 
 type t = PrivateTypes.t
+type kind = PrivateTypes.kind
 
 type visibility = PrivateTypes.visibility =
-  | Abstract of Kinds.t
-  | Alias of (t * Kinds.t)
+  | Abstract of kind
+  | Alias of (t * kind)
 
 val of_parse_tree_kind :
   pure_arrow:[< `Allow | `Partial | `Forbid] ->
   <lib_dir : string; ..> ->
   Env.t ->
   DesugaredTree.ty ->
-  (t * Kinds.t)
+  (t * kind)
 
 val of_parse_tree :
   pure_arrow:[< `Allow | `Partial | `Forbid] ->
@@ -51,7 +52,7 @@ val apply_ty :
   loc_f:Location.t ->
   loc_x:Location.t ->
   ty_x:t ->
-  kind_x:Kinds.t ->
+  kind_x:kind ->
   t ->
   t
 
@@ -68,14 +69,14 @@ val is_fun : t -> bool
 
 val is_unit : <lib_dir : string; ..> -> t -> bool
 
-val tyclass_wrap : Ident.TyClass.t -> (tyvar_name * Kinds.t) list -> t -> t
+val tyclass_wrap : Ident.TyClass.t -> (tyvar_name * kind) list -> t -> t
 
 val extract_filled_tyclasses :
   t ->
   ((Ident.TyClass.t * t list) option list * Effects.t * t)
 
-val forall : tyvar_name * Kinds.t * t -> t
+val forall : tyvar_name * kind * t -> t
 val tyclass :
-  (Ident.TyClass.t * Kinds.t EnvMap.TypeVar.t * PrivateTypes.t list) * PrivateTypes.effects * t ->
+  (Ident.TyClass.t * kind EnvMap.TypeVar.t * PrivateTypes.t list) * PrivateTypes.effects * t ->
   t
 val ty : loc:Location.t -> Env.t -> Ident.Type.t -> t

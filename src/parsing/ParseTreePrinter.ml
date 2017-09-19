@@ -10,9 +10,9 @@ let dump_name = function
   | (_, `LowerName name) | (_, `UpperName name) -> str (String.concat "." name)
 
 let rec dump_kind = function
-  | Kinds.Star -> str "*"
-  | Kinds.Eff -> str "φ"
-  | Kinds.KFun (x, y) -> dump_kind x ^^^ str "->" ^/^ dump_kind y
+  | KStar -> str "*"
+  | KEff -> str "φ"
+  | KFun (x, y) -> dump_kind x ^^^ str "->" ^/^ dump_kind y
 
 let dump_kind_opt = function
   | Some k -> dump_kind k

@@ -9,7 +9,12 @@ type new_upper_name = (loc * [`NewUpperName of string])
 type lower_name = (loc * [`LowerName of string list])
 type upper_name = (loc * [`UpperName of string list])
 
-type ty_arg = (new_lower_name * Kinds.t option)
+type kind =
+  | KStar
+  | KEff
+  | KFun of (kind * kind)
+
+type ty_arg = (new_lower_name * kind option)
 
 type effect_name =
   | EffTy of (upper_name * upper_name list)
@@ -90,7 +95,7 @@ type import =
 type top =
   | Value of value
   | Type of (new_upper_name * ty)
-  | AbstractType of (new_upper_name * Kinds.t option)
+  | AbstractType of (new_upper_name * kind option)
   | Foreign of (char list * new_lower_name * ty)
   | Datatype of (new_upper_name * ty_arg list * variant list)
   | Exception of (new_upper_name * ty list)
@@ -102,7 +107,7 @@ type imports = import list
 
 type interface =
   | IVal of (new_lower_name * ty)
-  | IAbstractType of (new_upper_name * Kinds.t option)
+  | IAbstractType of (new_upper_name * kind option)
   | IDatatype of (new_upper_name * ty_arg list * variant list)
   | ITypeAlias of (new_upper_name * ty)
   | IException of (new_upper_name * ty list)

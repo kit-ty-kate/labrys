@@ -6,7 +6,7 @@ type tyvar_name = Ident.TypeVar.t
 type t = PrivateTypes.class_t
 
 val create :
-  (Ident.TypeVar.t * Kinds.t) list ->
+  (Ident.TypeVar.t * PrivateTypes.kind) list ->
   (Ident.Name.t * PrivateTypes.t) list ->
   t
 
@@ -14,9 +14,9 @@ val equal : t -> t -> bool
 
 val get_params :
   loc:Location.t ->
-  (Env.t -> DesugaredTree.ty -> PrivateTypes.t * Kinds.t) ->
+  (Env.t -> DesugaredTree.ty -> PrivateTypes.t * PrivateTypes.kind) ->
   Env.t ->
-  Kinds.t EnvMap.TypeVar.t ->
+  PrivateTypes.kind EnvMap.TypeVar.t ->
   DesugaredTree.ty list ->
   t ->
   (Env.t * PrivateTypes.t list)
@@ -31,7 +31,7 @@ val get_instance_name :
 val add_instance :
   tyclass:Ident.TyClass.t ->
   current_module:Module.t ->
-  (PrivateTypes.t * Kinds.t) list ->
+  (PrivateTypes.t * PrivateTypes.kind) list ->
   t ->
   (Ident.Name.t * PrivateTypes.t list * t)
 

@@ -5,7 +5,7 @@ type t =
   { values : PrivateTypes.t EnvMap.Value.t
   ; variants : (int * PrivateTypes.t * int) EnvMap.Variant.t
   ; types : PrivateTypes.visibility EnvMap.Types.t
-  ; type_vars : Kinds.t EnvMap.TypeVar.t
+  ; type_vars : PrivateTypes.kind EnvMap.TypeVar.t
   ; constructors : (Ident.TypeVar.t list * (PrivateTypes.t list * int) EnvMap.Index.t) EnvMap.Constr.t
   ; exceptions : PrivateTypes.t list EnvMap.Exn.t
   ; tyclasses : PrivateTypes.class_t EnvMap.TyClass.t
@@ -59,9 +59,9 @@ let union a b =
 let ty_equal x y = match x, y with
   | (PrivateTypes.Abstract k1 | PrivateTypes.Alias (_, k1)), PrivateTypes.Abstract k2
   | PrivateTypes.Abstract k1, PrivateTypes.Alias (_, k2) ->
-      Kinds.equal k1 k2
+      PrivateTypes.kind_equal k1 k2
   | PrivateTypes.Alias (ty1, k1), PrivateTypes.Alias (ty2, k2) ->
-      PrivateTypes.ty_equal ty1 ty2 && Kinds.equal k1 k2
+      PrivateTypes.ty_equal ty1 ty2 && PrivateTypes.kind_equal k1 k2
 
 let variant_equal (idx1, ty1, len1) (idx2, ty2, len2) =
   PrivateTypes.ty_equal ty1 ty2 && Int.equal idx1 idx2 && Int.equal len1 len2

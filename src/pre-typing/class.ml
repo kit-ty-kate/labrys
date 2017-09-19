@@ -8,7 +8,7 @@ module Instances = PrivateTypes.Instances
 
 (* TODO: Handle contraints *)
 type t = PrivateTypes.class_t =
-  { params : (tyvar_name * Kinds.t) list
+  { params : (tyvar_name * PrivateTypes.kind) list
   ; signature : (name * PrivateTypes.t) list
   ; instances : name Instances.t
   }
@@ -29,8 +29,8 @@ let get_params ~loc f env tyvars args self =
     let aux (env, args) (_, k) ty =
       let loc = fst ty in
       let (ty, k') = f env ty in
-      if not (Kinds.equal k k') then
-        Kinds.Err.fail ~loc ~has:k' ~expected:k;
+      if not (PrivateTypes.kind_equal k k') then
+        PrivateTypes.Err.kind ~loc ~has:k' ~expected:k;
       (env, ty :: args)
     in
     let (env, args) =
@@ -58,12 +58,11 @@ let get_instance_name ~loc ~tyclass tys self =
 (* TODO: Improve loc *)
 let add_instance ~tyclass ~current_module tys self =
   let aux (ty, k1) (_, k2) =
-    if not (Kinds.equal k1 k2) then
-      Err.fail
+    if not (PrivateTypes.kind_equal k1 k2) then
+      PrivateTypes.Err.kind
         ~loc:(Ident.TyClass.loc tyclass)
-        "Kinds doesn't match. Has '%s' but expected '%s'"
-        (Kinds.to_string k1)
-        (Kinds.to_string k2);
+        ~has:k1
+        ~expected:k2;
     ty
   in
   let tys = List.map2 aux tys self.params in

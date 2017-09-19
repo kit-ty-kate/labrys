@@ -8,15 +8,16 @@ type exn_name = Ident.Exn.t
 type tyclass_name = Ident.TyClass.t
 type instance_name = Ident.Instance.t
 type ty = DesugaredTree.ty
+type kind = DesugaredTree.kind
 type loc = Location.t
 type variant = DesugaredTree.variant
 type tyclass_instance = DesugaredTree.tyclass_instance
 
 type t =
   | Val of (name * ty)
-  | AbstractType of (t_name * Kinds.t)
-  | Datatype of (t_name * Kinds.t * (tyvar_name * Kinds.t) list * variant list)
+  | AbstractType of (t_name * kind)
+  | Datatype of (t_name * kind * (tyvar_name * kind) list * variant list)
   | TypeAlias of (t_name * ty)
   | Exception of (exn_name * ty list)
-  | Class of (tyclass_name * (tyvar_name * Kinds.t) list * (name * ty) list)
+  | Class of (tyclass_name * (tyvar_name * kind) list * (name * ty) list)
   | Instance of (tyclass_instance * instance_name option)

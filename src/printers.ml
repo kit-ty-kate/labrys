@@ -11,7 +11,8 @@ let dump_t_name = Ident.Type.to_string
 let dump_tyvar_name = Ident.TypeVar.to_string
 let dump_tyclass_name = Ident.TyClass.to_string
 let dump_instance_name = Ident.Instance.to_string
-let dump_k = Kinds.to_string
+
+let dump_k k = Utils.string_of_doc (ParseTreePrinter.dump_kind k)
 
 let rec dump_top f doc = function
   | [] -> doc

@@ -41,7 +41,7 @@ let add options env eff self =
         | (PrivateTypes.Alias (ty, k)) ->
             (k, false, union_ty self ty)
       in
-      if not (Kinds.is_effect k) then
+      if not (PrivateTypes.kind_is_effect k) then
         Err.fail
           ~loc:(Ident.Type.loc name)
           "Only kind φ is accepted here";
@@ -60,7 +60,7 @@ let add options env eff self =
       {self with exns}
   | DesugaredTree.EffTyVar name ->
       let k = EnvMap.TypeVar.find name env.Env.type_vars in
-      if not (Kinds.is_effect k) then
+      if not (PrivateTypes.kind_is_effect k) then
         Err.fail
           ~loc:(Ident.TypeVar.loc name)
           "Only kind φ is accepted here";

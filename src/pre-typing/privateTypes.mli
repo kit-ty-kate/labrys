@@ -15,19 +15,26 @@ type effects =
   ; exns : Exn_set.t
   }
 
+type kind = PretypedTree.kind =
+  | KStar
+  | KEff
+  | KFun of (kind * kind)
+
 type t =
   | Ty of ty_name
   | TyVar of tyvar_name
   | Eff of effects
   | Fun of (t * effects * t)
-  | Forall of (tyvar_name * Kinds.t * t)
-  | TyClass of ((Ident.TyClass.t * Kinds.t EnvMap.TypeVar.t * t list) * effects * t)
-  | AbsOnTy of (tyvar_name * Kinds.t * t)
+  | Forall of (tyvar_name * kind * t)
+  | TyClass of ((Ident.TyClass.t * kind EnvMap.TypeVar.t * t list) * effects * t)
+  | AbsOnTy of (tyvar_name * kind * t)
   | AppOnTy of (t * t)
 
 type visibility =
-  | Abstract of Kinds.t
-  | Alias of (t * Kinds.t)
+  | Abstract of kind
+  | Alias of (t * kind)
+
+val kind_equal : kind -> kind -> bool
 
 val ty_equal : t -> t -> bool
 
@@ -61,9 +68,16 @@ module Instances : Utils.EQMAP with type key = t list
 
 (* TODO: Handle contraints *)
 type class_t =
-  { params : (tyvar_name * Kinds.t) list
+  { params : (tyvar_name * kind) list
   ; signature : (name * t) list
   ; instances : name Instances.t
   }
 
 val class_equal : class_t -> class_t -> bool
+
+val kind_is_star : kind -> bool
+val kind_is_effect : kind -> bool
+
+module Err : sig
+  val kind : loc:Location.t -> has:kind -> expected:kind -> 'a
+end

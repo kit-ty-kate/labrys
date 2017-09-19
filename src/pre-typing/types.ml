@@ -6,19 +6,21 @@
 type name = Ident.Type.t
 type tyvar_name = Ident.TypeVar.t
 
+type kind = PrivateTypes.kind
+
 type t = PrivateTypes.t =
   | Ty of name
   | TyVar of tyvar_name
   | Eff of PrivateTypes.effects
   | Fun of (t * PrivateTypes.effects * t)
-  | Forall of (tyvar_name * Kinds.t * t)
-  | TyClass of ((Ident.TyClass.t * Kinds.t EnvMap.TypeVar.t * t list) * Effects.t * t)
-  | AbsOnTy of (tyvar_name * Kinds.t * t)
+  | Forall of (tyvar_name * kind * t)
+  | TyClass of ((Ident.TyClass.t * kind EnvMap.TypeVar.t * t list) * Effects.t * t)
+  | AbsOnTy of (tyvar_name * kind * t)
   | AppOnTy of (t * t)
 
 type visibility = PrivateTypes.visibility =
-  | Abstract of Kinds.t
-  | Alias of (t * Kinds.t)
+  | Abstract of kind
+  | Alias of (t * kind)
 
 let fail_not_star ~loc x =
   Err.fail ~loc "The type construct '%s' cannot be used with kind /= '*'" x
@@ -48,11 +50,11 @@ let rec of_parse_tree_kind ~pure_arrow options env = function
       let (x, k1) = of_parse_tree_kind ~pure_arrow:pa options env x in
       let eff = handle_effects ~loc options pure_arrow env eff in
       let (y, k2) = of_parse_tree_kind ~pure_arrow options env y in
-      if Kinds.not_star k1 then
+      if not (PrivateTypes.kind_is_star k1) then
         fail_not_star ~loc:loc_x "->";
-      if Kinds.not_star k2 then
+      if not (PrivateTypes.kind_is_star k2) then
         fail_not_star ~loc:loc_y "->";
-      (Fun (x, eff, y), Kinds.Star)
+      (Fun (x, eff, y), PrivateTypes.KStar)
   | (_, DesugaredTree.Ty name) ->
       begin match EnvMap.Types.find name env.Env.types with
       | Alias (ty, k) -> (ty, k) (* TODO: Fix variables if already exist *)
@@ -62,14 +64,14 @@ let rec of_parse_tree_kind ~pure_arrow options env = function
       let k = EnvMap.TypeVar.find name env.Env.type_vars in
       (TyVar name, k)
   | (_, DesugaredTree.Eff effects) ->
-      (Eff (Effects.of_list options env effects), Kinds.Eff)
+      (Eff (Effects.of_list options env effects), PrivateTypes.KEff)
   | (_, DesugaredTree.Forall ((name, k), ret)) ->
       let loc_ret = fst ret in
       let env = Env.add_type_var name k env in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow options env ret in
-      if Kinds.not_star kx then
+      if not (PrivateTypes.kind_is_star kx) then
         fail_not_star ~loc:loc_ret "forall";
-      (Forall (name, k, ret), Kinds.Star)
+      (Forall (name, k, ret), PrivateTypes.KStar)
   | (loc, DesugaredTree.TyClass ((name, tyvars, args), eff, ret)) ->
       let loc_ret = fst ret in
       let (env, tyvars, args) =
@@ -87,27 +89,32 @@ let rec of_parse_tree_kind ~pure_arrow options env = function
       in
       let eff = handle_effects ~loc options pure_arrow env eff in
       let (ret, kx) = of_parse_tree_kind ~pure_arrow options env ret in
-      if Kinds.not_star kx then
+      if not (PrivateTypes.kind_is_star kx) then
         fail_not_star ~loc:loc_ret "forall";
-      (TyClass ((name, tyvars, args), eff, ret), Kinds.Star)
+      (TyClass ((name, tyvars, args), eff, ret), PrivateTypes.KStar)
   | (_, DesugaredTree.AbsOnTy ((name, k), ret)) ->
       let env = Env.add_type_var name k env in
       let (ret, kret) = of_parse_tree_kind ~pure_arrow options env ret in
-      (AbsOnTy (name, k, ret), Kinds.KFun (k, kret))
+      (AbsOnTy (name, k, ret), PrivateTypes.KFun (k, kret))
   | (loc, DesugaredTree.AppOnTy (f, x)) ->
       let (f, kf) = of_parse_tree_kind ~pure_arrow options env f in
       let pa = switch_pure_arrow pure_arrow in
       let (x, kx) = of_parse_tree_kind ~pure_arrow:pa options env x in
       let k =
         match kf with
-        | Kinds.KFun (p, r) when Kinds.equal p kx ->
+        | PrivateTypes.KFun (p, r) when PrivateTypes.kind_equal p kx ->
             r
-        | Kinds.KFun _ | Kinds.Eff | Kinds.Star as k ->
-            Err.fail
+        | PrivateTypes.KFun (expected, _) ->
+            PrivateTypes.Err.kind ~loc ~has:kx ~expected
+        | PrivateTypes.KEff | PrivateTypes.KStar ->
+            let open Utils.PPrint in
+            Err.fail_doc
               ~loc
-              "Kind '%s' can't be applied on '%s'"
-              (Kinds.to_string kx)
-              (Kinds.to_string k)
+              (str "Kind" ^^^
+               squotes (ParseTreePrinter.dump_kind kx) ^^^
+               str "can't be applied on" ^^^
+               squotes (ParseTreePrinter.dump_kind kf) ^^^
+               dot)
       in
       (AppOnTy (f, x), k)
 
@@ -123,7 +130,7 @@ let of_parse_tree_kind ~pure_arrow options env ty =
 let of_parse_tree ~pure_arrow options env ty =
   let (loc, _) = ty in
   let (ty, k) = of_parse_tree_kind ~pure_arrow options env ty in
-  if Kinds.not_star k then
+  if not (PrivateTypes.kind_is_star k) then
     Err.fail ~loc "Values cannot be of kind /= '*'";
   ty
 
@@ -337,10 +344,10 @@ let apply ~loc_f ~loc_x ty_f ty_x =
 
 let apply_ty ~loc_f ~loc_x ~ty_x ~kind_x =
   let rec aux = function
-    | Forall (ty, k, res) when Kinds.equal k kind_x ->
+    | Forall (ty, k, res) when PrivateTypes.kind_equal k kind_x ->
         replace ~from:ty ~ty:ty_x res
     | Forall (_, k, _) ->
-        Kinds.Err.fail ~loc:loc_x ~has:kind_x ~expected:k
+        PrivateTypes.Err.kind ~loc:loc_x ~has:kind_x ~expected:k
     | TyClass (x, eff, res) ->
         TyClass (x, eff, aux res)
     | Fun _ | AppOnTy _ | Ty _ | TyVar _ as ty ->

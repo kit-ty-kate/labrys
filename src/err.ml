@@ -11,6 +11,8 @@ exception Exn of t
 
 let fail ~loc x = Printf.ksprintf (fun x -> raise (Exn (Located (loc, x)))) x
 
+let fail_doc ~loc x = raise (Exn (Located (loc, Utils.string_of_doc x)))
+
 let fail_module x = Printf.ksprintf (fun x -> raise (Exn (Module x))) x
 
 let dump = function
