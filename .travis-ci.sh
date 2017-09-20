@@ -16,6 +16,8 @@ opam lint
 
 # Install
 PKG=cervoise
+opam pin add -y --no-action --kind=git pprint https://github.com/fpottier/pprint#safe_string
+sed -i 's/"-C" "src"//g' ~/.opam/*/overlay/pprint/opam
 opam pin add -y --no-action --kind=git $PKG .
 opam install -y "llvm.${LLVM_VERSION}${LLVM_VERSION_MICRO}" $PKG
 
