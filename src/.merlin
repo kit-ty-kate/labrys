@@ -12,3 +12,4 @@ B ../_build/src
 B ../_build/src/*
 FLG -safe-string
 FLG -open Containers
+FLG -open MonoOpen

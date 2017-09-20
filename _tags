@@ -29,7 +29,7 @@ true: package(containers)
 true: package(containers.data)
 true: package(monomorphic)
 
-true: open(Monomorphic.None)
+not <src/monoOpen.*>: open(MonoOpen)
 true: open(Containers)
 
 "src": include
