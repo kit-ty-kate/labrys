@@ -162,6 +162,11 @@ let print_desugared_tree modul options =
   let (_, _, desugared_tree) = get_desugared_tree options modul in
   print_endline (Utils.string_of_doc (DesugaredTreePrinter.dump desugared_tree))
 
+let print_pretyped_tree modul options =
+  let modul = Module.from_string options modul in
+  let (_, _, pretyped_tree) = get_pretyped_tree options modul in
+  print_endline (Utils.string_of_doc (PretypedTreePrinter.dump pretyped_tree))
+
 let print_untyped_tree modul options =
   let modul = Module.from_string options modul in
   let (_, _, typed_tree) =

@@ -42,6 +42,14 @@ let print_desugared_tree modul src_dir build_dir lib_dir no_prelude () =
     method no_prelude = no_prelude
   end)
 
+let print_pretyped_tree modul src_dir build_dir lib_dir no_prelude () =
+  Compiler.print_pretyped_tree modul (object
+    method src_dir = src_dir
+    method build_dir = build_dir
+    method lib_dir = lib_dir
+    method no_prelude = no_prelude
+  end)
+
 let print_untyped_tree modul src_dir build_dir lib_dir no_prelude () =
   Compiler.print_untyped_tree modul (object
     method src_dir = src_dir
@@ -139,6 +147,10 @@ let print_desugared_tree =
   let args = Term.pure print_desugared_tree |> base in
   (args, Term.info "print-desugared-tree")
 
+let print_pretyped_tree =
+  let args = Term.pure print_pretyped_tree |> base in
+  (args, Term.info "print-pretyped-tree")
+
 let print_untyped_tree =
   let args = Term.pure print_untyped_tree |> base in
   (args, Term.info "print-untyped-tree")
@@ -171,6 +183,7 @@ let cmds =
   ; library
   ; print_parse_tree
   ; print_desugared_tree
+  ; print_pretyped_tree
   ; print_untyped_tree
   ; print_lambda_tree
   ; print_flatten_tree

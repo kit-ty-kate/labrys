@@ -45,6 +45,10 @@ class type print_desugared_tree = object
   inherit base
 end
 
+class type print_pretyped_tree = object
+  inherit base
+end
+
 class type print_untyped_tree = object
   inherit base
 end

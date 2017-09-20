@@ -24,7 +24,6 @@
     * Remove the gamma type
     * If fv is empty then make it constant
 * Clean Printers
-  * Add a printer to PretypedTree
   * Use the new printers as a replacement to the to_string function
 * Fix TODOs
 * Stabilization (unit-tests)
@@ -35,6 +34,7 @@
 
 == Short term ==
 
+* Unite similar printers
 * Prove the soundness of System Fcω using Coq
 * Improve the FFI
   * Allow to pass and return abstract types
