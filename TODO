@@ -30,6 +30,7 @@
 * Stabilization (unit-tests)
 * Write the Cervoise complete semantics (pretyped-tree)
 * Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
+* Have a real custom GC
 
 
 == Short term ==
@@ -86,7 +87,6 @@
 * Pattern-matching over types
   * We could have builtin types that would tell us the current architecture for example
   * To implement that nicely we could add a new kind "Range" that we allow some types to return a range of types
-* Have a real custom GC
 * Type inference
 * Parallelism
 * Concurrency

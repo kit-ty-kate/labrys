@@ -3,6 +3,11 @@
 
 let fmt = Printf.sprintf
 
+let string_of_uchar c =
+  let b = Buffer.create 1 in
+  Uutf.Buffer.add_utf_8 b c;
+  Buffer.contents b
+
 let string_of_doc doc =
   let buf = Buffer.create 1024 in
   PPrint.ToBuffer.pretty 0.9 80 buf doc;

@@ -160,7 +160,7 @@ let print_parse_tree modul options =
 let print_desugared_tree modul options =
   let modul = Module.from_string options modul in
   let (_, _, desugared_tree) = get_desugared_tree options modul in
-  print_endline (Printers.DesugaredTree.dump desugared_tree)
+  print_endline (Utils.string_of_doc (DesugaredTreePrinter.dump desugared_tree))
 
 let print_untyped_tree modul options =
   let modul = Module.from_string options modul in

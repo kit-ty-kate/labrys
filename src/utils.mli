@@ -1,6 +1,8 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
+val string_of_uchar : Uchar.t -> string
+
 val string_of_doc : PPrint.document -> string
 
 val string_of_list : ('a -> string) -> 'a list -> string
