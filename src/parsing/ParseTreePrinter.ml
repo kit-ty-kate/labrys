@@ -22,16 +22,6 @@ let dump_module = function
   | Source name -> dump_name name
   | Library name -> dump_name name
 
-let dump_exn x = separate_map (str " | ") dump_name x
-
-let dump_eff (_, x) =
-  let aux = function
-    | EffTyVar name -> dump_name name
-    | EffTy (name, []) -> dump_name name
-    | EffTy (name, args) -> dump_name name ^^^ brackets (dump_exn args)
-  in
-  separate_map (comma ^^ space) aux x
-
 let dump_forall_arg = function
   | (name, Some k) ->
       parens (dump_name name ^^^ colon ^^^ dump_kind k)
@@ -41,15 +31,16 @@ let dump_forall_arg = function
 let dump_forall_args l = separate_map space dump_forall_arg l
 let dump_ty_args l = separate_map (comma ^^ space) dump_forall_arg l
 
-let dump_fun_eff = function
+let rec dump_tys tys = separate_map space dump_ty tys
+and dump_eff (_, x) = separate_map (comma ^^ space) dump_ty x
+
+and dump_fun_eff = function
   | None -> str "->"
   | Some eff -> str "-[" ^^ dump_eff eff ^^ str "]->"
 
-let dump_tyclass_eff = function
+and dump_tyclass_eff = function
   | None -> str "=>"
   | Some eff -> str "=[" ^^ dump_eff eff ^^ str "]=>"
-
-let rec dump_tys tys = separate_map space dump_ty tys
 
 and dump_tyclass (name, ty_args, args) =
   let name = dump_name name in
@@ -86,7 +77,7 @@ and dump_ty = function
 
 let dump_annot = function
   | (ty, None) -> dump_ty ty
-  | (ty, Some eff) -> brackets (dump_eff eff) ^^^ dump_ty ty
+  | (ty, Some eff) -> dump_ty eff ^^^ sharp ^^^ dump_ty ty
 
 let dump_annot_opt = function
   | None -> empty

@@ -81,21 +81,6 @@ let new_lower_name_to_type_var = function
 
 let desugar_kind = Option.get_or ~default:KStar
 
-let desugar_eff imports (loc, l) =
-  let l =
-    let aux = function
-      | ParseTree.EffTy (name, args) ->
-          let name = upper_name_to_type imports name in
-          let args = List.map (upper_name_to_exn imports) args in
-          EffTy (name, args)
-      | ParseTree.EffTyVar name ->
-          let name = new_lower_name_to_type_var name in
-          EffTyVar name
-    in
-    List.map aux l
-  in
-  (loc, l)
-
 let desugar_t_value (name, k) =
   let name = new_lower_name_to_type_var name in
   let k = desugar_kind k in
@@ -106,6 +91,9 @@ let rec desugar_tyclass imports (name, tyvars, args) =
   let tyvars = List.map desugar_t_value tyvars in
   let args = List.map (desugar_ty imports) args in
   (name, tyvars, args)
+
+and desugar_eff imports (loc, l) =
+  (loc, List.map (desugar_ty imports) l)
 
 and desugar_ty imports = function
   | (loc, ParseTree.Fun (x, eff, y)) ->
@@ -143,7 +131,7 @@ and desugar_tys ~loc ~ty imports f = function
 
 let desugar_annot imports (annot, eff) =
   let annot = desugar_ty imports annot in
-  let eff = Option.map (desugar_eff imports) eff in
+  let eff = Option.map (desugar_ty imports) eff in
   (annot, eff)
 
 let rec desugar_pattern imports = function

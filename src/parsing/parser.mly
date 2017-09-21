@@ -23,6 +23,7 @@
 %token Lambda
 %token Dot
 %token Comma
+%token Hash
 %token Arrow DoubleArrow
 %token LArrowEff RArrowEff
 %token LDoubleArrowEff RDoubleArrowEff
@@ -111,7 +112,7 @@ let_aux:
   | Rec { ParseTree.Rec }
 
 %inline ty_annot(ty):
-  | Colon LBracket LBracket eff = eff RBracket RBracket ty = ty
+  | Colon eff = ty Hash ty = ty
       { (ty, Some eff) }
   | Colon ty = ty
       { (ty, None) }
@@ -293,21 +294,7 @@ kind:
   | x = kindUnclosed { x }
   | x = kindClosed { x }
 
-eff: eff = separated_list(Comma, effectName) { (loc $startpos $endpos, eff) }
-
-effectName:
-  | name = upperName
-      { ParseTree.EffTy (name, []) }
-  | name = newLowerName
-      { ParseTree.EffTyVar name }
-  | name = upperName LBracket args = eff_exn RBracket
-      { ParseTree.EffTy (name, args) }
-
-eff_exn:
-  | name = upperName
-      { [name] }
-  | name = upperName Pipe xs = eff_exn
-      { name :: xs }
+eff: eff = separated_list(Comma, typeExpr) { (loc $startpos $endpos, eff) }
 
 exceptionValue:
   | LParen name = upperName args = exceptionValueArgs RParen

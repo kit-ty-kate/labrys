@@ -35,6 +35,7 @@ rule main = parse
   | '}' { Parser.RBrace }
   | '|' { Parser.Pipe }
   | '*' { Parser.Star }
+  | '#' { Parser.Hash }
   | '!'
   | "φ" { Parser.Eff }
   | '\\'

@@ -5,6 +5,9 @@ open PretypedTree
 
 module ForbiddenEnv = EnvSet.Value
 
+let ty_to_effects ty =
+  (fst ty, [ty])
+
 let rec get_rec_ty ~name (loc, t) = match t with
   | Annot (_, ty) ->
       ty
@@ -13,12 +16,14 @@ let rec get_rec_ty ~name (loc, t) = match t with
       get_rec_ty ~name t
   | Abs ((name, ty), t) ->
       let (ty', eff) = get_rec_ty ~name t in
+      let eff = Option.map ty_to_effects eff in
       ((loc, Fun (ty, eff, ty')), None)
   | TAbs ((tname, k), t) ->
       let (ty', eff) = get_rec_ty ~name t in
       ((loc, Forall ((tname, k), ty')), eff)
   | CAbs ((_, cl), t) ->
       let (ty', eff) = get_rec_ty ~name t in
+      let eff = Option.map ty_to_effects eff in
       ((loc, TyClass (cl, eff, ty')), None)
   | App _ | TApp _ | CApp _
   | Val _ | Var _ | Const _

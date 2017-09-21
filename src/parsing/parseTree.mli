@@ -16,17 +16,13 @@ type kind =
 
 type ty_arg = (new_lower_name * kind option)
 
-type effect_name =
-  | EffTy of (upper_name * upper_name list)
-  | EffTyVar of new_lower_name
-
-type effects = (loc * effect_name list)
-
 type is_rec =
   | Rec
   | NonRec
 
 type tyclass = (upper_name * ty_arg list * ty list)
+
+and effects = (loc * ty list)
 
 and ty' =
   | Fun of (ty * effects option * ty)
@@ -40,7 +36,7 @@ and ty' =
 
 and ty = (loc * ty')
 
-type ty_annot = (ty * effects option)
+type ty_annot = (ty * ty option)
 type v_arg = (new_lower_name * ty)
 
 type pattern =

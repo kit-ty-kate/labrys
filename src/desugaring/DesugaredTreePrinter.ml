@@ -19,29 +19,24 @@ let rec dump_kind = function
 
 let dump_exn x = separate_map (str " | ") dump_exn_name x
 
-let dump_eff (_, x) =
-  let aux = function
-    | EffTyVar name -> dump_tyvar_name name
-    | EffTy (name, []) -> dump_ty_name name
-    | EffTy (name, args) -> dump_ty_name name ^^^ brackets (dump_exn args)
-  in
-  separate_map (comma ^^ space) aux x
-
 let dump_forall_arg (name, k) =
   parens (dump_tyvar_name name ^^^ colon ^^^ dump_kind k)
 
 let dump_forall_args l = separate_map space dump_forall_arg l
 let dump_ty_args l = separate_map (comma ^^ space) dump_forall_arg l
 
-let dump_fun_eff = function
+let rec dump_tys tys = separate_map space dump_ty tys
+
+and dump_eff (_, x) =
+  separate_map (comma ^^ space) dump_ty x
+
+and dump_fun_eff = function
   | None -> str "->"
   | Some eff -> str "-[" ^^ dump_eff eff ^^ str "]->"
 
-let dump_tyclass_eff = function
+and dump_tyclass_eff = function
   | None -> str "=>"
   | Some eff -> str "=[" ^^ dump_eff eff ^^ str "]=>"
-
-let rec dump_tys tys = separate_map space dump_ty tys
 
 and dump_tyclass (name, ty_args, args) =
   let name = dump_tyclass_name name in
@@ -78,7 +73,7 @@ and dump_ty = function
 
 let dump_annot = function
   | (ty, None) -> dump_ty ty
-  | (ty, Some eff) -> brackets (dump_eff eff) ^^^ dump_ty ty
+  | (ty, Some eff) -> dump_ty eff ^^^ sharp ^^^ dump_ty ty
 
 let dump_rec = function
   | true -> str "rec"

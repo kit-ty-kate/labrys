@@ -18,13 +18,9 @@ type kind = ParseTree.kind =
 
 type t_value = (tyvar_name * kind)
 
-type effect_name = DesugaredTree.effect_name =
-  | EffTy of (t_name * exn_name list)
-  | EffTyVar of tyvar_name
-
-type effects = (loc * effect_name list)
-
 type tyclass = (tyclass_name * t_value list * ty list)
+
+and effects = (loc * ty list)
 
 and ty' = DesugaredTree.ty' =
   | Fun of (ty * effects option * ty)
@@ -38,7 +34,7 @@ and ty' = DesugaredTree.ty' =
 
 and ty = (loc * ty')
 
-type ty_annot = (ty * effects option)
+type ty_annot = (ty * ty option)
 type tyclass_instance = (tyclass_name * ty list)
 
 type tyclass_app_arg = DesugaredTree.tyclass_app_arg =
