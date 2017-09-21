@@ -3,8 +3,9 @@
 
 type name = Ident.Name.t
 type exn_name = Ident.Exn.t
+type variant_name = Ident.Variant.t
 type ty_size = int
-type pattern_var = (PatternMatrix.var * name)
+type pattern_var = (int list * name)
 type index = int
 type arity = int
 type length = int
@@ -22,12 +23,25 @@ type foreign_ret_type =
   | Void
   | Alloc of tag_ty
 
+(* TODO: Improve *)
+type constr = (variant_name * index)
+
+(* TODO: Improve *)
+type 'a pattern' =
+  | Node of (int option * ('a * 'a pattern') list)
+  | Leaf of int
+
+(* TODO: Improve *)
+type pattern =
+  | Idx of constr pattern'
+  | Ptr of exn_name pattern'
+
 type t =
   | Abs of (name * t)
   | App of (t * t)
   | Val of name
   | Var of (index * length)
-  | PatternMatching of (t * (pattern_var list * t) list * t * Pattern.t)
+  | PatternMatching of (t * (pattern_var list * t) list * t * pattern)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
   | Fail of (exn_name * t list)

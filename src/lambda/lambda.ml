@@ -8,16 +8,16 @@ let env_add name env =
   (id, EnvMap.Value.add name id env)
 
 let rec of_patterns' f = function
-  | Pattern.Leaf label ->
+  | UntypedTree.Leaf label ->
       Leaf label
-  | Pattern.Node (var, cases) ->
+  | UntypedTree.Node (var, cases) ->
       let aux (constr, tree) = (f constr, of_patterns' f tree) in
       let cases = List.map aux cases in
       Node (var, cases)
 
 let of_patterns = function
-  | Pattern.Idx pat -> IdxTree (of_patterns' snd pat)
-  | Pattern.Ptr pat -> PtrTree (of_patterns' Fun.id pat)
+  | UntypedTree.Idx pat -> IdxTree (of_patterns' snd pat)
+  | UntypedTree.Ptr pat -> PtrTree (of_patterns' Fun.id pat)
 
 let create_dyn_functions f n =
   let rec aux params = function
@@ -43,9 +43,9 @@ let rec of_results env var m =
     let rec aux env t = function
       | (idx, name)::xs ->
           let rec aux' var = function
-            | PatternMatrix.VLeaf ->
+            | [] ->
                 Val var
-            | PatternMatrix.VNode (idx, xs) ->
+            | idx::xs ->
                 let name = create_fresh_name () in
                 let t = aux' name xs in
                 (* NOTE: "succ idx" is here because variants' first element is

@@ -32,8 +32,8 @@ module UntypedTree = struct
     ^^ content
 
   let rec dump_var = function
-    | PatternMatrix.VLeaf -> "VLeaf"
-    | PatternMatrix.VNode (i, var) -> fmt "VNode (%d, %s)" i (dump_var var)
+    | [] -> "VLeaf"
+    | i::var -> fmt "VNode (%d, %s)" i (dump_var var)
 
   let rec dump_cases f cases =
     let aux doc (constr, t) =
@@ -45,19 +45,19 @@ module UntypedTree = struct
     List.fold_left aux PPrint.empty cases
 
   and dump_patterns' f = function
-    | Pattern.Leaf i ->
+    | Leaf i ->
         PPrint.break 1
         ^^ PPrint.OCaml.int i
-    | Pattern.Node (idx, cases) ->
+    | Node (idx, cases) ->
         dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
 
   let dump_patterns = function
-    | Pattern.Idx pat ->
+    | Idx pat ->
         let f (name, index) =
           PPrint.string (fmt "| %s <=> %d ->" (dump_variant_name name) index)
         in
         dump_patterns' f pat
-     | Pattern.Ptr pat ->
+     | Ptr pat ->
          let f name =
            PPrint.string (fmt "| exn %s ->" (dump_exn_name name))
          in
