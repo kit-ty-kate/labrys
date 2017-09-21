@@ -35,7 +35,6 @@ true: open(Containers)
 "src": include
 "src/parsing": include
 "src/desugaring": include
-"src/interface": include
 "src/pre-typing": include
 "src/typing": include
 "src/lambda": include

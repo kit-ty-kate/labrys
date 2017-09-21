@@ -35,7 +35,8 @@ let rec build_intf options current_module =
   let (imports, tree) =
     Desugar.create_interface ~current_module options mimports imports tree
   in
-  (imports, Interface.compile ~current_module options env tree)
+  let tree = Pretyper.pretype_interface tree in
+  (imports, TypeChecker.check_interface ~current_module options env tree)
 
 and build_imports_intf options imports =
   let aux (imports, env) x =

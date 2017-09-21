@@ -477,12 +477,12 @@ let create_interface ~current_module options mimports imports interface =
     | ParseTree.IVal ((name, _) as signature) :: xs ->
         let value = desugar_sig ~current_module local_imports signature in
         let imports = Imports.add_value ~export:true name current_module imports in
-        aux imports local_imports (InterfaceTree.Val value :: acc) xs
+        aux imports local_imports (IVal value :: acc) xs
     | ParseTree.IAbstractType (name, k) :: xs ->
         let imports = Imports.add_type ~export:true name current_module imports in
         let local_imports = Imports.add_type ~export:false name current_module local_imports in
         let name = new_upper_name_to_type ~current_module name in
-        aux imports local_imports (InterfaceTree.AbstractType (name, desugar_kind k) :: acc) xs
+        aux imports local_imports (IAbstractType (name, desugar_kind k) :: acc) xs
     | ParseTree.IDatatype (name, args, variants) :: xs ->
         let imports = Imports.add_type ~export:true name current_module imports in
         let local_imports = Imports.add_type ~export:false name current_module local_imports in
@@ -491,16 +491,16 @@ let create_interface ~current_module options mimports imports interface =
         let args = desugar_variant_args args in
         let imports = import_variants ~export:true ~current_module imports variants in
         let variants = desugar_variants ~current_module local_imports ~datatype:name ~args variants in
-        aux imports local_imports (InterfaceTree.Datatype (name, kind, args, variants) :: acc) xs
+        aux imports local_imports (IDatatype (name, kind, args, variants) :: acc) xs
     | ParseTree.ITypeAlias (name, ty) :: xs ->
         let imports = Imports.add_type ~export:true name current_module imports in
         let local_imports' = Imports.add_type ~export:false name current_module local_imports in
         let name = new_upper_name_to_type ~current_module name in
-        aux imports local_imports' (InterfaceTree.TypeAlias (name, desugar_ty local_imports ty) :: acc) xs
+        aux imports local_imports' (ITypeAlias (name, desugar_ty local_imports ty) :: acc) xs
     | ParseTree.IException (name, tys) :: xs ->
         let imports' = Imports.add_exn ~export:true name current_module imports in
         let name = new_upper_name_to_exn ~current_module name in
-        aux imports' local_imports (InterfaceTree.Exception (name, List.map (desugar_ty local_imports) tys) :: acc) xs
+        aux imports' local_imports (IException (name, List.map (desugar_ty local_imports) tys) :: acc) xs
     | ParseTree.IOpen import :: xs ->
         let (loc, modul', modul) = desugar_open ~current_module options import in
         if not (List.exists (Module.equal modul') mimports) then
@@ -514,7 +514,7 @@ let create_interface ~current_module options mimports imports interface =
         let params = List.map desugar_t_value params in
         let imports = import_sigs ~export:true ~current_module imports sigs in
         let sigs = List.map (desugar_sig ~current_module local_imports) sigs in
-        aux imports local_imports' (InterfaceTree.Class (name, params, sigs) :: acc) xs
+        aux imports local_imports' (IClass (name, params, sigs) :: acc) xs
     | ParseTree.IInstance (tyclass, name) :: xs ->
         (* NOTE: No need to add the name in the interfaces *)
         let tyclass = desugar_instance local_imports tyclass in
@@ -526,7 +526,7 @@ let create_interface ~current_module options mimports imports interface =
           in
           desugar_instance_name ~current_module aux (imports, local_imports) name
         in
-        aux imports local_imports (InterfaceTree.Instance (tyclass, name) :: acc) xs
+        aux imports local_imports (IInstance (tyclass, name) :: acc) xs
     | [] ->
         (imports, acc)
   in

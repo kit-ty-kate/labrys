@@ -21,4 +21,4 @@ val create_interface :
   Module.t list ->
   Imports.t ->
   ParseTree.interface list ->
-  (Imports.t * InterfaceTree.t list)
+  (Imports.t * DesugaredTree.interface list)

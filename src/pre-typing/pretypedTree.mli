@@ -86,3 +86,12 @@ type top =
   | Instance of (tyclass_instance * instance_name option * (name * t) list)
 
 type imports = module_name list
+
+type interface = DesugaredTree.interface =
+  | IVal of (name * ty)
+  | IAbstractType of (t_name * kind)
+  | IDatatype of (t_name * kind * (tyvar_name * kind) list * variant list)
+  | ITypeAlias of (t_name * ty)
+  | IException of (exn_name * ty list)
+  | IClass of (tyclass_name * (tyvar_name * kind) list * (name * ty) list)
+  | IInstance of (tyclass_instance * instance_name option)

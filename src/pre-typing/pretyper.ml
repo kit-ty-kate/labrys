@@ -121,3 +121,6 @@ let pretype_top = function
 
 let pretype top =
   List.map pretype_top top
+
+let pretype_interface =
+  Fun.id

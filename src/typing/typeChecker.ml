@@ -5,3 +5,6 @@ open UntypedTree
 
 let check ~modul ~interface ~with_main options env x =
   assert false
+
+let check_interface ~current_module options env x =
+  assert false
