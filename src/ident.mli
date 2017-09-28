@@ -14,26 +14,11 @@ module Name : sig
   val loc : t -> Location.t
 
   val unique : t -> int -> t
-
-  val prepend_empty : t -> t
 end
 
-module Variant : sig
-  include module type of Name
-
-  val to_name : t -> Name.t
-end
-
+module Constr : module type of Name
 module Type : module type of Name
-
-module TypeVar : module type of Name
-
 module Exn : module type of Name
-
+module TyVar : module type of Name
 module TyClass : module type of Name
-
-module Instance : sig
-  include module type of Name
-
-  val to_name : t -> Name.t
-end
+module Instance : module type of Name

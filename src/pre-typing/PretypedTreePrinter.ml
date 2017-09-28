@@ -6,9 +6,9 @@ open PretypedTree
 
 let dump_name name = str (Ident.Name.to_string name)
 let dump_ty_name name = str (Ident.Type.to_string name)
-let dump_tyvar_name name = str (Ident.TypeVar.to_string name)
+let dump_tyvar_name name = str (Ident.TyVar.to_string name)
 let dump_exn_name name = str (Ident.Exn.to_string name)
-let dump_var_name name = str (Ident.Variant.to_string name)
+let dump_var_name name = str (Ident.Constr.to_string name)
 let dump_tyclass_name name = str (Ident.TyClass.to_string name)
 let dump_inst_name name = str (Ident.Instance.to_string name)
 

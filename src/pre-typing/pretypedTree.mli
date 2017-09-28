@@ -2,10 +2,10 @@
 (* See the LICENSE file at the top-level directory. *)
 
 type name = Ident.Name.t
-type variant_name = Ident.Variant.t
+type constr_name = Ident.Constr.t
 type exn_name = Ident.Exn.t
 type t_name = Ident.Type.t
-type tyvar_name = Ident.TypeVar.t
+type tyvar_name = Ident.TyVar.t
 type tyclass_name = Ident.TyClass.t
 type instance_name = Ident.Instance.t
 type module_name = Module.t
@@ -42,7 +42,7 @@ type tyclass_app_arg = DesugaredTree.tyclass_app_arg =
   | TyClassInstance of tyclass_instance
 
 type pattern = DesugaredTree.pattern =
-  | TyConstr of (loc * variant_name * pattern list)
+  | TyConstr of (loc * constr_name * pattern list)
   | Any of name
 
 type const = DesugaredTree.const =
@@ -59,7 +59,7 @@ type t' =
   | TApp of (t * ty)
   | CApp of (t * tyclass_app_arg)
   | Val of name
-  | Var of variant_name
+  | Var of constr_name
   | PatternMatching of (t * (pattern * t) list)
   | Let of (name * t * t)
   | LetRec of (name * ty * t * t)
@@ -70,7 +70,7 @@ type t' =
 
 and t = (loc * t')
 
-type variant = (variant_name * ty list * ty)
+type variant = (constr_name * ty list * ty)
 
 type top =
   | Value of (name * t)

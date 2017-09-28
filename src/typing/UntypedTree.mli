@@ -3,7 +3,7 @@
 
 type name = Ident.Name.t
 type exn_name = Ident.Exn.t
-type variant_name = Ident.Variant.t
+type constr_name = Ident.Constr.t
 type ty_size = int
 type pattern_var = (int list * name)
 type index = int
@@ -24,7 +24,7 @@ type foreign_ret_type =
   | Alloc of tag_ty
 
 (* TODO: Improve *)
-type constr = (variant_name * index)
+type constr = (constr_name * index)
 
 (* TODO: Improve *)
 type 'a pattern' =

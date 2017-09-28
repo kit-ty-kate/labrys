@@ -7,7 +7,7 @@ let foldl = List.fold_left
 let foldr = List.fold_right
 
 let new_upper_name_to_variant ~current_module (loc, `NewUpperName name) =
-  Ident.Variant.create ~loc current_module name
+  Ident.Constr.create ~loc current_module name
 let new_upper_name_to_type ~current_module (loc, `NewUpperName name) =
   Ident.Type.create ~loc current_module name
 let new_upper_name_to_exn ~current_module (loc, `NewUpperName name) =
@@ -28,7 +28,7 @@ let create_name (type a) imports loc (module Id : ID with type t = a) name =
       | name -> Err.fail ~loc "Unbound identifier %s" (String.concat "." name)
 
 let upper_name_to_variant imports (loc, `UpperName name) =
-  create_name imports.Imports.variants loc (module Ident.Variant) name
+  create_name imports.Imports.variants loc (module Ident.Constr) name
 let upper_name_to_type imports (loc, `UpperName name) =
   create_name imports.Imports.types loc (module Ident.Type) name
 let upper_name_to_exn imports (loc, `UpperName name) =
@@ -69,7 +69,7 @@ let new_lower_name_to_instance ~current_module = function
 
 let new_lower_name_to_type_var = function
   | (loc, `NewLowerName name) ->
-      Ident.TypeVar.local_create ~loc name
+      Ident.TyVar.local_create ~loc name
   | (loc, `Underscore) ->
       Builtins.underscore_type_var_loc loc
 

@@ -5,7 +5,7 @@ let fmt = Printf.sprintf
 let (^^) = PPrint.(^^)
 
 let dump_name = Ident.Name.to_string
-let dump_variant_name = Ident.Variant.to_string
+let dump_variant_name = Ident.Constr.to_string
 let dump_exn_name = Ident.Exn.to_string
 
 let rec dump_top f doc = function
