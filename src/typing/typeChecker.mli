@@ -3,16 +3,16 @@
 
 val check :
   modul:Module.t ->
-  interface:Env.t ->
+  interface:TypedEnv.env ->
   with_main:bool ->
   <lib_dir : string; ..> ->
-  Env.t ->
+  TypedEnv.env ->
   PretypedTree.top list ->
   UntypedTree.top list
 
 val check_interface :
   current_module:Module.t ->
   <lib_dir : string; ..> ->
-  Env.t ->
+  TypedEnv.env ->
   PretypedTree.interface list ->
-  Env.t
+  TypedEnv.env

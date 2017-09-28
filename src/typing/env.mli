@@ -1,6 +1,29 @@
-(* TODO *)
-type t = int
+(* Copyright (c) 2013-2017 The Cervoise developers. *)
+(* See the LICENSE file at the top-level directory. *)
 
-val empty : t
-val union : t -> t -> t
-val get_untyped_values : t -> LIdent.t EnvMap.Value.t
+val empty : TypedEnv.env
+val union : TypedEnv.env -> TypedEnv.env -> TypedEnv.env
+val diff : TypedEnv.env -> TypedEnv.env -> TypedEnv.env
+val get_untyped_values : TypedEnv.env -> LIdent.t EnvMap.Value.t
+
+type add = TypedEnv.env -> TypedEnv.env
+
+val add_toplevel_value : Ident.Name.t -> PretypedTree.ty -> add
+val add_abstract_type : Ident.Type.t -> PretypedTree.kind -> add
+val add_datatype :
+  Ident.Type.t ->
+  PretypedTree.kind ->
+  PretypedTree.t_value list ->
+  PretypedTree.variant list ->
+  add
+val add_type_alias : Ident.Type.t -> PretypedTree.ty -> add
+val add_exception : Ident.Exn.t -> PretypedTree.ty list -> add
+val add_class :
+  Ident.TyClass.t ->
+  PretypedTree.t_value list ->
+  (Ident.Name.t * PretypedTree.ty) list ->
+  add
+val add_instance :
+  PretypedTree.tyclass_instance ->
+  PretypedTree.instance_name option ->
+  add
