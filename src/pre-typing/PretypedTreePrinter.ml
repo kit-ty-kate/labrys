@@ -149,9 +149,8 @@ and dump_cases : type a. (a -> _) -> (a * _) list -> _ = fun f cases ->
   separate_map hardline aux cases
 
 let dump_variants variants =
-  let aux (name, tys, ty) =
-    bar ^^^ dump_var_name name ^^^ separate_map space dump_ty tys ^^^ colon ^^^
-    dump_ty ty
+  let aux (name, ty) =
+    bar ^^^ dump_var_name name ^^^ colon ^^^ dump_ty ty
   in
   separate_map hardline aux variants
 
@@ -183,9 +182,8 @@ let dump_top = function
   | Foreign (cname, name, ty) ->
       str "foreign" ^^^ dump_cname cname ^^^ dump_name name ^^^ colon ^//^
       dump_ty ty
-  | Datatype (name, k, args, variants) ->
-      str "type" ^^^ dump_ty_name name ^^^ dump_forall_args args ^^^ colon ^^^
-      dump_kind k ^^^ equals ^//^
+  | Datatype (name, k, variants) ->
+      str "type" ^^^ dump_ty_name name ^^^ colon ^^^ dump_kind k ^^^ equals ^//^
       dump_variants variants
   | Exception (name, args) ->
       str "exception" ^^^ dump_exn_name name ^^^ dump_tys args

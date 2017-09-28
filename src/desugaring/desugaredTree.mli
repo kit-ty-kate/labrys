@@ -70,13 +70,13 @@ type t' =
 
 and t = (loc * t')
 
-type variant = (constr_name * ty list * ty)
+type variant = (constr_name * ty)
 
 type top =
   | Value of (name * t)
   | Type of (t_name * ty)
   | Foreign of (string * name * ty)
-  | Datatype of (t_name * kind * (tyvar_name * kind) list * variant list)
+  | Datatype of (t_name * kind * variant list)
   | Exception of (exn_name * ty list)
   | Class of (tyclass_name * t_value list * (name * ty) list)
   | Instance of (tyclass_instance * instance_name option * (name * t) list)
@@ -86,7 +86,7 @@ type imports = module_name list
 type interface =
   | IVal of (name * ty)
   | IAbstractType of (t_name * kind)
-  | IDatatype of (t_name * kind * (tyvar_name * kind) list * variant list)
+  | IDatatype of (t_name * kind * variant list)
   | ITypeAlias of (t_name * ty)
   | IException of (exn_name * ty list)
   | IClass of (tyclass_name * (tyvar_name * kind) list * (name * ty) list)

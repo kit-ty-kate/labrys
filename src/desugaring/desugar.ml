@@ -331,7 +331,7 @@ let desugar_variant ~current_module imports ~datatype ~args (name, tys) =
     |> foldr (fun x ty -> (uloc, Fun (x, None, ty))) tys
     |> foldr (fun arg ty -> (uloc, Forall (arg, ty))) args
   in
-  (name, tys, ty)
+  (name, ty)
 
 let desugar_variants ~current_module imports ~datatype ~args =
   List.map (desugar_variant ~current_module imports ~datatype ~args)
@@ -399,7 +399,7 @@ let create ~current_module options mimports =
         let imports = Imports.add_type ~export:false name current_module imports in
         let name = new_upper_name_to_type ~current_module name in
         let kind = desugar_kind kind in
-        Datatype (name, kind, [], []) :: aux imports xs
+        Datatype (name, kind, []) :: aux imports xs
     | ParseTree.Datatype (name, args, variants) :: xs ->
         let imports = Imports.add_type ~export:false name current_module imports in
         let kind = desugar_kind_from_args args in
@@ -407,7 +407,7 @@ let create ~current_module options mimports =
         let args = desugar_variant_args args in
         let imports = import_variants ~export:false ~current_module imports variants in
         let variants = desugar_variants ~current_module imports ~datatype:name ~args variants in
-        Datatype (name, kind, args, variants) :: aux imports xs
+        Datatype (name, kind, variants) :: aux imports xs
     | ParseTree.Exception (name, tys) :: xs ->
         if Int.(List.length tys > Config.max_fail_num_args) then
           Err.fail
@@ -473,7 +473,7 @@ let create_interface ~current_module options mimports imports interface =
         let args = desugar_variant_args args in
         let imports = import_variants ~export:true ~current_module imports variants in
         let variants = desugar_variants ~current_module local_imports ~datatype:name ~args variants in
-        aux imports local_imports (IDatatype (name, kind, args, variants) :: acc) xs
+        aux imports local_imports (IDatatype (name, kind, variants) :: acc) xs
     | ParseTree.ITypeAlias (name, ty) :: xs ->
         let imports = Imports.add_type ~export:true name current_module imports in
         let local_imports' = Imports.add_type ~export:false name current_module local_imports in
