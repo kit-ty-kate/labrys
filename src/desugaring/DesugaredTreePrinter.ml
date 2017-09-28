@@ -17,8 +17,6 @@ let rec dump_kind = function
   | KEff -> str "φ"
   | KFun (x, y) -> dump_kind x ^^^ str "->" ^/^ dump_kind y
 
-let dump_exn x = separate_map (str " | ") dump_exn_name x
-
 let dump_forall_arg (name, k) =
   parens (dump_tyvar_name name ^^^ colon ^^^ dump_kind k)
 

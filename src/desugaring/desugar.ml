@@ -202,7 +202,7 @@ let desugar_const ~loc = function
       let s = desugar_string ~loc s in
       String s
 
-let desugar_try_arg_to_name imports = function
+let desugar_try_arg_to_name = function
   | ParseTree.TyConstr (loc, _, _) ->
       Err.fail ~loc "Full pattern-matching is not supported"
   | ParseTree.Any name ->
@@ -225,9 +225,9 @@ and desugar_pat imports options (pattern, t) =
   (pattern, t)
 
 and desugar_try_pattern imports options = function
-  | (ParseTree.TyConstr (loc, exn, args), t) ->
+  | (ParseTree.TyConstr (_, exn, args), t) ->
       let exn = upper_name_to_exn imports exn in
-      let args = List.map (desugar_try_arg_to_name imports) args in
+      let args = List.map desugar_try_arg_to_name args in
       let t = desugar_t imports options t in
       ((exn, args), t)
   | (ParseTree.Any (loc, _), _) ->
