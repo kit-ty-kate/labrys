@@ -41,21 +41,17 @@ let lower_name_to_value imports (loc, `LowerName name) =
 let lower_name_to_instance imports (loc, `LowerName name) =
   create_name imports.Imports.instances loc (module Ident.Instance) name
 
-let new_lower_name_to_local_value ~allow_underscore = function
+let new_lower_name_to_local_value = function
   | (loc, `NewLowerName name) ->
       Ident.Name.local_create ~loc name
-  | (loc, `Underscore) when allow_underscore ->
-      Builtins.underscore_loc loc
   | (loc, `Underscore) ->
-      Err.fail ~loc "Wildcards are not allowed here"
+      Builtins.underscore_loc loc
 
-let new_lower_name_to_local_instance ~allow_underscore = function
+let new_lower_name_to_local_instance = function
   | (loc, `NewLowerName name) ->
       Ident.Instance.local_create ~loc name
-  | (loc, `Underscore) when allow_underscore ->
-      Builtins.underscore_instance_loc loc
   | (loc, `Underscore) ->
-      Err.fail ~loc "Wildcards are not allowed here"
+      Builtins.underscore_instance_loc loc
 
 let new_lower_name_to_value ~current_module ~allow_underscore = function
   | (loc, `NewLowerName name) ->
@@ -65,11 +61,9 @@ let new_lower_name_to_value ~current_module ~allow_underscore = function
   | (loc, `Underscore) ->
       Err.fail ~loc "Wildcards are not allowed here"
 
-let new_lower_name_to_instance ~current_module ~allow_underscore = function
+let new_lower_name_to_instance ~current_module = function
   | (loc, `NewLowerName name) ->
       Ident.Instance.create ~loc current_module name
-  | (loc, `Underscore) when allow_underscore ->
-      Builtins.underscore_instance_loc loc
   | (loc, `Underscore) ->
       Err.fail ~loc "Wildcards are not allowed here"
 
@@ -140,7 +134,7 @@ let rec desugar_pattern imports = function
       let args = List.map (desugar_pattern imports) args in
       TyConstr (loc, name, args)
   | ParseTree.Any name ->
-      let name = new_lower_name_to_local_value ~allow_underscore:true name in
+      let name = new_lower_name_to_local_value name in
       Any name
 
 let desugar_instance imports (name, tys) =
@@ -212,10 +206,10 @@ let desugar_try_arg_to_name imports = function
   | ParseTree.TyConstr (loc, _, _) ->
       Err.fail ~loc "Full pattern-matching is not supported"
   | ParseTree.Any name ->
-      new_lower_name_to_local_value ~allow_underscore:true name
+      new_lower_name_to_local_value name
 
 let rec desugar_local_value imports options (name, is_rec, t) =
-  let name = new_lower_name_to_local_value ~allow_underscore:true name in
+  let name = new_lower_name_to_local_value name in
   desugar_let imports options name is_rec t
 
 and desugar_let imports options name is_rec (args, x) =
@@ -300,7 +294,7 @@ and desugar_t imports options = function
 and desugar_args imports options args (annot, t) =
   let rec aux = function
     | (loc, ParseTree.VArg (name, ty)) :: xs ->
-        let name = new_lower_name_to_local_value ~allow_underscore:true name in
+        let name = new_lower_name_to_local_value name in
         let ty = desugar_ty imports ty in
         (loc, Abs ((name, ty), aux xs))
     | (loc, ParseTree.TArg t_value) :: xs ->
@@ -313,7 +307,7 @@ and desugar_args imports options args (annot, t) =
         in
         aux ((loc, x) :: xs)
     | (loc, ParseTree.TyClassArg (name, tyclass)) :: xs ->
-        let name = new_lower_name_to_local_instance ~allow_underscore:true name in
+        let name = new_lower_name_to_local_instance name in
         let tyclass = desugar_tyclass imports tyclass in
         (loc, CAbs ((name, tyclass), aux xs))
     | [] ->
@@ -371,7 +365,7 @@ let import_sigs = import_aux Imports.add_value
 let desugar_instance_name ~current_module f x = function
   | Some name ->
       let x = f name x in
-      let name = new_lower_name_to_instance ~current_module ~allow_underscore:false name in
+      let name = new_lower_name_to_instance ~current_module name in
       (Some name, x)
   | None ->
       (None, x)
