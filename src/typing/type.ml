@@ -3,22 +3,87 @@
 
 open TypedEnv
 
-let check ~pure_arrow env x =
-  assert false (* TODO *)
+let trigger_pure_arrow = function
+  | `Partial -> `Forbid
+  | `Allow | `Forbid as x -> x
 
-let check_value ~pure_arrow env x =
-  match check ~pure_arrow env x with
-  | (ty, KStar) ->
-      ty
-  | (_, (KEff | KFun _)) ->
-      Err.fail
-        ~loc:(fst x)
-        "Values cannot have types with a kind different from '*'"
+let add_abstract_type name k env =
+  let types = EnvMap.Type.add name (Abstract k) env.TypedEnv.types in
+  {env with TypedEnv.types}
 
 let rec kind_equal x y = match x, y with
   | KStar, KStar | KEff, KEff -> true
   | KFun (k1, k2), KFun (k1', k2') -> kind_equal k1 k1' && kind_equal k2 k2'
   | KStar, _ | KEff, _ | KFun _, _ -> false
+
+let kind_fail ~loc ~has ~expected =
+  Err.fail_doc
+    ~loc
+    Utils.PPrint.(str "Type has kind" ^^^
+                  squotes (ParseTreePrinter.dump_kind has) ^^^
+                  str "but was expected of kind" ^^^
+                  squotes (ParseTreePrinter.dump_kind expected) ^^^
+                  dot)
+
+let rec eff_check env (_, e) =
+  let aux ty =
+    match check ~pure_arrow:`Forbid env ty with
+    | (ty, KEff) ->
+        ty
+    | (_, (KStar | KFun _ as k)) ->
+        kind_fail ~loc:(fst ty) ~has:k ~expected:KEff
+  in
+  List.map aux e
+
+and eff_arrow_check ~loc ~pure_arrow env e = match e, pure_arrow with
+  | None, (`Allow | `Partial) ->
+      []
+  | None, `Forbid ->
+      (* TODO: Warning ? *)
+      Err.fail ~loc "Pure arrows are forbidden here. If you really want one \
+                     use the explicit syntax '-[]->' instead"
+  | Some e, (`Allow | `Partial | `Forbid) ->
+      eff_check env e
+
+and check ~pure_arrow env = function
+  | (loc, PretypedTree.Fun (t1, e, t2)) ->
+      let t1 = check_value ~pure_arrow:(trigger_pure_arrow pure_arrow) env t1 in
+      let e = eff_arrow_check ~loc ~pure_arrow env e in
+      let t2 = check_value ~pure_arrow env t2 in
+      (Fun (t1, e, t2), KStar)
+  | (_, PretypedTree.Ty name) ->
+      begin match EnvMap.Type.find name env.TypedEnv.types with
+      | Alias (k, ty) -> (TAlias (name, ty), k)
+      | Abstract k | Datatype (k, _) -> (Ty name, k)
+      end
+  | (_, PretypedTree.Eff e) ->
+      (Eff (eff_check env e), KEff)
+  | (_, PretypedTree.Forall ((name, k), t)) ->
+      let env = add_abstract_type name k env in
+      (Forall (name, k, check_value ~pure_arrow env t), KStar)
+  | (_, PretypedTree.TyClass _) ->
+      assert false (* TODO *)
+  | (_, PretypedTree.AbsOnTy ((name, k), t)) ->
+      let env = add_abstract_type name k env in
+      let (t, k') = check ~pure_arrow env t in
+      (Abs (name, k, t), KFun (k, k'))
+  | (loc, PretypedTree.AppOnTy (t1, t2)) ->
+      let (ty2, k2) = check ~pure_arrow env t2 in
+      begin match check ~pure_arrow env t1 with
+      | (ty1, KFun (k1, k1')) when kind_equal k1 k2 -> (App (ty1, ty2), k1')
+      | (_, KFun (k1, _)) -> kind_fail ~loc:(fst t2) ~has:k2 ~expected:k1
+      | (_, KEff) -> Err.fail ~loc "Cannot apply on a type of kind '!'."
+      | (_, KStar) -> Err.fail ~loc "Cannot apply on a type of kind '*'."
+      end
+  | (_, PretypedTree.TyVar _) ->
+      assert false (* TO REMOVE *)
+
+and check_value ~pure_arrow env x =
+  match check ~pure_arrow env x with
+  | (ty, KStar) ->
+      ty
+  | (_, (KEff | KFun _ as k)) ->
+      kind_fail ~loc:(fst x) ~has:k ~expected:KStar
 
 let rec replace a ~by =
   let replace t = replace a ~by t in
