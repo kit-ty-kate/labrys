@@ -3,7 +3,21 @@
 
 type index = int
 
-type ty = unit (* TODO *)
+type kind = PretypedTree.kind =
+  | KStar
+  | KEff
+  | KFun of (kind * kind)
+
+type effects = ty list
+
+and ty =
+  | TAlias of (Ident.Type.t * ty)
+  | Ty of Ident.Type.t
+  | Eff of effects
+  | Fun of (ty * effects * ty)
+  | Forall of (Ident.Type.t * kind * ty)
+  | Abs of (Ident.Type.t * kind * ty)
+  | App of (ty * ty)
 
 type aty =
   | Abstract of PretypedTree.kind

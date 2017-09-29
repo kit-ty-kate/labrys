@@ -11,7 +11,7 @@ type instance_name = Ident.Instance.t
 type module_name = Module.t
 type loc = Location.t
 
-type kind = ParseTree.kind =
+type kind = DesugaredTree.kind =
   | KStar
   | KEff
   | KFun of (kind * kind)
