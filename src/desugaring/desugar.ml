@@ -67,16 +67,16 @@ let new_lower_name_to_instance ~current_module = function
   | (loc, `Underscore) ->
       Err.fail ~loc "Wildcards are not allowed here"
 
-let new_lower_name_to_type_var = function
+let new_lower_name_to_type = function
   | (loc, `NewLowerName name) ->
-      Ident.TyVar.local_create ~loc name
+      Ident.Type.local_create ~loc name
   | (loc, `Underscore) ->
       Builtins.underscore_type_var_loc loc
 
 let desugar_kind = Option.get_or ~default:KStar
 
 let desugar_t_value (name, k) =
-  let name = new_lower_name_to_type_var name in
+  let name = new_lower_name_to_type name in
   let k = desugar_kind k in
   (name, k)
 
@@ -97,8 +97,8 @@ and desugar_ty imports = function
       let name = upper_name_to_type imports name in
       (loc, Ty name)
   | (loc, ParseTree.TyVar name) ->
-      let name = new_lower_name_to_type_var name in
-      (loc, TyVar name)
+      let name = new_lower_name_to_type name in
+      (loc, Ty name)
   | (loc, ParseTree.Eff effects) ->
       let effects = desugar_eff imports effects in
       (loc, Eff effects)
@@ -327,7 +327,7 @@ let desugar_variant ~current_module imports ~datatype ~args (name, tys) =
   let ty =
     let uloc = Builtins.unknown_loc in
     let ty = (uloc, Ty datatype) in
-    foldl (fun ty (arg, _) -> (uloc, AppOnTy (ty, (uloc, TyVar arg)))) ty args
+    foldl (fun ty (arg, _) -> (uloc, AppOnTy (ty, (uloc, Ty arg)))) ty args
     |> foldr (fun x ty -> (uloc, Fun (x, None, ty))) tys
     |> foldr (fun arg ty -> (uloc, Forall (arg, ty))) args
   in
@@ -342,7 +342,7 @@ let desugar_sig ~current_module imports (name, ty) =
   (name, ty)
 
 let desugar_variant_args args =
-  let aux (x, k) = (new_lower_name_to_type_var x, desugar_kind k) in
+  let aux (x, k) = (new_lower_name_to_type x, desugar_kind k) in
   List.map aux args
 
 let desugar_value ~current_module imports options (name, is_rec, t) =

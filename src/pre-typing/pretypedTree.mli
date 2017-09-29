@@ -5,7 +5,6 @@ type name = Ident.Name.t
 type constr_name = Ident.Constr.t
 type exn_name = Ident.Exn.t
 type t_name = Ident.Type.t
-type tyvar_name = Ident.TyVar.t
 type tyclass_name = Ident.TyClass.t
 type instance_name = Ident.Instance.t
 type module_name = Module.t
@@ -16,7 +15,7 @@ type kind = DesugaredTree.kind =
   | KEff
   | KFun of (kind * kind)
 
-type t_value = (tyvar_name * kind)
+type t_value = (t_name * kind)
 
 type tyclass = (tyclass_name * t_value list * ty list)
 
@@ -25,7 +24,6 @@ and effects = (loc * ty list)
 and ty' = DesugaredTree.ty' =
   | Fun of (ty * effects option * ty)
   | Ty of t_name
-  | TyVar of tyvar_name
   | Eff of effects
   | Forall of (t_value * ty)
   | TyClass of (tyclass * effects option * ty)
@@ -89,5 +87,5 @@ type interface = DesugaredTree.interface =
   | IDatatype of (t_name * kind * variant list)
   | ITypeAlias of (t_name * ty)
   | IException of (exn_name * ty list)
-  | IClass of (tyclass_name * (tyvar_name * kind) list * (name * ty) list)
+  | IClass of (tyclass_name * t_value list * (name * ty) list)
   | IInstance of (tyclass_instance * instance_name option)

@@ -6,7 +6,6 @@ open DesugaredTree
 
 let dump_name name = str (Ident.Name.to_string name)
 let dump_ty_name name = str (Ident.Type.to_string name)
-let dump_tyvar_name name = str (Ident.TyVar.to_string name)
 let dump_exn_name name = str (Ident.Exn.to_string name)
 let dump_var_name name = str (Ident.Constr.to_string name)
 let dump_tyclass_name name = str (Ident.TyClass.to_string name)
@@ -18,7 +17,7 @@ let rec dump_kind = function
   | KFun (x, y) -> dump_kind x ^^^ str "->" ^/^ dump_kind y
 
 let dump_forall_arg (name, k) =
-  parens (dump_tyvar_name name ^^^ colon ^^^ dump_kind k)
+  parens (dump_ty_name name ^^^ colon ^^^ dump_kind k)
 
 let dump_forall_args l = separate_map space dump_forall_arg l
 let dump_ty_args l = separate_map (comma ^^ space) dump_forall_arg l
@@ -49,7 +48,6 @@ and dump_ty = function
       let res = dump_ty res in
       parens (param ^^^ eff ^/^ res)
   | (_, Ty name) -> dump_ty_name name
-  | (_, TyVar name) -> dump_tyvar_name name
   | (_, Eff eff) -> brackets (dump_eff eff)
   | (_, Forall (arg, res)) ->
       let arg = dump_forall_arg arg in
@@ -105,7 +103,7 @@ and dump_t = function
       parens (str "λ" ^^^ parens (dump_name name ^^^ colon ^^^ dump_ty ty) ^^^
               str "->" ^//^ dump_t t)
   | (_, TAbs ((name, k), t)) ->
-      parens (str "λ" ^^^ parens (dump_tyvar_name name ^^^ colon ^^^ dump_kind k) ^^^
+      parens (str "λ" ^^^ parens (dump_ty_name name ^^^ colon ^^^ dump_kind k) ^^^
               str "->" ^//^ dump_t t)
   | (_, CAbs ((name, tyclass), t)) ->
       parens (str "λ" ^^^ parens (dump_inst_name name ^^^ colon ^^^ dump_tyclass tyclass) ^^^

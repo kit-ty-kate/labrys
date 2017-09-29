@@ -34,6 +34,5 @@ module Constr = struct
 end
 module Type = Name
 module Exn = Name
-module TyVar = Name
 module TyClass = Name
 module Instance = Name

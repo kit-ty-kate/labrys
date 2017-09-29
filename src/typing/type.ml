@@ -75,8 +75,6 @@ and check ~pure_arrow env = function
       | (_, KEff) -> Err.fail ~loc "Cannot apply on a type of kind '!'."
       | (_, KStar) -> Err.fail ~loc "Cannot apply on a type of kind '*'."
       end
-  | (_, PretypedTree.TyVar _) ->
-      assert false (* TO REMOVE *)
 
 and check_value ~pure_arrow env x =
   match check ~pure_arrow env x with

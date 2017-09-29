@@ -11,7 +11,7 @@ val string : <lib_dir : string; ..> -> Ident.Type.t
 
 val underscore : Ident.Name.t
 val underscore_loc : Location.t -> Ident.Name.t
-val underscore_type_var_loc : Location.t -> Ident.TyVar.t
+val underscore_type_var_loc : Location.t -> Ident.Type.t
 val underscore_instance_loc : Location.t -> Ident.Instance.t
 
 val unknown_loc : Location.t

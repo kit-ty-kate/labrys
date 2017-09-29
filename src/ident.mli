@@ -22,6 +22,5 @@ module Constr : sig
 end
 module Type : module type of Name
 module Exn : module type of Name
-module TyVar : module type of Name
 module TyClass : module type of Name
 module Instance : module type of Name
