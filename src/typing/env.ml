@@ -41,7 +41,7 @@ let get_untyped_values env =
 type add = TypedEnv.env -> TypedEnv.env
 
 let add_toplevel_value name ty env =
-  let ty = Type.check ~pure_arrow:`Partial env ty in
+  let ty = Type.check_value ~pure_arrow:`Partial env ty in
   let values = EnvMap.Value.add name ty env.TypedEnv.values in
   {env with TypedEnv.values}
 
@@ -58,11 +58,12 @@ let map_variants env =
       Err.fail
         ~loc:(Ident.Constr.loc name)
         "A data constructor with the same name already exists in this variant";
-    variants @ [(name, idx, Type.check ~pure_arrow:`Partial env ty)]
+    variants @ [(name, idx, Type.check_value ~pure_arrow:`Partial env ty)]
   in
   List.foldi aux []
 
 let add_datatype name k variants env =
+  (* TODO: Check kind ? *)
   let variants = map_variants env variants in
   let constrs =
     List.fold_left
@@ -74,11 +75,11 @@ let add_datatype name k variants env =
   {env with TypedEnv.constrs; TypedEnv.types}
 
 let add_type_alias name ty env =
-  let ty = Type.check ~pure_arrow:`Forbid env ty in
-  let types = EnvMap.Type.add name (TypedEnv.Alias ty) env.TypedEnv.types in
+  let (ty, k) = Type.check ~pure_arrow:`Forbid env ty in
+  let types = EnvMap.Type.add name (TypedEnv.Alias (k, ty)) env.TypedEnv.types in
   {env with TypedEnv.types}
 
 let add_exception name args env =
-  let args = List.map (Type.check ~pure_arrow:`Forbid env) args in
+  let args = List.map (Type.check_value ~pure_arrow:`Forbid env) args in
   let exns = EnvMap.Exn.add name args env.TypedEnv.exns in
   {env with TypedEnv.exns}

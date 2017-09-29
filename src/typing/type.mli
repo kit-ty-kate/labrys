@@ -5,6 +5,12 @@ val check :
   pure_arrow:[`Partial | `Forbid | `Allow] ->
   TypedEnv.env ->
   PretypedTree.ty ->
+  (TypedEnv.ty * TypedEnv.kind)
+
+val check_value :
+  pure_arrow:[`Partial | `Forbid | `Allow] ->
+  TypedEnv.env ->
+  PretypedTree.ty ->
   TypedEnv.ty
 
 val is_subset_of : TypedEnv.ty -> TypedEnv.ty -> bool

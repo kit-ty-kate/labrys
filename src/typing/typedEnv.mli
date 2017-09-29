@@ -21,7 +21,7 @@ and ty =
 
 type aty =
   | Abstract of PretypedTree.kind
-  | Alias of ty
+  | Alias of (PretypedTree.kind * ty)
   | Datatype of (PretypedTree.kind * (Ident.Constr.t * index * ty) list)
 
 type env = {

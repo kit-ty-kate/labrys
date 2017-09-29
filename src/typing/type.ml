@@ -6,6 +6,15 @@ open TypedEnv
 let check ~pure_arrow env x =
   assert false (* TODO *)
 
+let check_value ~pure_arrow env x =
+  match check ~pure_arrow env x with
+  | (ty, KStar) ->
+      ty
+  | (_, (KEff | KFun _)) ->
+      Err.fail
+        ~loc:(fst x)
+        "Values cannot have types with a kind different from '*'"
+
 let rec kind_equal x y = match x, y with
   | KStar, KStar | KEff, KEff -> true
   | KFun (k1, k2), KFun (k1', k2') -> kind_equal k1 k1' && kind_equal k2 k2'
