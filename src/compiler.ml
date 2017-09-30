@@ -68,8 +68,12 @@ let get_pretyped_tree options modul =
 
 let get_untyped_tree ~with_main ~interface options modul =
   let (imports, env, pretyped_tree) = get_pretyped_tree options modul in
+  let options = object
+    method lib_dir = options#lib_dir
+    method with_main = with_main
+  end in
   let typed_tree =
-    TypeChecker.check ~modul ~interface ~with_main options env pretyped_tree
+    TypeChecker.check ~current_module:modul ~interface options env pretyped_tree
   in
   (imports, env, typed_tree)
 

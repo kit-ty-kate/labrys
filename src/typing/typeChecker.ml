@@ -3,8 +3,72 @@
 
 open UntypedTree
 
-let check ~modul ~interface ~with_main options env x =
+let type_fail ~loc ~has ~expected =
+  Err.fail ~loc
+    "This value has type '%s' but was expected of type '%s'."
+    (Type.to_string has)
+    (Type.to_string expected)
+
+let unit options = TypedEnv.Ty (Builtins.unit options)
+let is_main ~current_module = Ident.Name.equal (Builtins.main ~current_module)
+
+let check_term env t =
   assert false (* TODO *)
+
+let check_eff_value ~current_module options name ty eff =
+  let loc = Ident.Name.loc name in
+  if options#with_main && is_main ~current_module name then begin
+    if not (List.for_all (Ident.Type.equal (Builtins.io options)) eff) then
+      Err.fail ~loc
+        "Effects different than 'IO' are not allowed in the main function";
+    if not (Type.is_subset_of ty (unit options)) then
+      Err.fail ~loc
+        "The main function is supposed to have type 'unit' but got type '%s'"
+        (Type.to_string ty);
+    true
+  end else begin
+    if not (List.is_empty eff) then
+      Err.fail ~loc "Effects are not allowed on toplevel";
+    false
+  end
+
+let check_foreign_type options env ty =
+  assert false (* TODO *)
+
+let check_top ~current_module options (acc, has_main, env) = function
+  | PretypedTree.Value (name, t) ->
+      let (t, ty, eff) = check_term env t in
+      let has_main = check_eff_value ~current_module options name ty eff in
+      let acc = acc @ [Value (name, t)] in
+      let env = Env.add_toplevel_value name ty env in
+      (acc, has_main, env)
+  | PretypedTree.Type (name, ty) ->
+      let env = Env.add_type_alias name ty env in
+      (acc, has_main, env)
+  | PretypedTree.Foreign (cname, name, ty) ->
+      let ty = check_foreign_type options env ty in
+      let acc = acc @ [Foreign (cname, name, ty)] in
+      let env = Env.add_toplevel_value name ty env in
+      (acc, has_main, env)
+  | PretypedTree.Datatype (name, k, variants) ->
+      let env = Env.add_datatype name k variants env in
+      (acc, has_main, env)
+  | PretypedTree.Exception (name, args) ->
+      let acc = acc @ [Exception name] in
+      let env = Env.add_exception name args env in
+      (acc, has_main, env)
+  | PretypedTree.Class _ ->
+        assert false (* TODO *)
+  | PretypedTree.Instance _ ->
+        assert false (* TODO *)
+
+let check ~current_module ~interface options env x =
+  let check_top = check_top ~current_module options in
+  let (res, has_main, env) = List.fold_left check_top ([], false, env) x in
+  if options#with_main && not has_main then
+    Err.fail_module "No 'main' value found in the main module";
+  (); (* TODO: Check interface correspondance *)
+  res
 
 let check_interface ~current_module options =
   let aux env = function
@@ -18,9 +82,9 @@ let check_interface ~current_module options =
         Env.add_type_alias name ty env
     | PretypedTree.IException (name, args) ->
         Env.add_exception name args env
-    | PretypedTree.IClass (name, args, sigs) ->
+    | PretypedTree.IClass _ ->
         assert false (* TODO *)
-    | PretypedTree.IInstance (instance, name) ->
+    | PretypedTree.IInstance _ ->
         assert false (* TODO *)
   in
   fun env l ->

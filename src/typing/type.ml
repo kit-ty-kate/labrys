@@ -141,3 +141,6 @@ and app x y = match x, y with
       App (t1, t2)
 
 let is_subset_of = is_subset_of 0
+
+let to_string ty =
+  assert false (* TODO *)

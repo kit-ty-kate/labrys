@@ -14,3 +14,5 @@ val check_value :
   TypedEnv.ty
 
 val is_subset_of : TypedEnv.ty -> TypedEnv.ty -> bool
+
+val to_string : TypedEnv.ty -> string
