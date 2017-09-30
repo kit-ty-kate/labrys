@@ -4,10 +4,12 @@
 open UntypedTree
 
 let type_fail ~loc ~has ~expected =
-  Err.fail ~loc
-    "This value has type '%s' but was expected of type '%s'."
-    (Type.to_string has)
-    (Type.to_string expected)
+  Err.fail_doc ~loc
+    Utils.PPrint.(str "This value has type" ^^^
+                  squotes (Type.dump has) ^^^
+                  str "but was expected of type" ^^^
+                  squotes (Type.dump expected) ^^^
+                  dot)
 
 let unit options = TypedEnv.Ty (Builtins.unit options)
 let is_main ~current_module = Ident.Name.equal (Builtins.main ~current_module)
@@ -22,9 +24,11 @@ let check_eff_value ~current_module options name ty eff =
       Err.fail ~loc
         "Effects different than 'IO' are not allowed in the main function";
     if not (Type.is_subset_of ty (unit options)) then
-      Err.fail ~loc
-        "The main function is supposed to have type 'unit' but got type '%s'"
-        (Type.to_string ty);
+      Err.fail_doc ~loc
+        Utils.PPrint.(str "The main function is supposed to have type 'unit' \
+                           but got type" ^^^
+                      squotes (Type.dump ty) ^^^
+                      dot);
     true
   end else begin
     if not (List.is_empty eff) then

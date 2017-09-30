@@ -142,5 +142,40 @@ and app x y = match x, y with
 
 let is_subset_of = is_subset_of 0
 
-let to_string ty =
-  assert false (* TODO *)
+open Utils.PPrint
+
+let dump_ty_name name = str (Ident.Type.to_string name)
+let dump_kind = ParseTreePrinter.dump_kind
+
+let dump_forall_arg name k =
+  parens (dump_ty_name name ^^^ colon ^^^ dump_kind k)
+
+let rec dump_eff eff =
+  separate_map (comma ^^ space) dump eff
+
+and dump_fun_eff = function
+  | [] -> str "->"
+  | eff -> str "-[" ^^ dump_eff eff ^^ str "]->"
+
+and dump =
+  let open Utils.PPrint in
+  function
+  | Fun (param, eff, res) ->
+      let param = dump param in
+      let eff = dump_fun_eff eff in
+      let res = dump res in
+      parens (param ^^^ eff ^/^ res)
+  | TAlias (name, _) | Ty name -> dump_ty_name name
+  | Eff eff -> brackets (dump_eff eff)
+  | Forall (name, k, res) ->
+      let arg = dump_forall_arg name k in
+      let res = dump res in
+      parens (str "forall" ^^^ arg ^^ comma ^//^ res)
+  | Abs (name, k, res) ->
+      let arg = dump_forall_arg name k in
+      let res = dump res in
+      parens (str "λ" ^^^ arg ^^^ str "->" ^//^ res)
+  | App (f, x) ->
+      let f = dump f in
+      let x = dump x in
+      parens (f ^^^ brackets x)

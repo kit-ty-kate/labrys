@@ -15,4 +15,4 @@ val check_value :
 
 val is_subset_of : TypedEnv.ty -> TypedEnv.ty -> bool
 
-val to_string : TypedEnv.ty -> string
+val dump : TypedEnv.ty -> PPrint.document
