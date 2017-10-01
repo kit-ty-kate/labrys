@@ -8,7 +8,7 @@ val get_untyped_values : TypedEnv.env -> LIdent.t EnvMap.Value.t
 
 type add = TypedEnv.env -> TypedEnv.env
 
-val add_toplevel_value : Ident.Name.t -> PretypedTree.ty -> add
+val add_toplevel_value : Ident.Name.t -> TypedEnv.ty -> add
 val add_abstract_type : Ident.Type.t -> PretypedTree.kind -> add
 val add_datatype :
   Ident.Type.t ->

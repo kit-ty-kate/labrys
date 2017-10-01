@@ -10,13 +10,12 @@ let empty = TypedEnv.{
 
 let ensure_unique _ _ _ = assert false
 
-let union x y =
-  TypedEnv.{
-    values = EnvMap.Value.union ensure_unique x.values y.values;
-    constrs = EnvMap.Constr.union ensure_unique x.constrs y.constrs;
-    types = EnvMap.Type.union ensure_unique x.types y.types;
-    exns = EnvMap.Exn.union ensure_unique x.exns y.exns;
-  }
+let union x y = TypedEnv.{
+  values = EnvMap.Value.union ensure_unique x.values y.values;
+  constrs = EnvMap.Constr.union ensure_unique x.constrs y.constrs;
+  types = EnvMap.Type.union ensure_unique x.types y.types;
+  exns = EnvMap.Exn.union ensure_unique x.exns y.exns;
+}
 
 let diff x y = TypedEnv.{
   values = EnvMap.Value.diff x.values y.values;
@@ -41,7 +40,6 @@ let get_untyped_values env =
 type add = TypedEnv.env -> TypedEnv.env
 
 let add_toplevel_value name ty env =
-  let ty = Type.check_value ~pure_arrow:`Partial env ty in
   let values = EnvMap.Value.add name ty env.TypedEnv.values in
   {env with TypedEnv.values}
 

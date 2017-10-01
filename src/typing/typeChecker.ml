@@ -77,6 +77,7 @@ let check ~current_module ~interface options env x =
 let check_interface ~current_module options =
   let aux env = function
     | PretypedTree.IVal (name, ty) ->
+        let ty = Type.check_value ~pure_arrow:`Partial env ty in
         Env.add_toplevel_value name ty env
     | PretypedTree.IAbstractType (name, k) ->
         Env.add_abstract_type name k env
