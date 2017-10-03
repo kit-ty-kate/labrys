@@ -71,7 +71,7 @@ let check ~current_module ~interface options env x =
   let (res, has_main, env) = List.fold_left check_top ([], false, env) x in
   if options#with_main && not has_main then
     Err.fail_module "No 'main' value found in the main module";
-  (); (* TODO: Check interface correspondance *)
+  Env.check_vdiff interface env;
   res
 
 let check_interface ~current_module options =

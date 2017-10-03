@@ -14,5 +14,9 @@ val check_value :
   TypedEnv.ty
 
 val is_subset_of : TypedEnv.ty -> TypedEnv.ty -> bool
+val aty_is_subset_of : TypedEnv.aty -> TypedEnv.aty -> bool
+val is_subset_of_list : TypedEnv.ty list -> TypedEnv.ty list -> bool
 
 val dump : TypedEnv.ty -> PPrint.document
+val dump_aty : Ident.Type.t -> TypedEnv.aty -> PPrint.document
+val dump_exn : Ident.Exn.t -> TypedEnv.ty list -> PPrint.document

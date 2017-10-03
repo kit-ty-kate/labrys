@@ -142,9 +142,29 @@ and app x y = match x, y with
 
 let is_subset_of = is_subset_of 0
 
+let datatype_is_subset_of (k1, constrs1) (k2, constrs2) =
+  let aux (name1, _, ty1) (name2, _, ty2) =
+    Ident.Constr.equal name1 name2 && is_subset_of ty1 ty2
+  in
+  kind_equal k1 k2 && List.equal aux constrs1 constrs2
+
+let aty_is_subset_of x y = match x, y with
+  | Abstract k1, Abstract k2
+  | Abstract k1, Alias (k2, _)
+  | Abstract k1, Datatype (k2, _) -> kind_equal k1 k2
+  | Alias (_, t1), Alias (_, t2) -> is_subset_of t1 t2
+  | Datatype d1, Datatype d2 -> datatype_is_subset_of d1 d2
+  | Alias _, _ | Datatype _, _ -> false
+
+let is_subset_of_list tys1 tys2 =
+  try List.for_all2 is_subset_of tys1 tys2 with
+  | Invalid_argument _ -> false
+
 open Utils.PPrint
 
 let dump_ty_name name = str (Ident.Type.to_string name)
+let dump_exn_name name = str (Ident.Exn.to_string name)
+let dump_constr_name name = str (Ident.Constr.to_string name)
 let dump_kind = ParseTreePrinter.dump_kind
 
 let dump_forall_arg name k =
@@ -179,3 +199,22 @@ and dump =
       let f = dump f in
       let x = dump x in
       parens (f ^^^ brackets x)
+
+let dump_constr (name, _, ty) =
+  bar ^^^ dump_constr_name name ^^^ colon ^^^ dump ty
+
+let dump_constrs constrs =
+  separate_map hardline dump_constr constrs
+
+let dump_aty name aty =
+  str "type" ^^^ dump_ty_name name ^^^
+  match aty with
+  | Abstract k ->
+      colon ^^^ dump_kind k
+  | Alias (_, ty) ->
+      equals ^//^ dump ty
+  | Datatype (k, constrs) ->
+      colon ^^^ dump_kind k ^^^ equals ^//^ dump_constrs constrs
+
+let dump_exn name tys =
+  str "exception" ^^^ dump_exn_name name ^^^ separate_map space dump tys

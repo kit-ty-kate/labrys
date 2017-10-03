@@ -6,6 +6,8 @@ val union : TypedEnv.env -> TypedEnv.env -> TypedEnv.env
 val diff : TypedEnv.env -> TypedEnv.env -> TypedEnv.env
 val get_untyped_values : TypedEnv.env -> LIdent.t EnvMap.Value.t
 
+val check_vdiff : TypedEnv.env -> TypedEnv.env -> unit
+
 type add = TypedEnv.env -> TypedEnv.env
 
 val add_toplevel_value : Ident.Name.t -> TypedEnv.ty -> add

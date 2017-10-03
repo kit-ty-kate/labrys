@@ -37,6 +37,61 @@ let get_untyped_values env =
   let values = EnvMap.Value.mapi (to_lident Ident.Name.to_string) values in
   EnvMap.Value.union ensure_unique constrs values
 
+let fail_not_provided thing name =
+  Err.fail_module
+    "The implementation does not match the interface: \
+     The %s '%s' is required but not provided."
+    thing
+    name
+
+let fail_value_mismatch name ~intf ~impl =
+  Err.fail_doc
+    ~loc:(Ident.Name.loc name)
+    Utils.PPrint.(str "The implementation does not match the interface:" ^//^
+                  str "The value has type" ^^^
+                  squotes (Type.dump impl) ^^^
+                  str "but the interface expects a value of type" ^^^
+                  squotes (Type.dump intf) ^^
+                  dot)
+
+let fail_type_mismatch name ~intf ~impl =
+  Err.fail_doc
+    ~loc:(Ident.Type.loc name)
+    Utils.PPrint.(str "The implementation does not match the interface:" ^//^
+                  (str "The type has the form:" ^//^
+                   Type.dump_aty name impl) ^/^
+                  (str "but the interface expects a type of the form:" ^//^
+                   Type.dump_aty name intf))
+
+let fail_exn_mismatch name ~intf ~impl =
+  Err.fail_doc
+    ~loc:(Ident.Exn.loc name)
+    Utils.PPrint.(str "The implementation does not match the interface:" ^//^
+                  (str "The exception has the form:" ^//^
+                   Type.dump_exn name impl) ^/^
+                  (str "but the interface expects an exception of the form:" ^//^
+                   Type.dump_exn name intf))
+
+let vdiff_value env name ty = match EnvMap.Value.find_opt name env with
+  | None -> fail_not_provided "value" (Ident.Name.to_string name)
+  | Some ty' when Type.is_subset_of ty' ty -> ()
+  | Some ty' -> fail_value_mismatch name ~intf:ty ~impl:ty'
+
+let vdiff_type env name aty = match EnvMap.Type.find_opt name env with
+  | None -> fail_not_provided "type" (Ident.Type.to_string name)
+  | Some aty' when Type.aty_is_subset_of aty' aty -> ()
+  | Some aty' -> fail_type_mismatch name ~intf:aty ~impl:aty'
+
+let vdiff_exn env name tys = match EnvMap.Exn.find_opt name env with
+  | None -> fail_not_provided "exception" (Ident.Exn.to_string name)
+  | Some tys' when Type.is_subset_of_list tys' tys -> ()
+  | Some tys' -> fail_exn_mismatch name ~intf:tys ~impl:tys'
+
+let check_vdiff x y =
+  EnvMap.Value.iter (vdiff_value y.TypedEnv.values) x.TypedEnv.values;
+  EnvMap.Type.iter (vdiff_type y.TypedEnv.types) x.TypedEnv.types;
+  EnvMap.Exn.iter (vdiff_exn y.TypedEnv.exns) x.TypedEnv.exns;
+
 type add = TypedEnv.env -> TypedEnv.env
 
 let add_toplevel_value name ty env =
