@@ -53,7 +53,7 @@ and check ~pure_arrow env = function
       (Fun (t1, e, t2), KStar)
   | (_, PretypedTree.Ty name) ->
       begin match EnvMap.Type.find name env.TypedEnv.types with
-      | Alias (k, ty) -> (TAlias (name, ty), k)
+      | Alias (k, ty) -> (ty, k)
       | Abstract k | Datatype (k, _) -> (Ty name, k)
       end
   | (_, PretypedTree.Eff e) ->
@@ -87,7 +87,7 @@ let rec replace a ~by =
   let replace t = replace a ~by t in
   function
   | Ty b when Ident.Type.equal a b -> by
-  | TAlias _ | Ty _ as t -> t
+  | Ty _ as t -> t
   | Eff e -> Eff (List.map replace e)
   | Fun (t1, e, t2) -> Fun (replace t1, List.map replace e, replace t2)
   | Forall (b, _, _) | Abs (b, _, _) as t when Ident.Type.equal a b -> t
@@ -98,31 +98,29 @@ let rec replace a ~by =
 let fresh n =
   Ident.Type.local_create ~loc:Builtins.unknown_loc (string_of_int n)
 
-let rec eff_is_subset_of n e1 e2 = match e1, e2 with
-  | [], _ -> true
-  | t::e1, e2 -> List.exists (is_subset_of n t) e2 && eff_is_subset_of n e1 e2
+let rec eff_equal n e1 e2 =
+  try List.for_all2 (equal n) e1 e2 with
+  | Invalid_argument _ -> false
 
-and is_subset_of n x y = match x, y with
-  | TAlias (_, x), y | x, TAlias (_, y) ->
-      is_subset_of n x y
+and equal n x y = match x, y with
   | Ty a1, Ty a2 ->
       Ident.Type.equal a1 a2
   | Eff e1, Eff e2 ->
-      eff_is_subset_of n e1 e2
+      eff_equal n e1 e2
   | Fun (t1, e1, t2), Fun (t1', e2, t2') ->
-      is_subset_of n t1' t1 && eff_is_subset_of n e1 e2 && is_subset_of n t2 t2'
+      equal n t1' t1 && eff_equal n e1 e2 && equal n t2 t2'
   | Forall (a1, k1, t1), Forall (a2, k2, t2)
   | Abs (a1, k1, t1), Abs (a2, k2, t2) ->
       let by = Ty (fresh n) in
       let t1 = replace a1 ~by t1 in
       let t2 = replace a2 ~by t2 in
-      kind_equal k1 k2 && is_subset_of (succ n) t1 t2
+      kind_equal k1 k2 && equal (succ n) t1 t2
   | App (t1, t2), App (t1', t2') ->
-      is_subset_of n t2 t2' && is_subset_of n t2' t2 && is_subset_of n t1 t1'
+      equal n t2 t2' && equal n t1 t1'
   | App (t1, t2), t' ->
-      is_subset_of n (app t1 t2) t'
+      equal n (app t1 t2) t'
   | t, App (t1, t2) ->
-      is_subset_of n t (app t1 t2)
+      equal n t (app t1 t2)
   | Ty _, _ | Eff _, _ | Fun _, _ | Forall _, _ | Abs _, _ ->
       false
 
@@ -132,89 +130,25 @@ and app x y = match x, y with
   | App (t1, t2), t' ->
       begin match app t1 t2 with
       | Abs (a, _, t) -> replace a ~by:t' t
-      | TAlias (_, t) -> app t t'
       | App _ | Ty _ | Eff _ | Fun _ | Forall _ as t -> App (t, t')
       end
-  | TAlias (_, t1), t2 ->
-      app t1 t2
   | Ty _ | Eff _ | Fun _ | Forall _ as t1, t2 ->
       App (t1, t2)
 
-let is_subset_of = is_subset_of 0
+let equal = equal 0
 
-let datatype_is_subset_of (k1, constrs1) (k2, constrs2) =
-  let aux (name1, _, ty1) (name2, _, ty2) =
-    Ident.Constr.equal name1 name2 && is_subset_of ty1 ty2
-  in
-  kind_equal k1 k2 && List.equal aux constrs1 constrs2
-
-let aty_is_subset_of x y = match x, y with
-  | Abstract k1, Abstract k2
-  | Abstract k1, Alias (k2, _)
-  | Abstract k1, Datatype (k2, _) -> kind_equal k1 k2
-  | Alias (_, t1), Alias (_, t2) -> is_subset_of t1 t2
-  | Datatype d1, Datatype d2 -> datatype_is_subset_of d1 d2
-  | Alias _, _ | Datatype _, _ -> false
-
-let is_subset_of_list tys1 tys2 =
-  try List.for_all2 is_subset_of tys1 tys2 with
-  | Invalid_argument _ -> false
-
-open Utils.PPrint
-
-let dump_ty_name name = str (Ident.Type.to_string name)
-let dump_exn_name name = str (Ident.Exn.to_string name)
-let dump_constr_name name = str (Ident.Constr.to_string name)
-let dump_kind = ParseTreePrinter.dump_kind
-
-let dump_forall_arg name k =
-  parens (dump_ty_name name ^^^ colon ^^^ dump_kind k)
-
-let rec dump_eff eff =
-  separate_map (comma ^^ space) dump eff
-
-and dump_fun_eff = function
-  | [] -> str "->"
-  | eff -> str "-[" ^^ dump_eff eff ^^ str "]->"
-
-and dump =
-  let open Utils.PPrint in
+let rec to_ptype =
+  let loc = Builtins.unknown_loc in
   function
-  | Fun (param, eff, res) ->
-      let param = dump param in
-      let eff = dump_fun_eff eff in
-      let res = dump res in
-      parens (param ^^^ eff ^/^ res)
-  | TAlias (name, _) | Ty name -> dump_ty_name name
-  | Eff eff -> brackets (dump_eff eff)
-  | Forall (name, k, res) ->
-      let arg = dump_forall_arg name k in
-      let res = dump res in
-      parens (str "forall" ^^^ arg ^^ comma ^//^ res)
-  | Abs (name, k, res) ->
-      let arg = dump_forall_arg name k in
-      let res = dump res in
-      parens (str "λ" ^^^ arg ^^^ str "->" ^//^ res)
-  | App (f, x) ->
-      let f = dump f in
-      let x = dump x in
-      parens (f ^^^ brackets x)
+  | Fun (t1, e, t2) ->
+      (loc, PretypedTree.Fun (to_ptype t1, Some (to_ptype_eff e), to_ptype t2))
+  | Ty name -> (loc, PretypedTree.Ty name)
+  | Eff e -> (loc, PretypedTree.Eff (to_ptype_eff e))
+  | Forall (name, k, t) -> (loc, PretypedTree.Forall ((name, k), to_ptype t))
+  | Abs (name, k, t) -> (loc, PretypedTree.AbsOnTy ((name, k), to_ptype t))
+  | App (t1, t2) -> (loc, PretypedTree.AppOnTy (to_ptype t1, to_ptype t2))
 
-let dump_constr (name, _, ty) =
-  bar ^^^ dump_constr_name name ^^^ colon ^^^ dump ty
+and to_ptype_eff e =
+  (Builtins.unknown_loc, List.map to_ptype e)
 
-let dump_constrs constrs =
-  separate_map hardline dump_constr constrs
-
-let dump_aty name aty =
-  str "type" ^^^ dump_ty_name name ^^^
-  match aty with
-  | Abstract k ->
-      colon ^^^ dump_kind k
-  | Alias (_, ty) ->
-      equals ^//^ dump ty
-  | Datatype (k, constrs) ->
-      colon ^^^ dump_kind k ^^^ equals ^//^ dump_constrs constrs
-
-let dump_exn name tys =
-  str "exception" ^^^ dump_exn_name name ^^^ separate_map space dump tys
+let dump ty = PretypedTreePrinter.dump_ty (to_ptype ty)

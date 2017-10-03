@@ -49,9 +49,9 @@ let fail_value_mismatch name ~intf ~impl =
     ~loc:(Ident.Name.loc name)
     Utils.PPrint.(str "The implementation does not match the interface:" ^//^
                   str "The value has type" ^^^
-                  squotes (Type.dump impl) ^^^
+                  squotes (NType.dump impl) ^^^
                   str "but the interface expects a value of type" ^^^
-                  squotes (Type.dump intf) ^^
+                  squotes (NType.dump intf) ^^
                   dot)
 
 let fail_type_mismatch name ~intf ~impl =
@@ -59,32 +59,32 @@ let fail_type_mismatch name ~intf ~impl =
     ~loc:(Ident.Type.loc name)
     Utils.PPrint.(str "The implementation does not match the interface:" ^//^
                   (str "The type has the form:" ^//^
-                   Type.dump_aty name impl) ^/^
+                   NType.dump_aty name impl) ^/^
                   (str "but the interface expects a type of the form:" ^//^
-                   Type.dump_aty name intf))
+                   NType.dump_aty name intf))
 
 let fail_exn_mismatch name ~intf ~impl =
   Err.fail_doc
     ~loc:(Ident.Exn.loc name)
     Utils.PPrint.(str "The implementation does not match the interface:" ^//^
                   (str "The exception has the form:" ^//^
-                   Type.dump_exn name impl) ^/^
+                   NType.dump_exn name impl) ^/^
                   (str "but the interface expects an exception of the form:" ^//^
-                   Type.dump_exn name intf))
+                   NType.dump_exn name intf))
 
 let vdiff_value env name ty = match EnvMap.Value.find_opt name env with
   | None -> fail_not_provided "value" (Ident.Name.to_string name)
-  | Some ty' when Type.is_subset_of ty' ty -> ()
+  | Some ty' when NType.is_subset_of ty' ty -> ()
   | Some ty' -> fail_value_mismatch name ~intf:ty ~impl:ty'
 
 let vdiff_type env name aty = match EnvMap.Type.find_opt name env with
   | None -> fail_not_provided "type" (Ident.Type.to_string name)
-  | Some aty' when Type.aty_is_subset_of aty' aty -> ()
+  | Some aty' when NType.aty_is_subset_of aty' aty -> ()
   | Some aty' -> fail_type_mismatch name ~intf:aty ~impl:aty'
 
 let vdiff_exn env name tys = match EnvMap.Exn.find_opt name env with
   | None -> fail_not_provided "exception" (Ident.Exn.to_string name)
-  | Some tys' when Type.is_subset_of_list tys' tys -> ()
+  | Some tys' when NType.is_subset_of_list tys' tys -> ()
   | Some tys' -> fail_exn_mismatch name ~intf:tys ~impl:tys'
 
 let check_vdiff x y =
@@ -111,7 +111,7 @@ let map_variants env =
       Err.fail
         ~loc:(Ident.Constr.loc name)
         "A data constructor with the same name already exists in this variant";
-    variants @ [(name, idx, Type.check_value ~pure_arrow:`Partial env ty)]
+    variants @ [(name, idx, NType.check ~pure_arrow:`Partial env ty)]
   in
   List.foldi aux []
 
@@ -133,6 +133,6 @@ let add_type_alias name ty env =
   {env with TypedEnv.types}
 
 let add_exception name args env =
-  let args = List.map (Type.check_value ~pure_arrow:`Forbid env) args in
+  let args = List.map (NType.check ~pure_arrow:`Forbid env) args in
   let exns = EnvMap.Exn.add name args env.TypedEnv.exns in
   {env with TypedEnv.exns}

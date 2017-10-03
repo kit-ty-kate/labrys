@@ -11,11 +11,11 @@ let type_fail ~loc ~has ~expected =
                   squotes (Type.dump expected) ^^^
                   dot)
 
-let unit options = TypedEnv.Ty (Builtins.unit options)
-let is_unit options = Type.is_subset_of (unit options)
+let unit options = TypedEnv.NTy (Builtins.unit options)
+let is_unit options = NType.is_subset_of (unit options)
 let is_main ~current_module = Ident.Name.equal (Builtins.main ~current_module)
-let io options = TypedEnv.Ty (Builtins.io options)
-let has_io options = List.exists (Type.is_subset_of (io options))
+let io options = TypedEnv.NTy (Builtins.io options)
+let has_io options = List.exists (NType.is_subset_of (io options))
 
 let check_term env t =
   assert false (* TODO *)
@@ -26,11 +26,11 @@ let check_eff_value ~current_module options name ty eff =
     if not (List.for_all (Ident.Type.equal (Builtins.io options)) eff) then
       Err.fail ~loc
         "Effects different than 'IO' are not allowed in the main function";
-    if not (Type.is_subset_of ty (unit options)) then
+    if not (NType.is_subset_of ty (unit options)) then
       Err.fail_doc ~loc
         Utils.PPrint.(str "The main function is supposed to have type 'unit' \
                            but got type" ^^^
-                      squotes (Type.dump ty) ^^^
+                      squotes (NType.dump ty) ^^^
                       dot);
     true
   end else begin
@@ -40,9 +40,9 @@ let check_eff_value ~current_module options name ty eff =
   end
 
 let rec get_foreign_type ~default options = function
-  | TypedEnv.TAlias (_, ty) | TypedEnv.Forall (_, _, ty) ->
+  | TypedEnv.NForall (_, _, ty) ->
       get_foreign_type ~default options ty
-  | TypedEnv.Ty name ->
+  | TypedEnv.NTy name ->
       let arg_ty_map =
         [ (Builtins.int options, `Int ())
         ; (Builtins.float options, `Float ())
@@ -52,21 +52,20 @@ let rec get_foreign_type ~default options = function
       in
       Option.get_or ~default
         (List.Assoc.get ~eq:Ident.Type.equal name arg_ty_map)
-  | TypedEnv.App _ | TypedEnv.Fun _ ->
+  | TypedEnv.NApp _ | TypedEnv.NFun _ ->
       default
-  | TypedEnv.Eff _ | TypedEnv.Abs _ ->
-      assert false (* NOTE: This shouldn't happen *)
+
+let rec is_last = function
+  | TypedEnv.NForall (_, _, t) -> is_last t
+  | TypedEnv.NTy _ | TypedEnv.NApp _ -> true
+  | TypedEnv.NFun _ -> false
 
 let rec check_foreign_type ~loc is_first options env = function
-  | TypedEnv.TAlias (_, ty) | TypedEnv.Forall (_, _, ty) ->
+  | TypedEnv.NForall (_, _, ty) ->
       check_foreign_type ~loc true options env ty
-  | TypedEnv.Ty _ | TypedEnv.App _ ->
+  | TypedEnv.NTy _ | TypedEnv.NApp _ ->
       Err.fail ~loc "Cannot bind a global variable"
-  | TypedEnv.Eff _ | TypedEnv.Abs _ ->
-      assert false (* NOTE: This shouldn't happen *)
-  | TypedEnv.Fun (t1, e, TypedEnv.TAlias (_, t2)) ->
-      check_foreign_type ~loc true options env (TypedEnv.Fun (t1, e, t2))
-  | TypedEnv.Fun (t1, e, (TypedEnv.Ty _ | TypedEnv.App _ as t2)) ->
+  | TypedEnv.NFun (t1, e, t2) when is_last t2 ->
       if not (has_io options e) then
         Err.fail ~loc "Bindings cannot be pure. All bindings have \
                        to use the IO effect on the final arrow";
@@ -77,7 +76,8 @@ let rec check_foreign_type ~loc is_first options env = function
       in
       let t2 = get_foreign_type ~default:`Void options t2 in
       (t2, t1)
-  | TypedEnv.Fun (t1, _, t2) ->
+  | TypedEnv.NFun (t1, _, t2) ->
+      (* TODO: Warning if e <> [] ? *)
       let t1 = get_foreign_type ~default:`Custom options t1 in
       let (ret, t2) = check_foreign_type ~loc false options env t2 in
       (ret, [t1] @ t2)
@@ -93,7 +93,7 @@ let check_top ~current_module options (acc, has_main, env) = function
       let env = Env.add_type_alias name ty env in
       (acc, has_main, env)
   | PretypedTree.Foreign (cname, name, ty) ->
-      let ty = Type.check_value ~pure_arrow:`Partial env ty in
+      let ty = NType.check ~pure_arrow:`Partial env ty in
       let rty =
         check_foreign_type ~loc:(Ident.Name.loc name) true options env ty
       in
@@ -123,7 +123,7 @@ let check ~current_module ~interface options env x =
 let check_interface ~current_module options =
   let aux env = function
     | PretypedTree.IVal (name, ty) ->
-        let ty = Type.check_value ~pure_arrow:`Partial env ty in
+        let ty = NType.check ~pure_arrow:`Partial env ty in
         Env.add_toplevel_value name ty env
     | PretypedTree.IAbstractType (name, k) ->
         Env.add_abstract_type name k env
