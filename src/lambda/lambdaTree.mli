@@ -10,13 +10,10 @@ type length = int
 type branch = int
 
 type ('int, 'float, 'char, 'string) ty =
-  ('int, 'float, 'char, 'string) UntypedTree.ty =
-  | Int of 'int
-  | Float of 'float
-  | Char of 'char
-  | String of 'string
+  ('int, 'float, 'char, 'string) UntypedTree.ty
 
-type tag_ty = (unit, unit, unit, unit) ty
+type tag_ty = [(unit, unit, unit, unit) ty | `Custom]
+type ret_ty = [tag_ty | `Void]
 type const = (int, float, Uchar.t, string) ty
 
 (* TODO: What is this int option ?? *)
@@ -28,16 +25,12 @@ type tree =
   | IdxTree of constr tree'
   | PtrTree of eff_name tree'
 
-type foreign_ret_type = UntypedTree.foreign_ret_type =
-  | Void
-  | Alloc of tag_ty
-
 type t =
   | Abs of (name * t)
   | App of (name * name)
   | Val of name
   | Datatype of (index option * name list)
-  | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
+  | CallForeign of (string * ret_ty * (tag_ty * name) list)
   | PatternMatching of (name * t list * t * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)

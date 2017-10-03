@@ -12,7 +12,10 @@ let type_fail ~loc ~has ~expected =
                   dot)
 
 let unit options = TypedEnv.Ty (Builtins.unit options)
+let is_unit options = Type.is_subset_of (unit options)
 let is_main ~current_module = Ident.Name.equal (Builtins.main ~current_module)
+let io options = TypedEnv.Ty (Builtins.io options)
+let has_io options = List.exists (Type.is_subset_of (io options))
 
 let check_term env t =
   assert false (* TODO *)
@@ -36,8 +39,48 @@ let check_eff_value ~current_module options name ty eff =
     false
   end
 
-let check_foreign_type options env ty =
-  assert false (* TODO *)
+let rec get_foreign_type ~default options = function
+  | TypedEnv.TAlias (_, ty) | TypedEnv.Forall (_, _, ty) ->
+      get_foreign_type ~default options ty
+  | TypedEnv.Ty name ->
+      let arg_ty_map =
+        [ (Builtins.int options, `Int ())
+        ; (Builtins.float options, `Float ())
+        ; (Builtins.char options, `Char ())
+          (* NOTE: String is not present because it is a pointer *)
+        ]
+      in
+      Option.get_or ~default
+        (List.Assoc.get ~eq:Ident.Type.equal name arg_ty_map)
+  | TypedEnv.App _ | TypedEnv.Fun _ ->
+      default
+  | TypedEnv.Eff _ | TypedEnv.Abs _ ->
+      assert false (* NOTE: This shouldn't happen *)
+
+let rec check_foreign_type ~loc is_first options env = function
+  | TypedEnv.TAlias (_, ty) | TypedEnv.Forall (_, _, ty) ->
+      check_foreign_type ~loc true options env ty
+  | TypedEnv.Ty _ | TypedEnv.App _ ->
+      Err.fail ~loc "Cannot bind a global variable"
+  | TypedEnv.Eff _ | TypedEnv.Abs _ ->
+      assert false (* NOTE: This shouldn't happen *)
+  | TypedEnv.Fun (t1, e, TypedEnv.TAlias (_, t2)) ->
+      check_foreign_type ~loc true options env (TypedEnv.Fun (t1, e, t2))
+  | TypedEnv.Fun (t1, e, (TypedEnv.Ty _ | TypedEnv.App _ as t2)) ->
+      if not (has_io options e) then
+        Err.fail ~loc "Bindings cannot be pure. All bindings have \
+                       to use the IO effect on the final arrow";
+      let t1 =
+        if is_first && is_unit options t1
+        then []
+        else [get_foreign_type ~default:`Custom options t1]
+      in
+      let t2 = get_foreign_type ~default:`Void options t2 in
+      (t2, t1)
+  | TypedEnv.Fun (t1, _, t2) ->
+      let t1 = get_foreign_type ~default:`Custom options t1 in
+      let (ret, t2) = check_foreign_type ~loc false options env t2 in
+      (ret, [t1] @ t2)
 
 let check_top ~current_module options (acc, has_main, env) = function
   | PretypedTree.Value (name, t) ->
@@ -50,8 +93,11 @@ let check_top ~current_module options (acc, has_main, env) = function
       let env = Env.add_type_alias name ty env in
       (acc, has_main, env)
   | PretypedTree.Foreign (cname, name, ty) ->
-      let ty = check_foreign_type options env ty in
-      let acc = acc @ [Foreign (cname, name, ty)] in
+      let ty = Type.check_value ~pure_arrow:`Partial env ty in
+      let rty =
+        check_foreign_type ~loc:(Ident.Name.loc name) true options env ty
+      in
+      let acc = acc @ [Foreign (cname, name, rty)] in
       let env = Env.add_toplevel_value name ty env in
       (acc, has_main, env)
   | PretypedTree.Datatype (name, k, variants) ->

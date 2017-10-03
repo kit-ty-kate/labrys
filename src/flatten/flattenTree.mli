@@ -9,13 +9,10 @@ type arity = int
 type length = int
 
 type ('int, 'float, 'char, 'string) ty =
-  ('int, 'float, 'char, 'string) LambdaTree.ty =
-  | Int of 'int
-  | Float of 'float
-  | Char of 'char
-  | String of 'string
+  ('int, 'float, 'char, 'string) LambdaTree.ty
 
-type tag_ty = (unit, unit, unit, unit) ty
+type tag_ty = [(unit, unit, unit, unit) ty | `Custom]
+type ret_ty = [tag_ty | `Void]
 type const = (int, float, Uchar.t, string) ty
 
 type 'a tree' = 'a LambdaTree.tree' =
@@ -26,17 +23,13 @@ type tree = LambdaTree.tree =
   | IdxTree of constr tree'
   | PtrTree of eff_name tree'
 
-type foreign_ret_type = LambdaTree.foreign_ret_type =
-  | Void
-  | Alloc of tag_ty
-
 type t' =
   | Abs of (name * t)
   | Rec of (name * t') (* TODO: Remove this case (LIdent should be sufficiant) *)
   | App of (name * name)
   | Val of name
   | Datatype of (index option * name list)
-  | CallForeign of (string * foreign_ret_type * (tag_ty * name) list)
+  | CallForeign of (string * ret_ty * (tag_ty * name) list)
   | PatternMatching of (name * t list * t * tree)
   | Fail of (eff_name * name list)
   | Try of (t * (name * t))

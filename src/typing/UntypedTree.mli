@@ -10,18 +10,16 @@ type index = int
 type arity = int
 type length = int
 
-type ('int, 'float, 'char, 'string) ty =
-  | Int of 'int
-  | Float of 'float
-  | Char of 'char
-  | String of 'string
+type ('int, 'float, 'char, 'string) ty = [
+  | `Int of 'int
+  | `Float of 'float
+  | `Char of 'char
+  | `String of 'string
+]
 
-type tag_ty = (unit, unit, unit, unit) ty
+type tag_ty = [(unit, unit, unit, unit) ty | `Custom]
+type ret_ty = [tag_ty | `Void]
 type const = (int, float, Uchar.t, string) ty
-
-type foreign_ret_type =
-  | Void
-  | Alloc of tag_ty
 
 (* TODO: Improve *)
 type constr = (constr_name * index)
@@ -51,7 +49,7 @@ type t =
   | Const of const
   | Unreachable
 
-type foreign_fun_type = (foreign_ret_type * tag_ty list)
+type foreign_fun_type = (ret_ty * tag_ty list)
 
 type top =
   | Value of (name * t)

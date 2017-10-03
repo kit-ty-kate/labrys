@@ -147,13 +147,13 @@ module UntypedTree = struct
            ^^ List.fold_left aux PPrint.empty fields
            ^^ PPrint.rbrace
           )
-    | Const (Int n) ->
+    | Const (`Int n) ->
         PPrint.string (fmt "%d" n)
-    | Const (Float n) ->
+    | Const (`Float n) ->
         PPrint.string (fmt "%f" n)
-    | Const (Char c) ->
+    | Const (`Char c) ->
         PPrint.string (fmt "'%lc'" (Uchar.to_int c))
-    | Const (String s) ->
+    | Const (`String s) ->
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
         PPrint.string "UNREACHABLE"
@@ -188,14 +188,12 @@ module UntypedTree = struct
     List.fold_left aux PPrint.empty args
 
   let dump_tag_ty = function
-    | Int () -> "Int"
-    | Float () -> "Float"
-    | Char () -> "Char"
-    | String () -> "String"
-
-  let dump_ret_ty = function
-    | Void -> "Void"
-    | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
+    | `Int () -> "Int"
+    | `Float () -> "Float"
+    | `Char () -> "Char"
+    | `String () -> "String"
+    | `Custom -> "UNKNOWN"
+    | `Void -> "VOID"
 
   let dump_args_ty l =
     fmt "(%s)" (String.concat ", " (List.map dump_tag_ty l))
@@ -210,7 +208,7 @@ module UntypedTree = struct
     | Value (name, t) ->
         dump_value name t
     | Foreign (cname, name, (ret, args)) ->
-        PPrint.string (fmt "foreign \"%s\" %s : (%s, %s)" cname (dump_name name) (dump_ret_ty ret) (dump_args_ty args))
+        PPrint.string (fmt "foreign \"%s\" %s : (%s, %s)" cname (dump_name name) (dump_tag_ty ret) (dump_args_ty args))
     | Exception name ->
         PPrint.string (fmt "exception %s" (dump_exn_name name))
     | Instance (name, values) ->
@@ -270,22 +268,21 @@ module LambdaTree = struct
 
   let dump_args_ty l =
     let aux = function
-      | (Int (), name) -> fmt "Int %s" (dump_name name)
-      | (Float (), name) -> fmt "Float %s" (dump_name name)
-      | (Char (), name) -> fmt "Char %s" (dump_name name)
-      | (String (), name) -> fmt "String %s" (dump_name name)
+      | (`Int (), name) -> fmt "Int %s" (dump_name name)
+      | (`Float (), name) -> fmt "Float %s" (dump_name name)
+      | (`Char (), name) -> fmt "Char %s" (dump_name name)
+      | (`String (), name) -> fmt "String %s" (dump_name name)
+      | (`Custom, name) -> fmt "UNKNOWN %s" (dump_name name)
     in
     String.concat ", " (List.map aux l)
 
   let dump_tag_ty = function
-    | Int () -> "Int"
-    | Float () -> "Float"
-    | Char () -> "Char"
-    | String () -> "String"
-
-  let dump_ret_ty = function
-    | Void -> "Void"
-    | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
+    | `Int () -> "Int"
+    | `Float () -> "Float"
+    | `Char () -> "Char"
+    | `String () -> "String"
+    | `Custom -> "UNKNOWN"
+    | `Void -> "VOID"
 
   let rec dump_t = function
     | Abs (name, t) ->
@@ -318,7 +315,7 @@ module LambdaTree = struct
            ^^ PPrint.rbracket
           )
     | CallForeign (name, ret, args) ->
-        PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_ret_ty ret))
+        PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_tag_ty ret))
     | PatternMatching (t, results, default, patterns) ->
         dump_pattern_matching
           (PPrint.string (dump_name t))
@@ -372,13 +369,13 @@ module LambdaTree = struct
         ^^ PPrint.string "end"
     | RecordGet (name, n) ->
         PPrint.string (fmt "%s.%d" (dump_name name) n)
-    | Const (Int n) ->
+    | Const (`Int n) ->
         PPrint.string (fmt "%d" n)
-    | Const (Float n) ->
+    | Const (`Float n) ->
         PPrint.string (fmt "%f" n)
-    | Const (Char c) ->
+    | Const (`Char c) ->
         PPrint.string (fmt "'%lc'" (Uchar.to_int c))
-    | Const (String s) ->
+    | Const (`String s) ->
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
         PPrint.string "UNREACHABLE"
@@ -463,22 +460,21 @@ module FlattenTree = struct
 
   let dump_args_ty l =
     let aux = function
-      | (Int (), name) -> fmt "Int %s" (dump_name name)
-      | (Float (), name) -> fmt "Float %s" (dump_name name)
-      | (Char (), name) -> fmt "Char %s" (dump_name name)
-      | (String (), name) -> fmt "String %s" (dump_name name)
+      | (`Int (), name) -> fmt "Int %s" (dump_name name)
+      | (`Float (), name) -> fmt "Float %s" (dump_name name)
+      | (`Char (), name) -> fmt "Char %s" (dump_name name)
+      | (`String (), name) -> fmt "String %s" (dump_name name)
+      | (`Custom, name) -> fmt "UNKNOWN %s" (dump_name name)
     in
     String.concat ", " (List.map aux l)
 
   let dump_tag_ty = function
-    | Int () -> "Int"
-    | Float () -> "Float"
-    | Char () -> "Char"
-    | String () -> "String"
-
-  let dump_ret_ty = function
-    | Void -> "Void"
-    | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
+    | `Int () -> "Int"
+    | `Float () -> "Float"
+    | `Char () -> "Char"
+    | `String () -> "String"
+    | `Custom -> "UNKNOWN"
+    | `Void -> "VOID"
 
   let rec dump_t' = function
     | Abs (name, t) ->
@@ -519,7 +515,7 @@ module FlattenTree = struct
            ^^ PPrint.rbracket
           )
     | CallForeign (name, ret, args) ->
-        PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_ret_ty ret))
+        PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_tag_ty ret))
     | PatternMatching (t, results, default, patterns) ->
         dump_pattern_matching
           (PPrint.string (dump_name t))
@@ -551,13 +547,13 @@ module FlattenTree = struct
         ^^ PPrint.string "end"
     | RecordGet (name, n) ->
         PPrint.string (fmt "%s.%d" (dump_name name) n)
-    | Const (Int n) ->
+    | Const (`Int n) ->
         PPrint.string (fmt "%d" n)
-    | Const (Float n) ->
+    | Const (`Float n) ->
         PPrint.string (fmt "%f" n)
-    | Const (Char c) ->
+    | Const (`Char c) ->
         PPrint.string (fmt "'%lc'" (Uchar.to_int c))
-    | Const (String s) ->
+    | Const (`String s) ->
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
         PPrint.string "UNREACHABLE"
@@ -662,22 +658,21 @@ module OptimizedTree = struct
 
   let dump_args_ty l =
     let aux = function
-      | (Int (), name) -> fmt "Int %s" (dump_name name)
-      | (Float (), name) -> fmt "Float %s" (dump_name name)
-      | (Char (), name) -> fmt "Char %s" (dump_name name)
-      | (String (), name) -> fmt "String %s" (dump_name name)
+      | (`Int (), name) -> fmt "Int %s" (dump_name name)
+      | (`Float (), name) -> fmt "Float %s" (dump_name name)
+      | (`Char (), name) -> fmt "Char %s" (dump_name name)
+      | (`String (), name) -> fmt "String %s" (dump_name name)
+      | (`Custom, name) -> fmt "UNKNOWN %s" (dump_name name)
     in
     String.concat ", " (List.map aux l)
 
   let dump_tag_ty = function
-    | Int () -> "Int"
-    | Float () -> "Float"
-    | Char () -> "Char"
-    | String () -> "String"
-
-  let dump_ret_ty = function
-    | Void -> "Void"
-    | Alloc ty -> fmt "Alloc %s" (dump_tag_ty ty)
+    | `Int () -> "Int"
+    | `Float () -> "Float"
+    | `Char () -> "Char"
+    | `String () -> "String"
+    | `Custom -> "UNKNOWN"
+    | `Void -> "VOID"
 
   let rec dump_t' = function
     | Abs (name, free_vars, t) ->
@@ -718,7 +713,7 @@ module OptimizedTree = struct
            ^^ PPrint.rbracket
           )
     | CallForeign (name, ret, args) ->
-        PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_ret_ty ret))
+        PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_tag_ty ret))
     | PatternMatching (t, results, default, patterns) ->
         dump_pattern_matching
           (PPrint.string (dump_name t))
@@ -750,13 +745,13 @@ module OptimizedTree = struct
         ^^ PPrint.string "end"
     | RecordGet (name, n) ->
         PPrint.string (fmt "%s.%d" (dump_name name) n)
-    | Const (Int n) ->
+    | Const (`Int n) ->
         PPrint.string (fmt "%d" n)
-    | Const (Float n) ->
+    | Const (`Float n) ->
         PPrint.string (fmt "%f" n)
-    | Const (Char c) ->
+    | Const (`Char c) ->
         PPrint.string (fmt "'%lc'" (Uchar.to_int c))
-    | Const (String s) ->
+    | Const (`String s) ->
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
         PPrint.string "UNREACHABLE"

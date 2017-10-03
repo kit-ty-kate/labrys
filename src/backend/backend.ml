@@ -222,20 +222,18 @@ module Make (I : I) = struct
         Llvm.build_extractvalue value idx "" builder
 
   let get_const = function
-    | OptimizedTree.Int n -> Llvm.const_int Type.i32 n
-    | OptimizedTree.Float n -> Llvm.const_float Type.float n
-    | OptimizedTree.Char n -> Llvm.const_int Type.i32 (Uchar.to_int n)
-    | OptimizedTree.String s -> Llvm.const_string c (s ^ "\x00")
+    | `Int n -> Llvm.const_int Type.i32 n
+    | `Float n -> Llvm.const_float Type.float n
+    | `Char n -> Llvm.const_int Type.i32 (Uchar.to_int n)
+    | `String s -> Llvm.const_string c (s ^ "\x00")
 
   let llvm_ty_of_ty = function
-    | OptimizedTree.Int () -> Type.i32
-    | OptimizedTree.Float () -> Type.float
-    | OptimizedTree.Char () -> Type.i32
-    | OptimizedTree.String () -> Type.star
-
-  let ret_type = function
-    | OptimizedTree.Void -> Type.void
-    | OptimizedTree.Alloc ty -> llvm_ty_of_ty ty
+    | `Int () -> Type.i32
+    | `Float () -> Type.float
+    | `Char () -> Type.i32
+    | `String () -> Type.star
+    | `Custom -> Type.star
+    | `Void -> Type.void
 
   let args_type args =
     let aux (ty, _) = llvm_ty_of_ty ty in
@@ -270,7 +268,7 @@ module Make (I : I) = struct
         [||]
     | args ->
         let aux = function
-          | (OptimizedTree.String (), name) ->
+          | (`Custom, name) ->
               get_value env builder name
           | (ty, name) ->
               let ty = Llvm.pointer_type (llvm_ty_of_ty ty) in
@@ -313,13 +311,13 @@ module Make (I : I) = struct
     | OptimizedTree.PtrTree tree -> g get_exn tree
 
   let map_ret builder t = function
-    | OptimizedTree.Void ->
+    | `Void ->
         let v = Llvm.define_constant "" (Llvm.const_array Type.star [||]) m in
         let v = Llvm.const_bitcast v Type.star in
         (v, builder)
-    | OptimizedTree.Alloc (OptimizedTree.String ()) ->
+    | `Custom ->
         (t, builder)
-    | OptimizedTree.Alloc ty ->
+    | ty ->
         let ty = llvm_ty_of_ty ty in
         let value = Llvm.build_malloc ty "" builder in
         Llvm.build_store t value builder;
@@ -385,7 +383,7 @@ module Make (I : I) = struct
           (v, builder)
         end
     | OptimizedTree.CallForeign (name, ret, args) ->
-        let ty = Llvm.function_type (ret_type ret) (args_type args) in
+        let ty = Llvm.function_type (llvm_ty_of_ty ret) (args_type args) in
         let f = Llvm.declare_function name ty m in
         let args = map_args env builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret
