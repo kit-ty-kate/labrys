@@ -100,6 +100,9 @@ let rec size = function
   | NFun (_, _, t) -> succ (size t)
   | NForall (_, _, t) -> size t
 
+let replace a ~by t =
+  normalize (Type.replace a ~by (to_type t))
+
 open Utils.PPrint
 
 let dump_ty_name name = str (Ident.Type.to_string name)

@@ -61,9 +61,15 @@ let rec check_term options env = function
   | (_, PretypedTree.CAbs _) ->
       assert false (* TODO *)
   | (loc, PretypedTree.App (t1, t2)) ->
-      assert false (* TODO *)
+      let (t1, ty1, eff1) = check_term options env t1 in
+      let (t2, ty2, eff2) = check_term options env t2 in
+      let (ty, eff3) = app ~loc ty2 ty1 in
+      (App (t1, t2), ty, eff1 @ eff2 @ eff3)
   | (loc, PretypedTree.TApp (t, ty)) ->
-      assert false (* TODO *)
+      let (t, ty', eff) = check_term options env t in
+      let ty = Type.check ~pure_arrow:`Forbid env ty in
+      let ty = tapp ~loc ty ty' in
+      (t, ty, eff)
   | (_, PretypedTree.CApp _) ->
       assert false (* TODO *)
   | (_, PretypedTree.Val name) ->
@@ -91,6 +97,30 @@ let rec check_term options env = function
   | (_, PretypedTree.Const c) ->
       let (c, ty) = get_const options c in
       (Const c, TypedEnv.NTy ty, [])
+
+and app ~loc ty2 = function
+  | TypedEnv.NFun (ty2', eff, ty) when NType.is_subset_of ty2 ty2' ->
+      (ty, eff)
+  | TypedEnv.NFun (expected, _, _) ->
+      type_fail ~loc ~has:ty2 ~expected
+  | TypedEnv.NTy _ | TypedEnv.NForall _ | TypedEnv.NApp _ as ty ->
+      Err.fail_doc
+        ~loc
+        Utils.PPrint.(str "This expression has type" ^^^
+                      squotes (NType.dump ty) ^/^
+                      str "This is not a function; it cannot be applied.")
+
+and tapp ~loc (ty, k) = function
+  | TypedEnv.NForall (name, k', ty') when Type.kind_equal k k' ->
+      NType.replace name ~by:ty ty'
+  | TypedEnv.NForall (_, expected, _) ->
+      Type.kind_fail ~loc ~has:k ~expected
+  | TypedEnv.NTy _ | TypedEnv.NFun _ | TypedEnv.NApp _ as ty ->
+      Err.fail_doc
+        ~loc
+        Utils.PPrint.(str "This expression has type" ^^^
+                      squotes (NType.dump ty) ^/^
+                      str "This is not a type abstraction; it cannot be applied.")
 
 let check_eff_value ~current_module options name ty eff =
   let loc = Ident.Name.loc name in

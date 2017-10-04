@@ -2,6 +2,8 @@
 (* See the LICENSE file at the top-level directory. *)
 
 val kind_equal : PretypedTree.kind -> PretypedTree.kind -> bool
+val kind_fail :
+  loc:Location.t -> has:TypedEnv.kind -> expected:TypedEnv.kind -> 'a
 
 val check :
   pure_arrow:[`Partial | `Forbid | `Allow] ->
