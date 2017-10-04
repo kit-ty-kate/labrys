@@ -10,8 +10,4 @@ val check :
   UntypedTree.top list
 
 val check_interface :
-  current_module:Module.t ->
-  <lib_dir : string; ..> ->
-  TypedEnv.env ->
-  PretypedTree.interface list ->
-  TypedEnv.env
+  TypedEnv.env -> PretypedTree.interface list -> TypedEnv.env

@@ -47,7 +47,7 @@ let get_const options = function
   | PretypedTree.String s -> (`String s, Builtins.string options)
 
 let rec check_term options env = function
-  | (loc, PretypedTree.Abs ((name, ty), t)) ->
+  | (_, PretypedTree.Abs ((name, ty), t)) ->
       let ty = NType.check ~pure_arrow:`Forbid env ty in
       let env = Env.add_value name ty env in
       let (t, ty', eff) = check_term options env t in
@@ -75,16 +75,25 @@ let rec check_term options env = function
   | (_, PretypedTree.Val name) ->
       let ty = EnvMap.Value.find name env.TypedEnv.values in
       (Val name, ty, [])
-  | (loc, PretypedTree.Var name) ->
+  | (_, PretypedTree.Var name) ->
       let (idx, ty) = EnvMap.Constr.find name env.TypedEnv.constrs in
       let size = NType.size ty in
       (Var (idx, size), ty, [])
-  | (loc, PretypedTree.PatternMatching (t, cases)) ->
+  | (_, PretypedTree.PatternMatching _) ->
       assert false (* TODO *)
-  | (loc, PretypedTree.Let (name, t1, t2)) ->
-      assert false (* TODO *)
+  | (_, PretypedTree.Let (name, t1, t2)) ->
+      let (t1, ty1, eff1) = check_term options env t1 in
+      let env = Env.add_value name ty1 env in
+      let (t2, ty2, eff2) = check_term options env t2 in
+      (Let (name, t1, t2), ty2, eff1 @ eff2)
   | (loc, PretypedTree.LetRec (name, ty, t1, t2)) ->
-      assert false (* TODO *)
+      let ty = NType.check ~pure_arrow:`Partial env ty in
+      let env = Env.add_value name ty env in
+      let (t1, ty1, eff1) = check_term options env t1 in
+      if not (NType.is_subset_of ty1 ty) then
+        type_fail ~loc ~has:ty ~expected:ty1;
+      let (t2, ty2, eff2) = check_term options env t2 in
+      (Let (name, t1, t2), ty2, eff1 @ eff2)
   | (_, PretypedTree.Fail _) ->
       assert false (* TODO *)
   | (_, PretypedTree.Try _) ->
@@ -222,7 +231,7 @@ let check ~current_module ~interface options env x =
   Env.check_vdiff interface env;
   res
 
-let check_interface ~current_module options =
+let check_interface =
   let aux env = function
     | PretypedTree.IVal (name, ty) ->
         let ty = NType.check ~pure_arrow:`Partial env ty in
