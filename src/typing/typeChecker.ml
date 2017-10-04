@@ -48,9 +48,16 @@ let get_const options = function
 
 let rec check_term options env = function
   | (loc, PretypedTree.Abs ((name, ty), t)) ->
-      assert false (* TODO *)
+      let ty = NType.check ~pure_arrow:`Forbid env ty in
+      let env = Env.add_value name ty env in
+      let (t, ty', eff) = check_term options env t in
+      (Abs (name, t), TypedEnv.NFun (ty, eff, ty'), [])
   | (loc, PretypedTree.TAbs ((name, k), t)) ->
-      assert false (* TODO *)
+      let env = Env.add_abstract_type name k env in
+      let (t, ty, eff) = check_term options env t in
+      if not (List.is_empty eff) then
+        Err.fail ~loc "Effects are forbidden under type abstractions.";
+      (t, TypedEnv.NForall (name, k, ty), [])
   | (_, PretypedTree.CAbs _) ->
       assert false (* TODO *)
   | (loc, PretypedTree.App (t1, t2)) ->
@@ -152,7 +159,7 @@ let check_top ~current_module options (acc, has_main, env) = function
       let (t, ty, eff) = check_term options env t in
       let has_main = check_eff_value ~current_module options name ty eff in
       let acc = acc @ [Value (name, t)] in
-      let env = Env.add_toplevel_value name ty env in
+      let env = Env.add_value name ty env in
       (acc, has_main, env)
   | PretypedTree.Type (name, ty) ->
       let env = Env.add_type_alias name ty env in
@@ -163,7 +170,7 @@ let check_top ~current_module options (acc, has_main, env) = function
         check_foreign_type ~loc:(Ident.Name.loc name) true options env ty
       in
       let acc = acc @ [Foreign (cname, name, rty)] in
-      let env = Env.add_toplevel_value name ty env in
+      let env = Env.add_value name ty env in
       (acc, has_main, env)
   | PretypedTree.Datatype (name, k, variants) ->
       let env = Env.add_datatype name k variants env in
@@ -189,7 +196,7 @@ let check_interface ~current_module options =
   let aux env = function
     | PretypedTree.IVal (name, ty) ->
         let ty = NType.check ~pure_arrow:`Partial env ty in
-        Env.add_toplevel_value name ty env
+        Env.add_value name ty env
     | PretypedTree.IAbstractType (name, k) ->
         Env.add_abstract_type name k env
     | PretypedTree.IDatatype (name, k, variants) ->

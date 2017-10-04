@@ -94,7 +94,7 @@ let check_vdiff x y =
 
 type add = TypedEnv.env -> TypedEnv.env
 
-let add_toplevel_value name ty env =
+let add_value name ty env =
   let values = EnvMap.Value.add name ty env.TypedEnv.values in
   {env with TypedEnv.values}
 

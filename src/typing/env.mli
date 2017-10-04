@@ -10,7 +10,7 @@ val check_vdiff : TypedEnv.env -> TypedEnv.env -> unit
 
 type add = TypedEnv.env -> TypedEnv.env
 
-val add_toplevel_value : Ident.Name.t -> TypedEnv.nty -> add
+val add_value : Ident.Name.t -> TypedEnv.nty -> add
 val add_abstract_type : Ident.Type.t -> PretypedTree.kind -> add
 val add_datatype :
   Ident.Type.t ->
