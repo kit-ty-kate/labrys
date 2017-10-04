@@ -6,10 +6,33 @@ open UntypedTree
 let type_fail ~loc ~has ~expected =
   Err.fail_doc ~loc
     Utils.PPrint.(str "This value has type" ^^^
-                  squotes (Type.dump has) ^^^
+                  squotes (NType.dump has) ^^^
                   str "but was expected of type" ^^^
-                  squotes (Type.dump expected) ^^^
+                  squotes (NType.dump expected) ^^^
                   dot)
+
+let eff_fail ~loc ~has ~expected =
+  Err.fail_doc ~loc
+    Utils.PPrint.(str "This effect has type" ^^^
+                  squotes (NType.dump_eff has) ^^^
+                  str "but was expected of type" ^^^
+                  squotes (NType.dump_eff expected) ^^^
+                  dot)
+
+let check_type ~loc env ty' ty =
+  let ty = NType.check ~pure_arrow:`Allow env ty in
+  if not (NType.is_subset_of ty' ty) then
+    type_fail ~loc ~has:ty' ~expected:ty;
+  ty
+
+let check_eff ~loc env eff' eff =
+  let eff = NType.check_eff ~pure_arrow:`Allow env eff in
+  if not (NType.eff_is_subset_of eff' eff) then
+    eff_fail ~loc ~has:eff' ~expected:eff;
+  eff
+
+let check_eff_opt ~loc env eff' =
+  Option.map_or ~default:[] (check_eff ~loc env eff')
 
 let unit options = TypedEnv.NTy (Builtins.unit options)
 let is_unit options = NType.is_subset_of (unit options)
@@ -17,13 +40,55 @@ let is_main ~current_module = Ident.Name.equal (Builtins.main ~current_module)
 let io options = TypedEnv.NTy (Builtins.io options)
 let has_io options = List.exists (NType.is_subset_of (io options))
 
-let check_term env t =
-  assert false (* TODO *)
+let get_const options = function
+  | PretypedTree.Int n -> (`Int n, Builtins.int options)
+  | PretypedTree.Float n -> (`Float n, Builtins.float options)
+  | PretypedTree.Char c -> (`Char c, Builtins.char options)
+  | PretypedTree.String s -> (`String s, Builtins.string options)
+
+let rec check_term options env = function
+  | (loc, PretypedTree.Abs ((name, ty), t)) ->
+      assert false (* TODO *)
+  | (loc, PretypedTree.TAbs ((name, k), t)) ->
+      assert false (* TODO *)
+  | (_, PretypedTree.CAbs _) ->
+      assert false (* TODO *)
+  | (loc, PretypedTree.App (t1, t2)) ->
+      assert false (* TODO *)
+  | (loc, PretypedTree.TApp (t, ty)) ->
+      assert false (* TODO *)
+  | (_, PretypedTree.CApp _) ->
+      assert false (* TODO *)
+  | (_, PretypedTree.Val name) ->
+      let ty = EnvMap.Value.find name env.TypedEnv.values in
+      (Val name, ty, [])
+  | (loc, PretypedTree.Var name) ->
+      let (idx, ty) = EnvMap.Constr.find name env.TypedEnv.constrs in
+      let size = NType.size ty in
+      (Var (idx, size), ty, [])
+  | (loc, PretypedTree.PatternMatching (t, cases)) ->
+      assert false (* TODO *)
+  | (loc, PretypedTree.Let (name, t1, t2)) ->
+      assert false (* TODO *)
+  | (loc, PretypedTree.LetRec (name, ty, t1, t2)) ->
+      assert false (* TODO *)
+  | (_, PretypedTree.Fail _) ->
+      assert false (* TODO *)
+  | (_, PretypedTree.Try _) ->
+      assert false (* TODO *)
+  | (loc, PretypedTree.Annot (t, (ty, eff))) ->
+      let (t, ty', eff') = check_term options env t in
+      let ty = check_type ~loc env ty' ty in
+      let eff = check_eff_opt ~loc env eff' eff in
+      (t, ty, eff)
+  | (_, PretypedTree.Const c) ->
+      let (c, ty) = get_const options c in
+      (Const c, TypedEnv.NTy ty, [])
 
 let check_eff_value ~current_module options name ty eff =
   let loc = Ident.Name.loc name in
   if options#with_main && is_main ~current_module name then begin
-    if not (List.for_all (Ident.Type.equal (Builtins.io options)) eff) then
+    if not (List.for_all (NType.is_subset_of (io options)) eff) then
       Err.fail ~loc
         "Effects different than 'IO' are not allowed in the main function";
     if not (NType.is_subset_of ty (unit options)) then
@@ -84,7 +149,7 @@ let rec check_foreign_type ~loc is_first options env = function
 
 let check_top ~current_module options (acc, has_main, env) = function
   | PretypedTree.Value (name, t) ->
-      let (t, ty, eff) = check_term env t in
+      let (t, ty, eff) = check_term options env t in
       let has_main = check_eff_value ~current_module options name ty eff in
       let acc = acc @ [Value (name, t)] in
       let env = Env.add_toplevel_value name ty env in

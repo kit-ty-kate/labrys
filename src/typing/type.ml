@@ -25,15 +25,8 @@ let kind_fail ~loc ~has ~expected =
                   squotes (ParseTreePrinter.dump_kind expected) ^^^
                   dot)
 
-let rec eff_check env (_, e) =
-  let aux ty =
-    match check ~pure_arrow:`Forbid env ty with
-    | (ty, KEff) ->
-        ty
-    | (_, (KStar | KFun _ as k)) ->
-        kind_fail ~loc:(fst ty) ~has:k ~expected:KEff
-  in
-  List.map aux e
+let rec eff_check ~pure_arrow env (_, e) =
+  List.map (check_eff ~pure_arrow env) e
 
 and eff_arrow_check ~loc ~pure_arrow env e = match e, pure_arrow with
   | None, (`Allow | `Partial) ->
@@ -43,7 +36,7 @@ and eff_arrow_check ~loc ~pure_arrow env e = match e, pure_arrow with
       Err.fail ~loc "Pure arrows are forbidden here. If you really want one \
                      use the explicit syntax '-[]->' instead"
   | Some e, (`Allow | `Partial | `Forbid) ->
-      eff_check env e
+      eff_check ~pure_arrow env e
 
 and check ~pure_arrow env = function
   | (loc, PretypedTree.Fun (t1, e, t2)) ->
@@ -57,7 +50,7 @@ and check ~pure_arrow env = function
       | Abstract k | Datatype (k, _) -> (Ty name, k)
       end
   | (_, PretypedTree.Eff e) ->
-      (Eff (eff_check env e), KEff)
+      (Eff (eff_check ~pure_arrow env e), KEff)
   | (_, PretypedTree.Forall ((name, k), t)) ->
       let env = add_abstract_type name k env in
       (Forall (name, k, check_value ~pure_arrow env t), KStar)
@@ -78,10 +71,13 @@ and check ~pure_arrow env = function
 
 and check_value ~pure_arrow env x =
   match check ~pure_arrow env x with
-  | (ty, KStar) ->
-      ty
-  | (_, (KEff | KFun _ as k)) ->
-      kind_fail ~loc:(fst x) ~has:k ~expected:KStar
+  | (ty, KStar) -> ty
+  | (_, (KEff | KFun _ as k)) -> kind_fail ~loc:(fst x) ~has:k ~expected:KStar
+
+and check_eff ~pure_arrow env x =
+  match check ~pure_arrow env x with
+  | (ty, KEff) -> ty
+  | (_, (KStar | KFun _ as k)) -> kind_fail ~loc:(fst x) ~has:k ~expected:KEff
 
 let rec replace a ~by =
   let replace t = replace a ~by t in
@@ -137,9 +133,9 @@ and app x y = match x, y with
 
 let equal = equal 0
 
-let rec to_ptype =
-  let loc = Builtins.unknown_loc in
-  function
+let loc = Builtins.unknown_loc
+
+let rec to_ptype = function
   | Fun (t1, e, t2) ->
       (loc, PretypedTree.Fun (to_ptype t1, Some (to_ptype_eff e), to_ptype t2))
   | Ty name -> (loc, PretypedTree.Ty name)
@@ -148,7 +144,8 @@ let rec to_ptype =
   | Abs (name, k, t) -> (loc, PretypedTree.AbsOnTy ((name, k), to_ptype t))
   | App (t1, t2) -> (loc, PretypedTree.AppOnTy (to_ptype t1, to_ptype t2))
 
-and to_ptype_eff e =
-  (Builtins.unknown_loc, List.map to_ptype e)
+and to_ptype_eff e = (loc, List.map to_ptype e)
 
 let dump ty = PretypedTreePrinter.dump_ty (to_ptype ty)
+let dump_eff eff =
+  PretypedTreePrinter.dump_ty (loc, PretypedTree.Eff (to_ptype_eff eff))

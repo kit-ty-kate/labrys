@@ -15,9 +15,25 @@ let rec normalize = function
       | Ty _ | Fun _ | Forall _ as t -> normalize t
       end
 
+let rec normalize_eff = function
+  | Ty name -> [NTy name]
+  | Eff e -> List.concat (List.map normalize_eff e)
+  | Fun _ | Abs _ | Forall _ -> assert false
+  | App (t1, t2) ->
+      begin match Type.app t1 t2 with
+      | Ty name -> [NTy name]
+      | Eff e -> List.concat (List.map normalize_eff e)
+      | App (t1, t2) -> [NApp (normalize t1, t2)]
+      | Fun _ | Abs _ | Forall _ -> assert false
+      end
+
 let check ~pure_arrow env ty =
   let ty = Type.check_value ~pure_arrow env ty in
   normalize ty
+
+let check_eff ~pure_arrow env ty =
+  let ty = Type.check_eff ~pure_arrow env ty in
+  normalize_eff ty
 
 let rec to_type = function
   | NFun (t1, e, t2) -> Fun (to_type t1, List.map to_type e, to_type t2)
@@ -59,6 +75,7 @@ and is_subset_of n x y = match x, y with
       false
 
 let is_subset_of = is_subset_of 0
+let eff_is_subset_of = eff_is_subset_of 0
 
 let datatype_is_subset_of (k1, constrs1) (k2, constrs2) =
   let aux (name1, _, ty1) (name2, _, ty2) =
@@ -78,6 +95,11 @@ let is_subset_of_list tys1 tys2 =
   try List.for_all2 is_subset_of tys1 tys2 with
   | Invalid_argument _ -> false
 
+let rec size = function
+  | NTy _ | NApp _ -> 0
+  | NFun (_, _, t) -> succ (size t)
+  | NForall (_, _, t) -> size t
+
 open Utils.PPrint
 
 let dump_ty_name name = str (Ident.Type.to_string name)
@@ -86,6 +108,7 @@ let dump_constr_name name = str (Ident.Constr.to_string name)
 let dump_kind = ParseTreePrinter.dump_kind
 
 let dump ty = Type.dump (to_type ty)
+let dump_eff eff = Type.dump_eff (List.map to_type eff)
 
 let dump_constr (name, _, ty) =
   bar ^^^ dump_constr_name name ^^^ colon ^^^ dump ty
