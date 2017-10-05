@@ -74,6 +74,16 @@ let rec get_supertype ty eff = function
       else
         type_fail ~loc ~has:ty' ~expected:ty
 
+let rec filter_effects options eff = function
+  | [] ->
+      eff
+  | ((name, _), _)::branches ->
+      (* TODO: Check duplication *)
+      let exn = TypedEnv.NTy (Builtins.exn options) in
+      let ty' = TypedEnv.NApp (exn, TypedEnv.Ty (Ident.Exn.to_type name)) in
+      let eff = List.filter (fun ty -> not (NType.is_subset_of ty ty')) eff in
+      filter_effects options eff branches
+
 let rec check_try_branch options env ((name, args), t) =
   let name = Ident.Exn.to_constr name in
   match EnvMap.Constr.find name env.TypedEnv.constrs with
@@ -96,13 +106,14 @@ let rec check_try_branch options env ((name, args), t) =
         ~loc:(Ident.Constr.loc name)
         "This data constructor is not an exception"
 
-and check_try_branches options ty env = function
+and check_try_branches options ty eff env = function
   | [] ->
       assert false (* NOTE: This is forbidden by the syntax *)
   | branches ->
+      let eff = filter_effects options eff branches in
       let branches = List.map (check_try_branch options env) branches in
       let (branches, tys) = List.split branches in
-      let (ty, eff) = get_supertype ty [] tys in
+      let (ty, eff) = get_supertype ty eff tys in
       (branches, ty, eff)
 
 and check_term options env = function
@@ -161,8 +172,8 @@ and check_term options env = function
       (Fail t, ty, eff @ eff')
   | (_, PretypedTree.Try (t, branches)) ->
       let (t, ty, eff) = check_term options env t in
-      let (branches, ty, eff') = check_try_branches options ty env branches in
-      (Try (t, branches), ty, eff @ eff')
+      let (branches, ty, eff) = check_try_branches options ty eff env branches in
+      (Try (t, branches), ty, eff)
   | (loc, PretypedTree.Annot (t, (ty, eff))) ->
       let (t, ty', eff') = check_term options env t in
       let ty = check_type ~loc env ty' ty in
