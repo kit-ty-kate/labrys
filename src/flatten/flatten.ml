@@ -38,8 +38,8 @@ let rec propagate' env = function
       let branches = List.map (propagate env) branches in
       let default = propagate env default in
       ([], PatternMatching (name, branches, default, tree))
-  | Fail (name, args) ->
-      ([], Fail (name, args))
+  | Fail name ->
+      ([], Fail name)
   | Try (t, (name, t')) ->
       let t = propagate env t in
       let t' = propagate env t' in
@@ -51,8 +51,6 @@ let rec propagate' env = function
       ([], Const c)
   | Unreachable ->
       ([], Unreachable)
-  | Reraise name ->
-      ([], Reraise name)
 
 and propagate env (lets, t) =
   let rec aux env = function
@@ -96,8 +94,8 @@ let rec of_term = function
       let (lets_x, x) = of_term x in
       let (lets_t, t) = of_term t in
       (lets_x @ [(name, Rec (name, x))] @ lets_t, t)
-  | LambdaTree.Fail (name, args) ->
-      ([], Fail (name, args))
+  | LambdaTree.Fail name ->
+      ([], Fail name)
   | LambdaTree.Try (t, (name, t')) ->
       let t = of_term t in
       let t' = of_term t' in
@@ -108,8 +106,6 @@ let rec of_term = function
       ([], Const c)
   | LambdaTree.Unreachable ->
       ([], Unreachable)
-  | LambdaTree.Reraise name ->
-      ([], Reraise name)
 
 let of_lambda_tree top =
   let aux = function

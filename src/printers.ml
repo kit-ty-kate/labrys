@@ -5,8 +5,6 @@ let fmt = Printf.sprintf
 let (^^) = PPrint.(^^)
 
 let dump_name = Ident.Name.to_string
-let dump_variant_name = Ident.Constr.to_string
-let dump_exn_name = Ident.Exn.to_string
 
 let rec dump_top f doc = function
   | [] -> doc
@@ -52,14 +50,14 @@ module UntypedTree = struct
         dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
 
   let dump_patterns = function
-    | Idx pat ->
-        let f (name, index) =
-          PPrint.string (fmt "| %s <=> %d ->" (dump_variant_name name) index)
+    | Index pat ->
+        let f index =
+          PPrint.string (fmt "| %d ->" index)
         in
         dump_patterns' f pat
-     | Ptr pat ->
+     | Exn pat ->
          let f name =
-           PPrint.string (fmt "| exn %s ->" (dump_exn_name name))
+           PPrint.string (fmt "| exn %s ->" (dump_name name))
          in
          dump_patterns' f pat
 
@@ -68,6 +66,10 @@ module UntypedTree = struct
       fmt "%s (%s = %s)" acc (dump_name name) (dump_var var)
     in
     List.fold_left aux "Ø" free_vars
+
+  let dump_constr_rep = function
+    | Index idx -> string_of_int idx
+    | Exn name -> dump_name name
 
   let rec dump_t = function
     | Abs (name, t) ->
@@ -86,8 +88,8 @@ module UntypedTree = struct
           )
     | Val name ->
         PPrint.string (dump_name name)
-    | Var (idx, len) ->
-        PPrint.string (fmt "[%d, %d]" idx len)
+    | Var (rep, len) ->
+        PPrint.string (fmt "[%s, %d]" (dump_constr_rep rep) len)
     | PatternMatching (t, results, default, patterns) ->
         dump_pattern_matching
           (dump_t t)
@@ -118,13 +120,12 @@ module UntypedTree = struct
            ^^ dump_t xs
            ^^ PPrint.rparen
           )
-    | Fail (name, args) ->
+    | Fail t ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string "fail"
            ^^ PPrint.blank 1
-           ^^ PPrint.string (dump_exn_name name)
-           ^^ dump_exn_args args
+           ^^ dump_t t
            ^^ PPrint.rparen
           )
     | Try (t, branches) ->
@@ -177,15 +178,11 @@ module UntypedTree = struct
       doc
       ^^ PPrint.break 1
       ^^ PPrint.group
-           (PPrint.string (fmt "| %s %s ->" (dump_exn_name name) (dump_args args))
+           (PPrint.string (fmt "| %s %s ->" (dump_name name) (dump_args args))
             ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t t)
            )
     in
     List.fold_left aux PPrint.empty branches
-
-  and dump_exn_args args =
-    let aux doc x = doc ^^ PPrint.break 1 ^^ dump_t x in
-    List.fold_left aux PPrint.empty args
 
   let dump_tag_ty = function
     | `Int () -> "Int"
@@ -210,7 +207,7 @@ module UntypedTree = struct
     | Foreign (cname, name, (ret, args)) ->
         PPrint.string (fmt "foreign \"%s\" %s : (%s, %s)" cname (dump_name name) (dump_tag_ty ret) (dump_args_ty args))
     | Exception name ->
-        PPrint.string (fmt "exception %s" (dump_exn_name name))
+        PPrint.string (fmt "exception %s" (dump_name name))
     | Instance (name, values) ->
         PPrint.string (fmt "instance %s =" (dump_name name))
         ^^ PPrint.break 1
@@ -255,14 +252,14 @@ module LambdaTree = struct
         dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
 
   let dump_patterns = function
-    | IdxTree pat ->
+    | Index pat ->
         let f index =
           PPrint.string (fmt "| %d ->" index)
         in
         dump_patterns' f pat
-     | PtrTree pat ->
+     | Exn pat ->
          let f name =
-           PPrint.string (fmt "| exn %s ->" (dump_exn_name name))
+           PPrint.string (fmt "| exn %s ->" (dump_name name))
          in
          dump_patterns' f pat
 
@@ -283,6 +280,10 @@ module LambdaTree = struct
     | `String () -> "String"
     | `Custom -> "UNKNOWN"
     | `Void -> "VOID"
+
+  let dump_constr_rep = function
+    | Index idx -> string_of_int idx
+    | Exn name -> dump_name name
 
   let rec dump_t = function
     | Abs (name, t) ->
@@ -307,7 +308,7 @@ module LambdaTree = struct
         PPrint.group
           (PPrint.lbracket
            ^^ PPrint.break 1
-           ^^ PPrint.string (Option.map_or ~default:"" string_of_int index)
+           ^^ PPrint.string (Option.map_or ~default:"" dump_constr_rep index)
            ^^ PPrint.break 1
            ^^ PPrint.bar
            ^^ PPrint.break 1
@@ -346,13 +347,12 @@ module LambdaTree = struct
            ^^ dump_t xs
            ^^ PPrint.rparen
           )
-    | Fail (name, args) ->
+    | Fail name ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string "fail"
            ^^ PPrint.blank 1
-           ^^ PPrint.string (dump_exn_name name)
-           ^^ dump_args args
+           ^^ PPrint.string (dump_name name)
            ^^ PPrint.rparen
           )
     | Try (t, (name, t')) ->
@@ -379,8 +379,6 @@ module LambdaTree = struct
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
         PPrint.string "UNREACHABLE"
-    | Reraise e ->
-        PPrint.string (fmt "reraise %s" (dump_name e))
 
   and dump_results results =
     let aux doc i result =
@@ -408,7 +406,7 @@ module LambdaTree = struct
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
     | Exception name ->
-        PPrint.string (fmt "exception %s" (dump_exn_name name))
+        PPrint.string (fmt "exception %s" (dump_name name))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
@@ -447,14 +445,14 @@ module FlattenTree = struct
         dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
 
   let dump_patterns = function
-    | IdxTree pat ->
+    | Index pat ->
         let f index =
           PPrint.string (fmt "| %d ->" index)
         in
         dump_patterns' f pat
-     | PtrTree pat ->
+     | Exn pat ->
          let f name =
-           PPrint.string (fmt "| exn %s ->" (dump_exn_name name))
+           PPrint.string (fmt "| exn %s ->" (dump_name name))
          in
          dump_patterns' f pat
 
@@ -475,6 +473,10 @@ module FlattenTree = struct
     | `String () -> "String"
     | `Custom -> "UNKNOWN"
     | `Void -> "VOID"
+
+  let dump_constr_rep = function
+    | Index idx -> string_of_int idx
+    | Exn name -> dump_name name
 
   let rec dump_t' = function
     | Abs (name, t) ->
@@ -507,7 +509,7 @@ module FlattenTree = struct
         PPrint.group
           (PPrint.lbracket
            ^^ PPrint.break 1
-           ^^ PPrint.string (Option.map_or ~default:"" string_of_int index)
+           ^^ PPrint.string (Option.map_or ~default:"" dump_constr_rep index)
            ^^ PPrint.break 1
            ^^ PPrint.bar
            ^^ PPrint.break 1
@@ -524,13 +526,12 @@ module FlattenTree = struct
         ^^ PPrint.string "| _ -> " ^^ dump_t default
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Fail (name, args) ->
+    | Fail name ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string "fail"
            ^^ PPrint.blank 1
-           ^^ PPrint.string (dump_exn_name name)
-           ^^ dump_args args
+           ^^ PPrint.string (dump_name name)
            ^^ PPrint.rparen
           )
     | Try (t, (name, t')) ->
@@ -557,8 +558,6 @@ module FlattenTree = struct
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
         PPrint.string "UNREACHABLE"
-    | Reraise e ->
-        PPrint.string (fmt "reraise %s" (dump_name e))
 
   and dump_t (lets, t) =
     let aux (name, x) =
@@ -600,7 +599,7 @@ module FlattenTree = struct
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
     | Exception name ->
-        PPrint.string (fmt "exception %s" (dump_exn_name name))
+        PPrint.string (fmt "exception %s" (dump_name name))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in
@@ -639,14 +638,14 @@ module OptimizedTree = struct
         dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
 
   let dump_patterns = function
-    | IdxTree pat ->
+    | Index pat ->
         let f index =
           PPrint.string (fmt "| %d ->" index)
         in
         dump_patterns' f pat
-     | PtrTree pat ->
+     | Exn pat ->
          let f name =
-           PPrint.string (fmt "| exn %s ->" (dump_exn_name name))
+           PPrint.string (fmt "| exn %s ->" (dump_name name))
          in
          dump_patterns' f pat
 
@@ -673,6 +672,10 @@ module OptimizedTree = struct
     | `String () -> "String"
     | `Custom -> "UNKNOWN"
     | `Void -> "VOID"
+
+  let dump_constr_rep = function
+    | Index idx -> string_of_int idx
+    | Exn name -> dump_name name
 
   let rec dump_t' = function
     | Abs (name, free_vars, t) ->
@@ -705,7 +708,7 @@ module OptimizedTree = struct
         PPrint.group
           (PPrint.lbracket
            ^^ PPrint.space
-           ^^ PPrint.string (Option.map_or ~default:"" string_of_int index)
+           ^^ PPrint.string (Option.map_or ~default:"" dump_constr_rep index)
            ^^ PPrint.space
            ^^ PPrint.bar
            ^^ PPrint.space
@@ -722,13 +725,12 @@ module OptimizedTree = struct
         ^^ PPrint.string "| _ -> " ^^ dump_t default
         ^^ PPrint.break 1
         ^^ PPrint.string "end"
-    | Fail (name, args) ->
+    | Fail name ->
         PPrint.group
           (PPrint.lparen
            ^^ PPrint.string "fail"
            ^^ PPrint.blank 1
-           ^^ PPrint.string (dump_exn_name name)
-           ^^ dump_args args
+           ^^ PPrint.string (dump_name name)
            ^^ PPrint.rparen
           )
     | Try (t, (name, t')) ->
@@ -755,8 +757,6 @@ module OptimizedTree = struct
         PPrint.string (fmt "\"%s\"" s)
     | Unreachable ->
         PPrint.string "UNREACHABLE"
-    | Reraise e ->
-        PPrint.string (fmt "reraise %s" (dump_name e))
 
   and dump_t (lets, t) =
     let aux (name, x) =
@@ -804,7 +804,7 @@ module OptimizedTree = struct
            ^^ PPrint.nest 2 (PPrint.break 1 ^^ dump_t t)
           )
     | Exception name ->
-        PPrint.string (fmt "exception %s" (dump_exn_name name))
+        PPrint.string (fmt "exception %s" (dump_name name))
 
   let dump top =
     let doc = dump_top dump PPrint.empty top in

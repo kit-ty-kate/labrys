@@ -46,8 +46,9 @@ let get_const options = function
   | PretypedTree.Char c -> (`Char c, Builtins.char options)
   | PretypedTree.String s -> (`String s, Builtins.string options)
 
-let get_rep name rep =
-  assert false (* TODO *)
+let get_rep name = function
+  | TypedEnv.Index idx -> Index idx
+  | TypedEnv.Exn -> Exn (Ident.Constr.to_name name)
 
 let rec check_term options env = function
   | (_, PretypedTree.Abs ((name, ty), t)) ->
@@ -219,7 +220,7 @@ let check_top ~current_module options (acc, has_main, env) = function
       let env = Env.add_datatype name k variants env in
       (acc, has_main, env)
   | PretypedTree.Exception (name, args) ->
-      let acc = acc @ [Exception name] in
+      let acc = acc @ [Exception (Ident.Exn.to_name name)] in
       let env = Env.add_exception name args env in
       (acc, has_main, env)
   | PretypedTree.Class _ ->

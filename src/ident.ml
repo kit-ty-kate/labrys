@@ -35,6 +35,7 @@ end
 module Type = Name
 module Exn = struct
   include Name
+  let to_name = Fun.id
   let to_type = Fun.id
   let to_constr = Fun.id
 end

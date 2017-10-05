@@ -23,6 +23,7 @@ end
 module Type : module type of Name
 module Exn : sig
   include module type of Name
+  val to_name : t -> Name.t
   val to_type : t -> Type.t
   val to_constr : t -> Constr.t
 end

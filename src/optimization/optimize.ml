@@ -27,8 +27,8 @@ let rec of_term' = function
       let (t, fv) = of_term' t in
       let fv = Set.remove_all fv name in
       (Rec (name, t), fv)
-  | FlattenTree.Fail (exn, args) ->
-      (Fail (exn, args), Set.of_list args)
+  | FlattenTree.Fail name ->
+      (Fail name, Set.singleton name)
   | FlattenTree.Try (t, (name, t')) ->
       let (t, fv1) = of_term t in
       let (t', fv2) = of_term t' in
@@ -40,8 +40,6 @@ let rec of_term' = function
       (Const c, Set.empty)
   | FlattenTree.Unreachable ->
       (Unreachable, Set.empty)
-  | FlattenTree.Reraise name ->
-      (Reraise name, Set.singleton name)
 
 and of_term (lets, t) =
   let rec aux = function

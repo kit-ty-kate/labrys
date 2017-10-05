@@ -208,7 +208,7 @@ module Make (I : I) = struct
     (builder', closure, env)
 
   let get_exn name =
-    let name = Ident.Exn.to_string name in
+    let name = LIdent.to_string name in
     Llvm.declare_global Type.i8 name m
 
   let llvalue_of_pattern_var value builder = function
@@ -305,8 +305,8 @@ module Make (I : I) = struct
     let g f tree = create_tree' ~default env builder value results f tree in
     let int_to_ptr i = Llvm.const_inttoptr (Llvm.const_int Type.i32 i) Type.star in
     function
-    | OptimizedTree.IdxTree tree -> g int_to_ptr tree
-    | OptimizedTree.PtrTree tree -> g get_exn tree
+    | OptimizedTree.Index tree -> g int_to_ptr tree
+    | OptimizedTree.Exn tree -> g get_exn tree
 
   let map_ret builder t = function
     | `Void ->
@@ -368,8 +368,12 @@ module Make (I : I) = struct
     | OptimizedTree.Datatype (index, params) ->
         let values = List.map (get_value env builder) params in
         let values = match index with
-          | Some index -> Llvm.const_inttoptr (i32 index) Type.star :: values
-          | None -> values
+          | Some (OptimizedTree.Index index) ->
+              Llvm.const_inttoptr (i32 index) Type.star :: values
+          | Some (OptimizedTree.Exn name) ->
+              get_exn name :: values
+          | None ->
+              values
         in
         if List.for_all Llvm.is_constant values then begin
           let v = Array.of_list values in
@@ -387,14 +391,11 @@ module Make (I : I) = struct
         map_ret builder (Llvm.build_call f args "" builder) ret
     | OptimizedTree.Rec (name, t) ->
         lambda' ~isrec:(Some name) ~jmp_buf env builder t
-    | OptimizedTree.Fail (name, args) ->
-        (* TODO: Fix *)
-        let args = List.map (get_value env builder) args in
-        let tag = get_exn name in
-        init exn_var Type.exn_glob (tag :: args) builder;
+    | OptimizedTree.Fail name ->
+        let v = get_value env builder name in
+        Llvm.build_store v exn_var builder;
         create_fail jmp_buf builder
     | OptimizedTree.Try (t, (name, t')) ->
-        (* TODO: Fix *)
         let jmp_buf' = Generic.alloc_jmp_buf builder in
         let (next_block, next_builder) = Llvm.create_block c builder in
         let jmp_buf_gen = Llvm.build_bitcast jmp_buf' Type.star "" builder in
@@ -408,9 +409,7 @@ module Make (I : I) = struct
         in
         let (catch_result, catch_block) =
           let (block, builder) = Llvm.create_block c builder in
-          let exn = Llvm.build_alloca Type.exn_glob "" builder in
-          let exn' = Llvm.build_load exn_var "" builder in
-          Llvm.build_store exn' exn builder;
+          let exn = Llvm.build_load exn_var "" builder in
           Llvm.build_store (Llvm.undef Type.exn_glob) exn_var builder;
           let env = LIdent.Map.add name (Value exn) env in
           let (t', builder') = lambda ~jmp_buf env builder t' in
@@ -430,12 +429,6 @@ module Make (I : I) = struct
     | OptimizedTree.Unreachable ->
         unreachable builder;
         (undef, snd (Llvm.create_block c builder))
-    | OptimizedTree.Reraise e ->
-        (* TODO: Fix *)
-        let e = get_value env builder e in
-        let e = Llvm.build_load e "" builder in
-        Llvm.build_store e exn_var builder;
-        create_fail jmp_buf builder
 
   and lambda ?isrec ~jmp_buf env builder (lets, t) =
     let rec aux env builder = function
@@ -477,7 +470,7 @@ module Make (I : I) = struct
           Llvm.build_store value global builder;
           builder
       | OptimizedTree.Exception name ->
-          let name = Ident.Exn.to_string name in
+          let name = LIdent.to_string name in
           (* NOTE: Don't use Llvm.define_constant as it merges equal values *)
           let v = Llvm.define_global name (string name) m in
           Llvm.set_global_constant true v;

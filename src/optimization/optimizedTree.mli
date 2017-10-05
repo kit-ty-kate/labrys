@@ -2,7 +2,6 @@
 (* See the LICENSE file at the top-level directory. *)
 
 type name = LIdent.t
-type eff_name = Ident.Exn.t
 type free_vars = EnvSet.MIDValue.t
 type index = int
 type constr = int
@@ -20,24 +19,24 @@ type 'a tree' = 'a FlattenTree.tree' =
   | Node of (int option * ('a * 'a tree') list)
   | Leaf of int
 
-type tree = FlattenTree.tree =
-  | IdxTree of constr tree'
-  | PtrTree of eff_name tree'
+type ('a, 'b) rep = ('a, 'b) FlattenTree.rep = Index of 'a | Exn of 'b
+
+type constr_rep = (constr, name) rep
+type tree = (constr tree', name tree') rep
 
 type t' =
   | Abs of (name * free_vars * t)
   | Rec of (name * t')
   | App of (name * name)
   | Val of name
-  | Datatype of (index option * name list)
+  | Datatype of (constr_rep option * name list)
   | CallForeign of (string * ret_ty * (tag_ty * name) list)
   | PatternMatching of (name * t list * t * tree)
-  | Fail of (eff_name * name list)
+  | Fail of name
   | Try of (t * (name * t))
   | RecordGet of (name * index)
   | Const of const
   | Unreachable
-  | Reraise of name
 
 and t = ((name * t') list * t')
 
@@ -45,5 +44,5 @@ type linkage = FlattenTree.linkage = Public | Private
 
 type top =
   | Value of (name * t * linkage)
-  | Exception of eff_name
+  | Exception of name
   | Function of (name * (name * t) * linkage)

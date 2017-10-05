@@ -2,8 +2,6 @@
 (* See the LICENSE file at the top-level directory. *)
 
 type name = Ident.Name.t
-type exn_name = Ident.Exn.t
-type constr_name = Ident.Constr.t
 type ty_size = int
 type pattern_var = (int list * name)
 type index = int
@@ -22,28 +20,25 @@ type ret_ty = [tag_ty | `Void]
 type const = (int, float, Uchar.t, string) ty
 
 (* TODO: Improve *)
-type constr = (constr_name * index)
-
-(* TODO: Improve *)
 type 'a pattern' =
   | Node of (int option * ('a * 'a pattern') list)
   | Leaf of int
 
-(* TODO: Improve *)
-type pattern =
-  | Idx of constr pattern'
-  | Ptr of exn_name pattern'
+type ('a, 'b) rep = Index of 'a | Exn of 'b
+
+type constr_rep = (index, name) rep
+type pattern = (index pattern', name pattern') rep
 
 type t =
   | Abs of (name * t)
   | App of (t * t)
   | Val of name
-  | Var of (index * length)
+  | Var of (constr_rep * length)
   | PatternMatching of (t * (pattern_var list * t) list * t * pattern)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
-  | Fail of (exn_name * t list)
-  | Try of (t * ((exn_name * name list) * t) list)
+  | Fail of t
+  | Try of (t * ((name * name list) * t) list)
   | RecordGet of (t * int)
   | RecordCreate of t list
   | Const of const
@@ -54,5 +49,5 @@ type foreign_fun_type = (ret_ty * tag_ty list)
 type top =
   | Value of (name * t)
   | Foreign of (string * name * foreign_fun_type)
-  | Exception of exn_name
+  | Exception of name
   | Instance of (name * (name * t) list)

@@ -3,6 +3,14 @@
 
 open LambdaTree
 
+let create_fresh_name () = LIdent.create ".@fresh"
+
+let get_name name env =
+  match EnvMap.Value.find_opt name env with
+  | Some x -> x
+  | None -> assert false (* NOTE: Every external values should be in the
+                            environment *)
+
 let env_add name env =
   let id = LIdent.create (Ident.Name.to_string name) in
   (id, EnvMap.Value.add name id env)
@@ -15,9 +23,9 @@ let rec of_patterns' f = function
       let cases = List.map aux cases in
       Node (var, cases)
 
-let of_patterns = function
-  | UntypedTree.Idx pat -> IdxTree (of_patterns' snd pat)
-  | UntypedTree.Ptr pat -> PtrTree (of_patterns' Fun.id pat)
+let of_patterns env = function
+  | UntypedTree.Index pat -> Index (of_patterns' Fun.id pat)
+  | UntypedTree.Exn pat -> Exn (of_patterns' (fun name -> get_name name env) pat)
 
 let create_dyn_functions f n =
   let rec aux params = function
@@ -30,13 +38,9 @@ let create_dyn_functions f n =
   in
   aux [] n
 
-let create_fresh_name () = LIdent.create ".@fresh"
-
-let get_name name env =
-  match EnvMap.Value.find_opt name env with
-  | Some x -> x
-  | None -> assert false (* NOTE: Every external values should be in the
-                            environment *)
+let of_constr_rep env = function
+  | UntypedTree.Index idx -> Index idx
+  | UntypedTree.Exn name -> Exn (get_name name env)
 
 let rec of_results env var m =
   let aux (wildcards, t) =
@@ -74,6 +78,7 @@ and of_try_pattern env var l =
       | [] ->
           ([], [])
       | ((exn, args), t)::xs ->
+          let exn = get_name exn env in
           let (branches, patterns) = aux (succ i) xs in
           let t =
             List.mapi (fun i x -> (x, RecordGet (var, i))) args
@@ -83,8 +88,8 @@ and of_try_pattern env var l =
     in
     aux 0 l
   in
-  let pattern = PtrTree (Node (None, patterns)) in
-  PatternMatching (var, branches, Reraise var, pattern)
+  let pattern = Exn (Node (None, patterns)) in
+  PatternMatching (var, branches, Fail var, pattern)
 
 and of_args env f args =
   let args =
@@ -114,15 +119,16 @@ and of_typed_term env = function
       Let (name_x, x, Let (name_f, f, App (name_f, name_x)))
   | UntypedTree.Val name ->
       Val (get_name name env)
-  | UntypedTree.Var (idx, len) ->
+  | UntypedTree.Var (rep, len) ->
+      let rep = of_constr_rep env rep in
       create_dyn_functions
-        (fun params -> Datatype (Some idx, params))
+        (fun params -> Datatype (Some rep, params))
         len
   | UntypedTree.PatternMatching (t, results, default, patterns) ->
       let t = of_typed_term env t in
       let name = create_fresh_name () in
       let results = of_results env name results in
-      let patterns = of_patterns patterns in
+      let patterns = of_patterns env patterns in
       let default = of_typed_term env default in
       let pat = PatternMatching (name, results, default, patterns) in
       Let (name, t, pat)
@@ -141,8 +147,9 @@ and of_typed_term env = function
       let t = of_typed_term env t in
       let xs = of_typed_term env xs in
       LetRec (name, t, xs)
-  | UntypedTree.Fail (name, args) ->
-      of_args env (fun names -> Fail (name, names)) args
+  | UntypedTree.Fail t ->
+      let name = create_fresh_name () in
+      Let (name, of_typed_term env t, Fail name)
   | UntypedTree.RecordGet (t, n) ->
       let name = create_fresh_name () in
       let t = of_typed_term env t in
@@ -195,6 +202,7 @@ let rec of_typed_tree mset env = function
       let xs = of_typed_tree mset env xs in
       Value (name, create_dyn_functions cname ty, linkage) :: xs
   | UntypedTree.Exception name :: xs ->
+      let (name, mset, env, _) = env_add mset name env in
       let xs = of_typed_tree mset env xs in
       Exception name :: xs
   | UntypedTree.Instance (name, values) :: xs ->

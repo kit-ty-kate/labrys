@@ -2,7 +2,6 @@
 (* See the LICENSE file at the top-level directory. *)
 
 type name = LIdent.t
-type eff_name = Ident.Exn.t
 type index = int
 type constr = int
 type arity = int
@@ -21,28 +20,28 @@ type 'a tree' =
   | Node of (int option * ('a * 'a tree') list)
   | Leaf of branch
 
-type tree =
-  | IdxTree of constr tree'
-  | PtrTree of eff_name tree'
+type ('a, 'b) rep = ('a, 'b) UntypedTree.rep = Index of 'a | Exn of 'b
+
+type constr_rep = (constr, name) rep
+type tree = (constr tree', name tree') rep
 
 type t =
   | Abs of (name * t)
   | App of (name * name)
   | Val of name
-  | Datatype of (index option * name list)
+  | Datatype of (constr_rep option * name list)
   | CallForeign of (string * ret_ty * (tag_ty * name) list)
   | PatternMatching of (name * t list * t * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
-  | Fail of (eff_name * name list)
+  | Fail of name
   | Try of (t * (name * t))
   | RecordGet of (name * index)
   | Const of const
   | Unreachable
-  | Reraise of name
 
 type linkage = Public | Private
 
 type top =
   | Value of (name * t * linkage)
-  | Exception of eff_name
+  | Exception of name
