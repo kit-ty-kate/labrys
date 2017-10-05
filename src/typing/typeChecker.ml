@@ -35,7 +35,6 @@ let check_eff_opt ~loc env eff' =
   Option.map_or ~default:[] (check_eff ~loc env eff')
 
 let unit options = TypedEnv.NTy (Builtins.unit options)
-let is_unit options = NType.is_subset_of (unit options)
 let is_main ~current_module = Ident.Name.equal (Builtins.main ~current_module)
 let io options = TypedEnv.NTy (Builtins.io options)
 let has_io options = List.exists (NType.is_subset_of (io options))
@@ -50,7 +49,63 @@ let get_rep name = function
   | TypedEnv.Index idx -> Index idx
   | TypedEnv.Exn -> Exn (Ident.Constr.to_name name)
 
-let rec check_term options env = function
+let eff_of_ty ~loc options = function
+  | TypedEnv.NSum [] ->
+      assert false (* TODO: Check this. This shouldn't happen *)
+  | TypedEnv.NSum sum ->
+      let exn = TypedEnv.NTy (Builtins.exn options) in
+      List.map (fun t -> TypedEnv.NApp (exn, NType.to_type t)) sum
+  | TypedEnv.NTy _ | TypedEnv.NFun _
+  | TypedEnv.NForall _ | TypedEnv.NApp _ as t ->
+      Err.fail_doc
+        ~loc
+        Utils.PPrint.(str "Cannot throw exception of type" ^^^
+                      squotes (NType.dump t) ^^^
+                      dot)
+
+let rec get_supertype ty eff = function
+  | [] ->
+      (ty, eff)
+  | (loc, ty', eff')::tys ->
+      if NType.is_subset_of ty ty' then
+        get_supertype ty' (eff @ eff') tys
+      else if NType.is_subset_of ty' ty then
+        get_supertype ty (eff @ eff') tys
+      else
+        type_fail ~loc ~has:ty' ~expected:ty
+
+let rec check_try_branch options env ((name, args), t) =
+  let name = Ident.Exn.to_constr name in
+  match EnvMap.Constr.find name env.TypedEnv.constrs with
+  | TypedEnv.Exn, ty' ->
+      let (args', _) = NType.funs ty' in
+      let aux env name (ty, _) = Env.add_value name ty env in
+      let env = try List.fold_left2 aux env args args' with
+        | Invalid_argument _ ->
+            Err.fail
+              ~loc:(Ident.Constr.loc name)
+              "Wrong number of parameters. Has %d but expected %d."
+              (List.length args)
+              (List.length args')
+      in
+      let loct = fst t in
+      let (t, tyt, eff) = check_term options env t in
+      (((Ident.Constr.to_name name, args), t), (loct, tyt, eff))
+  | TypedEnv.Index _, _ ->
+      Err.fail
+        ~loc:(Ident.Constr.loc name)
+        "This data constructor is not an exception"
+
+and check_try_branches options ty env = function
+  | [] ->
+      assert false (* NOTE: This is forbidden by the syntax *)
+  | branches ->
+      let branches = List.map (check_try_branch options env) branches in
+      let (branches, tys) = List.split branches in
+      let (ty, eff) = get_supertype ty [] tys in
+      (branches, ty, eff)
+
+and check_term options env = function
   | (_, PretypedTree.Abs ((name, ty), t)) ->
       let ty = NType.check ~pure_arrow:`Forbid env ty in
       let env = Env.add_value name ty env in
@@ -99,10 +154,15 @@ let rec check_term options env = function
         type_fail ~loc ~has:ty ~expected:ty1;
       let (t2, ty2, eff2) = check_term options env t2 in
       (Let (name, t1, t2), ty2, eff1 @ eff2)
-  | (_, PretypedTree.Fail _) ->
-      assert false (* TODO *)
-  | (_, PretypedTree.Try _) ->
-      assert false (* TODO *)
+  | (loc, PretypedTree.Fail (ty, t)) ->
+      let ty = NType.check ~pure_arrow:`Allow env ty in
+      let (t, ty', eff') = check_term options env t in
+      let eff = eff_of_ty ~loc options ty' in
+      (Fail t, ty, eff @ eff')
+  | (_, PretypedTree.Try (t, branches)) ->
+      let (t, ty, eff) = check_term options env t in
+      let (branches, ty, eff') = check_try_branches options ty env branches in
+      (Try (t, branches), ty, eff @ eff')
   | (loc, PretypedTree.Annot (t, (ty, eff))) ->
       let (t, ty', eff') = check_term options env t in
       let ty = check_type ~loc env ty' ty in
@@ -171,31 +231,20 @@ let rec get_foreign_type ~default options = function
   | TypedEnv.NSum _ | TypedEnv.NApp _ | TypedEnv.NFun _ ->
       default
 
-let rec is_last = function
-  | TypedEnv.NForall (_, _, t) -> is_last t
-  | TypedEnv.NTy _ | TypedEnv.NSum _ | TypedEnv.NApp _ -> true
-  | TypedEnv.NFun _ -> false
-
-let rec check_foreign_type ~loc is_first options env = function
-  | TypedEnv.NForall (_, _, ty) ->
-      check_foreign_type ~loc true options env ty
-  | TypedEnv.NTy _ | TypedEnv.NSum _ | TypedEnv.NApp _ ->
+let rec check_foreign_type ~loc options env = function
+  | [], _ ->
       Err.fail ~loc "Cannot bind a global variable"
-  | TypedEnv.NFun (t1, e, t2) when is_last t2 ->
+  | [(t1, e)], t2 ->
       if not (has_io options e) then
         Err.fail ~loc "Bindings cannot be pure. All bindings have \
                        to use the IO effect on the final arrow";
-      let t1 =
-        if is_first && is_unit options t1
-        then []
-        else [get_foreign_type ~default:`Custom options t1]
-      in
+      let t1 = get_foreign_type ~default:`Custom options t1 in
       let t2 = get_foreign_type ~default:`Void options t2 in
-      (t2, t1)
-  | TypedEnv.NFun (t1, _, t2) ->
+      (t2, [t1])
+  | (t1, _) :: l, t2 ->
       (* TODO: Warning if e <> [] ? *)
       let t1 = get_foreign_type ~default:`Custom options t1 in
-      let (ret, t2) = check_foreign_type ~loc false options env t2 in
+      let (ret, t2) = check_foreign_type ~loc options env (l, t2) in
       (ret, [t1] @ t2)
 
 let check_top ~current_module options (acc, has_main, env) = function
@@ -211,7 +260,7 @@ let check_top ~current_module options (acc, has_main, env) = function
   | PretypedTree.Foreign (cname, name, ty) ->
       let ty = NType.check ~pure_arrow:`Partial env ty in
       let rty =
-        check_foreign_type ~loc:(Ident.Name.loc name) true options env ty
+        check_foreign_type ~loc:(Ident.Name.loc name) options env (NType.funs ty)
       in
       let acc = acc @ [Foreign (cname, name, rty)] in
       let env = Env.add_value name ty env in

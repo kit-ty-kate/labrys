@@ -105,6 +105,11 @@ let rec size = function
 let replace a ~by t =
   normalize (Type.replace a ~by (to_type t))
 
+let rec funs = function
+  | NTy _ | NSum _ | NApp _ as t -> ([], t)
+  | NForall (_, _, t) -> funs t
+  | NFun (t1, e, t2) -> let (l, t) = funs t2 in ((t1, e) :: l, t)
+
 open Utils.PPrint
 
 let dump_ty_name name = str (Ident.Type.to_string name)

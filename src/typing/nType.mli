@@ -17,8 +17,11 @@ val is_subset_of : TypedEnv.nty -> TypedEnv.nty -> bool
 val eff_is_subset_of : TypedEnv.neffects -> TypedEnv.neffects -> bool
 val aty_is_subset_of : TypedEnv.aty -> TypedEnv.aty -> bool
 
+val to_type : TypedEnv.nty -> TypedEnv.ty
 val size : TypedEnv.nty -> int
 val replace : Ident.Type.t -> by:TypedEnv.ty -> TypedEnv.nty -> TypedEnv.nty
+val funs :
+  TypedEnv.nty -> ((TypedEnv.nty * TypedEnv.neffects) list * TypedEnv.nty)
 
 val dump : TypedEnv.nty -> PPrint.document
 val dump_eff : TypedEnv.neffects -> PPrint.document
