@@ -33,6 +33,10 @@ module Constr = struct
   let to_name = Fun.id
 end
 module Type = Name
-module Exn = Name
+module Exn = struct
+  include Name
+  let to_type = Fun.id
+  let to_constr = Fun.id
+end
 module TyClass = Name
 module Instance = Name

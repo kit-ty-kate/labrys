@@ -33,7 +33,7 @@
 %token Alias
 %token Pipe
 %token Colon
-%token Star Eff
+%token Star Eff Caret
 %token Fail
 %token Try
 %token Exception
@@ -49,6 +49,7 @@
 %token <char list> String
 %token LQMarkParen LParen RParen
 %token LQMarkBracket LBracket RBracket
+%token LBracketUp RBracketUp
 %token LBrace RBrace
 %token EOF
 
@@ -147,7 +148,7 @@ termStrictlyUnclosed:
 termNonStrictlyUnclosed:
   | x = app
       { x }
-  | Fail LBracket ty = typeExpr RBracket exn = exceptionValue
+  | Fail LBracket ty = typeExpr RBracket exn = termClosed
       { (loc $startpos $endpos, ParseTree.Fail (ty, exn)) }
 
 termUnclosed:
@@ -259,6 +260,8 @@ typeExprClosed:
       { (loc $startpos $endpos, ParseTree.TyVar name) }
   | LBracket eff = eff RBracket
       { (loc $startpos(eff) $endpos(eff), ParseTree.Eff eff) }
+  | LBracketUp sum = sum RBracketUp
+      { (loc $startpos(sum) $endpos(sum), ParseTree.Sum sum) }
   | LParen x = typeExpr RParen
       { x }
 
@@ -283,30 +286,17 @@ kindUnclosed:
       { ParseTree.KFun (k1, k2) }
 
 kindClosed:
-  | Star
-      { ParseTree.KStar }
-  | Eff
-      { ParseTree.KEff }
-  | LParen x = kind RParen
-      { x }
+  | Star { ParseTree.KStar }
+  | Eff { ParseTree.KEff }
+  | Caret { ParseTree.KExn }
+  | LParen x = kind RParen { x }
 
 kind:
   | x = kindUnclosed { x }
   | x = kindClosed { x }
 
 eff: eff = separated_list(Comma, typeExpr) { (loc $startpos $endpos, eff) }
-
-exceptionValue:
-  | LParen name = upperName args = exceptionValueArgs RParen
-      { (name, args) }
-  | name = upperName
-      { (name, []) }
-
-exceptionValueArgs:
-  | x = termClosed xs = exceptionValueArgs
-      { x :: xs }
-  | x = termClosed
-      { [x] }
+sum: sum = separated_list(Pipe, typeExpr) { sum }
 
 variant:
   | name = newUpperName tys = typeExprClosed*

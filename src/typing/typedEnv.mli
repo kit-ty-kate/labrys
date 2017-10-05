@@ -6,6 +6,7 @@ type index = int
 type kind = PretypedTree.kind =
   | KStar
   | KEff
+  | KExn
   | KFun of (kind * kind)
 
 type effects = ty list
@@ -14,6 +15,7 @@ type effects = ty list
 and ty =
   | Ty of Ident.Type.t
   | Eff of effects
+  | Sum of ty list
   | Fun of (ty * effects * ty)
   | Forall of (Ident.Type.t * kind * ty)
   | Abs of (Ident.Type.t * kind * ty)
@@ -24,6 +26,7 @@ type neffects = nty list
 (* Checked and normalized types *)
 and nty =
   | NTy of Ident.Type.t
+  | NSum of nty list
   | NFun of (nty * neffects * nty)
   | NForall of (Ident.Type.t * kind * nty)
   | NApp of (nty * ty)
@@ -33,9 +36,10 @@ type aty =
   | Alias of (PretypedTree.kind * ty)
   | Datatype of (PretypedTree.kind * (Ident.Constr.t * index * nty) list)
 
+type constr_rep = Index of index | Exn
+
 type env = {
   values : nty EnvMap.Value.t;
-  constrs : (index * nty) EnvMap.Constr.t;
+  constrs : (constr_rep * nty) EnvMap.Constr.t;
   types : aty EnvMap.Type.t;
-  exns : nty list EnvMap.Exn.t;
 }

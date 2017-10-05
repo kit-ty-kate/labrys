@@ -12,6 +12,7 @@ type upper_name = (loc * [`UpperName of string list])
 type kind =
   | KStar
   | KEff
+  | KExn
   | KFun of (kind * kind)
 
 type ty_arg = (new_lower_name * kind option)
@@ -29,6 +30,7 @@ and ty' =
   | Ty of upper_name
   | TyVar of new_lower_name
   | Eff of effects
+  | Sum of ty list
   | Forall of (ty_arg list * ty)
   | TyClass of (tyclass * effects option * ty)
   | AbsOnTy of (ty_arg list * ty)
@@ -74,7 +76,7 @@ and t' =
   | UpperVal of upper_name
   | PatternMatching of (t * (pattern * t) list)
   | Let of (value * t)
-  | Fail of (ty * (upper_name * t list))
+  | Fail of (ty * t)
   | Try of (t * (pattern * t) list)
   | Seq of (t * t)
   | Annot of (t * ty_annot)

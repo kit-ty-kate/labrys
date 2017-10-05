@@ -14,6 +14,7 @@ let dump_inst_name name = str (Ident.Instance.to_string name)
 let rec dump_kind = function
   | KStar -> str "*"
   | KEff -> str "φ"
+  | KExn -> str "^"
   | KFun (x, y) -> dump_kind x ^^^ str "->" ^/^ dump_kind y
 
 let dump_forall_arg (name, k) =
@@ -23,9 +24,8 @@ let dump_forall_args l = separate_map space dump_forall_arg l
 let dump_ty_args l = separate_map (comma ^^ space) dump_forall_arg l
 
 let rec dump_tys tys = separate_map space dump_ty tys
-
-and dump_eff (_, x) =
-  separate_map (comma ^^ space) dump_ty x
+and dump_eff (_, x) = separate_map (comma ^^ space) dump_ty x
+and dump_sum x = separate_map (space ^^ bar ^^ space) dump_ty x
 
 and dump_fun_eff = function
   | None -> str "->"
@@ -49,6 +49,7 @@ and dump_ty = function
       parens (param ^^^ eff ^/^ res)
   | (_, Ty name) -> dump_ty_name name
   | (_, Eff eff) -> brackets (dump_eff eff)
+  | (_, Sum sum) -> brackets (caret ^^^ dump_sum sum ^^^ caret)
   | (_, Forall (arg, res)) ->
       let arg = dump_forall_arg arg in
       let res = dump_ty res in
@@ -124,9 +125,8 @@ and dump_t = function
       parens (group (dump_let ~is_rec:false (name, x) ^/^ str "in") ^/^ dump_t xs)
   | (_, LetRec (name, x, xs)) ->
       parens (group (dump_let ~is_rec:true (name, x) ^/^ str "in") ^/^ dump_t xs)
-  | (_, Fail (ty, (name, args))) ->
-      parens (str "fail" ^^^ brackets (dump_ty ty) ^^^ dump_exn_name name ^^
-              separate_map space dump_t args)
+  | (_, Fail (ty, t)) ->
+      parens (str "fail" ^^^ brackets (dump_ty ty) ^^^ dump_t t)
   | (_, Try t) ->
       dump_pattern_matching "try" dump_try_pattern t
   | (_, Annot (t, ty)) ->
@@ -183,8 +183,8 @@ let dump_top = function
   | Datatype (name, k, variants) ->
       str "type" ^^^ dump_ty_name name ^^^ colon ^^^ dump_kind k ^^^ equals ^//^
       dump_variants variants
-  | Exception (name, args) ->
-      str "exception" ^^^ dump_exn_name name ^^^ dump_tys args
+  | Exception (name, ty) ->
+      str "exception" ^^^ dump_exn_name name ^^^ colon ^^^ dump_ty ty
   | Class (name, params, sigs) ->
       group (
         (str "class" ^^^ dump_class name params ^^^ equals ^//^

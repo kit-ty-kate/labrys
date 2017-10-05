@@ -11,4 +11,3 @@ end
 module Value : S with type key = Ident.Name.t
 module Constr : S with type key = Ident.Constr.t
 module Type : S with type key = Ident.Type.t
-module Exn : S with type key = Ident.Exn.t

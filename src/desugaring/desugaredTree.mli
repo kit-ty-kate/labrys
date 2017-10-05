@@ -13,6 +13,7 @@ type loc = Location.t
 type kind = ParseTree.kind =
   | KStar
   | KEff
+  | KExn
   | KFun of (kind * kind)
 
 type t_value = (t_name * kind)
@@ -25,6 +26,7 @@ and ty' =
   | Fun of (ty * effects option * ty)
   | Ty of t_name
   | Eff of effects
+  | Sum of ty list
   | Forall of (t_value * ty)
   | TyClass of (tyclass * effects option * ty)
   | AbsOnTy of (t_value * ty)
@@ -61,7 +63,7 @@ type t' =
   | PatternMatching of (t * (pattern * t) list)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
-  | Fail of (ty * (exn_name * t list))
+  | Fail of (ty * t)
   | Try of (t * ((exn_name * name list) * t) list)
   | Annot of (t * ty_annot)
   | Const of const
@@ -75,7 +77,7 @@ type top =
   | Type of (t_name * ty)
   | Foreign of (string * name * ty)
   | Datatype of (t_name * kind * variant list)
-  | Exception of (exn_name * ty list)
+  | Exception of (exn_name * ty)
   | Class of (tyclass_name * t_value list * (name * ty) list)
   | Instance of (tyclass_instance * instance_name option * (name * t) list)
 
@@ -86,6 +88,6 @@ type interface =
   | IAbstractType of (t_name * kind)
   | IDatatype of (t_name * kind * variant list)
   | ITypeAlias of (t_name * ty)
-  | IException of (exn_name * ty list)
+  | IException of (exn_name * ty)
   | IClass of (tyclass_name * t_value list * (name * ty) list)
   | IInstance of (tyclass_instance * instance_name option)

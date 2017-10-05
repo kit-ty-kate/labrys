@@ -46,6 +46,9 @@ let get_const options = function
   | PretypedTree.Char c -> (`Char c, Builtins.char options)
   | PretypedTree.String s -> (`String s, Builtins.string options)
 
+let get_rep name rep =
+  assert false (* TODO *)
+
 let rec check_term options env = function
   | (_, PretypedTree.Abs ((name, ty), t)) ->
       let ty = NType.check ~pure_arrow:`Forbid env ty in
@@ -76,9 +79,10 @@ let rec check_term options env = function
       let ty = EnvMap.Value.find name env.TypedEnv.values in
       (Val name, ty, [])
   | (_, PretypedTree.Var name) ->
-      let (idx, ty) = EnvMap.Constr.find name env.TypedEnv.constrs in
+      let (rep, ty) = EnvMap.Constr.find name env.TypedEnv.constrs in
+      let rep = get_rep name rep in
       let size = NType.size ty in
-      (Var (idx, size), ty, [])
+      (Var (rep, size), ty, [])
   | (_, PretypedTree.PatternMatching _) ->
       assert false (* TODO *)
   | (_, PretypedTree.Let (name, t1, t2)) ->
@@ -112,7 +116,7 @@ and app ~loc ty2 = function
       (ty, eff)
   | TypedEnv.NFun (expected, _, _) ->
       type_fail ~loc ~has:ty2 ~expected
-  | TypedEnv.NTy _ | TypedEnv.NForall _ | TypedEnv.NApp _ as ty ->
+  | TypedEnv.NTy _ | TypedEnv.NSum _ | TypedEnv.NForall _ | TypedEnv.NApp _ as ty ->
       Err.fail_doc
         ~loc
         Utils.PPrint.(str "This expression has type" ^^^
@@ -124,7 +128,7 @@ and tapp ~loc (ty, k) = function
       NType.replace name ~by:ty ty'
   | TypedEnv.NForall (_, expected, _) ->
       Type.kind_fail ~loc ~has:k ~expected
-  | TypedEnv.NTy _ | TypedEnv.NFun _ | TypedEnv.NApp _ as ty ->
+  | TypedEnv.NTy _ | TypedEnv.NSum _ | TypedEnv.NFun _ | TypedEnv.NApp _ as ty ->
       Err.fail_doc
         ~loc
         Utils.PPrint.(str "This expression has type" ^^^
@@ -163,18 +167,18 @@ let rec get_foreign_type ~default options = function
       in
       Option.get_or ~default
         (List.Assoc.get ~eq:Ident.Type.equal name arg_ty_map)
-  | TypedEnv.NApp _ | TypedEnv.NFun _ ->
+  | TypedEnv.NSum _ | TypedEnv.NApp _ | TypedEnv.NFun _ ->
       default
 
 let rec is_last = function
   | TypedEnv.NForall (_, _, t) -> is_last t
-  | TypedEnv.NTy _ | TypedEnv.NApp _ -> true
+  | TypedEnv.NTy _ | TypedEnv.NSum _ | TypedEnv.NApp _ -> true
   | TypedEnv.NFun _ -> false
 
 let rec check_foreign_type ~loc is_first options env = function
   | TypedEnv.NForall (_, _, ty) ->
       check_foreign_type ~loc true options env ty
-  | TypedEnv.NTy _ | TypedEnv.NApp _ ->
+  | TypedEnv.NTy _ | TypedEnv.NSum _ | TypedEnv.NApp _ ->
       Err.fail ~loc "Cannot bind a global variable"
   | TypedEnv.NFun (t1, e, t2) when is_last t2 ->
       if not (has_io options e) then

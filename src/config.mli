@@ -3,5 +3,3 @@
 
 val version : string
 val lib : string
-
-val max_fail_num_args : int

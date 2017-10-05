@@ -18,4 +18,4 @@ val add_datatype :
   PretypedTree.variant list ->
   add
 val add_type_alias : Ident.Type.t -> PretypedTree.ty -> add
-val add_exception : Ident.Exn.t -> PretypedTree.ty list -> add
+val add_exception : Ident.Exn.t -> PretypedTree.ty -> add

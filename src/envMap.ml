@@ -31,13 +31,23 @@ module Value = Make(Ident.Name)(struct
         (Ident.Name.to_string k)
   end)
 
-module Constr = Make(Ident.Constr)(struct
-    let fail k =
+module Constr = struct
+  include Make(Ident.Constr)(struct
+      let fail k =
+        Err.fail
+          ~loc:(Ident.Constr.loc k)
+          "The data constructor '%s' was not found in Γ"
+          (Ident.Constr.to_string k)
+    end)
+
+  let add k x map =
+    if mem k map then
       Err.fail
         ~loc:(Ident.Constr.loc k)
-        "The data constructor '%s' was not found in Γ"
-        (Ident.Constr.to_string k)
-  end)
+        "A module cannot contain several times the data constructor '%s'"
+        (Ident.Constr.to_string k);
+    add k x map
+end
 
 module Type = struct
   include Make(Ident.Type)(struct
@@ -54,23 +64,5 @@ module Type = struct
         ~loc:(Ident.Type.loc k)
         "A module cannot contain several times the type '%s'"
         (Ident.Type.to_string k);
-    add k x map
-end
-
-module Exn = struct
-  include Make(Ident.Exn)(struct
-      let fail k =
-        Err.fail
-          ~loc:(Ident.Exn.loc k)
-          "The exception '%s' is not defined in Γ"
-          (Ident.Exn.to_string k)
-    end)
-
-  let add k x map =
-    if mem k map then
-      Err.fail
-        ~loc:(Ident.Exn.loc k)
-        "A module cannot contain several times the exception '%s'"
-        (Ident.Exn.to_string k);
     add k x map
 end

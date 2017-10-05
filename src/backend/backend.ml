@@ -18,8 +18,6 @@ module type I = sig
   val debug : bool
 end
 
-let exn_glob_size = succ Config.max_fail_num_args
-
 module Type = struct
   let void = Llvm.void_type c
   let i8 = Llvm.i8_type c
@@ -27,7 +25,7 @@ module Type = struct
   let float = Llvm.float_type c
   let star = Llvm.pointer_type i8
   let array = Llvm.array_type star
-  let exn_glob = array exn_glob_size
+  let exn_glob = Llvm.pointer_type star
   let array_ptr size = Llvm.pointer_type (array size)
   let variant_ptr = array_ptr
   let closure_ptr = array_ptr
@@ -390,11 +388,13 @@ module Make (I : I) = struct
     | OptimizedTree.Rec (name, t) ->
         lambda' ~isrec:(Some name) ~jmp_buf env builder t
     | OptimizedTree.Fail (name, args) ->
+        (* TODO: Fix *)
         let args = List.map (get_value env builder) args in
         let tag = get_exn name in
         init exn_var Type.exn_glob (tag :: args) builder;
         create_fail jmp_buf builder
     | OptimizedTree.Try (t, (name, t')) ->
+        (* TODO: Fix *)
         let jmp_buf' = Generic.alloc_jmp_buf builder in
         let (next_block, next_builder) = Llvm.create_block c builder in
         let jmp_buf_gen = Llvm.build_bitcast jmp_buf' Type.star "" builder in
@@ -431,6 +431,7 @@ module Make (I : I) = struct
         unreachable builder;
         (undef, snd (Llvm.create_block c builder))
     | OptimizedTree.Reraise e ->
+        (* TODO: Fix *)
         let e = get_value env builder e in
         let e = Llvm.build_load e "" builder in
         Llvm.build_store e exn_var builder;

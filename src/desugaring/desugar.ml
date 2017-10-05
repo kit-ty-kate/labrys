@@ -102,6 +102,9 @@ and desugar_ty imports = function
   | (loc, ParseTree.Eff effects) ->
       let effects = desugar_eff imports effects in
       (loc, Eff effects)
+  | (loc, ParseTree.Sum sum) ->
+      let sum = List.map (desugar_ty imports) sum in
+      (loc, Sum sum)
   | (loc, ParseTree.Forall (args, ty)) ->
       assert (not (List.is_empty args));
       desugar_tys ~loc ~ty imports (fun x -> Forall x) args
@@ -189,18 +192,10 @@ let desugar_char ~loc s =
   | _ -> Err.fail ~loc "A character cannot contain several characters"
 
 let desugar_const ~loc = function
-  | ParseTree.Int n ->
-      let n = int_of_string n in
-      Int n
-  | ParseTree.Float n ->
-      let n = float_of_string n in
-      Float n
-  | ParseTree.Char c ->
-      let c = desugar_char ~loc c in
-      Char c
-  | ParseTree.String s ->
-      let s = desugar_string ~loc s in
-      String s
+  | ParseTree.Int n -> Int (int_of_string n)
+  | ParseTree.Float n -> Float (float_of_string n)
+  | ParseTree.Char c -> Char (desugar_char ~loc c)
+  | ParseTree.String s -> String (desugar_string ~loc s)
 
 let desugar_try_arg_to_name = function
   | ParseTree.TyConstr (loc, _, _) ->
@@ -231,6 +226,7 @@ and desugar_try_pattern imports options = function
       let t = desugar_t imports options t in
       ((exn, args), t)
   | (ParseTree.Any (loc, _), _) ->
+      (* TODO: Allow this *)
       Err.fail ~loc "Wildcard patterns are not supported here"
 
 and desugar_t imports options = function
@@ -264,11 +260,10 @@ and desugar_t imports options = function
       let (name, x) = desugar_local_value imports options value in
       let t = desugar_t imports options t in
       (loc, Let (name, x, t))
-  | (loc, ParseTree.Fail (ty, (exn, args))) ->
+  | (loc, ParseTree.Fail (ty, t)) ->
       let ty = desugar_ty imports ty in
-      let exn = upper_name_to_exn imports exn in
-      let args = List.map (desugar_t imports options) args in
-      (loc, Fail (ty, (exn, args)))
+      let t = desugar_t imports options t in
+      (loc, Fail (ty, t))
   | (loc, ParseTree.Try (t, patterns)) ->
       assert (not (List.is_empty patterns));
       let t = desugar_t imports options t in
@@ -321,17 +316,24 @@ and desugar_args imports options args (annot, t) =
   in
   aux args
 
-let desugar_variant ~current_module imports ~datatype ~args (name, tys) =
-  let name = new_upper_name_to_variant ~current_module name in
+let type_list_to_type imports ~datatype ~args tys =
+  let uloc = Builtins.unknown_loc in
   let tys = List.map (desugar_ty imports) tys in
-  let ty =
-    let uloc = Builtins.unknown_loc in
-    let ty = (uloc, Ty datatype) in
-    foldl (fun ty (arg, _) -> (uloc, AppOnTy (ty, (uloc, Ty arg)))) ty args
-    |> foldr (fun x ty -> (uloc, Fun (x, None, ty))) tys
-    |> foldr (fun arg ty -> (uloc, Forall (arg, ty))) args
-  in
+  foldl (fun ty (arg, _) -> (uloc, AppOnTy (ty, (uloc, Ty arg)))) datatype args
+  |> foldr (fun x ty -> (uloc, Fun (x, None, ty))) tys
+  |> foldr (fun arg ty -> (uloc, Forall (arg, ty))) args
+
+let desugar_variant ~current_module imports ~datatype ~args (name, tys) =
+  let uloc = Builtins.unknown_loc in
+  let name = new_upper_name_to_variant ~current_module name in
+  let datatype = (uloc, Ty datatype) in
+  let ty = type_list_to_type imports ~datatype ~args tys in
   (name, ty)
+
+let desugar_exception_type imports name tys =
+  let uloc = Builtins.unknown_loc in
+  let datatype = (uloc, Sum [(uloc, Ty (Ident.Exn.to_type name))]) in
+  type_list_to_type imports ~datatype ~args:[] tys
 
 let desugar_variants ~current_module imports ~datatype ~args =
   List.map (desugar_variant ~current_module imports ~datatype ~args)
@@ -409,15 +411,10 @@ let create ~current_module options mimports =
         let variants = desugar_variants ~current_module imports ~datatype:name ~args variants in
         Datatype (name, kind, variants) :: aux imports xs
     | ParseTree.Exception (name, tys) :: xs ->
-        if Int.(List.length tys > Config.max_fail_num_args) then
-          Err.fail
-            ~loc:(fst name)
-            "Cannot define an exception with more than %d parameters"
-            Config.max_fail_num_args;
         let name' = new_upper_name_to_exn ~current_module name in
-        let tys = List.map (desugar_ty imports) tys in
+        let ty = desugar_exception_type imports name' tys in
         let imports = Imports.add_exn ~export:false name current_module imports in
-        Exception (name', tys) :: aux imports xs
+        Exception (name', ty) :: aux imports xs
     | ParseTree.Open import :: xs ->
         let (loc, modul', modul) = desugar_open ~current_module options import in
         if not (List.exists (Module.equal modul') mimports) then
@@ -480,9 +477,10 @@ let create_interface ~current_module options mimports imports interface =
         let name = new_upper_name_to_type ~current_module name in
         aux imports local_imports' (ITypeAlias (name, desugar_ty local_imports ty) :: acc) xs
     | ParseTree.IException (name, tys) :: xs ->
-        let imports' = Imports.add_exn ~export:true name current_module imports in
-        let name = new_upper_name_to_exn ~current_module name in
-        aux imports' local_imports (IException (name, List.map (desugar_ty local_imports) tys) :: acc) xs
+        let name' = new_upper_name_to_exn ~current_module name in
+        let ty = desugar_exception_type imports name' tys in
+        let imports = Imports.add_exn ~export:true name current_module imports in
+        aux imports local_imports (IException (name', ty) :: acc) xs
     | ParseTree.IOpen import :: xs ->
         let (loc, modul', modul) = desugar_open ~current_module options import in
         if not (List.exists (Module.equal modul') mimports) then

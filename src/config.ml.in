@@ -3,5 +3,3 @@
 
 let version = "%%VERSION%%"
 let lib = "%%LIBDIR%%/cervoise"
-
-let max_fail_num_args = 31

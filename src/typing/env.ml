@@ -5,7 +5,6 @@ let empty = TypedEnv.{
   values = EnvMap.Value.empty;
   constrs = EnvMap.Constr.empty;
   types = EnvMap.Type.empty;
-  exns = EnvMap.Exn.empty;
 }
 
 let ensure_unique _ _ _ = assert false
@@ -14,14 +13,12 @@ let union x y = TypedEnv.{
   values = EnvMap.Value.union ensure_unique x.values y.values;
   constrs = EnvMap.Constr.union ensure_unique x.constrs y.constrs;
   types = EnvMap.Type.union ensure_unique x.types y.types;
-  exns = EnvMap.Exn.union ensure_unique x.exns y.exns;
 }
 
 let diff x y = TypedEnv.{
   values = EnvMap.Value.diff x.values y.values;
   constrs = EnvMap.Constr.diff x.constrs y.constrs;
   types = EnvMap.Type.diff x.types y.types;
-  exns = EnvMap.Exn.diff x.exns y.exns;
 }
 
 let constrs_to_values constrs =
@@ -63,34 +60,42 @@ let fail_type_mismatch name ~intf ~impl =
                   (str "but the interface expects a type of the form:" ^//^
                    NType.dump_aty name intf))
 
-let fail_exn_mismatch name ~intf ~impl =
+let fail_constr_mismatch name ~intf ~impl =
   Err.fail_doc
-    ~loc:(Ident.Exn.loc name)
+    ~loc:(Ident.Constr.loc name)
     Utils.PPrint.(str "The implementation does not match the interface:" ^//^
                   (str "The exception has the form:" ^//^
-                   NType.dump_exn name impl) ^/^
+                   NType.dump_constr name impl) ^/^
                   (str "but the interface expects an exception of the form:" ^//^
-                   NType.dump_exn name intf))
+                   NType.dump_constr name intf))
 
 let vdiff_value env name ty = match EnvMap.Value.find_opt name env with
   | None -> fail_not_provided "value" (Ident.Name.to_string name)
   | Some ty' when NType.is_subset_of ty' ty -> ()
   | Some ty' -> fail_value_mismatch name ~intf:ty ~impl:ty'
 
+let vdiff_constr env name constr =
+  let is_subset_of (constr1, ty1) (constr2, ty2) =
+    NType.is_subset_of ty1 ty2 &&
+    match constr1, constr2 with
+    | TypedEnv.Exn, TypedEnv.Exn -> true
+    | TypedEnv.Index idx1, TypedEnv.Index idx2 -> Int.equal idx1 idx2
+    | TypedEnv.Exn, _ | TypedEnv.Index _, _ -> false
+  in
+  match EnvMap.Constr.find_opt name env with
+  | None -> fail_not_provided "data constructor" (Ident.Constr.to_string name)
+  | Some constr' when is_subset_of constr' constr -> ()
+  | Some constr' -> fail_constr_mismatch name ~intf:constr ~impl:constr'
+
 let vdiff_type env name aty = match EnvMap.Type.find_opt name env with
   | None -> fail_not_provided "type" (Ident.Type.to_string name)
   | Some aty' when NType.aty_is_subset_of aty' aty -> ()
   | Some aty' -> fail_type_mismatch name ~intf:aty ~impl:aty'
 
-let vdiff_exn env name tys = match EnvMap.Exn.find_opt name env with
-  | None -> fail_not_provided "exception" (Ident.Exn.to_string name)
-  | Some tys' when NType.is_subset_of_list tys' tys -> ()
-  | Some tys' -> fail_exn_mismatch name ~intf:tys ~impl:tys'
-
-let check_vdiff x y =
-  EnvMap.Value.iter (vdiff_value y.TypedEnv.values) x.TypedEnv.values;
-  EnvMap.Type.iter (vdiff_type y.TypedEnv.types) x.TypedEnv.types;
-  EnvMap.Exn.iter (vdiff_exn y.TypedEnv.exns) x.TypedEnv.exns;
+let check_vdiff TypedEnv.{values; constrs; types} y =
+  EnvMap.Value.iter (vdiff_value y.TypedEnv.values) values;
+  EnvMap.Type.iter (vdiff_type y.TypedEnv.types) types;
+  EnvMap.Constr.iter (vdiff_constr y.TypedEnv.constrs) constrs
 
 type add = TypedEnv.env -> TypedEnv.env
 
@@ -120,7 +125,7 @@ let add_datatype name k variants env =
   let variants = map_variants env variants in
   let constrs =
     List.fold_left
-      (fun constrs (name, idx, ty) -> EnvMap.Constr.add name (idx, ty) constrs)
+      (fun constrs (name, idx, ty) -> EnvMap.Constr.add name (TypedEnv.Index idx, ty) constrs)
       env.TypedEnv.constrs
       variants
   in
@@ -132,7 +137,12 @@ let add_type_alias name ty env =
   let types = EnvMap.Type.add name (TypedEnv.Alias (k, ty)) env.TypedEnv.types in
   {env with TypedEnv.types}
 
-let add_exception name args env =
-  let args = List.map (NType.check ~pure_arrow:`Forbid env) args in
-  let exns = EnvMap.Exn.add name args env.TypedEnv.exns in
-  {env with TypedEnv.exns}
+let add_exception name ty env =
+  let ty = NType.check ~pure_arrow:`Partial env ty in
+  let cname = Ident.Exn.to_constr name in
+  let carg = (TypedEnv.Exn, ty) in
+  let tname = Ident.Exn.to_type name in
+  let targ = TypedEnv.Abstract TypedEnv.KExn in
+  let constrs = EnvMap.Constr.add cname carg env.TypedEnv.constrs in
+  let types = EnvMap.Type.add tname targ env.TypedEnv.types in
+  {env with TypedEnv.constrs; types}

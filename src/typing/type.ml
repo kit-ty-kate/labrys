@@ -12,9 +12,9 @@ let add_abstract_type name k env =
   {env with TypedEnv.types}
 
 let rec kind_equal x y = match x, y with
-  | KStar, KStar | KEff, KEff -> true
+  | KStar, KStar | KEff, KEff | KExn, KExn -> true
   | KFun (k1, k2), KFun (k1', k2') -> kind_equal k1 k1' && kind_equal k2 k2'
-  | KStar, _ | KEff, _ | KFun _, _ -> false
+  | KStar, _ | KEff, _ | KExn, _ | KFun _, _ -> false
 
 let kind_fail ~loc ~has ~expected =
   Err.fail_doc
@@ -51,6 +51,8 @@ and check ~pure_arrow env = function
       end
   | (_, PretypedTree.Eff e) ->
       (Eff (eff_check ~pure_arrow env e), KEff)
+  | (_, PretypedTree.Sum sum) ->
+      (Sum (List.map (check_exn ~pure_arrow env) sum), KStar)
   | (_, PretypedTree.Forall ((name, k), t)) ->
       let env = add_abstract_type name k env in
       (Forall (name, k, check_value ~pure_arrow env t), KStar)
@@ -67,17 +69,26 @@ and check ~pure_arrow env = function
       | (_, KFun (k1, _)) -> kind_fail ~loc:(fst t2) ~has:k2 ~expected:k1
       | (_, KEff) -> Err.fail ~loc "Cannot apply on a type of kind '!'."
       | (_, KStar) -> Err.fail ~loc "Cannot apply on a type of kind '*'."
+      | (_, KExn) -> Err.fail ~loc "Cannot apply on a type of kind '^'."
       end
 
 and check_value ~pure_arrow env x =
   match check ~pure_arrow env x with
   | (ty, KStar) -> ty
-  | (_, (KEff | KFun _ as k)) -> kind_fail ~loc:(fst x) ~has:k ~expected:KStar
+  | (_, (KEff | KExn | KFun _ as k)) ->
+      kind_fail ~loc:(fst x) ~has:k ~expected:KStar
 
 and check_eff ~pure_arrow env x =
   match check ~pure_arrow env x with
   | (ty, KEff) -> ty
-  | (_, (KStar | KFun _ as k)) -> kind_fail ~loc:(fst x) ~has:k ~expected:KEff
+  | (_, (KStar | KExn | KFun _ as k)) ->
+      kind_fail ~loc:(fst x) ~has:k ~expected:KEff
+
+and check_exn ~pure_arrow env x =
+  match check ~pure_arrow env x with
+  | (ty, KExn) -> ty
+  | (_, (KStar | KEff | KFun _ as k)) ->
+      kind_fail ~loc:(fst x) ~has:k ~expected:KExn
 
 let rec replace a ~by =
   let replace t = replace a ~by t in
@@ -85,6 +96,7 @@ let rec replace a ~by =
   | Ty b when Ident.Type.equal a b -> by
   | Ty _ as t -> t
   | Eff e -> Eff (List.map replace e)
+  | Sum sum -> Sum (List.map replace sum)
   | Fun (t1, e, t2) -> Fun (replace t1, List.map replace e, replace t2)
   | Forall (b, _, _) | Abs (b, _, _) as t when Ident.Type.equal a b -> t
   | Forall (b, k, t) -> Forall (b, k, replace t)
@@ -94,7 +106,7 @@ let rec replace a ~by =
 let fresh n =
   Ident.Type.local_create ~loc:Builtins.unknown_loc (string_of_int n)
 
-let rec eff_equal n e1 e2 =
+let rec list_equal n e1 e2 =
   try List.for_all2 (equal n) e1 e2 with
   | Invalid_argument _ -> false
 
@@ -102,9 +114,11 @@ and equal n x y = match x, y with
   | Ty a1, Ty a2 ->
       Ident.Type.equal a1 a2
   | Eff e1, Eff e2 ->
-      eff_equal n e1 e2
+      list_equal n e1 e2
+  | Sum sum1, Sum sum2 ->
+      list_equal n sum1 sum2
   | Fun (t1, e1, t2), Fun (t1', e2, t2') ->
-      equal n t1' t1 && eff_equal n e1 e2 && equal n t2 t2'
+      equal n t1' t1 && list_equal n e1 e2 && equal n t2 t2'
   | Forall (a1, k1, t1), Forall (a2, k2, t2)
   | Abs (a1, k1, t1), Abs (a2, k2, t2) ->
       let by = Ty (fresh n) in
@@ -117,7 +131,7 @@ and equal n x y = match x, y with
       equal n (app t1 t2) t'
   | t, App (t1, t2) ->
       equal n t (app t1 t2)
-  | Ty _, _ | Eff _, _ | Fun _, _ | Forall _, _ | Abs _, _ ->
+  | Ty _, _ | Eff _, _ | Sum _, _ | Fun _, _ | Forall _, _ | Abs _, _ ->
       false
 
 and app x y = match x, y with
@@ -126,9 +140,9 @@ and app x y = match x, y with
   | App (t1, t2), t' ->
       begin match app t1 t2 with
       | Abs (a, _, t) -> replace a ~by:t' t
-      | App _ | Ty _ | Eff _ | Fun _ | Forall _ as t -> App (t, t')
+      | App _ | Ty _ | Eff _ | Sum _ | Fun _ | Forall _ as t -> App (t, t')
       end
-  | Ty _ | Eff _ | Fun _ | Forall _ as t1, t2 ->
+  | Ty _ | Eff _ | Sum _ | Fun _ | Forall _ as t1, t2 ->
       App (t1, t2)
 
 let equal = equal 0
@@ -140,6 +154,7 @@ let rec to_ptype = function
       (loc, PretypedTree.Fun (to_ptype t1, Some (to_ptype_eff e), to_ptype t2))
   | Ty name -> (loc, PretypedTree.Ty name)
   | Eff e -> (loc, PretypedTree.Eff (to_ptype_eff e))
+  | Sum sum -> (loc, PretypedTree.Sum (List.map to_ptype sum))
   | Forall (name, k, t) -> (loc, PretypedTree.Forall ((name, k), to_ptype t))
   | Abs (name, k, t) -> (loc, PretypedTree.AbsOnTy ((name, k), to_ptype t))
   | App (t1, t2) -> (loc, PretypedTree.AppOnTy (to_ptype t1, to_ptype t2))

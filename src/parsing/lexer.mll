@@ -36,10 +36,13 @@ rule main = parse
   | '|' { Parser.Pipe }
   | '*' { Parser.Star }
   | '#' { Parser.Hash }
+  | '^' { Parser.Caret }
   | '!'
   | "φ" { Parser.Eff }
   | '\\'
   | "λ" { Parser.Lambda }
+  | "[^" { Parser.LBracketUp }
+  | "^]" { Parser.RBracketUp }
   | "?[" { Parser.LQMarkBracket }
   | "?(" { Parser.LQMarkParen }
   | "->" { Parser.Arrow }
