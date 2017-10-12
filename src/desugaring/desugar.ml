@@ -10,8 +10,6 @@ let new_upper_name_to_variant ~current_module (loc, `NewUpperName name) =
   Ident.Constr.create ~loc current_module name
 let new_upper_name_to_type ~current_module (loc, `NewUpperName name) =
   Ident.Type.create ~loc current_module name
-let new_upper_name_to_exn ~current_module (loc, `NewUpperName name) =
-  Ident.Exn.create ~loc current_module name
 let new_upper_name_to_tyclass ~current_module (loc, `NewUpperName name) =
   Ident.TyClass.create ~loc current_module name
 
@@ -31,8 +29,6 @@ let upper_name_to_variant imports (loc, `UpperName name) =
   create_name imports.Imports.variants loc (module Ident.Constr) name
 let upper_name_to_type imports (loc, `UpperName name) =
   create_name imports.Imports.types loc (module Ident.Type) name
-let upper_name_to_exn imports (loc, `UpperName name) =
-  create_name imports.Imports.exns loc (module Ident.Exn) name
 let upper_name_to_tyclass imports (loc, `UpperName name) =
   create_name imports.Imports.tyclasses loc (module Ident.TyClass) name
 
@@ -221,7 +217,7 @@ and desugar_pat imports options (pattern, t) =
 
 and desugar_try_pattern imports options = function
   | (ParseTree.TyConstr (_, exn, args), t) ->
-      let exn = upper_name_to_exn imports exn in
+      let exn = upper_name_to_variant imports exn in
       let args = List.map desugar_try_arg_to_name args in
       let t = desugar_t imports options t in
       ((exn, args), t)
@@ -332,7 +328,7 @@ let desugar_variant ~current_module imports ~datatype ~args (name, tys) =
 
 let desugar_exception_type imports name tys =
   let uloc = Builtins.unknown_loc in
-  let datatype = (uloc, Sum [(uloc, Ty (Ident.Exn.to_type name))]) in
+  let datatype = (uloc, Sum [(uloc, Ty (Ident.Constr.to_type name))]) in
   type_list_to_type imports ~datatype ~args:[] tys
 
 let desugar_variants ~current_module imports ~datatype ~args =
@@ -411,7 +407,7 @@ let create ~current_module options mimports =
         let variants = desugar_variants ~current_module imports ~datatype:name ~args variants in
         Datatype (name, kind, variants) :: aux imports xs
     | ParseTree.Exception (name, tys) :: xs ->
-        let name' = new_upper_name_to_exn ~current_module name in
+        let name' = new_upper_name_to_variant ~current_module name in
         let ty = desugar_exception_type imports name' tys in
         let imports = Imports.add_exn ~export:false name current_module imports in
         Exception (name', ty) :: aux imports xs
@@ -477,7 +473,7 @@ let create_interface ~current_module options mimports imports interface =
         let name = new_upper_name_to_type ~current_module name in
         aux imports local_imports' (ITypeAlias (name, desugar_ty local_imports ty) :: acc) xs
     | ParseTree.IException (name, tys) :: xs ->
-        let name' = new_upper_name_to_exn ~current_module name in
+        let name' = new_upper_name_to_variant ~current_module name in
         let ty = desugar_exception_type imports name' tys in
         let imports = Imports.add_exn ~export:true name current_module imports in
         aux imports local_imports (IException (name', ty) :: acc) xs

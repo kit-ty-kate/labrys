@@ -69,7 +69,7 @@ let fail_constr_mismatch name ~intf ~impl =
                   (str "but the interface expects an exception of the form:" ^//^
                    NType.dump_constr name intf))
 
-let vdiff_value env name ty = match EnvMap.Value.find_opt name env with
+let vdiff_value env name ty = match EnvMap.Value.get name env with
   | None -> fail_not_provided "value" (Ident.Name.to_string name)
   | Some ty' when NType.is_subset_of ty' ty -> ()
   | Some ty' -> fail_value_mismatch name ~intf:ty ~impl:ty'
@@ -82,12 +82,12 @@ let vdiff_constr env name constr =
     | TypedEnv.Index idx1, TypedEnv.Index idx2 -> Int.equal idx1 idx2
     | TypedEnv.Exn, _ | TypedEnv.Index _, _ -> false
   in
-  match EnvMap.Constr.find_opt name env with
+  match EnvMap.Constr.get name env with
   | None -> fail_not_provided "data constructor" (Ident.Constr.to_string name)
   | Some constr' when is_subset_of constr' constr -> ()
   | Some constr' -> fail_constr_mismatch name ~intf:constr ~impl:constr'
 
-let vdiff_type env name aty = match EnvMap.Type.find_opt name env with
+let vdiff_type env name aty = match EnvMap.Type.get name env with
   | None -> fail_not_provided "type" (Ident.Type.to_string name)
   | Some aty' when NType.aty_is_subset_of aty' aty -> ()
   | Some aty' -> fail_type_mismatch name ~intf:aty ~impl:aty'
@@ -139,10 +139,9 @@ let add_type_alias name ty env =
 
 let add_exception name ty env =
   let ty = NType.check ~pure_arrow:`Partial env ty in
-  let cname = Ident.Exn.to_constr name in
   let carg = (TypedEnv.Exn, ty) in
-  let tname = Ident.Exn.to_type name in
+  let tname = Ident.Constr.to_type name in
   let targ = TypedEnv.Abstract TypedEnv.KExn in
-  let constrs = EnvMap.Constr.add cname carg env.TypedEnv.constrs in
+  let constrs = EnvMap.Constr.add name carg env.TypedEnv.constrs in
   let types = EnvMap.Type.add tname targ env.TypedEnv.types in
   {env with TypedEnv.constrs; types}

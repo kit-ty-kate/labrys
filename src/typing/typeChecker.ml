@@ -80,12 +80,11 @@ let rec filter_effects options eff = function
   | ((name, _), _)::branches ->
       (* TODO: Check duplication *)
       let exn = TypedEnv.NTy (Builtins.exn options) in
-      let ty' = TypedEnv.NApp (exn, TypedEnv.Ty (Ident.Exn.to_type name)) in
+      let ty' = TypedEnv.NApp (exn, TypedEnv.Ty (Ident.Constr.to_type name)) in
       let eff = List.filter (fun ty -> not (NType.is_subset_of ty ty')) eff in
       filter_effects options eff branches
 
 let rec check_try_branch options env ((name, args), t) =
-  let name = Ident.Exn.to_constr name in
   match EnvMap.Constr.find name env.TypedEnv.constrs with
   | TypedEnv.Exn, ty' ->
       let (args', _) = NType.funs ty' in
@@ -280,7 +279,7 @@ let check_top ~current_module options (acc, has_main, env) = function
       let env = Env.add_datatype name k variants env in
       (acc, has_main, env)
   | PretypedTree.Exception (name, args) ->
-      let acc = acc @ [Exception (Ident.Exn.to_name name)] in
+      let acc = acc @ [Exception (Ident.Constr.to_name name)] in
       let env = Env.add_exception name args env in
       (acc, has_main, env)
   | PretypedTree.Class _ ->

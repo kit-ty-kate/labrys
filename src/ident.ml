@@ -28,16 +28,11 @@ module Name = struct
     (loc, modul, fmt "%s__%d" name n)
 end
 
+module Type = Name
 module Constr = struct
   include Name
   let to_name = Fun.id
-end
-module Type = Name
-module Exn = struct
-  include Name
-  let to_name = Fun.id
   let to_type = Fun.id
-  let to_constr = Fun.id
 end
 module TyClass = Name
 module Instance = Name

@@ -16,16 +16,11 @@ module Name : sig
   val unique : t -> int -> t
 end
 
+module Type : module type of Name
 module Constr : sig
   include module type of Name
   val to_name : t -> Name.t
-end
-module Type : module type of Name
-module Exn : sig
-  include module type of Name
-  val to_name : t -> Name.t
   val to_type : t -> Type.t
-  val to_constr : t -> Constr.t
 end
 module TyClass : module type of Name
 module Instance : module type of Name

@@ -6,7 +6,7 @@ open LambdaTree
 let create_fresh_name () = LIdent.create ".@fresh"
 
 let get_name name env =
-  match EnvMap.Value.find_opt name env with
+  match EnvMap.Value.get name env with
   | Some x -> x
   | None -> assert false (* NOTE: Every external values should be in the
                             environment *)

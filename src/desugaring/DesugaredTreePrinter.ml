@@ -6,7 +6,6 @@ open DesugaredTree
 
 let dump_name name = str (Ident.Name.to_string name)
 let dump_ty_name name = str (Ident.Type.to_string name)
-let dump_exn_name name = str (Ident.Exn.to_string name)
 let dump_var_name name = str (Ident.Constr.to_string name)
 let dump_tyclass_name name = str (Ident.TyClass.to_string name)
 let dump_inst_name name = str (Ident.Instance.to_string name)
@@ -184,7 +183,7 @@ let dump_top = function
       str "type" ^^^ dump_ty_name name ^^^ colon ^^^ dump_kind k ^^^ equals ^//^
       dump_variants variants
   | Exception (name, ty) ->
-      str "exception" ^^^ dump_exn_name name ^^^ colon ^^^ dump_ty ty
+      str "exception" ^^^ dump_var_name name ^^^ colon ^^^ dump_ty ty
   | Class (name, params, sigs) ->
       group (
         (str "class" ^^^ dump_class name params ^^^ equals ^//^

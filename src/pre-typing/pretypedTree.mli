@@ -3,7 +3,6 @@
 
 type name = Ident.Name.t
 type constr_name = Ident.Constr.t
-type exn_name = Ident.Exn.t
 type t_name = Ident.Type.t
 type tyclass_name = Ident.TyClass.t
 type instance_name = Ident.Instance.t
@@ -44,6 +43,7 @@ type tyclass_app_arg = DesugaredTree.tyclass_app_arg =
 type pattern = DesugaredTree.pattern =
   | TyConstr of (loc * constr_name * pattern list)
   | Any of name
+  (* TODO: Add Or and As patterns *)
 
 type const = DesugaredTree.const =
   | Int of int
@@ -64,7 +64,7 @@ type t' =
   | Let of (name * t * t)
   | LetRec of (name * ty * t * t)
   | Fail of (ty * t)
-  | Try of (t * ((exn_name * name list) * t) list)
+  | Try of (t * ((constr_name * name list) * t) list)
   | Annot of (t * ty_annot)
   | Const of const
 
@@ -77,7 +77,7 @@ type top =
   | Type of (t_name * ty)
   | Foreign of (string * name * ty)
   | Datatype of (t_name * kind * variant list)
-  | Exception of (exn_name * ty)
+  | Exception of (constr_name * ty)
   | Class of (tyclass_name * t_value list * (name * ty) list)
   | Instance of (tyclass_instance * instance_name option * (name * t) list)
 
@@ -88,6 +88,6 @@ type interface = DesugaredTree.interface =
   | IAbstractType of (t_name * kind)
   | IDatatype of (t_name * kind * variant list)
   | ITypeAlias of (t_name * ty)
-  | IException of (exn_name * ty)
+  | IException of (constr_name * ty)
   | IClass of (tyclass_name * t_value list * (name * ty) list)
   | IInstance of (tyclass_instance * instance_name option)
