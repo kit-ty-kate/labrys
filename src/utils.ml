@@ -34,6 +34,14 @@ let rec last = function
   | [last] -> last
   | _::xs -> last xs
 
+let swap_list idx l =
+  try
+    let x = List.nth l idx in
+    let l = List.remove_at_idx idx l in
+    x :: l
+  with
+  | Failure _ -> raise Not_found
+
 let mkdir name =
   let aux name =
     try Unix.mkdir name 0o750

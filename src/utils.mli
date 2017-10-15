@@ -14,6 +14,8 @@ val detach_last : 'a list -> ('a list * 'a)
 
 val last : 'a list -> 'a
 
+val swap_list : int -> 'a list -> 'a list
+
 val combine_compare : (unit -> int) list -> int
 
 val exec_command : string -> string list -> int

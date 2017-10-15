@@ -33,11 +33,10 @@ let rec propagate' env = function
       ([], Datatype (idx, args))
   | CallForeign (name, ret, args) ->
       ([], CallForeign (name, ret, args))
-  | PatternMatching (name, branches, default, tree) ->
+  | PatternMatching (name, branches, tree) ->
       let name = rename env name in
-      let branches = List.map (propagate env) branches in
-      let default = propagate env default in
-      ([], PatternMatching (name, branches, default, tree))
+      let branches = List.map (propagate_branch env) branches in
+      ([], PatternMatching (name, branches, tree))
   | Fail name ->
       ([], Fail name)
   | Try (t, (name, t')) ->
@@ -51,6 +50,8 @@ let rec propagate' env = function
       ([], Const c)
   | Unreachable ->
       ([], Unreachable)
+
+and propagate_branch env (vars, t) = (vars, propagate env t)
 
 and propagate env (lets, t) =
   let rec aux env = function
@@ -82,10 +83,9 @@ let rec of_term = function
       ([], Datatype (idx, args))
   | LambdaTree.CallForeign (name, ret, args) ->
       ([], CallForeign (name, ret, args))
-  | LambdaTree.PatternMatching (name, branches, default, tree) ->
-      let branches = List.map of_term branches in
-      let default = of_term default in
-      ([], PatternMatching (name, branches, default, tree))
+  | LambdaTree.PatternMatching (name, branches, tree) ->
+      let branches = List.map of_branch branches in
+      ([], PatternMatching (name, branches, tree))
   | LambdaTree.Let (name, x, t) ->
       let (lets_x, x) = of_term x in
       let (lets_t, t) = of_term t in
@@ -106,6 +106,8 @@ let rec of_term = function
       ([], Const c)
   | LambdaTree.Unreachable ->
       ([], Unreachable)
+
+and of_branch (vars, t) = (vars, of_term t)
 
 let of_lambda_tree top =
   let aux = function

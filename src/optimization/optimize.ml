@@ -19,10 +19,9 @@ let rec of_term' = function
   | FlattenTree.CallForeign (name, ty, args) ->
       let fv = List.fold_right (fun (_, name) fv -> Set.add fv name) args Set.empty in
       (CallForeign (name, ty, args), fv)
-  | FlattenTree.PatternMatching (name, branches, default, tree) ->
-      let (default, fv) = of_term default in
-      let (branches, fv) = of_branches fv branches in
-      (PatternMatching (name, branches, default, tree), Set.add fv name)
+  | FlattenTree.PatternMatching (name, branches, tree) ->
+      let (branches, fv) = of_branches branches in
+      (PatternMatching (name, branches, tree), Set.add fv name)
   | FlattenTree.Rec (name, t) ->
       let (t, fv) = of_term' t in
       let fv = Set.remove_all fv name in
@@ -60,12 +59,13 @@ and of_term (lets, t) =
   let (lets, t, fv) = aux lets in
   ((lets, t), fv)
 
-and of_branches fv branches =
-  let aux (acc, fv) t =
+and of_branches branches =
+  let aux (acc, fv) (vars, t) =
     let (t, fvt) = of_term t in
-    (t :: acc, Set.union fvt fv)
+    let fvt = List.fold_left Set.remove_all fvt vars in
+    ((vars, t) :: acc, Set.union fvt fv)
   in
-  let (branches, fv) = List.fold_left aux ([], fv) branches in
+  let (branches, fv) = List.fold_left aux ([], Set.empty) branches in
   (List.rev branches, fv)
 
 let of_flatten_tree tree =

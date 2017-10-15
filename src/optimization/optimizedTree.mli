@@ -5,8 +5,8 @@ type name = LIdent.t
 type free_vars = EnvSet.MIDValue.t
 type index = int
 type constr = int
-type arity = int
 type length = int
+type branch = int
 
 type ('int, 'float, 'char, 'string) ty =
   ('int, 'float, 'char, 'string) FlattenTree.ty
@@ -15,14 +15,13 @@ type tag_ty = [(unit, unit, unit, unit) ty | `Custom]
 type ret_ty = [tag_ty | `Void]
 type const = (int, float, Uchar.t, string) ty
 
-type 'a tree' = 'a FlattenTree.tree' =
-  | Node of (int option * ('a * 'a tree') list)
-  | Leaf of int
+type constr_rep = FlattenTree.constr_rep = Index of constr | Exn of name
 
-type ('a, 'b) rep = ('a, 'b) FlattenTree.rep = Index of 'a | Exn of 'b
-
-type constr_rep = (constr, name) rep
-type tree = (constr tree', name tree') rep
+type tree = FlattenTree.tree =
+  | Switch of ((constr_rep * length * tree) list * tree)
+  | Swap of (index * tree)
+  | Alias of (name * tree)
+  | Jump of branch
 
 type t' =
   | Abs of (name * free_vars * t)
@@ -31,7 +30,7 @@ type t' =
   | Val of name
   | Datatype of (constr_rep option * name list)
   | CallForeign of (string * ret_ty * (tag_ty * name) list)
-  | PatternMatching of (name * t list * t * tree)
+  | PatternMatching of (name * (name list * t) list * tree)
   | Fail of name
   | Try of (t * (name * t))
   | RecordGet of (name * index)

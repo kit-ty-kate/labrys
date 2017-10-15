@@ -4,7 +4,6 @@
 type name = LIdent.t
 type index = int
 type constr = int
-type arity = int
 type length = int
 type branch = int
 
@@ -15,15 +14,13 @@ type tag_ty = [(unit, unit, unit, unit) ty | `Custom]
 type ret_ty = [tag_ty | `Void]
 type const = (int, float, Uchar.t, string) ty
 
-(* TODO: What is this int option ?? *)
-type 'a tree' =
-  | Node of (int option * ('a * 'a tree') list)
-  | Leaf of branch
+type constr_rep = Index of constr | Exn of name
 
-type ('a, 'b) rep = ('a, 'b) UntypedTree.rep = Index of 'a | Exn of 'b
-
-type constr_rep = (constr, name) rep
-type tree = (constr tree', name tree') rep
+type tree =
+  | Switch of ((constr_rep * length * tree) list * tree)
+  | Swap of (index * tree)
+  | Alias of (name * tree)
+  | Jump of branch
 
 type t =
   | Abs of (name * t)
@@ -31,7 +28,7 @@ type t =
   | Val of name
   | Datatype of (constr_rep option * name list)
   | CallForeign of (string * ret_ty * (tag_ty * name) list)
-  | PatternMatching of (name * t list * t * tree)
+  | PatternMatching of (name * (name list * t) list * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
   | Fail of name

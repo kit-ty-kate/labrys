@@ -19,54 +19,6 @@ let string_of_doc doc =
 module UntypedTree = struct
   open UntypedTree
 
-  let dump_pattern_matching t content =
-    PPrint.group
-      (PPrint.string "match"
-       ^^ PPrint.break 1
-       ^^ t
-       ^^ PPrint.break 1
-       ^^ PPrint.string "with"
-      )
-    ^^ content
-
-  let rec dump_var = function
-    | [] -> "VLeaf"
-    | i::var -> fmt "VNode (%d, %s)" i (dump_var var)
-
-  let rec dump_cases f cases =
-    let aux doc (constr, t) =
-      doc
-      ^^ PPrint.break 1
-      ^^ PPrint.group (f constr ^^ PPrint.nest 4 (dump_patterns' f t))
-
-    in
-    List.fold_left aux PPrint.empty cases
-
-  and dump_patterns' f = function
-    | Leaf i ->
-        PPrint.break 1
-        ^^ PPrint.OCaml.int i
-    | Node (idx, cases) ->
-        dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
-
-  let dump_patterns = function
-    | Index pat ->
-        let f index =
-          PPrint.string (fmt "| %d ->" index)
-        in
-        dump_patterns' f pat
-     | Exn pat ->
-         let f name =
-           PPrint.string (fmt "| exn %s ->" (dump_name name))
-         in
-         dump_patterns' f pat
-
-  let dump_free_vars free_vars =
-    let aux acc (var, name) =
-      fmt "%s (%s = %s)" acc (dump_name name) (dump_var var)
-    in
-    List.fold_left aux "Ø" free_vars
-
   let dump_constr_rep = function
     | Index idx -> string_of_int idx
     | Exn name -> dump_name name
@@ -90,14 +42,8 @@ module UntypedTree = struct
         PPrint.string (dump_name name)
     | Var (rep, len) ->
         PPrint.string (fmt "[%s, %d]" (dump_constr_rep rep) len)
-    | PatternMatching (t, results, default, patterns) ->
-        dump_pattern_matching
-          (dump_t t)
-          (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
-        ^^ PPrint.break 1
-        ^^ PPrint.string "| _ -> " ^^ dump_t default
-        ^^ PPrint.break 1
-        ^^ PPrint.string "end"
+    | PatternMatching _ ->
+        assert false (* TODO *)
     | Let (name, t, xs) ->
         PPrint.group
           (PPrint.lparen
@@ -156,19 +102,6 @@ module UntypedTree = struct
         PPrint.string (fmt "'%lc'" (Uchar.to_int c))
     | Const (`String s) ->
         PPrint.string (fmt "\"%s\"" s)
-    | Unreachable ->
-        PPrint.string "UNREACHABLE"
-
-  and dump_results results =
-    let aux doc i (free_vars, result) =
-      doc
-      ^^ PPrint.break 1
-      ^^ PPrint.group
-           (PPrint.string (fmt "| %d with %s ->" i (dump_free_vars free_vars))
-            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
-           )
-    in
-    List.foldi aux PPrint.empty results
 
   and dump_exn_branches branches =
     let dump_args args =
@@ -225,44 +158,6 @@ module LambdaTree = struct
 
   let dump_name = LIdent.to_string
 
-  let dump_pattern_matching t content =
-    PPrint.group
-      (PPrint.string "match"
-       ^^ PPrint.break 1
-       ^^ t
-       ^^ PPrint.break 1
-       ^^ PPrint.string "with"
-      )
-    ^^ content
-
-  let rec dump_cases f cases =
-    let aux doc (constr, t) =
-      doc
-      ^^ PPrint.break 1
-      ^^ PPrint.group (f constr ^^ PPrint.nest 4 (dump_patterns' f t))
-
-    in
-    List.fold_left aux PPrint.empty cases
-
-  and dump_patterns' f = function
-    | Leaf i ->
-        PPrint.break 1
-        ^^ PPrint.OCaml.int i
-    | Node (idx, cases) ->
-        dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
-
-  let dump_patterns = function
-    | Index pat ->
-        let f index =
-          PPrint.string (fmt "| %d ->" index)
-        in
-        dump_patterns' f pat
-     | Exn pat ->
-         let f name =
-           PPrint.string (fmt "| exn %s ->" (dump_name name))
-         in
-         dump_patterns' f pat
-
   let dump_args_ty l =
     let aux = function
       | (`Int (), name) -> fmt "Int %s" (dump_name name)
@@ -317,14 +212,8 @@ module LambdaTree = struct
           )
     | CallForeign (name, ret, args) ->
         PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_tag_ty ret))
-    | PatternMatching (t, results, default, patterns) ->
-        dump_pattern_matching
-          (PPrint.string (dump_name t))
-          (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
-        ^^ PPrint.break 1
-        ^^ PPrint.string "| _ -> " ^^ dump_t default
-        ^^ PPrint.break 1
-        ^^ PPrint.string "end"
+    | PatternMatching _ ->
+        assert false (* TODO *)
     | Let (name, t, xs) ->
         PPrint.group
           (PPrint.lparen
@@ -380,17 +269,6 @@ module LambdaTree = struct
     | Unreachable ->
         PPrint.string "UNREACHABLE"
 
-  and dump_results results =
-    let aux doc i result =
-      doc
-      ^^ PPrint.break 1
-      ^^ PPrint.group
-           (PPrint.string (fmt "| %d ->" i)
-            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
-           )
-    in
-    List.foldi aux PPrint.empty results
-
   and dump_args args =
     let aux doc name = doc ^^ PPrint.break 1 ^^ PPrint.string (dump_name name) in
     List.fold_left aux PPrint.empty args
@@ -417,44 +295,6 @@ module FlattenTree = struct
   open FlattenTree
 
   let dump_name = LIdent.to_string
-
-  let dump_pattern_matching t content =
-    PPrint.group
-      (PPrint.string "match"
-       ^^ PPrint.break 1
-       ^^ t
-       ^^ PPrint.break 1
-       ^^ PPrint.string "with"
-      )
-    ^^ content
-
-  let rec dump_cases f cases =
-    let aux doc (constr, t) =
-      doc
-      ^^ PPrint.break 1
-      ^^ PPrint.group (f constr ^^ PPrint.nest 4 (dump_patterns' f t))
-
-    in
-    List.fold_left aux PPrint.empty cases
-
-  and dump_patterns' f = function
-    | Leaf i ->
-        PPrint.break 1
-        ^^ PPrint.OCaml.int i
-    | Node (idx, cases) ->
-        dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
-
-  let dump_patterns = function
-    | Index pat ->
-        let f index =
-          PPrint.string (fmt "| %d ->" index)
-        in
-        dump_patterns' f pat
-     | Exn pat ->
-         let f name =
-           PPrint.string (fmt "| exn %s ->" (dump_name name))
-         in
-         dump_patterns' f pat
 
   let dump_args_ty l =
     let aux = function
@@ -518,14 +358,8 @@ module FlattenTree = struct
           )
     | CallForeign (name, ret, args) ->
         PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_tag_ty ret))
-    | PatternMatching (t, results, default, patterns) ->
-        dump_pattern_matching
-          (PPrint.string (dump_name t))
-          (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
-        ^^ PPrint.break 1
-        ^^ PPrint.string "| _ -> " ^^ dump_t default
-        ^^ PPrint.break 1
-        ^^ PPrint.string "end"
+    | PatternMatching _ ->
+        assert false (* TODO *)
     | Fail name ->
         PPrint.group
           (PPrint.lparen
@@ -573,17 +407,6 @@ module FlattenTree = struct
        dump_t' t
       )
 
-  and dump_results results =
-    let aux doc i result =
-      doc
-      ^^ PPrint.break 1
-      ^^ PPrint.group
-           (PPrint.string (fmt "| %d ->" i)
-            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
-           )
-    in
-    List.foldi aux PPrint.empty results
-
   and dump_args args =
     let aux doc name = doc ^^ PPrint.break 1 ^^ PPrint.string (dump_name name) in
     List.fold_left aux PPrint.empty args
@@ -610,44 +433,6 @@ module OptimizedTree = struct
   open OptimizedTree
 
   let dump_name = LIdent.to_string
-
-  let dump_pattern_matching t content =
-    PPrint.group
-      (PPrint.string "match"
-       ^^ PPrint.break 1
-       ^^ t
-       ^^ PPrint.break 1
-       ^^ PPrint.string "with"
-      )
-    ^^ content
-
-  let rec dump_cases f cases =
-    let aux doc (constr, t) =
-      doc
-      ^^ PPrint.break 1
-      ^^ PPrint.group (f constr ^^ PPrint.nest 4 (dump_patterns' f t))
-
-    in
-    List.fold_left aux PPrint.empty cases
-
-  and dump_patterns' f = function
-    | Leaf i ->
-        PPrint.break 1
-        ^^ PPrint.OCaml.int i
-    | Node (idx, cases) ->
-        dump_pattern_matching (PPrint.string (Option.map_or ~default:"<CURRENT>" string_of_int idx)) (dump_cases f cases)
-
-  let dump_patterns = function
-    | Index pat ->
-        let f index =
-          PPrint.string (fmt "| %d ->" index)
-        in
-        dump_patterns' f pat
-     | Exn pat ->
-         let f name =
-           PPrint.string (fmt "| exn %s ->" (dump_name name))
-         in
-         dump_patterns' f pat
 
   let dump_free_vars free_vars =
     let aux acc _ name =
@@ -717,14 +502,8 @@ module OptimizedTree = struct
           )
     | CallForeign (name, ret, args) ->
         PPrint.string (fmt "%s(%s) returns %s" name (dump_args_ty args) (dump_tag_ty ret))
-    | PatternMatching (t, results, default, patterns) ->
-        dump_pattern_matching
-          (PPrint.string (dump_name t))
-          (dump_results results ^^ PPrint.break 1 ^^ dump_patterns patterns)
-        ^^ PPrint.break 1
-        ^^ PPrint.string "| _ -> " ^^ dump_t default
-        ^^ PPrint.break 1
-        ^^ PPrint.string "end"
+    | PatternMatching _ ->
+        assert false (* TODO *)
     | Fail name ->
         PPrint.group
           (PPrint.lparen
@@ -772,17 +551,6 @@ module OptimizedTree = struct
        PPrint.space ^^
        dump_t' t
       )
-
-  and dump_results results =
-    let aux doc i result =
-      doc
-      ^^ PPrint.break 1
-      ^^ PPrint.group
-           (PPrint.string (fmt "| %d ->" i)
-            ^^ PPrint.nest 4 (PPrint.break 1 ^^ dump_t result)
-           )
-    in
-    List.foldi aux PPrint.empty results
 
   and dump_args args =
     let aux doc name = doc ^^ PPrint.break 1 ^^ PPrint.string (dump_name name) in
