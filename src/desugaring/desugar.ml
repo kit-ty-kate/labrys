@@ -135,6 +135,14 @@ let rec desugar_pattern imports = function
   | ParseTree.Any name ->
       let name = new_lower_name_to_local_value name in
       Any name
+  | ParseTree.Or (p1, p2) ->
+      let p1 = desugar_pattern imports p1 in
+      let p2 = desugar_pattern imports p2 in
+      Or (p1, p2)
+  | ParseTree.As (p, name) ->
+      let p = desugar_pattern imports p in
+      let name = new_lower_name_to_local_value name in
+      As (p, name)
 
 let desugar_instance imports (name, tys) =
   let name = upper_name_to_tyclass imports name in
@@ -198,6 +206,10 @@ let desugar_try_arg_to_name = function
       Err.fail ~loc "Full pattern-matching is not supported"
   | ParseTree.Any name ->
       new_lower_name_to_local_value name
+  | ParseTree.Or _ ->
+      assert false (* TODO *)
+  | ParseTree.As _ ->
+      assert false (* TODO *)
 
 let rec desugar_local_value imports options (name, is_rec, t) =
   let name = new_lower_name_to_local_value name in
@@ -224,6 +236,10 @@ and desugar_try_pattern imports options = function
   | (ParseTree.Any (loc, _), _) ->
       (* TODO: Allow this *)
       Err.fail ~loc "Wildcard patterns are not supported here"
+  | (ParseTree.Or _, _) ->
+      assert false (* TODO *)
+  | (ParseTree.As _, _) ->
+      assert false (* TODO *)
 
 and desugar_t imports options = function
   | (_, ParseTree.Abs (args, t)) ->

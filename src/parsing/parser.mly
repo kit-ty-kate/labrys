@@ -31,7 +31,7 @@
 %token Match With End
 %token Type
 %token Alias
-%token Pipe
+%token Pipe As
 %token Colon
 %token Star Eff Caret
 %token Fail
@@ -330,9 +330,23 @@ patClosed:
   | LParen p = pat RParen
       { p }
 
-patUnclosed:
+patNonStrictlyUnclosed:
   | name = upperName args = patClosed+
       { ParseTree.TyConstr (loc $startpos $endpos, name, args) }
+  | p = patProtectedPermissive As name = newLowerName
+      { ParseTree.As (p, name) }
+
+patStrictlyUnclosed:
+  | p1 = patProtectedPermissive Pipe p2 = pat
+      { ParseTree.Or (p1, p2) }
+
+patUnclosed:
+  | p = patNonStrictlyUnclosed { p }
+  | p = patStrictlyUnclosed { p }
+
+patProtectedPermissive:
+  | p = patClosed { p }
+  | p = patNonStrictlyUnclosed { p }
 
 pat:
   | p = patClosed { p }

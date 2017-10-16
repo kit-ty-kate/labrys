@@ -43,6 +43,8 @@ type tyclass_app_arg =
 type pattern =
   | TyConstr of (loc * constr_name * pattern list)
   | Any of name
+  | Or of (pattern * pattern)
+  | As of (pattern * name)
 
 type const =
   | Int of int

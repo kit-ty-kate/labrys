@@ -44,6 +44,8 @@ type v_arg = (new_lower_name * ty)
 type pattern =
   | TyConstr of (loc * upper_name * pattern list)
   | Any of new_lower_name
+  | Or of (pattern * pattern)
+  | As of (pattern * new_lower_name)
 
 type arg' =
   | VArg of v_arg

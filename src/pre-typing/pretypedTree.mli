@@ -43,7 +43,8 @@ type tyclass_app_arg = DesugaredTree.tyclass_app_arg =
 type pattern = DesugaredTree.pattern =
   | TyConstr of (loc * constr_name * pattern list)
   | Any of name
-  (* TODO: Add Or and As patterns *)
+  | Or of (pattern * pattern)
+  | As of (pattern * name)
 
 type const = DesugaredTree.const =
   | Int of int

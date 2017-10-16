@@ -54,6 +54,7 @@ rule main = parse
   | "let" { Parser.Let }
   | "rec" { Parser.Rec }
   | "in" { Parser.In }
+  | "as" { Parser.As }
   | "fail" { Parser.Fail }
   | "try" { Parser.Try }
   | "match" { Parser.Match }
