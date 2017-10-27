@@ -78,7 +78,7 @@ let dump_rec = function
 let rec dump_pattern = function
   | TyConstr (_, name, []) -> dump_var_name name
   | TyConstr (_, name, args) -> parens (dump_var_name name ^^^ dump_patterns args)
-  | Any name -> dump_name name
+  | Wildcard -> underscore
   | Or (p1, p2) -> parens (dump_pattern p1) ^^^ bar ^^^ dump_pattern p2
   | As (p, name) -> parens (dump_pattern p) ^^^ str "as" ^^^ dump_name name
 

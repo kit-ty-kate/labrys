@@ -42,7 +42,7 @@ type tyclass_app_arg =
 
 type pattern =
   | TyConstr of (loc * constr_name * pattern list)
-  | Any of name
+  | Wildcard
   | Or of (pattern * pattern)
   | As of (pattern * name)
 

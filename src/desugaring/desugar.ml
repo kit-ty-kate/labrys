@@ -134,7 +134,7 @@ let rec desugar_pattern imports = function
       TyConstr (loc, name, args)
   | ParseTree.Any name ->
       let name = new_lower_name_to_local_value name in
-      Any name
+      As (Wildcard, name)
   | ParseTree.Or (p1, p2) ->
       let p1 = desugar_pattern imports p1 in
       let p2 = desugar_pattern imports p2 in
