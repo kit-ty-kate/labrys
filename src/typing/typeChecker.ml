@@ -63,16 +63,19 @@ let eff_of_ty ~loc options = function
                       squotes (NType.dump t) ^^^
                       dot)
 
-let rec get_supertype ty eff = function
+let rec unify ty eff = function
   | [] ->
       (ty, eff)
   | (loc, ty', eff')::tys ->
       if NType.is_subset_of ty ty' then
-        get_supertype ty' (eff @ eff') tys
+        unify ty' (eff @ eff') tys
       else if NType.is_subset_of ty' ty then
-        get_supertype ty (eff @ eff') tys
+        unify ty (eff @ eff') tys
       else
         type_fail ~loc ~has:ty' ~expected:ty
+
+let unify_list _ _ =
+  assert false (* TODO *)
 
 let rec filter_effects options eff = function
   | [] ->
@@ -127,9 +130,6 @@ let compile env = function
         let heads = assert false (* TODO *) in
         assert false (* TODO *)
   end
-
-let unify_list _ _ =
-  assert false (* TODO *)
 
 let pattern_to_matrix env ty (pattern, a) =
   let rec aux ty = function
@@ -189,7 +189,7 @@ and check_try_branches options ty eff env = function
       let eff = filter_effects options eff branches in
       let branches = List.map (check_try_branch options env) branches in
       let (branches, tys) = List.split branches in
-      let (ty, eff) = get_supertype ty eff tys in
+      let (ty, eff) = unify ty eff tys in
       (branches, ty, eff)
 
 and check_results _ _ _ =
