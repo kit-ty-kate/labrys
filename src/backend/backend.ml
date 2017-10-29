@@ -323,7 +323,7 @@ module Make (I : I) = struct
         Llvm.build_store term name builder;
         create_tree env builder values results p
     | OptimizedTree.Swap (idx, p) ->
-        let values = Utils.swap_list idx values in
+        let values = Utils.swap_list (pred idx) values in
         create_tree env builder values results p
 
   let map_ret builder t = function
