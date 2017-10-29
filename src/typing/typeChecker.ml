@@ -87,64 +87,20 @@ let rec filter_effects options eff = function
       let eff = List.filter (fun ty -> not (NType.is_subset_of ty ty')) eff in
       filter_effects options eff branches
 
-let p_as name (ps, a) =
-  (List.map (fun p -> PretypedTree.As (p, name)) ps, a)
-
-let specialize ~eq ~ty_size =
-  let rec aux (p, a) = match p with
-    | [] -> assert false (* NOTE: This is forbidden by the syntax *)
-    | PretypedTree.TyConstr (_, c, qs)::ps when eq c -> [(qs @ ps, a)]
-    | PretypedTree.TyConstr _::_ -> []
-    | PretypedTree.Wildcard as p::ps -> [(List.replicate ty_size p @ ps, a)]
-    | PretypedTree.Or (q1, q2)::ps -> aux (q1::ps, a) @ aux (q2::ps, a)
-    | PretypedTree.As (p, name)::ps -> List.map (p_as name) (aux (p::ps, a))
-  in
-  fun m -> List.flatten (List.map aux m)
-
-let decompose =
-  let rec aux (p, a) = match p with
-    | [] -> assert false (* NOTE: This is forbidden by the syntax *)
-    | PretypedTree.TyConstr _::_ -> []
-    | PretypedTree.Wildcard::ps -> [(ps, a)]
-    | PretypedTree.Or (q1, q2)::ps -> aux (q1::ps, a) @ aux (q2::ps, a)
-    | PretypedTree.As (p, name)::ps -> List.map (p_as name) (aux (p::ps, a))
-  in
-  fun m -> List.flatten (List.map aux m)
-
-let jump a =
-  let exception Failed in
-  let rec aux i = function
-    | [] -> Jump a
-    | PretypedTree.TyConstr _::_ -> raise Failed
-    | PretypedTree.Wildcard::xs -> Swap (i, aux (succ i) xs)
-    | PretypedTree.Or _::_ -> raise Failed
-    | PretypedTree.As (p, name)::xs -> Alias (name, aux i (p::xs))
-  in
-  fun row -> try Some (aux 1 row) with Failed -> None
-
-let compile env = function
-  | [] -> assert false (* NOTE: This is forbidden by the syntax *)
-  | (row, a)::m -> begin match jump a row with
-    | Some t -> t
-    | None ->
-        let heads = assert false (* TODO *) in
-        assert false (* TODO *)
-  end
-
 let pattern_to_matrix env ty (pattern, a) =
   let rec aux ty = function
     | PretypedTree.TyConstr _ ->
         assert false (* TODO *)
     | PretypedTree.Wildcard ->
-        (PretypedTree.Wildcard, [])
+        ((ty, Pattern.Wildcard), [])
     | PretypedTree.Or (p1, p2) ->
         let (p1, tys1) = aux ty p1 in
         let (p2, tys2) = aux ty p2 in
         let tys = unify_list tys1 tys2 in
-        (PretypedTree.Or (p1, p2), tys)
+        ((ty, Pattern.Or (p1, p2)), tys)
     | PretypedTree.As (p, name) ->
         let (p, tys) = aux ty p in
-        (PretypedTree.As (p, name), (name, ty)::tys)
+        ((ty, Pattern.As (p, name)), (name, ty)::tys)
   in
   let (p, tys) = aux ty pattern in
   (([p], a), tys)
@@ -157,6 +113,9 @@ let split_patterns patterns =
   let (patterns, results) = List.split patterns in
   let aux a pattern = (pattern, a) in
   (List.mapi aux patterns, results)
+
+let check_decision_tree env tree =
+  assert false (* TODO *)
 
 (* TODO: Check unused cases by checking the produced decision tree for
    every action indexes *)
@@ -233,7 +192,8 @@ and check_term options env = function
       let (t, ty, eff1) = check_term options env t in
       let (patterns, results) = split_patterns patterns in
       let (matrix, vars) = patterns_to_matrix env ty patterns in
-      let tree = compile env matrix in
+      let tree = Pattern.compile matrix in
+      let tree = check_decision_tree env tree in
       let (results, ty, eff2) = check_results env vars results in
       (PatternMatching (t, results, tree), ty, eff1 @ eff2)
   | (_, PretypedTree.Let (name, t1, t2)) ->
