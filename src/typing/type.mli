@@ -26,6 +26,7 @@ val check_eff :
 val equal : TypedEnv.ty -> TypedEnv.ty -> bool
 val app : TypedEnv.ty -> TypedEnv.ty -> TypedEnv.ty
 val replace : Ident.Type.t -> by:TypedEnv.ty -> TypedEnv.ty -> TypedEnv.ty
+val head : TypedEnv.ty -> Ident.Type.t option
 
 val dump : TypedEnv.ty -> PPrint.document
 val dump_eff : TypedEnv.effects -> PPrint.document

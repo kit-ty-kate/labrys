@@ -87,10 +87,39 @@ let rec filter_effects options eff = function
       let eff = List.filter (fun ty -> not (NType.is_subset_of ty ty')) eff in
       filter_effects options eff branches
 
-let pattern_to_matrix env ty (pattern, a) =
+let rec get_constrs ~loc env ty = match Type.head ty with
+  | None ->
+      Err.fail_doc
+        ~loc
+        Utils.PPrint.(str "The type" ^^^
+                      squotes (Type.dump ty) ^^^
+                      str "cannot be matched.")
+  | Some ty ->
+      begin match EnvMap.Type.find ty env.TypedEnv.types with
+      | TypedEnv.Abstract _ ->
+          Err.fail
+            ~loc
+            "Cannot match over the abstract type '%s'"
+            (Ident.Type.to_string ty)
+      | TypedEnv.Alias (_, ty) ->
+          get_constrs ~loc env ty
+      | TypedEnv.Datatype (_, constrs) ->
+          constrs
+      end
+
+let fold_ty_list ~loc f x ~has ~expected =
+  try List.fold_left2 f x has expected with
+  | Invalid_argument _ ->
+      Err.fail
+        ~loc
+        "Wrong number of parameters. Has %d but expected %d."
+        (List.length has)
+        (List.length expected)
+
+let pattern_to_matrix env =
   let rec aux ty = function
-    | PretypedTree.TyConstr _ ->
-        assert false (* TODO *)
+    | PretypedTree.TyConstr (loc, c, ps) ->
+        p_constr ~loc env ty c ps
     | PretypedTree.Wildcard ->
         ((ty, Pattern.Wildcard), [])
     | PretypedTree.Or (p1, p2) ->
@@ -101,9 +130,30 @@ let pattern_to_matrix env ty (pattern, a) =
     | PretypedTree.As (p, name) ->
         let (p, tys) = aux ty p in
         ((ty, Pattern.As (p, name)), (name, ty)::tys)
+  and p_constr ~loc env ty c ps =
+    let constrs = get_constrs ~loc env (NType.to_type ty) in
+    match List.find_all (fun (c', _, _) -> Ident.Constr.equal c c') constrs with
+    | [] ->
+        let (_, ty) = NType.funs ty in
+        Err.fail_doc
+          ~loc
+          Utils.PPrint.(squotes (str (Ident.Constr.to_string c)) ^^^
+                        str "is not a constructor of" ^^^
+                        squotes (NType.dump ty) ^^
+                        dot)
+    | [(_, _, ty)] ->
+        let (expected, _) = NType.funs ty in
+        let fold = fold_ty_list ~loc in
+        let (args, tys) = fold fold_arg ([], []) ~has:ps ~expected in
+        ((ty, Pattern.Constr (loc, c, args)), tys)
+    | _::_::_ ->
+        assert false (* NOTE: This is forbidden by Env.map_variants *)
+  and fold_arg (args, tys) p ty =
+    assert false (* TODO *)
   in
-  let (p, tys) = aux ty pattern in
-  (([p], a), tys)
+  fun ty (p, a) ->
+    let (p, l) = aux ty p in
+    (([p], a), l)
 
 let patterns_to_matrix env ty patterns =
   let m = List.map (pattern_to_matrix env ty) patterns in
@@ -125,13 +175,9 @@ let rec check_try_branch options env ((name, args), t) =
   | TypedEnv.Exn, ty' ->
       let (args', _) = NType.funs ty' in
       let aux env name (ty, _) = Env.add_value name ty env in
-      let env = try List.fold_left2 aux env args args' with
-        | Invalid_argument _ ->
-            Err.fail
-              ~loc:(Ident.Constr.loc name)
-              "Wrong number of parameters. Has %d but expected %d."
-              (List.length args)
-              (List.length args')
+      let env =
+        let loc = Ident.Constr.loc name in
+        fold_ty_list ~loc aux env ~has:args ~expected:args'
       in
       let loct = fst t in
       let (t, tyt, eff) = check_term options env t in
@@ -151,7 +197,7 @@ and check_try_branches options ty eff env = function
       let (ty, eff) = unify ty eff tys in
       (branches, ty, eff)
 
-and check_results _ _ _ =
+and check_results env vars results =
   assert false (* TODO *)
 
 and check_term options env = function

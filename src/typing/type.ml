@@ -147,6 +147,12 @@ and app x y = match x, y with
 
 let equal = equal 0
 
+let rec head = function
+  | Ty name -> Some name
+  (* TODO: Sum ? *)
+  | Eff _ | Sum _ | Fun _ | Forall _ | Abs _ -> None
+  | App (x, _) -> head x
+
 let loc = Builtins.unknown_loc
 
 let rec to_ptype = function
