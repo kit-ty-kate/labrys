@@ -60,7 +60,7 @@ let jump a =
 
 let rec extract_constr = function
   | (_, Wildcard) -> []
-  | (_, Constr (loc, c, ps)) -> [(loc, c, List.length ps)]
+  | (ty, Constr (loc, c, ps)) -> [(loc, c, ty, List.length ps)]
   | (_, Or (p1, p2)) -> extract_constr p1 @ extract_constr p2
   | (_, As (p, _)) -> extract_constr p
 
@@ -91,4 +91,13 @@ let rec compile = function
       end
 and switch m =
   let heads = get_head_constrs m in
-  assert false (* TODO *)
+  let default = match decompose m with
+    | [] -> None
+    | m -> Some (compile m)
+  in
+  let aux (loc, c, ty, ty_size) =
+    let eq = Ident.Constr.equal c in
+    let tree = compile (specialize ~eq ~ty_size m) in
+    (loc, c, ty, tree)
+  in
+  Switch (List.map aux heads, default)
