@@ -20,6 +20,7 @@ type const = (int, float, Uchar.t, string) ty
 type constr_rep = Index of index | Exn of name
 
 type tree =
+  (* TODO: Do we need the default case ? *)
   | Switch of ((constr_rep * length * tree) list * tree option)
   | Swap of (index * tree)
   | Alias of (name * tree)

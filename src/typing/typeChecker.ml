@@ -63,19 +63,48 @@ let eff_of_ty ~loc options = function
                       squotes (NType.dump t) ^^^
                       dot)
 
-let rec unify ty eff = function
-  | [] ->
-      (ty, eff)
-  | (loc, ty', eff')::tys ->
-      if NType.is_subset_of ty ty' then
-        unify ty' (eff @ eff') tys
-      else if NType.is_subset_of ty' ty then
-        unify ty (eff @ eff') tys
-      else
-        type_fail ~loc ~has:ty' ~expected:ty
+let unify =
+  let rec aux ty eff = function
+    | [] ->
+        (ty, eff)
+    | (loc, ty', eff')::tys ->
+        if NType.is_subset_of ty ty' then
+          aux ty' (eff @ eff') tys
+        else if NType.is_subset_of ty' ty then
+          aux ty (eff @ eff') tys
+        else
+          type_fail ~loc ~has:ty' ~expected:ty
+  in
+  function
+  | [] -> assert false (* NOTE: Shouldn't happen *)
+  | (_, ty, eff)::tys -> aux ty eff tys
 
-let unify_list _ _ =
-  assert false (* TODO *)
+let unify_list l1 =
+  let error name =
+    Err.fail
+      ~loc:(Ident.Name.loc name)
+      "Variable '%s' is bound several times in this matching"
+      (Ident.Name.to_string name)
+  in
+  let rec aux l1 = function
+    | [] -> begin match l1 with
+      | [] -> []
+      | (name, _)::_ -> error name
+    end
+    | (name, ty)::l2 ->
+        let eq = Ident.Name.equal name in
+        begin match List.partition (fun (name', _) -> eq name') l1 with
+        | [], _ ->
+            error name
+        | [(name', ty')], l1 ->
+            let ty = (Ident.Name.loc name, ty, []) in
+            let ty' = (Ident.Name.loc name', ty', []) in
+            (name, fst (unify [ty; ty']))::aux l1 l2
+        | _::(name, _)::_, _ ->
+            error name
+        end
+  in
+  aux l1
 
 let rec filter_effects options eff = function
   | [] ->
@@ -148,8 +177,9 @@ let pattern_to_matrix env =
         ((ty, Pattern.Constr (loc, c, args)), tys)
     | _::_::_ ->
         assert false (* NOTE: This is forbidden by Env.map_variants *)
-  and fold_arg (args, tys) p ty =
-    assert false (* TODO *)
+  and fold_arg (args, tys) p (ty, _) =
+    let (p, tys1) = aux ty p in
+    (args @ [p], tys @ tys1)
   in
   fun ty (p, a) ->
     let (p, l) = aux ty p in
@@ -164,11 +194,46 @@ let split_patterns patterns =
   let aux a pattern = (pattern, a) in
   (List.mapi aux patterns, results)
 
-let check_decision_tree env tree =
-  assert false (* TODO *)
-
-(* TODO: Check unused cases by checking the produced decision tree for
-   every action indexes *)
+let rec check_decision_tree ~loc env = function
+  | Pattern.Switch (cases, default) -> check_switch ~loc env cases default
+  | Pattern.Swap (idx, tree) -> Swap (idx, check_decision_tree ~loc env tree)
+  | Pattern.Alias (name, tree) -> Alias (name, check_decision_tree ~loc env tree)
+  | Pattern.Jump a -> Jump a
+and check_switch ~loc env cases default =
+  let ty = List.map (fun (loc, _, ty, _) -> (loc, ty, [])) cases in
+  let ty, _ = unify ty in
+  let constrs =
+    try get_constrs ~loc:Builtins.unknown_loc env (NType.to_type ty) with
+    | Err.Exn _ -> assert false (* NOTE: already checked in pattern_to_matrix *)
+  in
+  let has_default = Option.is_some default in
+  let cases = check_cases ~loc ~has_default env cases constrs in
+  Switch (cases, Option.map (check_decision_tree ~loc env) default)
+and check_cases ~loc ~has_default env cases = function
+  | [] when List.is_empty cases ->
+      []
+  | [] ->
+      assert false
+  | (name, idx, ty)::constrs ->
+      let eq = Ident.Constr.equal name in
+      begin match List.find_all (fun (_, c, _, _) -> eq c) cases with
+      | [] when has_default ->
+          check_cases ~loc ~has_default env cases constrs
+      | [] ->
+          Err.fail
+            ~loc
+            "This pattern matching is not exhaustive. \
+             This constructor is not matched: %s"
+            (Ident.Constr.to_string name)
+      | [(loc', _, _, tree)] ->
+          let len = NType.size ty in
+          let tree = check_decision_tree ~loc:loc' env tree in
+          let cases = List.filter (fun (_, c, _, _) -> not (eq c)) cases in
+          let constrs = check_cases ~loc ~has_default env cases constrs in
+          (Index idx, len, tree)::constrs
+      | _::(loc, _, _, _)::_ ->
+          Err.fail ~loc "This match case is unused."
+      end
 
 let rec check_try_branch options env ((name, args), t) =
   match EnvMap.Constr.find name env.TypedEnv.constrs with
@@ -194,12 +259,32 @@ and check_try_branches options ty eff env = function
       let eff = filter_effects options eff branches in
       let branches = List.map (check_try_branch options env) branches in
       let (branches, tys) = List.split branches in
-      let (ty, eff) = unify ty eff tys in
+      let (ty, eff) = unify ((Builtins.unknown_loc, ty, eff)::tys) in
       (branches, ty, eff)
 
-and check_results env vars results =
-  assert false (* TODO *)
+and check_results options env vars results =
+  let check_vars env (results, ty) vars result =
+    let check_var (vars', env) (name, ty) =
+      let eq = Ident.Name.equal name in
+      match List.find_opt (fun (name, _) -> eq name) vars with
+      | Some (name, _) ->
+          let loc = Ident.Name.loc name in
+          Err.fail ~loc "Variable already defined in this pattern."
+      | None ->
+          (name :: vars', Env.add_value name ty env)
+    in
+    let (vars, env) = List.fold_left check_var ([], env) vars in
+    let (t, ty1, eff1) = check_term options env result in
+    (results @ [(vars, t)], ty @ [(fst result, ty1, eff1)])
+  in
+  let (results, tys) =
+    try List.fold_left2 (check_vars env) ([], []) vars results with
+    | Invalid_argument _ ->
+        assert false (* NOTE: Not possible (see pattern_to_matrix) *)
+  in
+  (results, unify tys)
 
+(* TODO: Use Set instead of list to encode the effects *)
 and check_term options env = function
   | (_, PretypedTree.Abs ((name, ty), t)) ->
       let ty = NType.check ~pure_arrow:`Forbid env ty in
@@ -234,13 +319,13 @@ and check_term options env = function
       let rep = get_rep name rep in
       let size = NType.size ty in
       (Var (rep, size), ty, [])
-  | (_, PretypedTree.PatternMatching (t, patterns)) ->
+  | (loc, PretypedTree.PatternMatching (t, patterns)) ->
       let (t, ty, eff1) = check_term options env t in
       let (patterns, results) = split_patterns patterns in
       let (matrix, vars) = patterns_to_matrix env ty patterns in
       let tree = Pattern.compile matrix in
-      let tree = check_decision_tree env tree in
-      let (results, ty, eff2) = check_results env vars results in
+      let tree = check_decision_tree ~loc env tree in
+      let (results, (ty, eff2)) = check_results options env vars results in
       (PatternMatching (t, results, tree), ty, eff1 @ eff2)
   | (_, PretypedTree.Let (name, t1, t2)) ->
       let (t1, ty1, eff1) = check_term options env t1 in
