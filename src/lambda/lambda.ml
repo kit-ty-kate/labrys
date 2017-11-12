@@ -50,16 +50,16 @@ let create_dyn_functions f n =
   aux [] n
 
 let rec of_results env =
-  let aux (results, env) (vars, t) =
+  let aux (vars_acc, results, env) (vars, t) =
     let aux (vars, env) name =
       let (name, env) = env_add name env in
       (vars @ [name], env)
     in
     let (vars, env) = List.fold_left aux ([], env) vars in
     let t = of_typed_term env t in
-    (results @ [(vars, t)], env)
+    (vars @ vars_acc, results @ [t], env)
   in
-  List.fold_left aux ([], env)
+  List.fold_left aux ([], [], env)
 
 and get_lets env t = function
   | (name, x)::xs ->
@@ -80,14 +80,14 @@ and of_try_pattern env var l =
             List.mapi (fun i x -> (x, RecordGet (var, i))) args
             |> get_lets env t
           in
-          (([], t) :: branches, (Exn exn, 0, Jump i) :: switches)
+          (t :: branches, (Exn exn, 0, Jump i) :: switches)
     in
     aux 0 l
   in
   let default = List.length branches in
-  let branches = branches @ [([], Fail var)] in
+  let branches = branches @ [Fail var] in
   let tree = Switch (switch, Jump default) in
-  PatternMatching (var, branches, tree)
+  PatternMatching (var, [], branches, tree)
 
 and of_args env f args =
   let args =
@@ -125,11 +125,11 @@ and of_typed_term env = function
   | UntypedTree.PatternMatching (t, results, pattern) ->
       let t = of_typed_term env t in
       let name = create_fresh_name () in
-      let (results, env) = of_results env results in
+      let (vars, results, env) = of_results env results in
       let unreachable = List.length results in
-      let results = results @ [([], Unreachable)] in
+      let results = results @ [Unreachable] in
       let pattern = of_pattern ~unreachable env pattern in
-      let pat = PatternMatching (name, results, pattern) in
+      let pat = PatternMatching (name, vars, results, pattern) in
       Let (name, t, pat)
   | UntypedTree.Try (t, branches) ->
       let t = of_typed_term env t in
