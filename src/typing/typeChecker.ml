@@ -170,8 +170,8 @@ let pattern_to_matrix env =
                         str "is not a constructor of" ^^^
                         squotes (NType.dump ty) ^^
                         dot)
-    | [(_, _, ty)] ->
-        let (expected, _) = NType.funs ty in
+    | [(_, _, ty')] ->
+        let (expected, _) = NType.funs ty' in
         let fold = fold_ty_list ~loc in
         let (args, tys) = fold fold_arg ([], []) ~has:ps ~expected in
         ((ty, Pattern.Constr (loc, c, args)), tys)
@@ -264,14 +264,13 @@ and check_try_branches options ty eff env = function
 
 and check_results options env vars results =
   let check_vars env (results, ty) vars result =
-    let check_var (vars', env) (name, ty) =
-      let eq = Ident.Name.equal name in
-      match List.find_opt (fun (name, _) -> eq name) vars with
-      | Some (name, _) ->
+    let check_var (vars, env) (name, ty) =
+      match List.find_opt (Ident.Name.equal name) vars with
+      | Some name ->
           let loc = Ident.Name.loc name in
           Err.fail ~loc "Variable already defined in this pattern."
       | None ->
-          (name :: vars', Env.add_value name ty env)
+          (name :: vars, Env.add_value name ty env)
     in
     let (vars, env) = List.fold_left check_var ([], env) vars in
     let (t, ty1, eff1) = check_term options env result in
