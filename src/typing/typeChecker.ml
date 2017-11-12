@@ -339,7 +339,7 @@ and check_term options env = function
       if not (NType.is_subset_of ty1 ty) then
         type_fail ~loc ~has:ty ~expected:ty1;
       let (t2, ty2, eff2) = check_term options env t2 in
-      (Let (name, t1, t2), ty2, eff1 @ eff2)
+      (LetRec (name, t1, t2), ty2, eff1 @ eff2)
   | (loc, PretypedTree.Fail (ty, t)) ->
       let ty = NType.check ~pure_arrow:`Allow env ty in
       let (t, ty', eff') = check_term options env t in
