@@ -122,7 +122,10 @@ let map_variants env =
 
 let add_datatype name k variants env =
   (* TODO: Check kind ? *)
-  let variants = map_variants env variants in
+  let variants =
+    let env = add_abstract_type name k env in
+    map_variants env variants
+  in
   let constrs =
     List.fold_left
       (fun constrs (name, idx, ty) -> EnvMap.Constr.add name (TypedEnv.Index idx, ty) constrs)
