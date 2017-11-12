@@ -540,7 +540,8 @@ let get_triple () =
 
 let get_target ~triple =
   let target = Llvm_target.Target.by_triple triple in
-  Llvm_target.TargetMachine.create ~triple target
+  let reloc_mode = Llvm_target.RelocMode.PIC in
+  Llvm_target.TargetMachine.create ~triple ~reloc_mode target
 
 let privatize_identifiers m =
   let aux f v =
