@@ -78,7 +78,7 @@ let destruct_ors =
   in
   fun (row, a) m -> match aux [] a row with
     | [] -> assert false (* NOTE: Cannot happen *)
-    | (row, a)::xs -> (row, a, xs @ m)
+    | (row, a)::_ as m' -> (row, a, m' @ m)
 
 let rec compile = function
   | [] -> assert false (* NOTE: This is forbidden by the syntax *)
