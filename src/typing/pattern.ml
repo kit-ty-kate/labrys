@@ -74,7 +74,16 @@ let destruct_ors =
     | [] -> [(acc, a)]
     | (_, (Wildcard | Constr _)) as p::ps -> aux (acc @ [p]) a ps
     | (_, Or (p1, p2))::ps -> aux acc a (p1::ps) @ aux acc a (p2::ps)
-    | (_, As (p, name))::ps -> List.map (p_as name) (aux acc a (p::ps))
+    | (_, As (p, name))::ps ->
+        let acc = destr_as name (aux acc a [p]) in
+        List.flatten (List.map (fun acc -> aux acc a ps) acc)
+  and destr_as name acc =
+    let rec aux = function
+      | ([], _) -> assert false (* NOTE: Cannot happen *)
+      | ([p], _) -> [(fst p, As (p, name))]
+      | (p::ps, a) -> p :: aux (ps, a)
+    in
+    List.map aux acc
   in
   fun (row, a) m -> match aux [] a row with
     | [] -> assert false (* NOTE: Cannot happen *)
