@@ -79,8 +79,8 @@ let rec dump_pattern = function
   | TyConstr (_, name, []) -> dump_var_name name
   | TyConstr (_, name, args) -> parens (dump_var_name name ^^^ dump_patterns args)
   | Wildcard -> underscore
-  | Or (p1, p2) -> parens (dump_pattern p1) ^^^ bar ^^^ dump_pattern p2
-  | As (p, name) -> parens (dump_pattern p) ^^^ str "as" ^^^ dump_name name
+  | Or (p1, p2) -> parens (parens (dump_pattern p1) ^^^ bar ^^^ dump_pattern p2)
+  | As (p, name) -> parens (parens (dump_pattern p) ^^^ str "as" ^^^ dump_name name)
 
 and dump_patterns l = separate_map space dump_pattern l
 
