@@ -40,7 +40,7 @@ clean-docs:
 	@$(RM) $(DOCS)
 
 stdlib:
-	./main.native build-module --no-prelude --src-dir stdlib Prelude
+	./main.native build-module --no-prelude --build-dir . --src-dir stdlib Prelude
 
 tests:
 	CERVOISE="$(shell pwd)" LLVM_VERSION="$(LLVM_VERSION)" cram $(TESTS)

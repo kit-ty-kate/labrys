@@ -1,5 +1,6 @@
 Init
 
+  $ export CERVOISE_LIBDIR=$CERVOISE/stdlib
   $ cp $CERVOISE/tests/basic/Basic.sfw .
 
 Normal compilation

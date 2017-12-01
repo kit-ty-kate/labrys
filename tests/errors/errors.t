@@ -1,5 +1,6 @@
 Init
 
+  $ export CERVOISE_LIBDIR=$CERVOISE/stdlib
   $ cp $CERVOISE/tests/errors/InvalidRec.sfw .
 
 Normal compilation
