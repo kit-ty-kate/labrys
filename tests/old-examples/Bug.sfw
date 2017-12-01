@@ -11,7 +11,7 @@ foreign "puts" println : String -[IO]-> Unit
 foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
 
 let natToInt =
-  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+  let rec aux (acc : Int) (n : Nat) : IO # Int =
     match n with
     | O -> acc
     | S n -> aux (add 1 acc) n
@@ -40,6 +40,6 @@ let test = try test Unit with A -> O end
 let apply {x} {y} {e : φ} (f : x -[e]-> y) (x : x) = f x
 
 let test () : Nat = apply [Nat] [Nat] [[]] (λ(x : Nat) -> x) O
-let test () : [[IO]] Nat = apply [Nat] [Nat] [[IO]] (λ(x : Nat) -> printNat x; x) O
+let test () : IO # Nat = apply [Nat] [Nat] [[IO]] (λ(x : Nat) -> printNat x; x) O
 
 let main = Unit

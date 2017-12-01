@@ -13,7 +13,7 @@ foreign "puts" println : String -[IO]-> Unit
 foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
 
 let natToInt =
-  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+  let rec aux (acc : Int) (n : Nat) : IO # Int =
     match n with
     | O -> acc
     | S n -> aux (add 1 acc) n
@@ -37,7 +37,7 @@ let plus =
   aux
 
 let mult (n : Nat) (m : Nat) =
-  let rec aux (acc : Nat) (n : Nat.T) (m : Nat.T) : [[IO]] Nat.T =
+  let rec aux (acc : Nat) (n : Nat.T) (m : Nat.T) : IO # Nat.T =
     match n with
     | Nat.O -> acc
     | Nat.S p -> aux (plus m acc) p m
@@ -46,7 +46,7 @@ let mult (n : Nat) (m : Nat) =
   aux O n m
 
 let fact (n : Nat) =
-  let rec aux (acc : Nat) (n : Nat) : [[IO]] Nat =
+  let rec aux (acc : Nat) (n : Nat) : IO # Nat =
     match n with
     | O -> acc
     | S x -> aux (mult n acc) x

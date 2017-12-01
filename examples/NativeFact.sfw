@@ -17,7 +17,7 @@ foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
 foreign ".cervoise.mul" mul : Int -> Int -[IO]-> Int
 
 let natToInt =
-  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+  let rec aux (acc : Int) (n : Nat) : IO # Int =
     match n with
     | O -> acc
     | S n -> aux (add 1 acc) n
@@ -25,7 +25,7 @@ let natToInt =
   in
   aux 0
 
-let rec fact (n : Nat) : [[IO]] Int =
+let rec fact (n : Nat) : [IO, Exn] # Int =
   match n with
   | O -> 1
   | S x -> mul (add 1 (natToInt x)) (fact x)

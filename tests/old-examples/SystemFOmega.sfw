@@ -11,7 +11,7 @@ foreign "puts" println : String -[IO]-> Unit
 foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
 
 let natToInt =
-  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+  let rec aux (acc : Int) (n : Nat) : IO # Int =
     match n with
     | O -> acc
     | S n -> aux (add 1 acc) n
@@ -51,7 +51,7 @@ let test = match test with
 
 --type alias Test = λx, λx, x
 
-let rec recursiveFun (x : Nat) (y : Nat) : [[IO]] Nat =
+let rec recursiveFun (x : Nat) (y : Nat) : IO # Nat =
   recursiveFun y (printNat x)
 
 let main =

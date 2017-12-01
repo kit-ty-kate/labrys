@@ -10,7 +10,7 @@ let printOne () = println "1"
 let printTwo () = println "2"
 let printOther () = println "other"
 
-let rec f (x : Nat) : [[IO]] Nat =
+let rec f (x : Nat) : IO # Nat =
   match x with
   | O -> let lol = printZero Unit in O
   | S O -> let lol = printOne Unit in O
