@@ -2,6 +2,11 @@
 
 == Before the first release (0.1) ==
 
+* Abstract k --> Datatype (k, [])
+* What about *polymorphic* inductive types ? How to match them ?
+* LambdaTree.LetRec --> Let (replace Rec by first order functions)
+* UntypedTree --> LambdaTree
+* lambda --> naming/NamedTree
 * Recode the typechecker !!
   * Write the semantics of System Fcω with effects, exceptions and typeclasses
     * Add a new kind for exceptions
@@ -11,7 +16,16 @@
     * Translate « exception Fail Int Float » into « type Fail : ^ » and « Fail : Int -> Float -> [^Fail^] »
     * Implement it
   * Split the part about pattern matching
-  * Merge type and typevar ??
+  * Forbid CAbs if App or.. after
+  * System Fcω
+    * Write semantics with typeclasses
+      * http://okmij.org/ftp/Computation/typeclass.html
+      * http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.53.3952&rep=rep1&type=pdf
+      * https://www.haskell.org/tutorial/classes.html
+      * https://stackoverflow.com/questions/9602176/why-were-type-classes-difficult-to-implement
+      * http://andrew.gibiansky.com/blog/haskell/haskell-typeclasses/
+    * See sf solutions to Stlc
+    * Prove type soundness of Fcω (see tapl p.86 or software fundation)
 * Remove arrow at desugaring
   * What about typeclasses and coercion arrow ?
 * Remove Rec
@@ -30,10 +44,15 @@
 * Write the Cervoise complete semantics (pretyped-tree)
 * Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
 * Have a real custom GC
+* Run make check
 
 
 == Short term ==
 
+* Write a decision procedure to automatically find coercion proofs
+* Check if we should get rid of Sum (ty)
+* Use Sedlex ?
+* Export covariance/contravariance (App)
 * Unite similar printers
 * Prove the soundness of System Fcω using Coq
 * Improve the FFI
@@ -56,6 +75,7 @@
 
 == Medium term ==
 
+* Implement « if x then y end » as « if x = True then y end »
 * Extensible records & extensible variants
 * Clean:
   * Add more explicit type names (like « type name = string » instead of just use a string)
