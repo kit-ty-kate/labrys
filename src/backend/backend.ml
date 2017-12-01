@@ -290,6 +290,7 @@ module Make (I : I) = struct
         let (block, builder) = Llvm.create_block c builder in
         let term = try List.hd values with Failure _ -> assert false in
         let term = Llvm.build_load_cast term (Type.variant_ptr (succ len)) builder in
+        let values = try List.tl values with Failure _ -> assert false in
         let values = extract_constr_args term len builder @ values in
         create_tree vars env builder values results tree;
         block
