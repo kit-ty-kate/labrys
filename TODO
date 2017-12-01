@@ -9,6 +9,8 @@
 * lambda --> naming/NamedTree
 * Recode the typechecker !!
   * Write the semantics of System Fcω with effects, exceptions and typeclasses
+    * Forbid CAbs if App (any computation) is after
+      * That would allow us to remove coercion abstractions at runtime
     * Add a new kind for exceptions
     * Add a new kind for typeclasses (?)
     * What about a new kind for type coercions ?
