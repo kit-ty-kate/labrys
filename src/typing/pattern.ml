@@ -50,7 +50,7 @@ let decompose =
 let jump a =
   let exception JumpFailed of index in
   let rec aux i = function
-    | [] -> Jump a
+    | [(_, Wildcard)] | [] -> Jump a
     | (_, Constr _)::_ -> raise (JumpFailed i)
     | (_, Wildcard)::xs -> Swap (i, aux (succ i) xs)
     | (_, Or _)::_ -> assert false (* NOTE: Case removed in destruct_ors *)
