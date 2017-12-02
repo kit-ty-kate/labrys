@@ -184,7 +184,7 @@ let print_lambda_tree modul options =
   let (_, lambda_tree) =
     get_lambda_tree ~with_main:true ~interface:Env.empty options modul
   in
-  print_endline (Printers.LambdaTree.dump lambda_tree)
+  print_endline (Utils.string_of_doc (LambdaTreePrinter.dump lambda_tree))
 
 let print_flatten_tree modul options =
   let modul = Module.from_string options modul in
