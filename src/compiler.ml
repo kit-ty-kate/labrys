@@ -177,7 +177,7 @@ let print_untyped_tree modul options =
   let (_, _, typed_tree) =
     get_untyped_tree ~with_main:true ~interface:Env.empty options modul
   in
-  print_endline (Printers.UntypedTree.dump typed_tree)
+  print_endline (Utils.string_of_doc (UntypedTreePrinter.dump typed_tree))
 
 let print_lambda_tree modul options =
   let modul = Module.from_string options modul in
