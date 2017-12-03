@@ -198,7 +198,7 @@ let print_optimized_tree modul options =
   let (_, optimized_tree) =
     get_optimized_tree ~with_main:true ~interface:Env.empty options modul
   in
-  print_endline (Printers.OptimizedTree.dump optimized_tree)
+  print_endline (Utils.string_of_doc (OptimizedTreePrinter.dump optimized_tree))
 
 let print_early_llvm modul options =
   let modul = Module.from_string options modul in
