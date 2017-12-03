@@ -191,7 +191,7 @@ let print_flatten_tree modul options =
   let (_, flatten_tree) =
     get_flatten_tree ~with_main:true ~interface:Env.empty options modul
   in
-  print_endline (Printers.FlattenTree.dump flatten_tree)
+  print_endline (Utils.string_of_doc (FlattenTreePrinter.dump flatten_tree))
 
 let print_optimized_tree modul options =
   let modul = Module.from_string options modul in
