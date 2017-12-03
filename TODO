@@ -1,36 +1,32 @@
-=== TODO ===
-
 == Before the first release (0.1) ==
 
-* Abstract k --> Datatype (k, [])
+* Debug System Fω
 * What about *polymorphic* inductive types ? How to match them ?
-* LambdaTree.LetRec --> Let (replace Rec by first order functions)
-* UntypedTree --> LambdaTree
-* lambda --> naming/NamedTree
-* Recode the typechecker !!
-  * Write the semantics of System Fcω with effects, exceptions and typeclasses
-    * Forbid CAbs if App (any computation) is after
-      * That would allow us to remove coercion abstractions at runtime
-    * Add a new kind for exceptions
-    * Add a new kind for typeclasses (?)
-    * What about a new kind for type coercions ?
-    * Translate « type alias T = Unit -> T » into « type T : * » and « axiom T : T ~ (Unit -> T) »
-    * Translate « exception Fail Int Float » into « type Fail : ^ » and « Fail : Int -> Float -> [^Fail^] »
-    * Implement it
-  * Split the part about pattern matching
-  * Forbid CAbs if App or.. after
-  * System Fcω
-    * Write semantics with typeclasses
-      * http://okmij.org/ftp/Computation/typeclass.html
-      * http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.53.3952&rep=rep1&type=pdf
-      * https://www.haskell.org/tutorial/classes.html
-      * https://stackoverflow.com/questions/9602176/why-were-type-classes-difficult-to-implement
-      * http://andrew.gibiansky.com/blog/haskell/haskell-typeclasses/
-    * See sf solutions to Stlc
-    * Prove type soundness of Fcω (see tapl p.86 or software fundation)
-* Remove arrow at desugaring
-  * What about typeclasses and coercion arrow ?
-* Remove Rec
+* Implement System Fcω
+  * Forbid CAbs if App (any computation) is after ?
+    * That would allow us to remove coercion abstractions at runtime
+  * What about a new kind for type coercions ?
+  * Translate « type alias T = Unit -> T » into « type T : * » and « axiom T : T ~ (Unit -> T) »
+  * Translate « exception Fail Int Float » into « type Fail : ^ » and « Fail : Int -> Float -> [^Fail^] »
+* (Re)-implement typeclasses:
+  * Write semantics with typeclasses
+    * http://okmij.org/ftp/Computation/typeclass.html
+    * http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.53.3952&rep=rep1&type=pdf
+    * https://www.haskell.org/tutorial/classes.html
+    * https://stackoverflow.com/questions/9602176/why-were-type-classes-difficult-to-implement
+    * http://andrew.gibiansky.com/blog/haskell/haskell-typeclasses/
+  * Add a new kind for typeclasses (?)
+* Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
+* Stabilization & unit-tests
+* Run make check
+
+
+== Short term ==
+
+* Have a real custom GC
+* Prove type soundness of Fcω (see tapl p.86 or software fundation)
+  * See sf solutions to Stlc
+* Write the Cervoise complete semantics (pretyped-tree)
 * Create a new compilation phase: FirstOrderTree
   * Abs (name * {fv} * t) --> Value (fresh, Abs (name * {fv} * t))
   * Datatype [c1 .. cn] --> ConstAlloc [c1 .. cn]
@@ -39,18 +35,14 @@
     * Preload all parameters/variables taken by the closure
     * Remove the gamma type
     * If fv is empty then make it constant
+* Remove arrow at desugaring
+  * What about typeclasses and coercion arrow ?
+* UntypedTree --> LambdaTree
+* lambda --> naming/NamedTree
+* LambdaTree.LetRec --> Let (replace Rec by first order functions)
+* Abstract k --> Datatype (k, [])
 * Clean Printers
   * Use the new printers as a replacement to the to_string function
-* Fix TODOs
-* Stabilization (unit-tests)
-* Write the Cervoise complete semantics (pretyped-tree)
-* Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
-* Have a real custom GC
-* Run make check
-
-
-== Short term ==
-
 * Write a decision procedure to automatically find coercion proofs
 * Check if we should get rid of Sum (ty)
 * Use Sedlex ?
