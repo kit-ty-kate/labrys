@@ -10,6 +10,6 @@ val compare : t -> t -> int
 
 val to_string : t -> string
 
-module Map : Utils.EQMAP with type key = t
-module Set : Utils.EQSET with type elt = t
+module Map : Map.S with type key = t
+module Set : Set.S with type elt = t
 module MSet : CCMultiSet.S with type elt = t

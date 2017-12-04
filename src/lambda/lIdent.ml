@@ -14,14 +14,14 @@ let to_string x = x#name
 
 type tmp = t
 
-module Map = Utils.EqMap (struct
+module Map = Map.Make (struct
     type t = tmp
-    let equal = equal
+    let compare = compare
   end)
 
-module Set = Utils.EqSet (struct
+module Set = Set.Make (struct
     type t = tmp
-    let equal = equal
+    let compare = compare
   end)
 
 module MSet = CCMultiSet.Make (struct

@@ -8,7 +8,7 @@ type value =
   | Abstr of (name * t)
 
 let rename env name =
-  match LIdent.Map.find name env with
+  match LIdent.Map.find_opt name env with
   | Some (Name name) -> name
   | Some (Abstr _) | None -> name
 
@@ -22,7 +22,7 @@ let rec propagate' env = function
   | App (x, y) ->
       let x = rename env x in
       let y = rename env y in
-      begin match LIdent.Map.find x env with
+      begin match LIdent.Map.find_opt x env with
       | Some (Abstr (name, (lets, t))) -> propagate env ((name, Val y) :: lets, t)
       | Some (Name _) | None -> ([], App (x, y))
       end

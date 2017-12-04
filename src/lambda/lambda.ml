@@ -179,7 +179,7 @@ let create_dyn_functions cname (ret, args) =
       Abs (name, t)
 
 let env_add mset name env =
-  let mset = Set.remove mset name in
+  let mset = Set.remove_all mset name in
   let (name', linkage) = match Set.count mset name with
     | 0 -> (name, Public)
     | n -> (Ident.Name.unique name n, Private)

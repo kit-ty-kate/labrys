@@ -15,7 +15,7 @@ module Name : sig
 
   val unique : t -> int -> t
 
-  module Set : Utils.EQSET with type elt = t
+  module Set : Set.S with type elt = t
   module MSet : CCMultiSet.S with type elt = t
 end
 

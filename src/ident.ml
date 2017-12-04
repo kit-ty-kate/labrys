@@ -29,9 +29,9 @@ module Name = struct
 
   type tmp = t
 
-  module Set = Utils.EqSet (struct
+  module Set = Set.Make (struct
       type t = tmp
-      let equal = equal
+      let compare = compare
     end)
   module MSet = CCMultiSet.Make (struct
       type t = tmp

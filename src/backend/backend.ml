@@ -239,7 +239,7 @@ module Make (I : I) = struct
     (undef, snd (Llvm.create_block c builder))
 
   let get_value env builder name =
-    match LIdent.Map.find name env with
+    match LIdent.Map.find_opt name env with
     | Some (Value value) ->
         value
     | Some (Env i) ->
