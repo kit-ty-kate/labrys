@@ -3,7 +3,7 @@
 
 open PretypedTree
 
-module ForbiddenEnv = EnvSet.Value
+module ForbiddenEnv = Ident.Name.Set
 
 let ty_to_effects ty =
   (fst ty, [ty])

@@ -14,6 +14,9 @@ module Name : sig
   val loc : t -> Location.t
 
   val unique : t -> int -> t
+
+  module Set : Utils.EQSET with type elt = t
+  module MSet : CCMultiSet.S with type elt = t
 end
 
 module Type : module type of Name

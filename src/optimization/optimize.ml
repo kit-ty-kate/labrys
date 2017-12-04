@@ -3,7 +3,7 @@
 
 open OptimizedTree
 
-module Set = EnvSet.MIDValue
+module Set = LIdent.MSet
 
 let rec of_term' = function
   | FlattenTree.Abs (name, t) ->

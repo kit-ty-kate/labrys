@@ -3,7 +3,7 @@
 
 open LambdaTree
 
-module Set = EnvSet.MValue
+module Set = Ident.Name.MSet
 
 let create_fresh_name () = LIdent.create ".@fresh"
 

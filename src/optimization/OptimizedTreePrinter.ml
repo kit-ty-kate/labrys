@@ -49,7 +49,7 @@ let dump_foreign_ty args ret =
   dump_args_ty args ^^^ str "->" ^^^ dump_tag_ty ret
 
 let dump_fv fv =
-  dump_list (List.map dump_name (EnvSet.MIDValue.to_list fv))
+  dump_list (List.map dump_name (LIdent.MSet.to_list fv))
 
 let rec dump_branch t =
   bar ^^^ dump_t t

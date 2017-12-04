@@ -26,6 +26,17 @@ module Name = struct
     if Int.(n <= 0) then
       assert false;
     (loc, modul, fmt "%s__%d" name n)
+
+  type tmp = t
+
+  module Set = Utils.EqSet (struct
+      type t = tmp
+      let equal = equal
+    end)
+  module MSet = CCMultiSet.Make (struct
+      type t = tmp
+      let compare = compare
+    end)
 end
 
 module Type = Name

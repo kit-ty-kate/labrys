@@ -19,6 +19,15 @@ type tmp = t
 
 module Map = Utils.EqMap (struct
     type t = tmp
-
     let equal = equal
+  end)
+
+module Set = Utils.EqSet (struct
+    type t = tmp
+    let equal = equal
+  end)
+
+module MSet = CCMultiSet.Make (struct
+    type t = tmp
+    let compare = compare
   end)

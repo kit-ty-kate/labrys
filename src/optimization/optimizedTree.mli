@@ -2,7 +2,7 @@
 (* See the LICENSE file at the top-level directory. *)
 
 type name = LIdent.t
-type free_vars = EnvSet.MIDValue.t
+type free_vars = LIdent.MSet.t
 type index = int
 type constr = int
 type length = int

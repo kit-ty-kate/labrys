@@ -1,7 +1,7 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-module Set = EnvSet.MIDValue
+module Set = LIdent.MSet
 
 module Llvm = struct
   include Llvm
