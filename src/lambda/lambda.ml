@@ -3,6 +3,8 @@
 
 open LambdaTree
 
+module Set = EnvSet.MValue
+
 let create_fresh_name () = LIdent.create ".@fresh"
 
 let get_name name env =
@@ -177,8 +179,8 @@ let create_dyn_functions cname (ret, args) =
       Abs (name, t)
 
 let env_add mset name env =
-  let mset = EnvSet.MValue.remove mset name in
-  let (name', linkage) = match EnvSet.MValue.count mset name with
+  let mset = Set.remove mset name in
+  let (name', linkage) = match Set.count mset name with
     | 0 -> (name, Public)
     | n -> (Ident.Name.unique name n, Private)
   in
@@ -216,13 +218,13 @@ let rec scan mset = function
   | UntypedTree.Value (name, _) :: xs
   | UntypedTree.Foreign (_, name, _) :: xs
   | UntypedTree.Instance (name, _) :: xs ->
-      scan (EnvSet.MValue.add mset name) xs
+      scan (Set.add mset name) xs
   | UntypedTree.Exception _ :: xs ->
       scan mset xs
   | [] ->
       mset
 
 let of_typed_tree env top =
-  let mset = scan EnvSet.MValue.empty top in
+  let mset = scan Set.empty top in
   let env = Env.get_untyped_values env in
   of_typed_tree mset env top
