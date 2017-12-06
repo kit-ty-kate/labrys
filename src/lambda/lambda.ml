@@ -46,7 +46,7 @@ let create_dyn_functions f n =
         f params
     | n ->
         let name = LIdent.create (string_of_int n) in
-        let params = name :: params in
+        let params = params @ [name] in
         Abs (name, aux params (pred n))
   in
   aux [] n
