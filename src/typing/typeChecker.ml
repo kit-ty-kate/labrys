@@ -406,9 +406,9 @@ let check_eff_value ~current_module options name ty eff =
     false
   end
 
-let rec get_foreign_type ~default options = function
+let rec get_foreign_type map options = function
   | TypedEnv.NForall (_, _, ty) ->
-      get_foreign_type ~default options ty
+      get_foreign_type map options ty
   | TypedEnv.NTy name ->
       let arg_ty_map =
         [ (Builtins.int options, `Int ())
@@ -417,10 +417,17 @@ let rec get_foreign_type ~default options = function
           (* NOTE: String is not present because it is a pointer *)
         ]
       in
-      Option.get_or ~default
+      let arg_ty_map = arg_ty_map @ map in
+      Option.get_or ~default:`Custom
         (List.Assoc.get ~eq:Ident.Type.equal name arg_ty_map)
   | TypedEnv.NSum _ | TypedEnv.NApp _ | TypedEnv.NFun _ ->
-      default
+      `Custom
+
+let get_arg_foreign_type options ty =
+  get_foreign_type [] options ty
+
+let get_ret_foreign_type options ty =
+  get_foreign_type [(Builtins.unit options, `Void)] options ty
 
 let rec check_foreign_type ~loc options env = function
   | [], _ ->
@@ -429,12 +436,12 @@ let rec check_foreign_type ~loc options env = function
       if not (has_io options e) then
         Err.fail ~loc "Bindings cannot be pure. All bindings have \
                        to use the IO effect on the final arrow";
-      let t1 = get_foreign_type ~default:`Custom options t1 in
-      let t2 = get_foreign_type ~default:`Void options t2 in
+      let t1 = get_arg_foreign_type options t1 in
+      let t2 = get_ret_foreign_type options t2 in
       (t2, [t1])
   | (t1, _) :: l, t2 ->
       (* TODO: Warning if e <> [] ? *)
-      let t1 = get_foreign_type ~default:`Custom options t1 in
+      let t1 = get_arg_foreign_type options t1 in
       let (ret, t2) = check_foreign_type ~loc options env (l, t2) in
       (ret, [t1] @ t2)
 
