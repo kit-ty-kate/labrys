@@ -194,6 +194,11 @@ let split_patterns patterns =
   let aux a pattern = (pattern, a) in
   (List.mapi aux patterns, results)
 
+let pat_vars =
+  let (%) = Fun.(%) in
+  let aux s (name, _) = Ident.Name.Set.add name s in
+  List.fold_left aux Ident.Name.Set.empty % List.flatten
+
 let rec check_decision_tree ~loc env = function
   | Pattern.Switch (cases, default) -> check_switch ~loc env cases default
   | Pattern.Swap (idx, tree) -> Swap (idx, check_decision_tree ~loc env tree)
@@ -272,9 +277,9 @@ and check_results options env vars results =
       | None ->
           (name :: vars, Env.add_value name ty env)
     in
-    let (vars, env) = List.fold_left check_var ([], env) vars in
+    let (_, env) = List.fold_left check_var ([], env) vars in
     let (t, ty1, eff1) = check_term options env result in
-    (results @ [(vars, t)], ty @ [(fst result, ty1, eff1)])
+    (results @ [t], ty @ [(fst result, ty1, eff1)])
   in
   let (results, tys) =
     try List.fold_left2 (check_vars env) ([], []) vars results with
@@ -325,7 +330,8 @@ and check_term options env = function
       let tree = Pattern.compile matrix in
       let tree = check_decision_tree ~loc env tree in
       let (results, (ty, eff2)) = check_results options env vars results in
-      (PatternMatching (t, results, tree), ty, eff1 @ eff2)
+      let vars = pat_vars vars in
+      (PatternMatching (t, vars, results, tree), ty, eff1 @ eff2)
   | (_, PretypedTree.Let (name, t1, t2)) ->
       let (t1, ty1, eff1) = check_term options env t1 in
       let env = Env.add_value name ty1 env in

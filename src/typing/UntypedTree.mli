@@ -2,6 +2,7 @@
 (* See the LICENSE file at the top-level directory. *)
 
 type name = Ident.Name.t
+type pat_vars = Ident.Name.Set.t
 type index = int
 type length = int
 type branch = int
@@ -31,7 +32,7 @@ type t =
   | App of (t * t)
   | Val of name
   | Var of (constr_rep * length)
-  | PatternMatching of (t * (name list * t) list * tree)
+  | PatternMatching of (t * pat_vars * t list * tree)
   | Let of (name * t * t)
   | LetRec of (name * t * t)
   | Fail of t

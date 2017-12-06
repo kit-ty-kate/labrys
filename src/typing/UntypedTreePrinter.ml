@@ -43,8 +43,8 @@ and dump_pattern_matching : type a. _ -> (a -> _) -> (_ * (a * _) list) -> _ =
   fun name f (t, cases) ->
     str name ^^^ dump_t t ^^^ str "with" ^/^ dump_cases f cases ^/^ str "end"
 
-and dump_branch (vars, t) =
-  bar ^^^ braces (separate_map space dump_name vars) ^^^ dump_t t
+and dump_branch t =
+  bar ^^^ dump_t t
 
 and dump_t = function
   | Abs (name, t) ->
@@ -55,8 +55,9 @@ and dump_t = function
       dump_name name
   | Var (rep, len) ->
       dump_list [dump_constr_rep rep; OCaml.int len]
-  | PatternMatching (t, branches, tree) ->
+  | PatternMatching (t, vars, branches, tree) ->
       str "match" ^^^ dump_t t ^^^ str "with" ^/^
+      braces (separate_map space dump_name (Ident.Name.Set.to_list vars)) ^^^ str "in" ^/^
       separate_map hardline dump_branch branches ^/^
       str "from" ^^^ dump_tree tree ^/^
       str "end"

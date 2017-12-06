@@ -51,19 +51,14 @@ let create_dyn_functions f n =
   in
   aux [] n
 
-let rec of_results env =
-  let aux (vars_acc, results, env) (vars, t) =
-    let aux (vars, env) name =
-      let (name, env) = env_add name env in
-      (vars @ [name], env)
-    in
-    let (vars, env) = List.fold_left aux ([], env) vars in
-    let t = of_typed_term env t in
-    (vars @ vars_acc, results @ [t], env)
+let of_pat_vars env vars =
+  let aux name (vars, env) =
+    let (name, env) = env_add name env in
+    (vars @ [name], env)
   in
-  List.fold_left aux ([], [], env)
+  Ident.Name.Set.fold aux vars ([], env)
 
-and get_lets env t = function
+let rec get_lets env t = function
   | (name, x)::xs ->
       let (name, env) = env_add name env in
       Let (name, x, get_lets env t xs)
@@ -124,10 +119,11 @@ and of_typed_term env = function
       create_dyn_functions
         (fun params -> Datatype (Some rep, params))
         len
-  | UntypedTree.PatternMatching (t, results, pattern) ->
+  | UntypedTree.PatternMatching (t, vars, results, pattern) ->
       let t = of_typed_term env t in
       let name = create_fresh_name () in
-      let (vars, results, env) = of_results env results in
+      let (vars, env) = of_pat_vars env vars in
+      let results = List.map (of_typed_term env) results in
       let unreachable = List.length results in
       let results = results @ [Unreachable] in
       let pattern = of_pattern ~unreachable env pattern in
