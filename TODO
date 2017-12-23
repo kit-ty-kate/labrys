@@ -1,6 +1,5 @@
 == Before the first release (0.1) ==
 
-* Debug System Fω
 * What about *polymorphic* inductive types ? How to match them ?
 * Implement System Fcω
   * Forbid CAbs if App (any computation) is after ?
@@ -23,6 +22,8 @@
 
 == Short term ==
 
+* Mark functions arrity in csfw files and implement the optimization
+* Forbid parameters of the type « [E] T » in applications « f x » where « x » has an effect (monadic style)
 * Have a real custom GC
 * Prove type soundness of Fcω (see tapl p.86 or software fundation)
   * See sf solutions to Stlc

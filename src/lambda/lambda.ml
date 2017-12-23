@@ -5,6 +5,13 @@ open LambdaTree
 
 module Set = Ident.Name.MSet
 
+(* DEBUG:
+let create_fresh_name =
+  let n = ref (-1) in
+  fun () ->
+    incr n;
+    LIdent.create (".@fresh." ^ string_of_int !n)
+*)
 let create_fresh_name () = LIdent.create ".@fresh"
 
 let get_name name env =
