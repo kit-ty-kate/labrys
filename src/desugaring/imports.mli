@@ -11,7 +11,6 @@ type t = private
   { values : Module.t Imports.t
   ; variants : Module.t Imports.t
   ; types : Module.t Imports.t
-  ; exns : Module.t Imports.t
   ; tyclasses : Module.t Imports.t
   ; instances : Module.t Imports.t
   }

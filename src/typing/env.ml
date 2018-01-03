@@ -141,10 +141,11 @@ let add_type_alias name ty env =
   {env with TypedEnv.types}
 
 let add_exception name ty env =
-  let ty = NType.check ~pure_arrow:`Partial env ty in
-  let carg = (TypedEnv.Exn, ty) in
   let tname = Ident.Constr.to_type name in
   let targ = TypedEnv.Abstract TypedEnv.KExn in
-  let constrs = EnvMap.Constr.add name carg env.TypedEnv.constrs in
   let types = EnvMap.Type.add tname targ env.TypedEnv.types in
-  {env with TypedEnv.constrs; types}
+  let env = {env with TypedEnv.types} in
+  let ty = NType.check ~pure_arrow:`Partial env ty in
+  let carg = (TypedEnv.Exn, ty) in
+  let constrs = EnvMap.Constr.add name carg env.TypedEnv.constrs in
+  {env with TypedEnv.constrs}
