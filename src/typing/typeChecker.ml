@@ -341,8 +341,7 @@ and check_term options env = function
       let ty = NType.check ~pure_arrow:`Partial env ty in
       let env = Env.add_value name ty env in
       let (t1, ty1, eff1) = check_term options env t1 in
-      if not (NType.is_subset_of ty1 ty) then
-        type_fail ~loc ~has:ty ~expected:ty1;
+      (* NOTE: ty is already checked by Annot (see Pretyper) *)
       let (t2, ty2, eff2) = check_term options env t2 in
       (LetRec (name, t1, t2), ty2, eff1 @ eff2)
   | (loc, PretypedTree.Fail (ty, t)) ->
