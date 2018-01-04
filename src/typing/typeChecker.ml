@@ -32,7 +32,7 @@ let check_eff ~loc env eff' eff =
   eff
 
 let check_eff_opt ~loc env eff' =
-  Option.map_or ~default:[] (check_eff ~loc env eff')
+  Option.map_or ~default:eff' (check_eff ~loc env eff')
 
 let unit options = TypedEnv.NTy (Builtins.unit options)
 let is_main ~current_module = Ident.Name.equal (Builtins.main ~current_module)
