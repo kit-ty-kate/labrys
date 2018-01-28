@@ -323,7 +323,7 @@ module Make (I : I) = struct
         in
         build_if_chain ~default vars env builder values term results cases
     | OptimizedTree.Alias (name, p) ->
-        let name = try List.assoc name vars with Not_found -> assert false in
+        let name = try List.assoc ~eq:LIdent.equal name vars with Not_found -> assert false in
         let term = try List.hd values with Failure _ -> assert false in
         Llvm.build_store term name builder;
         create_tree vars env builder values results p

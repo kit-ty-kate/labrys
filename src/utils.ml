@@ -104,8 +104,8 @@ module PPrint = struct
   include PPrint
 
   let check_empty f x y =
-    if x == empty then y
-    else if y == empty then x
+    if Equal.physical x empty then y
+    else if Equal.physical y empty then x
     else f x y
 
   let str = string

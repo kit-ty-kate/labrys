@@ -21,8 +21,7 @@ depends: [
   "msgpack"
   "uutf" {>= "1.0.0"}
   "llvm" {>= "3.8"}
-  "containers" {>= "1.0"}
-  "monomorphic"
+  "containers" {>= "2.0"}
 ]
 tags: [
   "compiler"

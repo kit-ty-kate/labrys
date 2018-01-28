@@ -27,9 +27,7 @@ true: package(llvm.linker)
 true: package(llvm.scalar_opts)
 true: package(containers)
 true: package(containers.data)
-true: package(monomorphic)
 
-not <src/monoOpen.*>: open(MonoOpen)
 true: open(Containers)
 
 "src": include

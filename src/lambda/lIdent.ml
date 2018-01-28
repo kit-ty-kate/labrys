@@ -7,7 +7,7 @@ let create name = object
   method name = name
 end
 
-let equal = (==)
+let equal = Equal.physical
 let compare x y = Int.compare (Oo.id x) (Oo.id y)
 
 let to_string x = x#name
