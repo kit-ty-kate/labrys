@@ -1,5 +1,7 @@
 == 0.1 ==
 
+* Use dune & ocaml-cram (or cram tests from dune) instead of cram
+  * Add a build-test field to opam
 * What about *polymorphic* inductive types ? How to match them ?
 * Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
 
