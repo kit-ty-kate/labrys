@@ -1,12 +1,25 @@
-== Before the first release (0.1) ==
+== 0.1 ==
 
 * What about *polymorphic* inductive types ? How to match them ?
+* Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
+
+
+== 0.2 ==
+
 * Implement System Fcω
   * Forbid CAbs if App (any computation) is after ?
     * That would allow us to remove coercion abstractions at runtime
   * What about a new kind for type coercions ?
   * Translate « type alias T = Unit -> T » into « type T : * » and « axiom T : T ~ (Unit -> T) »
   * Translate « exception Fail Int Float » into « type Fail : ^ » and « Fail : Int -> Float -> [^Fail^] »
+* How to prevent « C : forall a, a -> T » then « match C [Int] 1 with C [String] x -> x » ?
+  * Answer: Forbid any constructors to have a forall construct on the first level (i.e. « forall a, a -> T » but not « (forall a, a) -> T ») that is not referenced in the resulting type
+  * Or ?! Deconstruct as « C {a} x »
+    * Test: « Cons : forall a, a -> List a -> List a » deconstructed as « Cons {a} (co : a ~ Int) ... »
+
+
+== 0.3 ==
+
 * (Re)-implement typeclasses:
   * Write semantics with typeclasses
     * http://okmij.org/ftp/Computation/typeclass.html
@@ -15,9 +28,6 @@
     * https://stackoverflow.com/questions/9602176/why-were-type-classes-difficult-to-implement
     * http://andrew.gibiansky.com/blog/haskell/haskell-typeclasses/
   * Add a new kind for typeclasses (?)
-* Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
-* Stabilization & unit-tests
-* Run make check
 
 
 == Short term ==
