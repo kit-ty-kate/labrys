@@ -1,8 +1,8 @@
 Cervoise is a toy language based on LLVM that implements the System Fω type-system.
 
-The git repository is located at: https://github.com/jpdeplaix/cervoise
+The git repository is located at: https://github.com/kit-ty-kate/cervoise
 
-[![Build Status](https://travis-ci.org/jpdeplaix/cervoise.png?branch=master)](https://travis-ci.org/jpdeplaix/cervoise)
+[![Build Status](https://travis-ci.org/kit-ty-kate/cervoise.png?branch=master)](https://travis-ci.org/kit-ty-kate/cervoise)
 
 ### Runtime requirements
 
