@@ -8,7 +8,7 @@ type value =
   | Abstr of (name * t)
 
 let rename env name =
-  match LIdent.Map.find name env with
+  match LIdent.Map.find_opt name env with
   | Some (Name name) -> name
   | Some (Abstr _) | None -> name
 
@@ -22,7 +22,7 @@ let rec propagate' env = function
   | App (x, y) ->
       let x = rename env x in
       let y = rename env y in
-      begin match LIdent.Map.find x env with
+      begin match LIdent.Map.find_opt x env with
       | Some (Abstr (name, (lets, t))) -> propagate env ((name, Val y) :: lets, t)
       | Some (Name _) | None -> ([], App (x, y))
       end
@@ -33,13 +33,12 @@ let rec propagate' env = function
       ([], Datatype (idx, args))
   | CallForeign (name, ret, args) ->
       ([], CallForeign (name, ret, args))
-  | PatternMatching (name, branches, default, tree) ->
+  | PatternMatching (name, vars, branches, tree) ->
       let name = rename env name in
       let branches = List.map (propagate env) branches in
-      let default = propagate env default in
-      ([], PatternMatching (name, branches, default, tree))
-  | Fail (name, args) ->
-      ([], Fail (name, args))
+      ([], PatternMatching (name, vars, branches, tree))
+  | Fail name ->
+      ([], Fail name)
   | Try (t, (name, t')) ->
       let t = propagate env t in
       let t' = propagate env t' in
@@ -51,8 +50,6 @@ let rec propagate' env = function
       ([], Const c)
   | Unreachable ->
       ([], Unreachable)
-  | Reraise name ->
-      ([], Reraise name)
 
 and propagate env (lets, t) =
   let rec aux env = function
@@ -84,10 +81,9 @@ let rec of_term = function
       ([], Datatype (idx, args))
   | LambdaTree.CallForeign (name, ret, args) ->
       ([], CallForeign (name, ret, args))
-  | LambdaTree.PatternMatching (name, branches, default, tree) ->
+  | LambdaTree.PatternMatching (name, vars, branches, tree) ->
       let branches = List.map of_term branches in
-      let default = of_term default in
-      ([], PatternMatching (name, branches, default, tree))
+      ([], PatternMatching (name, vars, branches, tree))
   | LambdaTree.Let (name, x, t) ->
       let (lets_x, x) = of_term x in
       let (lets_t, t) = of_term t in
@@ -96,8 +92,8 @@ let rec of_term = function
       let (lets_x, x) = of_term x in
       let (lets_t, t) = of_term t in
       (lets_x @ [(name, Rec (name, x))] @ lets_t, t)
-  | LambdaTree.Fail (name, args) ->
-      ([], Fail (name, args))
+  | LambdaTree.Fail name ->
+      ([], Fail name)
   | LambdaTree.Try (t, (name, t')) ->
       let t = of_term t in
       let t' = of_term t' in
@@ -108,8 +104,6 @@ let rec of_term = function
       ([], Const c)
   | LambdaTree.Unreachable ->
       ([], Unreachable)
-  | LambdaTree.Reraise name ->
-      ([], Reraise name)
 
 let of_lambda_tree top =
   let aux = function

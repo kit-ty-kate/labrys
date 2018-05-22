@@ -35,7 +35,8 @@ let rec build_intf options current_module =
   let (imports, tree) =
     Desugar.create_interface ~current_module options mimports imports tree
   in
-  (imports, Interface.compile ~current_module options env tree)
+  let tree = Pretyper.pretype_interface tree in
+  (imports, TypeChecker.check_interface env tree)
 
 and build_imports_intf options imports =
   let aux (imports, env) x =
@@ -67,8 +68,12 @@ let get_pretyped_tree options modul =
 
 let get_untyped_tree ~with_main ~interface options modul =
   let (imports, env, pretyped_tree) = get_pretyped_tree options modul in
+  let options = object
+    method lib_dir = options#lib_dir
+    method with_main = with_main
+  end in
   let typed_tree =
-    TypeChecker.check ~modul ~interface ~with_main options env pretyped_tree
+    TypeChecker.check ~current_module:modul ~interface options env pretyped_tree
   in
   (imports, env, typed_tree)
 
@@ -172,28 +177,28 @@ let print_untyped_tree modul options =
   let (_, _, typed_tree) =
     get_untyped_tree ~with_main:true ~interface:Env.empty options modul
   in
-  print_endline (Printers.UntypedTree.dump typed_tree)
+  print_endline (Utils.string_of_doc (UntypedTreePrinter.dump typed_tree))
 
 let print_lambda_tree modul options =
   let modul = Module.from_string options modul in
   let (_, lambda_tree) =
     get_lambda_tree ~with_main:true ~interface:Env.empty options modul
   in
-  print_endline (Printers.LambdaTree.dump lambda_tree)
+  print_endline (Utils.string_of_doc (LambdaTreePrinter.dump lambda_tree))
 
 let print_flatten_tree modul options =
   let modul = Module.from_string options modul in
   let (_, flatten_tree) =
     get_flatten_tree ~with_main:true ~interface:Env.empty options modul
   in
-  print_endline (Printers.FlattenTree.dump flatten_tree)
+  print_endline (Utils.string_of_doc (FlattenTreePrinter.dump flatten_tree))
 
 let print_optimized_tree modul options =
   let modul = Module.from_string options modul in
   let (_, optimized_tree) =
     get_optimized_tree ~with_main:true ~interface:Env.empty options modul
   in
-  print_endline (Printers.OptimizedTree.dump optimized_tree)
+  print_endline (Utils.string_of_doc (OptimizedTreePrinter.dump optimized_tree))
 
 let print_early_llvm modul options =
   let modul = Module.from_string options modul in

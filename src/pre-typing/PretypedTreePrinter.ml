@@ -6,42 +6,33 @@ open PretypedTree
 
 let dump_name name = str (Ident.Name.to_string name)
 let dump_ty_name name = str (Ident.Type.to_string name)
-let dump_tyvar_name name = str (Ident.TypeVar.to_string name)
-let dump_exn_name name = str (Ident.Exn.to_string name)
-let dump_var_name name = str (Ident.Variant.to_string name)
+let dump_var_name name = str (Ident.Constr.to_string name)
 let dump_tyclass_name name = str (Ident.TyClass.to_string name)
 let dump_inst_name name = str (Ident.Instance.to_string name)
 
 let rec dump_kind = function
   | KStar -> str "*"
   | KEff -> str "φ"
+  | KExn -> str "^"
   | KFun (x, y) -> dump_kind x ^^^ str "->" ^/^ dump_kind y
 
-let dump_exn x = separate_map (str " | ") dump_exn_name x
-
-let dump_eff (_, x) =
-  let aux = function
-    | EffTyVar name -> dump_tyvar_name name
-    | EffTy (name, []) -> dump_ty_name name
-    | EffTy (name, args) -> dump_ty_name name ^^^ brackets (dump_exn args)
-  in
-  separate_map (comma ^^ space) aux x
-
 let dump_forall_arg (name, k) =
-  parens (dump_tyvar_name name ^^^ colon ^^^ dump_kind k)
+  parens (dump_ty_name name ^^^ colon ^^^ dump_kind k)
 
 let dump_forall_args l = separate_map space dump_forall_arg l
 let dump_ty_args l = separate_map (comma ^^ space) dump_forall_arg l
 
-let dump_fun_eff = function
+let rec dump_tys tys = separate_map space dump_ty tys
+and dump_eff (_, x) = separate_map (comma ^^ space) dump_ty x
+and dump_sum x = separate_map (space ^^ bar ^^ space) dump_ty x
+
+and dump_fun_eff = function
   | None -> str "->"
   | Some eff -> str "-[" ^^ dump_eff eff ^^ str "]->"
 
-let dump_tyclass_eff = function
+and dump_tyclass_eff = function
   | None -> str "=>"
   | Some eff -> str "=[" ^^ dump_eff eff ^^ str "]=>"
-
-let rec dump_tys tys = separate_map space dump_ty tys
 
 and dump_tyclass (name, ty_args, args) =
   let name = dump_tyclass_name name in
@@ -56,8 +47,8 @@ and dump_ty = function
       let res = dump_ty res in
       parens (param ^^^ eff ^/^ res)
   | (_, Ty name) -> dump_ty_name name
-  | (_, TyVar name) -> dump_tyvar_name name
   | (_, Eff eff) -> brackets (dump_eff eff)
+  | (_, Sum sum) -> brackets (caret ^^^ dump_sum sum ^^^ caret)
   | (_, Forall (arg, res)) ->
       let arg = dump_forall_arg arg in
       let res = dump_ty res in
@@ -78,12 +69,14 @@ and dump_ty = function
 
 let dump_annot = function
   | (ty, None) -> dump_ty ty
-  | (ty, Some eff) -> brackets (dump_eff eff) ^^^ dump_ty ty
+  | (ty, Some eff) -> dump_ty eff ^^^ sharp ^^^ dump_ty ty
 
 let rec dump_pattern = function
   | TyConstr (_, name, []) -> dump_var_name name
   | TyConstr (_, name, args) -> parens (dump_var_name name ^^^ dump_patterns args)
-  | Any name -> dump_name name
+  | Wildcard -> underscore
+  | Or (p1, p2) -> parens (dump_pattern p1) ^^^ bar ^^^ dump_pattern p2
+  | As (p, name) -> parens (dump_pattern p) ^^^ str "as" ^^^ dump_name name
 
 and dump_patterns l = separate_map space dump_pattern l
 
@@ -112,7 +105,7 @@ and dump_t = function
       parens (str "λ" ^^^ parens (dump_name name ^^^ colon ^^^ dump_ty ty) ^^^
               str "->" ^//^ dump_t t)
   | (_, TAbs ((name, k), t)) ->
-      parens (str "λ" ^^^ parens (dump_tyvar_name name ^^^ colon ^^^ dump_kind k) ^^^
+      parens (str "λ" ^^^ parens (dump_ty_name name ^^^ colon ^^^ dump_kind k) ^^^
               str "->" ^//^ dump_t t)
   | (_, CAbs ((name, tyclass), t)) ->
       parens (str "λ" ^^^ parens (dump_inst_name name ^^^ colon ^^^ dump_tyclass tyclass) ^^^
@@ -133,9 +126,8 @@ and dump_t = function
       parens (group (dump_let (name, x) ^/^ str "in") ^/^ dump_t xs)
   | (_, LetRec (name, rec_ty, x, xs)) ->
       parens (group (dump_let ~rec_ty (name, x) ^/^ str "in") ^/^ dump_t xs)
-  | (_, Fail (ty, (name, args))) ->
-      parens (str "fail" ^^^ brackets (dump_ty ty) ^^^ dump_exn_name name ^^
-              separate_map space dump_t args)
+  | (_, Fail (ty, t)) ->
+      parens (str "fail" ^^^ brackets (dump_ty ty) ^^^ dump_t t)
   | (_, Try t) ->
       dump_pattern_matching "try" dump_try_pattern t
   | (_, Annot (t, ty)) ->
@@ -156,9 +148,8 @@ and dump_cases : type a. (a -> _) -> (a * _) list -> _ = fun f cases ->
   separate_map hardline aux cases
 
 let dump_variants variants =
-  let aux (name, tys, ty) =
-    bar ^^^ dump_var_name name ^^^ separate_map space dump_ty tys ^^^ colon ^^^
-    dump_ty ty
+  let aux (name, ty) =
+    bar ^^^ dump_var_name name ^^^ colon ^^^ dump_ty ty
   in
   separate_map hardline aux variants
 
@@ -190,12 +181,11 @@ let dump_top = function
   | Foreign (cname, name, ty) ->
       str "foreign" ^^^ dump_cname cname ^^^ dump_name name ^^^ colon ^//^
       dump_ty ty
-  | Datatype (name, k, args, variants) ->
-      str "type" ^^^ dump_ty_name name ^^^ dump_forall_args args ^^^ colon ^^^
-      dump_kind k ^^^ equals ^//^
+  | Datatype (name, k, variants) ->
+      str "type" ^^^ dump_ty_name name ^^^ colon ^^^ dump_kind k ^^^ equals ^//^
       dump_variants variants
-  | Exception (name, args) ->
-      str "exception" ^^^ dump_exn_name name ^^^ dump_tys args
+  | Exception (name, ty) ->
+      str "exception" ^^^ dump_var_name name ^^^ colon ^^^ dump_ty ty
   | Class (name, params, sigs) ->
       group (
         (str "class" ^^^ dump_class name params ^^^ equals ^//^

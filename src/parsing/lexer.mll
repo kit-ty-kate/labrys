@@ -35,10 +35,14 @@ rule main = parse
   | '}' { Parser.RBrace }
   | '|' { Parser.Pipe }
   | '*' { Parser.Star }
+  | '#' { Parser.Hash }
+  | '^' { Parser.Caret }
   | '!'
   | "φ" { Parser.Eff }
   | '\\'
   | "λ" { Parser.Lambda }
+  | "[^" { Parser.LBracketUp }
+  | "^]" { Parser.RBracketUp }
   | "?[" { Parser.LQMarkBracket }
   | "?(" { Parser.LQMarkParen }
   | "->" { Parser.Arrow }
@@ -50,6 +54,7 @@ rule main = parse
   | "let" { Parser.Let }
   | "rec" { Parser.Rec }
   | "in" { Parser.In }
+  | "as" { Parser.As }
   | "fail" { Parser.Fail }
   | "try" { Parser.Try }
   | "match" { Parser.Match }

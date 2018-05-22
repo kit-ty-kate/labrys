@@ -25,7 +25,7 @@ let string options =
 let underscore_loc loc =
   Ident.Name.local_create ~loc "_"
 let underscore_type_var_loc loc =
-  Ident.TypeVar.local_create ~loc "_"
+  Ident.Type.local_create ~loc "_"
 let underscore_instance_loc loc =
   Ident.Instance.local_create ~loc "_"
 let underscore =

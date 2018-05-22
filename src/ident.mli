@@ -15,25 +15,15 @@ module Name : sig
 
   val unique : t -> int -> t
 
-  val prepend_empty : t -> t
-end
-
-module Variant : sig
-  include module type of Name
-
-  val to_name : t -> Name.t
+  module Set : Set.S with type elt = t
+  module MSet : CCMultiSet.S with type elt = t
 end
 
 module Type : module type of Name
-
-module TypeVar : module type of Name
-
-module Exn : module type of Name
-
-module TyClass : module type of Name
-
-module Instance : sig
+module Constr : sig
   include module type of Name
-
   val to_name : t -> Name.t
+  val to_type : t -> Type.t
 end
+module TyClass : module type of Name
+module Instance : module type of Name

@@ -23,6 +23,7 @@
 %token Lambda
 %token Dot
 %token Comma
+%token Hash
 %token Arrow DoubleArrow
 %token LArrowEff RArrowEff
 %token LDoubleArrowEff RDoubleArrowEff
@@ -30,9 +31,9 @@
 %token Match With End
 %token Type
 %token Alias
-%token Pipe
+%token Pipe As
 %token Colon
-%token Star Eff
+%token Star Eff Caret
 %token Fail
 %token Try
 %token Exception
@@ -48,6 +49,7 @@
 %token <char list> String
 %token LQMarkParen LParen RParen
 %token LQMarkBracket LBracket RBracket
+%token LBracketUp RBracketUp
 %token LBrace RBrace
 %token EOF
 
@@ -111,7 +113,7 @@ let_aux:
   | Rec { ParseTree.Rec }
 
 %inline ty_annot(ty):
-  | Colon LBracket LBracket eff = eff RBracket RBracket ty = ty
+  | Colon eff = ty Hash ty = ty
       { (ty, Some eff) }
   | Colon ty = ty
       { (ty, None) }
@@ -146,7 +148,7 @@ termStrictlyUnclosed:
 termNonStrictlyUnclosed:
   | x = app
       { x }
-  | Fail LBracket ty = typeExpr RBracket exn = exceptionValue
+  | Fail LBracket ty = typeExpr RBracket exn = termClosed
       { (loc $startpos $endpos, ParseTree.Fail (ty, exn)) }
 
 termUnclosed:
@@ -258,6 +260,8 @@ typeExprClosed:
       { (loc $startpos $endpos, ParseTree.TyVar name) }
   | LBracket eff = eff RBracket
       { (loc $startpos(eff) $endpos(eff), ParseTree.Eff eff) }
+  | LBracketUp sum = sum RBracketUp
+      { (loc $startpos(sum) $endpos(sum), ParseTree.Sum sum) }
   | LParen x = typeExpr RParen
       { x }
 
@@ -282,44 +286,17 @@ kindUnclosed:
       { ParseTree.KFun (k1, k2) }
 
 kindClosed:
-  | Star
-      { ParseTree.KStar }
-  | Eff
-      { ParseTree.KEff }
-  | LParen x = kind RParen
-      { x }
+  | Star { ParseTree.KStar }
+  | Eff { ParseTree.KEff }
+  | Caret { ParseTree.KExn }
+  | LParen x = kind RParen { x }
 
 kind:
   | x = kindUnclosed { x }
   | x = kindClosed { x }
 
-eff: eff = separated_list(Comma, effectName) { (loc $startpos $endpos, eff) }
-
-effectName:
-  | name = upperName
-      { ParseTree.EffTy (name, []) }
-  | name = newLowerName
-      { ParseTree.EffTyVar name }
-  | name = upperName LBracket args = eff_exn RBracket
-      { ParseTree.EffTy (name, args) }
-
-eff_exn:
-  | name = upperName
-      { [name] }
-  | name = upperName Pipe xs = eff_exn
-      { name :: xs }
-
-exceptionValue:
-  | LParen name = upperName args = exceptionValueArgs RParen
-      { (name, args) }
-  | name = upperName
-      { (name, []) }
-
-exceptionValueArgs:
-  | x = termClosed xs = exceptionValueArgs
-      { x :: xs }
-  | x = termClosed
-      { [x] }
+eff: eff = separated_list(Comma, typeExpr) { (loc $startpos $endpos, eff) }
+sum: sum = separated_list(Pipe, typeExpr) { sum }
 
 variant:
   | name = newUpperName tys = typeExprClosed*
@@ -353,9 +330,23 @@ patClosed:
   | LParen p = pat RParen
       { p }
 
-patUnclosed:
+patNonStrictlyUnclosed:
   | name = upperName args = patClosed+
       { ParseTree.TyConstr (loc $startpos $endpos, name, args) }
+  | p = patProtectedPermissive As name = newLowerName
+      { ParseTree.As (p, name) }
+
+patStrictlyUnclosed:
+  | p1 = patProtectedPermissive Pipe p2 = pat
+      { ParseTree.Or (p1, p2) }
+
+patUnclosed:
+  | p = patNonStrictlyUnclosed { p }
+  | p = patStrictlyUnclosed { p }
+
+patProtectedPermissive:
+  | p = patClosed { p }
+  | p = patNonStrictlyUnclosed { p }
 
 pat:
   | p = patClosed { p }

@@ -1,5 +1,6 @@
 Init
 
+  $ export CERVOISE_LIBDIR=$CERVOISE/stdlib
   $ cp $CERVOISE/tests/old-examples/Multi.sfw .
   $ cp $CERVOISE/tests/old-examples/Multi.sfwi .
   $ cp $CERVOISE/tests/old-examples/Nat.sfw .

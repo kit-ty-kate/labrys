@@ -1,24 +1,30 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-(** NOTE: the unused id field is needed to avoid optimization by
-    the ocaml compiler *)
-type t = {name : string; id : unit ref}
+type t = < name : string >
 
-let create name = {name; id = ref ()}
+let create name = object
+  method name = name
+end
 
-let raw_ptr (x : t) =
-  Nativeint.shift_left (Nativeint.of_int (Obj.magic x)) 1
+let equal = Equal.physical
+let compare x y = Int.compare (Oo.id x) (Oo.id y)
 
-let equal = (==)
-let compare x y = Nativeint.compare (raw_ptr x) (raw_ptr y)
-
-let to_string x = x.name
+let to_string x = x#name
 
 type tmp = t
 
-module Map = Utils.EqMap (struct
+module Map = Map.Make (struct
     type t = tmp
+    let compare = compare
+  end)
 
-    let equal = equal
+module Set = Set.Make (struct
+    type t = tmp
+    let compare = compare
+  end)
+
+module MSet = CCMultiSet.Make (struct
+    type t = tmp
+    let compare = compare
   end)

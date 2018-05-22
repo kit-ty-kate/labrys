@@ -2,6 +2,6 @@
 (* See the LICENSE file at the top-level directory. *)
 
 let version = "%%VERSION%%"
-let lib = "%%LIBDIR%%/cervoise"
-
-let max_fail_num_args = 31
+let lib =
+  try Sys.getenv "CERVOISE_LIBDIR"
+  with Not_found -> "%%LIBDIR%%/cervoise"

@@ -12,6 +12,7 @@ let dump_name = function
 let rec dump_kind = function
   | KStar -> str "*"
   | KEff -> str "φ"
+  | KExn -> str "^"
   | KFun (x, y) -> dump_kind x ^^^ str "->" ^/^ dump_kind y
 
 let dump_kind_opt = function
@@ -22,16 +23,6 @@ let dump_module = function
   | Source name -> dump_name name
   | Library name -> dump_name name
 
-let dump_exn x = separate_map (str " | ") dump_name x
-
-let dump_eff (_, x) =
-  let aux = function
-    | EffTyVar name -> dump_name name
-    | EffTy (name, []) -> dump_name name
-    | EffTy (name, args) -> dump_name name ^^^ brackets (dump_exn args)
-  in
-  separate_map (comma ^^ space) aux x
-
 let dump_forall_arg = function
   | (name, Some k) ->
       parens (dump_name name ^^^ colon ^^^ dump_kind k)
@@ -41,15 +32,17 @@ let dump_forall_arg = function
 let dump_forall_args l = separate_map space dump_forall_arg l
 let dump_ty_args l = separate_map (comma ^^ space) dump_forall_arg l
 
-let dump_fun_eff = function
+let rec dump_tys tys = separate_map space dump_ty tys
+and dump_eff (_, x) = separate_map (comma ^^ space) dump_ty x
+and dump_sum x = separate_map (space ^^ bar ^^ space) dump_ty x
+
+and dump_fun_eff = function
   | None -> str "->"
   | Some eff -> str "-[" ^^ dump_eff eff ^^ str "]->"
 
-let dump_tyclass_eff = function
+and dump_tyclass_eff = function
   | None -> str "=>"
   | Some eff -> str "=[" ^^ dump_eff eff ^^ str "]=>"
-
-let rec dump_tys tys = separate_map space dump_ty tys
 
 and dump_tyclass (name, ty_args, args) =
   let name = dump_name name in
@@ -66,6 +59,7 @@ and dump_ty = function
   | (_, Ty name) -> dump_name name
   | (_, TyVar name) -> dump_name name
   | (_, Eff eff) -> brackets (dump_eff eff)
+  | (_, Sum sum) -> brackets (caret ^^^ dump_sum sum ^^^ caret)
   | (_, Forall (names, res)) ->
       let names = dump_forall_args names in
       let res = dump_ty res in
@@ -86,7 +80,7 @@ and dump_ty = function
 
 let dump_annot = function
   | (ty, None) -> dump_ty ty
-  | (ty, Some eff) -> brackets (dump_eff eff) ^^^ dump_ty ty
+  | (ty, Some eff) -> dump_ty eff ^^^ sharp ^^^ dump_ty ty
 
 let dump_annot_opt = function
   | None -> empty
@@ -112,6 +106,8 @@ let rec dump_pattern = function
   | TyConstr (_, name, []) -> dump_name name
   | TyConstr (_, name, args) -> parens (dump_name name ^^^ dump_patterns args)
   | Any name -> dump_name name
+  | Or (p1, p2) -> parens (dump_pattern p1) ^^^ bar ^^^ dump_pattern p2
+  | As (p, name) -> parens (dump_pattern p) ^^^ str "as" ^^^ dump_name name
 
 and dump_patterns l = separate_map space dump_pattern l
 
@@ -147,9 +143,8 @@ and dump_t = function
       dump_pattern_matching "match" t
   | (_, Let (x, xs)) ->
       parens (group (dump_let x ^/^ str "in") ^/^ dump_t xs)
-  | (_, Fail (ty, (name, args))) ->
-      parens (str "fail" ^^^ brackets (dump_ty ty) ^^^ dump_name name ^^
-              separate_map space dump_t args)
+  | (_, Fail (ty, t)) ->
+      parens (str "fail" ^^^ brackets (dump_ty ty) ^^^ dump_t t)
   | (_, Try t) ->
       dump_pattern_matching "try" t
   | (_, Seq (x, y)) ->

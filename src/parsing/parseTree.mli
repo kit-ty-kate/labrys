@@ -12,15 +12,10 @@ type upper_name = (loc * [`UpperName of string list])
 type kind =
   | KStar
   | KEff
+  | KExn
   | KFun of (kind * kind)
 
 type ty_arg = (new_lower_name * kind option)
-
-type effect_name =
-  | EffTy of (upper_name * upper_name list)
-  | EffTyVar of new_lower_name
-
-type effects = (loc * effect_name list)
 
 type is_rec =
   | Rec
@@ -28,11 +23,14 @@ type is_rec =
 
 type tyclass = (upper_name * ty_arg list * ty list)
 
+and effects = (loc * ty list)
+
 and ty' =
   | Fun of (ty * effects option * ty)
   | Ty of upper_name
   | TyVar of new_lower_name
   | Eff of effects
+  | Sum of ty list
   | Forall of (ty_arg list * ty)
   | TyClass of (tyclass * effects option * ty)
   | AbsOnTy of (ty_arg list * ty)
@@ -40,12 +38,14 @@ and ty' =
 
 and ty = (loc * ty')
 
-type ty_annot = (ty * effects option)
+type ty_annot = (ty * ty option)
 type v_arg = (new_lower_name * ty)
 
 type pattern =
   | TyConstr of (loc * upper_name * pattern list)
   | Any of new_lower_name
+  | Or of (pattern * pattern)
+  | As of (pattern * new_lower_name)
 
 type arg' =
   | VArg of v_arg
@@ -78,7 +78,7 @@ and t' =
   | UpperVal of upper_name
   | PatternMatching of (t * (pattern * t) list)
   | Let of (value * t)
-  | Fail of (ty * (upper_name * t list))
+  | Fail of (ty * t)
   | Try of (t * (pattern * t) list)
   | Seq of (t * t)
   | Annot of (t * ty_annot)

@@ -1,7 +1,7 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-module Set = EnvSet.MIDValue
+module Set = LIdent.MSet
 
 module Llvm = struct
   include Llvm
@@ -18,8 +18,6 @@ module type I = sig
   val debug : bool
 end
 
-let exn_glob_size = succ Config.max_fail_num_args
-
 module Type = struct
   let void = Llvm.void_type c
   let i8 = Llvm.i8_type c
@@ -27,7 +25,7 @@ module Type = struct
   let float = Llvm.float_type c
   let star = Llvm.pointer_type i8
   let array = Llvm.array_type star
-  let exn_glob = array exn_glob_size
+  let exn_glob = Llvm.pointer_type star
   let array_ptr size = Llvm.pointer_type (array size)
   let variant_ptr = array_ptr
   let closure_ptr = array_ptr
@@ -152,6 +150,9 @@ module Make (I : I) = struct
       Llvm.build_call_void debug_trap [||] builder;
     Llvm.build_unreachable builder
 
+  let const_int_to_star x =
+    Llvm.const_inttoptr (Llvm.const_int Type.i32 x) Type.star
+
   let longjmp =
     let ty = Llvm.function_type Type.void [|Type.star|] in
     Llvm.declare_function "llvm.eh.sjlj.longjmp" ty m
@@ -210,32 +211,22 @@ module Make (I : I) = struct
     (builder', closure, env)
 
   let get_exn name =
-    let name = Ident.Exn.to_string name in
+    let name = LIdent.to_string name in
     Llvm.declare_global Type.i8 name m
 
-  let llvalue_of_pattern_var value builder = function
-    | None ->
-        value
-    | Some idx ->
-        let idx = succ idx in
-        let value = Llvm.build_load_cast value (Type.variant_ptr (succ idx)) builder in
-        Llvm.build_extractvalue value idx "" builder
-
   let get_const = function
-    | OptimizedTree.Int n -> Llvm.const_int Type.i32 n
-    | OptimizedTree.Float n -> Llvm.const_float Type.float n
-    | OptimizedTree.Char n -> Llvm.const_int Type.i32 (Uchar.to_int n)
-    | OptimizedTree.String s -> Llvm.const_string c (s ^ "\x00")
+    | `Int n -> Llvm.const_int Type.i32 n
+    | `Float n -> Llvm.const_float Type.float n
+    | `Char n -> Llvm.const_int Type.i32 (Uchar.to_int n)
+    | `String s -> Llvm.const_string c (s ^ "\x00")
 
   let llvm_ty_of_ty = function
-    | OptimizedTree.Int () -> Type.i32
-    | OptimizedTree.Float () -> Type.float
-    | OptimizedTree.Char () -> Type.i32
-    | OptimizedTree.String () -> Type.star
-
-  let ret_type = function
-    | OptimizedTree.Void -> Type.void
-    | OptimizedTree.Alloc ty -> llvm_ty_of_ty ty
+    | `Int () -> Type.i32
+    | `Float () -> Type.float
+    | `Char () -> Type.i32
+    | `String () -> Type.star
+    | `Custom -> Type.star
+    | `Void -> Type.void
 
   let args_type args =
     let aux (ty, _) = llvm_ty_of_ty ty in
@@ -248,7 +239,7 @@ module Make (I : I) = struct
     (undef, snd (Llvm.create_block c builder))
 
   let get_value env builder name =
-    match LIdent.Map.find name env with
+    match LIdent.Map.find_opt name env with
     | Some (Value value) ->
         value
     | Some (Env i) ->
@@ -265,12 +256,23 @@ module Make (I : I) = struct
         let extern = Llvm.declare_global Type.star name m in
         Llvm.build_load extern "" builder
 
+  let alloc_vars builder =
+    let aux var = (var, Llvm.build_alloca Type.star "" builder) in
+    List.map aux
+
+  let load_vars builder =
+    let aux env (name, var) =
+      let var = Llvm.build_load var "" builder in
+      LIdent.Map.add name (Value var) env
+    in
+    List.fold_left aux
+
   let map_args env builder = function
     | [] ->
         [||]
     | args ->
         let aux = function
-          | (OptimizedTree.String (), name) ->
+          | (`Custom, name) ->
               get_value env builder name
           | (ty, name) ->
               let ty = Llvm.pointer_type (llvm_ty_of_ty ty) in
@@ -279,15 +281,25 @@ module Make (I : I) = struct
         in
         Array.of_list (List.map aux args)
 
-  let rec build_if_chain ~default env builder value results f term cases =
-    let aux builder (constr, tree) =
+  let extract_constr_args term len builder =
+    List.init len (fun i -> Llvm.build_extractvalue term (succ i) "" builder)
+
+  let rec build_if_chain ~default vars env builder values term results cases =
+    let aux builder (constr, len, tree) =
       let if_branch =
         let (block, builder) = Llvm.create_block c builder in
-        create_tree' ~default env builder value results f tree;
+        let term = try List.hd values with Failure _ -> assert false in
+        let term = Llvm.build_load_cast term (Type.variant_ptr (succ len)) builder in
+        let values = try List.tl values with Failure _ -> assert false in
+        let values = extract_constr_args term len builder @ values in
+        create_tree vars env builder values results tree;
         block
       in
       let (else_branch, else_builder) = Llvm.create_block c builder in
-      let constr = f constr in
+      let constr = match constr with
+        | OptimizedTree.Index constr -> const_int_to_star constr
+        | OptimizedTree.Exn exn -> get_exn exn
+      in
       let cmp = Llvm.build_icmp Llvm.Icmp.Eq term constr "" builder in
       Llvm.build_cond_br cmp if_branch else_branch builder;
       else_builder
@@ -295,42 +307,53 @@ module Make (I : I) = struct
     let builder = List.fold_left aux builder cases in
     Llvm.build_br default builder
 
-  and create_tree' ~default env builder value results f = function
-    | OptimizedTree.Leaf i ->
-        let (block, _) = List.nth results i in
+  and create_tree vars env builder values results = function
+    | OptimizedTree.Jump branch ->
+        let (block, _) = List.nth results branch in
         Llvm.build_br block builder
-    | OptimizedTree.Node (var, cases) ->
-        let term = llvalue_of_pattern_var value builder var in
+    | OptimizedTree.Switch (cases, default) ->
+        let term = try List.hd values with Failure _ -> assert false in
         let term = Llvm.build_load_cast term (Type.variant_ptr 1) builder in
         let term = Llvm.build_extractvalue term 0 "" builder in
-        build_if_chain ~default env builder value results f term cases
-
-  let create_tree ~default env builder value results =
-    let g f tree = create_tree' ~default env builder value results f tree in
-    let int_to_ptr i = Llvm.const_inttoptr (Llvm.const_int Type.i32 i) Type.star in
-    function
-    | OptimizedTree.IdxTree tree -> g int_to_ptr tree
-    | OptimizedTree.PtrTree tree -> g get_exn tree
+        let default =
+          let (block, builder) = Llvm.create_block c builder in
+          let values = try List.tl values with Failure _ -> assert false in
+          create_tree vars env builder values results default;
+          block
+        in
+        build_if_chain ~default vars env builder values term results cases
+    | OptimizedTree.Alias (name, p) ->
+        let name = try List.assoc ~eq:LIdent.equal name vars with Not_found -> assert false in
+        let term = try List.hd values with Failure _ -> assert false in
+        Llvm.build_store term name builder;
+        create_tree vars env builder values results p
+    | OptimizedTree.Swap (idx, p) ->
+        let values = Utils.swap_list idx values in
+        create_tree vars env builder values results p
 
   let map_ret builder t = function
-    | OptimizedTree.Void ->
+    | `Void ->
         let v = Llvm.define_constant "" (Llvm.const_array Type.star [||]) m in
         let v = Llvm.const_bitcast v Type.star in
         (v, builder)
-    | OptimizedTree.Alloc (OptimizedTree.String ()) ->
+    | `Custom ->
         (t, builder)
-    | OptimizedTree.Alloc ty ->
+    | ty ->
         let ty = llvm_ty_of_ty ty in
         let value = Llvm.build_malloc ty "" builder in
         Llvm.build_store t value builder;
         let value = Llvm.build_bitcast value Type.star "" builder in
         (value, builder)
 
-  let rec create_result ~jmp_buf ~next_block env builder result =
-    let (block, builder') = Llvm.create_block c builder in
-    let (v, builder'') = lambda ~jmp_buf env builder' result in
-    Llvm.build_br next_block builder'';
-    (block, (v, Llvm.insertion_block builder''))
+  let rec create_results ~jmp_buf ~next_block vars env builder =
+    let aux (env, results) result =
+      let (block, builder') = Llvm.create_block c builder in
+      let env = load_vars builder' env vars in
+      let (v, builder'') = lambda ~jmp_buf env builder' result in
+      Llvm.build_br next_block builder'';
+      (env, results @ [(block, (v, Llvm.insertion_block builder''))])
+    in
+    List.fold_left aux (env, [])
 
   and abs ~name t env builder =
     let param = Llvm.current_param builder 0 in
@@ -354,17 +377,12 @@ module Make (I : I) = struct
         let f = Llvm.build_extractvalue f 0 "" builder in
         let f = Llvm.build_bitcast f (Type.lambda_ptr ~rt_env_size:1) "" builder in
         (Llvm.build_call f [|x; closure; jmp_buf|] "" builder, builder)
-    | OptimizedTree.PatternMatching (t, results, default, tree) ->
+    | OptimizedTree.PatternMatching (t, vars, results, tree) ->
         let t = get_value env builder t in
         let (next_block, next_builder) = Llvm.create_block c builder in
-        let results = List.map (create_result ~next_block ~jmp_buf env builder) results in
-        let default =
-          let (block, builder) = Llvm.create_block c builder in
-          let (_, builder') = lambda ~jmp_buf env builder default in
-          Llvm.build_unreachable builder';
-          block
-        in
-        create_tree ~default env builder t results tree;
+        let vars = alloc_vars builder vars in
+        let (env, results) = create_results ~next_block ~jmp_buf vars env builder results in
+        create_tree vars env builder [t] results tree;
         let results = List.map snd results in
         (Llvm.build_phi results "" next_builder, next_builder)
     | OptimizedTree.Val name ->
@@ -372,8 +390,12 @@ module Make (I : I) = struct
     | OptimizedTree.Datatype (index, params) ->
         let values = List.map (get_value env builder) params in
         let values = match index with
-          | Some index -> Llvm.const_inttoptr (i32 index) Type.star :: values
-          | None -> values
+          | Some (OptimizedTree.Index index) ->
+              Llvm.const_inttoptr (i32 index) Type.star :: values
+          | Some (OptimizedTree.Exn name) ->
+              get_exn name :: values
+          | None ->
+              values
         in
         if List.for_all Llvm.is_constant values then begin
           let v = Array.of_list values in
@@ -385,16 +407,15 @@ module Make (I : I) = struct
           (v, builder)
         end
     | OptimizedTree.CallForeign (name, ret, args) ->
-        let ty = Llvm.function_type (ret_type ret) (args_type args) in
+        let ty = Llvm.function_type (llvm_ty_of_ty ret) (args_type args) in
         let f = Llvm.declare_function name ty m in
         let args = map_args env builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret
     | OptimizedTree.Rec (name, t) ->
         lambda' ~isrec:(Some name) ~jmp_buf env builder t
-    | OptimizedTree.Fail (name, args) ->
-        let args = List.map (get_value env builder) args in
-        let tag = get_exn name in
-        init exn_var Type.exn_glob (tag :: args) builder;
+    | OptimizedTree.Fail name ->
+        let v = get_value env builder name in
+        Llvm.build_store v exn_var builder;
         create_fail jmp_buf builder
     | OptimizedTree.Try (t, (name, t')) ->
         let jmp_buf' = Generic.alloc_jmp_buf builder in
@@ -410,9 +431,7 @@ module Make (I : I) = struct
         in
         let (catch_result, catch_block) =
           let (block, builder) = Llvm.create_block c builder in
-          let exn = Llvm.build_alloca Type.exn_glob "" builder in
-          let exn' = Llvm.build_load exn_var "" builder in
-          Llvm.build_store exn' exn builder;
+          let exn = Llvm.build_load exn_var "" builder in
           Llvm.build_store (Llvm.undef Type.exn_glob) exn_var builder;
           let env = LIdent.Map.add name (Value exn) env in
           let (t', builder') = lambda ~jmp_buf env builder t' in
@@ -432,11 +451,6 @@ module Make (I : I) = struct
     | OptimizedTree.Unreachable ->
         unreachable builder;
         (undef, snd (Llvm.create_block c builder))
-    | OptimizedTree.Reraise e ->
-        let e = get_value env builder e in
-        let e = Llvm.build_load e "" builder in
-        Llvm.build_store e exn_var builder;
-        create_fail jmp_buf builder
 
   and lambda ?isrec ~jmp_buf env builder (lets, t) =
     let rec aux env builder = function
@@ -478,7 +492,7 @@ module Make (I : I) = struct
           Llvm.build_store value global builder;
           builder
       | OptimizedTree.Exception name ->
-          let name = Ident.Exn.to_string name in
+          let name = LIdent.to_string name in
           (* NOTE: Don't use Llvm.define_constant as it merges equal values *)
           let v = Llvm.define_global name (string name) m in
           Llvm.set_global_constant true v;
@@ -532,7 +546,8 @@ let get_triple () =
 
 let get_target ~triple =
   let target = Llvm_target.Target.by_triple triple in
-  Llvm_target.TargetMachine.create ~triple target
+  let reloc_mode = Llvm_target.RelocMode.PIC in
+  Llvm_target.TargetMachine.create ~triple ~reloc_mode target
 
 let privatize_identifiers m =
   let aux f v =

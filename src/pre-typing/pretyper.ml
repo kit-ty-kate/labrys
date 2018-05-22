@@ -3,7 +3,10 @@
 
 open PretypedTree
 
-module ForbiddenEnv = EnvSet.Value
+module ForbiddenEnv = Ident.Name.Set
+
+let ty_to_effects ty =
+  (fst ty, [ty])
 
 let rec get_rec_ty ~name (loc, t) = match t with
   | Annot (_, ty) ->
@@ -13,12 +16,14 @@ let rec get_rec_ty ~name (loc, t) = match t with
       get_rec_ty ~name t
   | Abs ((name, ty), t) ->
       let (ty', eff) = get_rec_ty ~name t in
+      let eff = Option.map ty_to_effects eff in
       ((loc, Fun (ty, eff, ty')), None)
   | TAbs ((tname, k), t) ->
       let (ty', eff) = get_rec_ty ~name t in
       ((loc, Forall ((tname, k), ty')), eff)
   | CAbs ((_, cl), t) ->
       let (ty', eff) = get_rec_ty ~name t in
+      let eff = Option.map ty_to_effects eff in
       ((loc, TyClass (cl, eff, ty')), None)
   | App _ | TApp _ | CApp _
   | Val _ | Var _ | Const _
@@ -80,9 +85,9 @@ and pretype_term ?last_let forbidden_env = function
       let ty = get_rec_ty ~name t in
       let xs = pretype_term ?last_let forbidden_env xs in
       (loc, LetRec (name, fst ty, (loc, Annot (t, ty)), xs))
-  | (loc, DesugaredTree.Fail (ty, (exn, args))) ->
-      let args = List.map (pretype_term forbidden_env) args in
-      (loc, Fail (ty, (exn, args)))
+  | (loc, DesugaredTree.Fail (ty, t)) ->
+      let t = pretype_term forbidden_env t in
+      (loc, Fail (ty, t))
   | (loc, DesugaredTree.Try (e, branches)) ->
       let e = pretype_term forbidden_env e in
       let branches =
@@ -121,3 +126,6 @@ let pretype_top = function
 
 let pretype top =
   List.map pretype_top top
+
+let pretype_interface =
+  Fun.id

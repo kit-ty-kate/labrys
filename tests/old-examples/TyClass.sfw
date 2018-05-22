@@ -14,7 +14,7 @@ foreign "puts" println : String -[IO]-> Unit
 foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
 
 let natToInt =
-  let rec aux (acc : Int) (n : Nat) : [[IO]] Int =
+  let rec aux (acc : Int) (n : Nat) : IO # Int =
     match n with
     | O -> acc
     | S n -> aux (add 1 acc) n

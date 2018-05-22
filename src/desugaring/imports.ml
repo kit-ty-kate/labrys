@@ -15,7 +15,6 @@ type t =
   { values : Module.t Imports.t
   ; variants : Module.t Imports.t
   ; types : Module.t Imports.t
-  ; exns : Module.t Imports.t
   ; tyclasses : Module.t Imports.t
   ; instances : Module.t Imports.t
   }
@@ -24,7 +23,6 @@ let empty =
   { values = Imports.empty
   ; variants = Imports.empty
   ; types = Imports.empty
-  ; exns = Imports.empty
   ; tyclasses = Imports.empty
   ; instances = Imports.empty
   }
@@ -49,8 +47,9 @@ let add_type ~export (_, `NewUpperName name) modul imports =
   {imports with types}
 
 let add_exn ~export (_, `NewUpperName name) modul imports =
-  let exns = add ~export name modul imports.exns in
-  {imports with exns}
+  let variants = add ~export name modul imports.variants in
+  let types = add ~export name modul imports.types in
+  {imports with variants; types}
 
 let add_tyclass ~export (_, `NewUpperName name) modul imports =
   let tyclasses = add ~export name modul imports.tyclasses in
@@ -74,16 +73,14 @@ let open_module modul imports =
   let values = Imports.foldr aux imports.values imports.values in
   let variants = Imports.foldr aux imports.variants imports.variants in
   let types = Imports.foldr aux imports.types imports.types in
-  let exns = Imports.foldr aux imports.exns imports.exns in
   let tyclasses = Imports.foldr aux imports.tyclasses imports.tyclasses in
   let instances = Imports.foldr aux imports.instances imports.instances in
-  {values; variants; types; exns; tyclasses; instances}
+  {values; variants; types; tyclasses; instances}
 
 let union a b =
   let values = Imports.union a.values b.values in
   let variants = Imports.union a.variants b.variants in
   let types = Imports.union a.types b.types in
-  let exns = Imports.union a.exns b.exns in
   let tyclasses = Imports.union a.tyclasses b.tyclasses in
   let instances = Imports.union a.instances b.instances in
-  {values; variants; types; exns; tyclasses; instances}
+  {values; variants; types; tyclasses; instances}

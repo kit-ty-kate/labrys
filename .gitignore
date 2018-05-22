@@ -5,6 +5,8 @@
 
 /a.out
 /dest
+/stdlib/Prelude.bc
+/stdlib/Prelude.csfw
 
 /cervoise.install
 

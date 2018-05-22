@@ -27,8 +27,8 @@ let cervoise =
     ~files:[
       Install.dir ~dir:"lib" [
         Install.file "stdlib/Prelude.sfwi";
-        Install.file "dest/stdlib/Prelude.bc";
-        Install.file "dest/stdlib/Prelude.csfw";
+        Install.file "stdlib/Prelude.bc";
+        Install.file "stdlib/Prelude.csfw";
       ];
     ]
     ()

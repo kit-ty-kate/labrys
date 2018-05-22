@@ -24,7 +24,8 @@ val to_string : t -> string
 val is_library : t -> bool
 
 val equal : t -> t -> bool
+val compare : t -> t -> int
 
 val to_module : t -> string list
 
-module Map : Utils.EQMAP with type key = t
+module Map : Map.S with type key = t

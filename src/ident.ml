@@ -6,20 +6,11 @@ let fmt = Printf.sprintf
 module Name = struct
   type t = (Location.t * Module.t option * string)
 
-  let equal (_, module_x, x) (_, module_y, y) = match module_x, module_y with
-    | Some module_x, Some module_y ->
-        Module.equal module_x module_y && String.equal x y
-    | None, None ->
-        String.equal x y
-    | Some _, None | None, Some _ ->
-        false
-
   let to_string = function
-    | (_, Some modul, name) ->
-        Module.to_string modul ^ "." ^ name
-    | (_, None, name) ->
-        name
+    | (_, Some modul, name) -> Module.to_string modul ^ "." ^ name
+    | (_, None, name) -> name
 
+  let equal x y = String.equal (to_string x) (to_string y)
   let compare x y = String.compare (to_string x) (to_string y)
 
   let create ~loc modul name =
@@ -30,32 +21,29 @@ module Name = struct
 
   let loc (loc, _, _) = loc
 
+  (* TODO: improve *)
   let unique (loc, modul, name) n =
     if Int.(n <= 0) then
       assert false;
     (loc, modul, fmt "%s__%d" name n)
 
-  let prepend_empty (loc, modul, name) =
-    (loc, modul, "." ^ name)
-end
+  type tmp = t
 
-module Variant = struct
-  include Name
-
-  let to_name = Fun.id
+  module Set = Set.Make (struct
+      type t = tmp
+      let compare = compare
+    end)
+  module MSet = CCMultiSet.Make (struct
+      type t = tmp
+      let compare = compare
+    end)
 end
 
 module Type = Name
-
-module TypeVar = Name
-
-module Exn = Name
-
-module TyClass = Name
-
-module Instance = struct
+module Constr = struct
   include Name
-
-  let to_name (loc, modul, name) =
-    (loc, modul, "$named-instance$" ^ name)
+  let to_name = Fun.id
+  let to_type = Fun.id
 end
+module TyClass = Name
+module Instance = Name

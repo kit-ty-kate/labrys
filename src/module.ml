@@ -1,8 +1,6 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-module Aliases = Utils.StrListSet
-
 exception Error of string
 
 type t =
@@ -78,13 +76,13 @@ let is_library self =
   self.library
 
 let equal x y = List.equal String.equal x.modul y.modul
+let compare x y = List.compare String.compare x.modul y.modul
 
 let to_module self = self.modul
 
 type tmp = t
 
-module Map = Utils.EqMap (struct
+module Map = Map.Make (struct
     type t = tmp
-
-    let equal = equal
+    let compare = compare
   end)

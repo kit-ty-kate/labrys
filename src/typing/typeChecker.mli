@@ -2,10 +2,12 @@
 (* See the LICENSE file at the top-level directory. *)
 
 val check :
-  modul:Module.t ->
-  interface:Env.t ->
-  with_main:bool ->
-  <lib_dir : string; ..> ->
-  Env.t ->
+  current_module:Module.t ->
+  interface:TypedEnv.env ->
+  <lib_dir : string; with_main : bool; ..> ->
+  TypedEnv.env ->
   PretypedTree.top list ->
   UntypedTree.top list
+
+val check_interface :
+  TypedEnv.env -> PretypedTree.interface list -> TypedEnv.env

@@ -1,26 +1,28 @@
 (* Copyright (c) 2013-2017 The Cervoise developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
+type ty = TypedEnv.nty
+type loc = Location.t
 type name = Ident.Name.t
-type eff_name = Ident.Exn.t
-type variant_name = Ident.Variant.t
-
+type constr_name = Ident.Constr.t
 type index = int
+type branch = int
 
-type constr = (variant_name * index)
+(** Source language (typed) *)
+type pattern' =
+  | Wildcard
+  | Constr of (loc * constr_name * pattern list)
+  | Or of (pattern * pattern)
+  | As of (pattern * name)
+and pattern = (ty * pattern')
 
-type 'a t' =
-  | Node of (int option * ('a * 'a t') list)
-  | Leaf of int
+(** Target language (typed) *)
+type tree =
+  | Switch of ((loc * constr_name * ty * tree) list * tree option)
+  | Swap of (index * tree)
+  | Alias of (name * tree)
+  | Jump of branch
 
-type t =
-  | Idx of constr t'
-  | Ptr of eff_name t'
+type matrix = (pattern list * branch) list
 
-val create :
-  loc:Location.t ->
-  (Env.t -> PretypedTree.t -> ('a * Types.t * Effects.t)) ->
-  Env.t ->
-  Types.t ->
-  (PretypedTree.pattern * PretypedTree.t) list ->
-  (t * ((PatternMatrix.var * name) list * 'a) list * Types.t * Effects.t)
+val compile : matrix -> tree
