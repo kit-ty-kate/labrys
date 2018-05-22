@@ -1,8 +1,5 @@
 /_build
 
-/main.native
-/main.byte
-
 /a.out
 /dest
 /stdlib/Prelude.bc

@@ -16,9 +16,6 @@ DOCS = \
     $(DOC)/system-fc.pdf \
     $(DOC)/system-fcw.pdf \
 
-src/%:
-	ocamlbuild -use-ocamlfind -no-plugin "$@"
-
 %.tex: %.ott
 	ott -i $< -o $@ -tex_show_meta false
 
@@ -29,10 +26,10 @@ src/%:
 	@$(RM) $<
 
 all:
-	ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild-pkg)" cervoise
+	jbuilder build
 
 clean:
-	ocamlbuild -clean
+	jbuilder clean
 
 docs: $(DOCS)
 
@@ -40,7 +37,7 @@ clean-docs:
 	@$(RM) $(DOCS)
 
 stdlib:
-	./main.native build-module --no-prelude --build-dir . --src-dir stdlib Prelude
+	jbuilder exec -- cervoise build-module --no-prelude --build-dir . --src-dir stdlib Prelude
 
 tests:
 	CERVOISE="$(shell pwd)" LLVM_VERSION="$(LLVM_VERSION)" cram $(TESTS)

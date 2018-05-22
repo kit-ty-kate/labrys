@@ -1,0 +1,58 @@
+(jbuild_version 1)
+
+(copy_files backend/*)
+(copy_files desugaring/*)
+(copy_files flatten/*)
+(copy_files lambda/*)
+(copy_files optimization/*)
+(copy_files parsing/*)
+(copy_files pre-typing/*)
+(copy_files typing/*)
+
+(menhir ((modules (parser))))
+(ocamllex (lexer))
+
+(executable
+ ((name main)
+  (public_name cervoise)
+  (flags (:standard -safe-string -w A-44-33-4 -open Containers))
+  (modules_without_implementation
+    (options
+     desugaredTree
+     flattenTree
+     lambdaTree
+     location
+     optimizedTree
+     parseTree
+     pretypedTree
+     typedEnv
+     untypedTree))
+  (libraries
+    (unix
+     cmdliner
+     pprint
+     re
+     msgpack
+     uutf
+     llvm
+     llvm.passmgr_builder
+     llvm.target
+     llvm.bitwriter
+     llvm.bitreader
+     llvm.all_backends
+     llvm.linker
+     llvm.scalar_opts
+     containers
+     containers.data))))
+
+(rule
+ ((targets (config.ml))
+  (deps (../config.ml))
+  (action (with-stdout-to ${@} (run ocaml ${<} ${version:cervoise})))))
+
+(install
+ ((section lib)
+  (files
+    (../stdlib/Prelude.sfwi
+     ../stdlib/Prelude.bc
+     ../stdlib/Prelude.csfw))))

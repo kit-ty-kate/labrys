@@ -8,11 +8,12 @@ homepage: "https://github.com/kit-ty-kate/cervoise"
 dev-repo: "https://github.com/kit-ty-kate/cervoise.git"
 bug-reports: "https://github.com/kit-ty-kate/cervoise/issues"
 build: [
-  [make]
-  [make "stdlib"]
+  ["jbuilder" "build" "-p" name "-j" jobs]
+  ["jbuilder" "exec" "--"
+   "cervoise" "build-module" "--no-prelude" "--build-dir" "." "--src-dir" "stdlib" "Prelude"]
 ]
 depends: [
-  "ocamlbuild-pkg" {build & >= "0.2.1"}
+  "jbuilder" {build & >= "1.0+beta18.1"}
   "menhir"
   "base-unix"
   "cmdliner"
