@@ -1,0 +1,15 @@
+(alias
+  (name runtest)
+  (deps examples.t
+        Hello.sfw
+        Fact.sfw
+        TailFact.sfw
+        NativeFact.sfw
+        Nat.sfw
+        Nat.sfwi)
+  (action
+    (progn
+      (setenv CERVOISE %{exe:../src/main.exe}
+        (setenv CERVOISE_LIBDIR %{project_root}/stdlib
+          (run craml examples.t)))
+      (diff? examples.t examples.t.corrected))))

@@ -2,12 +2,6 @@ DOC = doc
 
 LLVM_VERSION ?= 3.8
 
-TESTS = \
-    tests/basic/basic.t \
-    tests/old-examples/old-examples.t \
-    tests/examples/examples.t \
-    tests/errors/errors.t \
-
 DOCS = \
     $(DOC)/semantics.pdf \
     $(DOC)/system-f.pdf \
@@ -40,7 +34,7 @@ stdlib:
 	dune exec -- cervoise build-module --no-prelude --build-dir . --src-dir stdlib Prelude
 
 tests:
-	CERVOISE="$(shell pwd)" LLVM_VERSION="$(LLVM_VERSION)" cram $(TESTS)
+	LLVM_VERSION="$(LLVM_VERSION)" dune runtest $(TESTS)
 
 check:
 	dead_code_analyzer.opt --all -S -bind-seq --exclude _build/src/parsing/parser.ml _build/src

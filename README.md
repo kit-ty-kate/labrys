@@ -12,7 +12,6 @@ The git repository is located at: https://github.com/kit-ty-kate/cervoise
 ### Build-time requirements
 
 * The latest OPAM and the latest OCaml (https://opam.ocaml.org/)
-* Cram (for tests only)
 * Ott (for building documentation only)
 * Rubber (for building documentation only)
 

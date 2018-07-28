@@ -1,0 +1,9 @@
+(alias
+  (name runtest)
+  (deps basic.t Basic.sfw)
+  (action
+    (progn
+      (setenv CERVOISE %{exe:../../src/main.exe}
+        (setenv CERVOISE_LIBDIR %{project_root}/stdlib
+          (run craml basic.t)))
+      (diff? basic.t basic.t.corrected))))

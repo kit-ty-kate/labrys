@@ -1,10 +1,10 @@
 /_build
+/cervoise.install
+.merlin
 
 /a.out
 /dest
 /stdlib/Prelude.bc
 /stdlib/Prelude.csfw
 
-/cervoise.install
-
-/tests/*/*.t.err
+/tests/*/*.t.corrected

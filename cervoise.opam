@@ -12,6 +12,7 @@ build: [
   ["dune" "exec" "--"
    "cervoise" "build-module" "--no-prelude" "--build-dir" "." "--src-dir" "stdlib" "Prelude"]
 ]
+build-test: ["dune" "runtest" "-p" name "-j" jobs]
 depends: [
   "dune" {build}
   "menhir"
@@ -23,6 +24,7 @@ depends: [
   "uutf" {>= "1.0.0"}
   "llvm" {>= "3.8"}
   "containers" {>= "2.0"}
+  "craml" {test}
 ]
 tags: [
   "compiler"
