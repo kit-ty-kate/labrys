@@ -8,12 +8,12 @@ homepage: "https://github.com/kit-ty-kate/cervoise"
 dev-repo: "https://github.com/kit-ty-kate/cervoise.git"
 bug-reports: "https://github.com/kit-ty-kate/cervoise/issues"
 build: [
-  ["jbuilder" "build" "-p" name "-j" jobs]
-  ["jbuilder" "exec" "--"
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "exec" "--"
    "cervoise" "build-module" "--no-prelude" "--build-dir" "." "--src-dir" "stdlib" "Prelude"]
 ]
 depends: [
-  "jbuilder" {build & >= "1.0+beta18.1"}
+  "dune" {build}
   "menhir"
   "base-unix"
   "cmdliner"

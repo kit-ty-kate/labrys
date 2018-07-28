@@ -26,10 +26,10 @@ DOCS = \
 	@$(RM) $<
 
 all:
-	jbuilder build
+	dune build
 
 clean:
-	jbuilder clean
+	dune clean
 
 docs: $(DOCS)
 
@@ -37,7 +37,7 @@ clean-docs:
 	@$(RM) $(DOCS)
 
 stdlib:
-	jbuilder exec -- cervoise build-module --no-prelude --build-dir . --src-dir stdlib Prelude
+	dune exec -- cervoise build-module --no-prelude --build-dir . --src-dir stdlib Prelude
 
 tests:
 	CERVOISE="$(shell pwd)" LLVM_VERSION="$(LLVM_VERSION)" cram $(TESTS)

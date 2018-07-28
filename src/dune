@@ -1,5 +1,3 @@
-(jbuild_version 1)
-
 (copy_files backend/*)
 (copy_files desugaring/*)
 (copy_files flatten/*)
@@ -9,15 +7,15 @@
 (copy_files pre-typing/*)
 (copy_files typing/*)
 
-(menhir ((modules (parser))))
-(ocamllex (lexer))
+(menhir (modules parser))
+(ocamllex lexer)
 
 (executable
- ((name main)
+  (name main)
   (public_name cervoise)
-  (flags (:standard -safe-string -w A-44-33-4 -open Containers))
+  (flags (:standard -safe-string -warn-error -A -w A-44-33-4 -open Containers))
   (modules_without_implementation
-    (options
+     options
      desugaredTree
      flattenTree
      lambdaTree
@@ -26,9 +24,9 @@
      parseTree
      pretypedTree
      typedEnv
-     untypedTree))
+     untypedTree)
   (libraries
-    (unix
+     unix
      cmdliner
      pprint
      re
@@ -43,16 +41,16 @@
      llvm.linker
      llvm.scalar_opts
      containers
-     containers.data))))
+     containers.data))
 
 (rule
- ((targets (config.ml))
-  (deps (../config.ml))
-  (action (with-stdout-to ${@} (run ocaml ${<} ${version:cervoise})))))
+  (targets config.ml)
+  (deps ../config.ml)
+  (action (with-stdout-to %{targets} (run ocaml %{deps} %{version:cervoise}))))
 
 (install
- ((section lib)
+  (section lib)
   (files
-    (../stdlib/Prelude.sfwi
+     ../stdlib/Prelude.sfwi
      ../stdlib/Prelude.bc
-     ../stdlib/Prelude.csfw))))
+     ../stdlib/Prelude.csfw))
