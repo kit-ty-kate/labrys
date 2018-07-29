@@ -1,9 +1,9 @@
 (alias
   (name runtest)
-  (deps errors.t InvalidRec.sfw)
+  (deps (:test errors.t) (glob_files *.sfw) (glob_files *.sfwi))
   (action
     (progn
       (setenv CERVOISE %{exe:../../src/main.exe}
         (setenv CERVOISE_LIBDIR %{project_root}/stdlib
-          (run craml errors.t)))
-      (diff? errors.t errors.t.corrected))))
+          (run craml %{test})))
+      (diff? %{test} %{test}.corrected))))

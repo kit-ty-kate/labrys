@@ -1,36 +1,9 @@
 (alias
   (name runtest)
-  (deps old-examples.t
-        Multi.sfw
-        Nat.sfw
-        TestImports.sfw
-        YetAnotherBug.sfw
-        Bug.sfw
-        CompS.sfw
-        Exn.sfw
-        Fact.sfw
-        TailFact.sfw
-        NativeFact.sfw
-        GrosGrosBug.sfw
-        LetRecIn.sfw
-        MultiTypes.sfw
-        Multi.sfw
-        Print.sfw
-        Rec.sfw
-        Simple.sfw
-        SystemFOmega.sfw
-        SystemF.sfw
-        Test.sfw
-        UselessEnv.sfw
-        Variants.sfw
-        TyClass.sfw
-        Presentation.sfw
-        ExOne.sfw
-        ExnVar.sfw
-        Lol.sfw)
+  (deps (:test old-examples.t) (glob_files *.sfw) (glob_files *.sfwi))
   (action
     (progn
       (setenv CERVOISE %{exe:../../src/main.exe}
         (setenv CERVOISE_LIBDIR %{project_root}/stdlib
-          (run craml old-examples.t)))
-      (diff? old-examples.t old-examples.t.corrected))))
+          (run craml %{test})))
+      (diff? %{test} %{test}.corrected))))
