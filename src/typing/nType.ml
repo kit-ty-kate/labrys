@@ -7,7 +7,7 @@ let rec normalize = function
   | Ty name -> NTy name
   | Eff _ | Abs _ -> assert false
   | Sum sum -> NSum (List.map normalize sum)
-  | Fun (t1, e, t2) -> NFun (normalize t1, List.map normalize e, normalize t2)
+  | Fun (t1, e, t2) -> NFun (normalize t1, List.concat (List.map normalize_eff e), normalize t2)
   | Forall (name, k, t) -> NForall (name, k, normalize t)
   | App (t1, t2) ->
       begin match Type.app t1 t2 with
@@ -17,7 +17,7 @@ let rec normalize = function
       | Ty _ | Fun _ | Forall _ as t -> normalize t
       end
 
-let rec normalize_eff = function
+and normalize_eff = function
   | Ty name -> [NTy name]
   | Eff e -> List.concat (List.map normalize_eff e)
   | Sum _ | Fun _ | Abs _ | Forall _ -> assert false
