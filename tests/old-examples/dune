@@ -1,6 +1,6 @@
 (alias
   (name runtest)
-  (deps (:test old-examples.t) (glob_files *.sfw) (glob_files *.sfwi))
+  (deps (:test old-examples.t) (glob_files *.sfw) (glob_files *.sfwi) (glob_files Test/*.sfw) (glob_files Test/*.sfwi))
   (action
     (progn
       (setenv CERVOISE %{exe:../../src/main.exe}

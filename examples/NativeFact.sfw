@@ -25,7 +25,7 @@ let natToInt =
   in
   aux 0
 
-let rec fact (n : Nat) : [IO, Exn] # Int =
+let rec fact (n : Nat) : [IO] # Int =
   match n with
   | O -> 1
   | S x -> mul (add 1 (natToInt x)) (fact x)

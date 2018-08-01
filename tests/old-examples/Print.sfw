@@ -28,8 +28,3 @@ let printNat (n : Nat) =
 let main =
   let unit = printNat O in
   Unit
-
-type Nat' =
-  | O
-  | S Nat'
-  | D Nat' Nat'

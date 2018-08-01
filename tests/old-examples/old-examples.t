@@ -24,7 +24,7 @@ Normal compilation
   Compiling Exn
   Error in 'Exn.sfw' from line 9 column 4 to line 9 column 8:
       Effects are not allowed on toplevel
-  [1]
+--> exit 1
   $ $CERVOISE build-program Fact
   Compiling Fact
   Linking Fact
