@@ -100,8 +100,11 @@ let check_vdiff TypedEnv.{values; constrs; types} y =
 type add = TypedEnv.env -> TypedEnv.env
 
 let add_value name ty env =
-  let values = EnvMap.Value.add name ty env.TypedEnv.values in
-  {env with TypedEnv.values}
+  if Ident.Name.equal name Builtins.underscore then
+    env
+  else
+    let values = EnvMap.Value.add name ty env.TypedEnv.values in
+    {env with TypedEnv.values}
 
 let add_abstract_type name k env =
   let types = EnvMap.Type.add name (TypedEnv.Abstract k) env.TypedEnv.types in

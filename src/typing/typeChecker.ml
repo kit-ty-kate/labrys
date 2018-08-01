@@ -270,10 +270,10 @@ and check_results options env vars results =
   let check_vars env (results, ty) vars result =
     let check_var (vars, env) (name, ty) =
       match List.find_opt (Ident.Name.equal name) vars with
-      | Some name ->
+      | Some name when not (Ident.Name.equal name Builtins.underscore) ->
           let loc = Ident.Name.loc name in
           Err.fail ~loc "Variable already defined in this pattern."
-      | None ->
+      | None | Some _ ->
           (name :: vars, Env.add_value name ty env)
     in
     let (_, env) = List.fold_left check_var ([], env) vars in
