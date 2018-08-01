@@ -2,18 +2,4 @@ type Nat =
   | O
   | S Nat
 
-let id = \(x:Nat->Nat) -> x
-
-let val = id (λ(x:Nat) -> x)
-
-let idprime = id
-
-let main = Unit
-
-class Show a =
-  let show : a -[]-> Unit
-end
-
-let show = show
-
-let main = Unit
+let id (x : Nat -> Nat) = x

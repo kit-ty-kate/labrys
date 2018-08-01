@@ -1,13 +1,11 @@
 Normal compilation
 
-  $ $CERVOISE build-program Multi
-  Compiling Multi
-  Linking Multi
   $ $CERVOISE build-program Nat
   Compiling Nat
   Linking Nat
   $ $CERVOISE build-program TestImports
   Compiling TestImports
+  Compiling Multi
   Compiling Test.Lol
   Compiling Test.Multi
   Linking TestImports
@@ -43,8 +41,6 @@ Normal compilation
   $ $CERVOISE build-program MultiTypes
   Compiling MultiTypes
   Linking MultiTypes
-  $ $CERVOISE build-program Multi
-  Linking Multi
   $ $CERVOISE build-program Print
   Compiling Print
   Linking Print
@@ -69,15 +65,6 @@ Normal compilation
   $ $CERVOISE build-program Variants
   Compiling Variants
   Linking Variants
-  $ $CERVOISE build-program TyClass
-  Compiling TyClass
-  Linking TyClass
-  $ $CERVOISE build-program Presentation
-  Compiling Presentation
-  Linking Presentation
-  $ $CERVOISE build-program ExOne
-  Compiling ExOne
-  Linking ExOne
   $ $CERVOISE build-program ExnVar
   Compiling ExnVar
   Linking ExnVar
@@ -87,8 +74,6 @@ Normal compilation
 
 Test compiling printed LLVM-IR code
 
-  $ $CERVOISE print-early-llvm Multi | llc-$LLVM_VERSION - -o /dev/null
-  Linking Multi
   $ $CERVOISE print-early-llvm Nat | llc-$LLVM_VERSION - -o /dev/null
   Linking Nat
   $ $CERVOISE print-early-llvm TestImports | llc-$LLVM_VERSION - -o /dev/null
@@ -115,8 +100,6 @@ Test compiling printed LLVM-IR code
   Linking LetRecIn
   $ $CERVOISE print-early-llvm MultiTypes | llc-$LLVM_VERSION - -o /dev/null
   Linking MultiTypes
-  $ $CERVOISE print-early-llvm Multi | llc-$LLVM_VERSION - -o /dev/null
-  Linking Multi
   $ $CERVOISE print-early-llvm Print | llc-$LLVM_VERSION - -o /dev/null
   Linking Print
   $ $CERVOISE print-early-llvm Rec | llc-$LLVM_VERSION - -o /dev/null
@@ -133,12 +116,6 @@ Test compiling printed LLVM-IR code
   Linking UselessEnv
   $ $CERVOISE print-early-llvm Variants | llc-$LLVM_VERSION - -o /dev/null
   Linking Variants
-  $ $CERVOISE print-early-llvm TyClass | llc-$LLVM_VERSION - -o /dev/null
-  Linking TyClass
-  $ $CERVOISE print-early-llvm Presentation | llc-$LLVM_VERSION - -o /dev/null
-  Linking Presentation
-  $ $CERVOISE print-early-llvm ExOne | llc-$LLVM_VERSION - -o /dev/null
-  Linking ExOne
   $ $CERVOISE print-early-llvm ExnVar | llc-$LLVM_VERSION - -o /dev/null
   Linking ExnVar
   $ $CERVOISE print-early-llvm Lol | llc-$LLVM_VERSION - -o /dev/null

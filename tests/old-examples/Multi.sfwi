@@ -3,7 +3,3 @@ type Nat =
   | S Nat
 
 let id : (Nat -[]-> Nat) -> Nat -> Nat
-
-class Show a =
-  let show : a -[]-> Unit
-end
