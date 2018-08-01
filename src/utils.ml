@@ -112,4 +112,6 @@ module PPrint = struct
   let (^^^) = check_empty (fun x y -> x ^^ space ^^ y)
   let (^/^) = check_empty (^/^)
   let (^//^) = check_empty (^//^)
+
+  let parens x = group (parens x)
 end

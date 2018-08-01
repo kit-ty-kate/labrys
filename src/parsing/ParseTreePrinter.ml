@@ -13,7 +13,7 @@ let rec dump_kind = function
   | KStar -> str "*"
   | KEff -> str "φ"
   | KExn -> str "^"
-  | KFun (x, y) -> dump_kind x ^^^ str "->" ^/^ dump_kind y
+  | KFun (x, y) -> parens (dump_kind x ^^^ str "->" ^/^ dump_kind y)
 
 let dump_kind_opt = function
   | Some k -> dump_kind k

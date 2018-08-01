@@ -10,11 +10,7 @@ let dump_var_name name = str (Ident.Constr.to_string name)
 let dump_tyclass_name name = str (Ident.TyClass.to_string name)
 let dump_inst_name name = str (Ident.Instance.to_string name)
 
-let rec dump_kind = function
-  | KStar -> str "*"
-  | KEff -> str "φ"
-  | KExn -> str "^"
-  | KFun (x, y) -> dump_kind x ^^^ str "->" ^/^ dump_kind y
+let dump_kind = ParseTreePrinter.dump_kind
 
 let dump_forall_arg (name, k) =
   parens (dump_ty_name name ^^^ colon ^^^ dump_kind k)
