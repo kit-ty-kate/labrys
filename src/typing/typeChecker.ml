@@ -145,7 +145,7 @@ let fold_ty_list ~loc f x ~has ~expected =
         (List.length has)
         (List.length expected)
 
-let pattern_to_matrix env =
+let pattern_to_matrix env base_ty =
   let rec aux ty = function
     | PretypedTree.TyConstr (loc, c, ps) ->
         p_constr ~loc env ty c ps
@@ -163,26 +163,25 @@ let pattern_to_matrix env =
     let constrs = get_constrs ~loc env (NType.to_type ty) in
     match List.find_all (fun (c', _, _) -> Ident.Constr.equal c c') constrs with
     | [] ->
-        let (_, ty) = NType.funs ty in
         Err.fail_doc
           ~loc
           Utils.PPrint.(squotes (str (Ident.Constr.to_string c)) ^^^
                         str "is not a constructor of" ^^^
-                        squotes (NType.dump ty) ^^
+                        squotes (NType.dump base_ty) ^^
                         dot)
     | [(_, _, ty')] ->
-        let (expected, _) = NType.funs ty' in
+        let (expected, _) = NType.match_ty ~base_ty ty' in
         let fold = fold_ty_list ~loc in
         let (args, tys) = fold fold_arg ([], []) ~has:ps ~expected in
         ((ty, Pattern.Constr (loc, c, args)), tys)
     | _::_::_ ->
         assert false (* NOTE: This is forbidden by Env.map_variants *)
-  and fold_arg (args, tys) p (ty, _) =
+  and fold_arg (args, tys) p ty =
     let (p, tys1) = aux ty p in
     (args @ [p], tys @ tys1)
   in
-  fun ty (p, a) ->
-    let (p, l) = aux ty p in
+  fun (p, a) ->
+    let (p, l) = aux base_ty p in
     (([p], a), l)
 
 let patterns_to_matrix env ty patterns =
@@ -243,7 +242,7 @@ and check_cases ~loc ~has_default env cases = function
 let rec check_try_branch options env ((name, args), t) =
   match EnvMap.Constr.find name env.TypedEnv.constrs with
   | TypedEnv.Exn, ty' ->
-      let (args', _) = NType.funs ty' in
+      let (args', _) = NType.monomorphic_split ty' in
       let aux env name (ty, _) = Env.add_value name ty env in
       let env =
         let loc = Ident.Constr.loc name in
@@ -457,7 +456,7 @@ let check_top ~current_module options (acc, has_main, env) = function
   | PretypedTree.Foreign (cname, name, ty) ->
       let ty = NType.check ~pure_arrow:`Partial env ty in
       let rty =
-        check_foreign_type ~loc:(Ident.Name.loc name) options env (NType.funs ty)
+        check_foreign_type ~loc:(Ident.Name.loc name) options env (NType.monomorphic_split ty)
       in
       let acc = acc @ [Foreign (cname, name, rty)] in
       let env = Env.add_value name ty env in

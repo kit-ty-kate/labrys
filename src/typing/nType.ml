@@ -105,10 +105,46 @@ let rec size = function
 let replace a ~by t =
   normalize (Type.replace a ~by (to_type t))
 
-let rec funs = function
-  | NTy _ | NSum _ | NApp _ as t -> ([], t)
-  | NForall (_, _, t) -> funs t
-  | NFun (t1, e, t2) -> let (l, t) = funs t2 in ((t1, e) :: l, t)
+let multi_replace assoc_tbl t =
+  let aux t (a, by) = replace a ~by t in
+  List.fold_left aux t assoc_tbl
+
+let rec match_base_ty ~base_ty t = match base_ty, t with
+  | a, NTy b ->
+      [(b, to_type a)]
+  | NApp (nty1, ty1), NApp (nty2, ty2) ->
+      match_base_ty ~base_ty:nty1 nty2 @
+      begin match ty1, ty2 with
+      | a, Ty b -> [(b, a)]
+      | _, (Eff _ | Sum _ | Fun _ | Forall _ | Abs _ | App _) -> assert false
+      end
+  | NTy _, _ | NSum _, _ | NApp _, _ | NForall _, _ | NFun _, _ ->
+      assert false
+
+let rec match_ty ~base_ty = function
+  | NTy _ | NSum _ | NApp _ as t ->
+      (match_base_ty ~base_ty t, [], base_ty)
+  | NForall (a, _, t) ->
+      let (assoc_tbl, l, t) = match_ty ~base_ty t in
+      let assoc_tbl = List.Assoc.remove ~eq:Ident.Type.equal a assoc_tbl in
+      (assoc_tbl, l, t)
+  | NFun (t1, _, t2) ->
+      let (assoc_tbl, l, t) = match_ty ~base_ty t2 in
+      let t1 = multi_replace assoc_tbl t1 in
+      (assoc_tbl, t1::l, t)
+
+let match_ty ~base_ty t =
+  let (_, args, t) = match_ty ~base_ty t in
+  (args, t)
+
+let rec monomorphic_split = function
+  | NTy _ | NSum _ | NApp _ as t ->
+      ([], t)
+  | NForall (a, _, _) ->
+      Err.fail ~loc:(Ident.Type.loc a) "Type abstractions are forbidden here"
+  | NFun (t1, e, t2) ->
+      let (l, t) = monomorphic_split t2 in
+      ((t1, e)::l, t)
 
 open Utils.PPrint
 
