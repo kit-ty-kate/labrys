@@ -69,6 +69,16 @@ let rec get_head_constrs = function
   | ([], _)::_ -> assert false (* NOTE: Cannot happen *)
   | ((p::_), _)::m -> extract_constr p @ get_head_constrs m
 
+let get_head_constrs m =
+  let constrs = get_head_constrs m in
+  let rm_duplicates constrs ((_, c, _, _) as x) =
+    if List.exists (fun (_, c', _, _) -> Ident.Constr.equal c c') constrs then
+      constrs
+    else
+      constrs @ [x]
+  in
+  List.fold_left rm_duplicates [] constrs
+
 let destruct_ors =
   let rec aux acc a = function
     | [] -> [(acc, a)]
