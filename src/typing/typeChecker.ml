@@ -290,7 +290,7 @@ and check_results options env vars results =
 (* TODO: Use Set instead of list to encode the effects *)
 and check_term options env = function
   | (_, PretypedTree.Abs ((name, ty), t)) ->
-      let ty = NType.check ~pure_arrow:`Forbid env ty in
+      let ty = NType.check ~pure_arrow:`Allow env ty in
       let env = Env.add_value name ty env in
       let (t, ty', eff) = check_term options env t in
       (Abs (name, t), TypedEnv.NFun (ty, eff, ty'), [])
@@ -309,7 +309,7 @@ and check_term options env = function
       (App (t1, t2), ty, eff1 @ eff2 @ eff3)
   | (loc, PretypedTree.TApp (t, ty)) ->
       let (t, ty', eff) = check_term options env t in
-      let ty = Type.check ~pure_arrow:`Forbid env ty in
+      let ty = Type.check ~pure_arrow:`Allow env ty in
       let ty = tapp ~loc ty ty' in
       (t, ty, eff)
   | (_, PretypedTree.CApp _) ->
@@ -337,7 +337,7 @@ and check_term options env = function
       let (t2, ty2, eff2) = check_term options env t2 in
       (Let (name, t1, t2), ty2, eff1 @ eff2)
   | (loc, PretypedTree.LetRec (name, ty, t1, t2)) ->
-      let ty = NType.check ~pure_arrow:`Partial env ty in
+      let ty = NType.check ~pure_arrow:`Allow env ty in
       let env = Env.add_value name ty env in
       let (t1, ty1, eff1) = check_term options env t1 in
       (* NOTE: ty is already checked by Annot (see Pretyper) *)
@@ -454,7 +454,7 @@ let check_top ~current_module options (acc, has_main, env) = function
       let env = Env.add_type_alias name ty env in
       (acc, has_main, env)
   | PretypedTree.Foreign (cname, name, ty) ->
-      let ty = NType.check ~pure_arrow:`Partial env ty in
+      let ty = NType.check ~pure_arrow:`Allow env ty in
       let rty =
         check_foreign_type ~loc:(Ident.Name.loc name) options env (NType.monomorphic_split ty)
       in
