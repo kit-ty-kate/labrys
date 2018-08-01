@@ -13,6 +13,9 @@ Normal compilation
   $ $CERVOISE build-program NativeFact
   Compiling NativeFact
   Linking NativeFact
+  $ $CERVOISE build-program PolyFact
+  Compiling PolyFact
+  Linking PolyFact
 
 Test compiling printed LLVM-IR code
 
@@ -24,6 +27,8 @@ Test compiling printed LLVM-IR code
   Linking TailFact
   $ $CERVOISE print-early-llvm NativeFact | llc-$LLVM_VERSION - -o /dev/null
   Linking NativeFact
+  $ $CERVOISE print-early-llvm PolyFact | llc-$LLVM_VERSION - -o /dev/null
+  Linking PolyFact
 
 Test behaviours
 
@@ -70,3 +75,16 @@ Test behaviours
   362880
   3628800
   39916800
+  $ $CERVOISE build-program PolyFact
+  Linking PolyFact
+  $ ./a.out
+  1
+  1
+  2
+  6
+  24
+  120
+  720
+  5040
+  40320
+  362880
