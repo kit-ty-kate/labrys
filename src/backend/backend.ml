@@ -116,7 +116,6 @@ module Make (I : I) = struct
   type env =
     | Value of Llvm.llvalue
     | Env of int
-    | RecFun
     | Global of Llvm.llvalue
 
   let m = Llvm.create_module c (Module.to_string I.name)
@@ -180,12 +179,6 @@ module Make (I : I) = struct
           let values = value :: values in
           let env = LIdent.Map.add name (Env i) env in
           (succ i, values, env)
-      | RecFun ->
-          let value = Llvm.current_param builder 1 in
-          let value = Llvm.build_bitcast value Type.star "" builder in
-          let values = value :: values in
-          let env = LIdent.Map.add name (Env i) env in
-          (succ i, values, env)
       | Global value ->
           let env = LIdent.Map.add name (Global value) env in
           (i, values, env)
@@ -193,16 +186,10 @@ module Make (I : I) = struct
     let (_, b, c) = LIdent.Map.fold aux env (1, [], LIdent.Map.empty) in
     (List.rev b, c)
 
-  let create_closure ~isrec ~free_vars env builder =
+  let create_closure ~free_vars env builder =
     let env = LIdent.Map.filter (fun x _ -> Set.mem free_vars x) env in
     let (values, env) = fold_rt_env env builder in
     let rt_env_size = List.length values in
-    let env = match isrec with
-      | Some rec_name when Set.mem free_vars rec_name ->
-          LIdent.Map.add rec_name RecFun env
-      | Some _ | None ->
-          env
-    in
     let rt_env_size = succ rt_env_size in
     let (f, builder') = Llvm.define_function `Private c "__lambda" (Type.lambda ~rt_env_size) m in
     Llvm.set_linkage Llvm.Linkage.Private f;
@@ -245,10 +232,6 @@ module Make (I : I) = struct
     | Some (Env i) ->
         let rt_env = load_rt_env builder in
         Llvm.build_extractvalue rt_env i "" builder
-    | Some RecFun ->
-        let value = Llvm.current_param builder 1 in
-        let value = Llvm.build_bitcast value Type.star "" builder in
-        value
     | Some (Global value) ->
         Llvm.build_load value "" builder
     | None ->
@@ -345,29 +328,37 @@ module Make (I : I) = struct
         let value = Llvm.build_bitcast value Type.star "" builder in
         (value, builder)
 
-  let rec create_results ~jmp_buf ~next_block vars env builder =
+  let rec create_results ~last_bind ~jmp_buf ~next_block vars env builder =
     let aux (env, results) result =
       let (block, builder') = Llvm.create_block c builder in
       let env = load_vars builder' env vars in
-      let (v, builder'') = lambda ~jmp_buf env builder' result in
+      let (v, builder'') = lambda ~last_bind ~jmp_buf env builder' result in
       Llvm.build_br next_block builder'';
       (env, results @ [(block, (v, Llvm.insertion_block builder''))])
     in
     List.fold_left aux (env, [])
 
-  and abs ~name t env builder =
+  and abs ~last_bind ~name t env builder =
     let param = Llvm.current_param builder 0 in
     let jmp_buf = Llvm.current_param builder 2 in
+    let env = match last_bind with
+      | (name, _) when LIdent.Map.mem name env -> env
+      | (name, Some v) -> LIdent.Map.add name (Global v) env
+      | (name, None) ->
+          let rec_value = Llvm.current_param builder 1 in
+          let rec_value = Llvm.build_bitcast rec_value Type.star "" builder in
+          LIdent.Map.add name (Value rec_value) env
+    in
     let env = LIdent.Map.add name (Value param) env in
-    let (v, builder) = lambda ~jmp_buf env builder t in
+    let (v, builder) = lambda ~last_bind ~jmp_buf env builder t in
     Llvm.build_ret v builder
 
-  and lambda' ~isrec ~jmp_buf env builder = function
+  and lambda' ~last_bind ~jmp_buf env builder = function
     | OptimizedTree.Abs (name, free_vars, t) ->
         let (builder', closure, env) =
-          create_closure ~isrec ~free_vars env builder
+          create_closure ~free_vars env builder
         in
-        abs ~name t env builder';
+        abs ~last_bind ~name t env builder';
         (closure, builder)
     | OptimizedTree.App (f, x) ->
         let closure = get_value env builder f in
@@ -381,7 +372,7 @@ module Make (I : I) = struct
         let t = get_value env builder t in
         let (next_block, next_builder) = Llvm.create_block c builder in
         let vars = alloc_vars builder vars in
-        let (env, results) = create_results ~next_block ~jmp_buf vars env builder results in
+        let (env, results) = create_results ~last_bind ~next_block ~jmp_buf vars env builder results in
         create_tree vars env builder [t] results tree;
         let results = List.map snd results in
         (Llvm.build_phi results "" next_builder, next_builder)
@@ -412,7 +403,8 @@ module Make (I : I) = struct
         let args = map_args env builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret
     | OptimizedTree.Rec (name, t) ->
-        lambda' ~isrec:(Some name) ~jmp_buf env builder t
+        let last_bind = (name, None) in
+        lambda' ~last_bind ~jmp_buf env builder t
     | OptimizedTree.Fail name ->
         let v = get_value env builder name in
         Llvm.build_store v exn_var builder;
@@ -425,7 +417,7 @@ module Make (I : I) = struct
         let cond = Llvm.build_icmp Llvm.Icmp.Eq jmp_res (i32 0) "" builder in
         let (try_result, try_block) =
           let (block, builder) = Llvm.create_block c builder in
-          let (t, builder') = lambda ~jmp_buf:jmp_buf' env builder t in
+          let (t, builder') = lambda ~last_bind ~jmp_buf:jmp_buf' env builder t in
           Llvm.build_br next_block builder';
           ((t, Llvm.insertion_block builder'), block)
         in
@@ -434,7 +426,7 @@ module Make (I : I) = struct
           let exn = Llvm.build_load exn_var "" builder in
           Llvm.build_store (Llvm.undef Type.exn_glob) exn_var builder;
           let env = LIdent.Map.add name (Value exn) env in
-          let (t', builder') = lambda ~jmp_buf env builder t' in
+          let (t', builder') = lambda ~last_bind ~jmp_buf env builder t' in
           Llvm.build_br next_block builder';
           ((t', Llvm.insertion_block builder'), block)
         in
@@ -452,17 +444,17 @@ module Make (I : I) = struct
         unreachable builder;
         (undef, snd (Llvm.create_block c builder))
 
-  and lambda ?isrec ~jmp_buf env builder (lets, t) =
+  and lambda ~last_bind ~jmp_buf env builder (lets, t) =
     let rec aux env builder = function
       | (name, x)::xs ->
-          let (t, builder) = lambda' ~isrec ~jmp_buf env builder x in
+          let (t, builder) = lambda' ~last_bind ~jmp_buf env builder x in
           let env = LIdent.Map.add name (Value t) env in
           aux env builder xs
       | [] ->
           (env, builder)
     in
     let (env, builder) = aux env builder lets in
-    lambda' ~isrec ~jmp_buf env builder t
+    lambda' ~last_bind ~jmp_buf env builder t
 
   let set_linkage v = function
     | OptimizedTree.Private -> Llvm.set_linkage Llvm.Linkage.Private v
@@ -473,7 +465,8 @@ module Make (I : I) = struct
     let name' = "." ^ name in
     let v = Llvm.define_constant name' value m in
     let v = Llvm.define_constant name (Llvm.const_bitcast v Type.star) m in
-    set_linkage v linkage
+    set_linkage v linkage;
+    v
 
   let init_imports ~jmp_buf imports builder =
     let aux import =
@@ -488,7 +481,8 @@ module Make (I : I) = struct
           let name' = LIdent.to_string name in
           let global = Llvm.define_global name' null m in
           set_linkage global linkage;
-          let (value, builder) = lambda ~jmp_buf env builder t in
+          let last_bind = (name, Some global) in
+          let (value, builder) = lambda ~last_bind ~jmp_buf env builder t in
           Llvm.build_store value global builder;
           builder
       | OptimizedTree.Exception name ->
@@ -499,8 +493,9 @@ module Make (I : I) = struct
           builder
       | OptimizedTree.Function (name, (name', t), linkage) ->
           let (f, builder') = Llvm.define_function `Private c (".." ^ LIdent.to_string name) (Type.lambda ~rt_env_size:0) m in
-          define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]);
-          abs ~name:name' t env builder';
+          let f = define_global ~name ~linkage (Llvm.const_array Type.star [|Llvm.const_bitcast f Type.star|]) in
+          let last_bind = (name, Some f) in
+          abs ~last_bind ~name:name' t env builder';
           builder
     in
     let (f, builder) =
