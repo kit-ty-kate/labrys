@@ -1,8 +1,9 @@
 cat << EOF > Dockerfile
 FROM ocaml/opam2:debian-unstable
-ADD .
+ADD . /home/opam/cervoise
+WORKDIR /home/opam/cervoise
 RUN opam switch $OCAML_VERSION
-RUN eval $(opam env)
+RUN eval \$(opam env)
 
 # Install Ubuntu packages
 RUN echo "deb http://llvm.org/apt/unstable/ llvm-toolchain-$LLVM_VERSION main" | sudo tee -a /etc/apt/sources.list
