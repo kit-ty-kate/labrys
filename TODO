@@ -1,6 +1,5 @@
 == 0.1 ==
 
-* Fix all tests
 * Temporary remove type-classes
 * Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
 
