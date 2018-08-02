@@ -48,11 +48,9 @@ let dump_args_ty args =
 let dump_foreign_ty args ret =
   dump_args_ty args ^^^ str "->" ^^^ dump_tag_ty ret
 
-let rec dump_rec_let (name, t) =
-  str "let" ^^^ str "rec" ^^^ dump_name name ^^^ equals ^//^ dump_t t
-
-and dump_let (name, t) =
-  str "let" ^^^ dump_name name ^^^ equals ^//^ dump_t t
+let rec dump_let (name, is_rec, t) =
+  let r = if is_rec then space ^^ str "rec" else empty in
+  str "let" ^^ r ^^^ dump_name name ^^^ equals ^//^ dump_t t
 
 and dump_branch t =
   bar ^^^ dump_t t
@@ -74,10 +72,8 @@ and dump_t = function
       separate_map hardline dump_branch branches ^/^
       str "from" ^^^ dump_tree tree ^/^
       str "end"
-  | Let (name, x, xs) ->
-      parens (group (dump_let (name, x) ^/^ str "in") ^/^ dump_t xs)
-  | LetRec (name, x, xs) ->
-      parens (group (dump_rec_let (name, x) ^/^ str "in") ^/^ dump_t xs)
+  | Let (name, is_rec, x, xs) ->
+      parens (group (dump_let (name, is_rec, x) ^/^ str "in") ^/^ dump_t xs)
   | Fail t ->
       parens (str "fail" ^^^ dump_name t)
   | Try (t, (name, t')) ->
@@ -104,7 +100,7 @@ let dump_linkage = function
 
 let dump_top = function
   | Value (name, t, linkage) ->
-      dump_linkage linkage ^^^ dump_let (name, t)
+      dump_linkage linkage ^^^ dump_let (name, false, t)
   | Exception name ->
       str "exception" ^^^ dump_name name
 

@@ -68,7 +68,7 @@ let of_pat_vars env vars =
 let rec get_lets env t = function
   | (name, x)::xs ->
       let (name, env) = env_add name env in
-      Let (name, x, get_lets env t xs)
+      Let (name, false, x, get_lets env t xs)
   | [] ->
       of_typed_term env t
 
@@ -104,7 +104,7 @@ and of_args env f args =
   in
   let rec aux names = function
     | [] -> f (List.rev names)
-    | (name, t)::args -> Let (name, t, aux (name :: names) args)
+    | (name, t)::args -> Let (name, false, t, aux (name :: names) args)
   in
   aux [] args
 
@@ -118,7 +118,7 @@ and of_typed_term env = function
       let x = of_typed_term env x in
       let name_x = create_fresh_name () in
       let name_f = create_fresh_name () in
-      Let (name_x, x, Let (name_f, f, App (name_f, name_x)))
+      Let (name_x, false, x, Let (name_f, false, f, App (name_f, name_x)))
   | UntypedTree.Val name ->
       Val (get_name name env)
   | UntypedTree.Var (rep, len) ->
@@ -135,7 +135,7 @@ and of_typed_term env = function
       let results = results @ [Unreachable] in
       let pattern = of_pattern ~unreachable env pattern in
       let pat = PatternMatching (name, vars, results, pattern) in
-      Let (name, t, pat)
+      Let (name, false, t, pat)
   | UntypedTree.Try (t, branches) ->
       let t = of_typed_term env t in
       let name = create_fresh_name () in
@@ -145,19 +145,19 @@ and of_typed_term env = function
       let t = of_typed_term env t in
       let (name, env) = env_add name env in
       let xs = of_typed_term env xs in
-      Let (name, t, xs)
+      Let (name, false, t, xs)
   | UntypedTree.LetRec (name, t, xs) ->
       let (name, env) = env_add name env in
       let t = of_typed_term env t in
       let xs = of_typed_term env xs in
-      LetRec (name, t, xs)
+      Let (name, true, t, xs)
   | UntypedTree.Fail t ->
       let name = create_fresh_name () in
-      Let (name, of_typed_term env t, Fail name)
+      Let (name, false, of_typed_term env t, Fail name)
   | UntypedTree.RecordGet (t, n) ->
       let name = create_fresh_name () in
       let t = of_typed_term env t in
-      Let (name, t, RecordGet (name, n))
+      Let (name, false, t, RecordGet (name, n))
   | UntypedTree.RecordCreate fields ->
       of_args env (fun names -> (Datatype (None, names))) fields
   | UntypedTree.Const const ->

@@ -82,14 +82,10 @@ let rec of_term = function
   | LambdaTree.PatternMatching (name, vars, branches, tree) ->
       let branches = List.map of_term branches in
       ([], PatternMatching (name, vars, branches, tree))
-  | LambdaTree.Let (name, x, t) ->
+  | LambdaTree.Let (name, is_rec, x, t) ->
       let (lets_x, x) = of_term x in
       let (lets_t, t) = of_term t in
-      (lets_x @ [(name, false, x)] @ lets_t, t)
-  | LambdaTree.LetRec (name, x, t) ->
-      let (lets_x, x) = of_term x in
-      let (lets_t, t) = of_term t in
-      (lets_x @ [(name, true, x)] @ lets_t, t)
+      (lets_x @ [(name, is_rec, x)] @ lets_t, t)
   | LambdaTree.Fail name ->
       ([], Fail name)
   | LambdaTree.Try (t, (name, t')) ->

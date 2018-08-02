@@ -6,6 +6,7 @@ type index = int
 type constr = int
 type length = int
 type branch = int
+type is_rec = bool
 
 type ('int, 'float, 'char, 'string) ty =
   ('int, 'float, 'char, 'string) UntypedTree.ty
@@ -29,8 +30,7 @@ type t =
   | Datatype of (constr_rep option * name list)
   | CallForeign of (string * ret_ty * (tag_ty * name) list)
   | PatternMatching of (name * name list * t list * tree)
-  | Let of (name * t * t)
-  | LetRec of (name * t * t)
+  | Let of (name * is_rec * t * t)
   | Fail of name
   | Try of (t * (name * t))
   | RecordGet of (name * index)
