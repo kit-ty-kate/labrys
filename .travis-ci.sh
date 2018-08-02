@@ -22,5 +22,6 @@ RUN opam install -y opam-depext
 RUN opam depext -y cervoise
 RUN opam install -yt --deps-only cervoise
 RUN opam install -yvt cervoise
+RUN make tests
 EOF
 docker build .
