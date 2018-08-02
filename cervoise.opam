@@ -34,4 +34,4 @@ tags: [
   "type-system"
   "language"
 ]
-available: [ocaml-version >= "4.02.0"]
+available: [ocaml-version >= "4.04"]
