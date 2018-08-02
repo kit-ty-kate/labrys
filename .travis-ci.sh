@@ -9,7 +9,7 @@ sudo apt-get update -qq
 sudo apt-get install -qq cmake "llvm-$LLVM_VERSION" libgc-dev
 
 # Check OPAM package description
-opam lint
+opam lint *.opam
 
 # Install
 PKG=cervoise
