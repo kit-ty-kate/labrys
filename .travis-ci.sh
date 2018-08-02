@@ -14,7 +14,7 @@ opam lint *.opam
 # Install
 PKG=cervoise
 opam pin add -y --no-action --kind=git $PKG .
-opam install -y "llvm.${LLVM_VERSION}${LLVM_VERSION_MICRO}"
+opam pin add -y --no-action "llvm.${LLVM_VERSION}${LLVM_VERSION_MICRO}"
 opam install -y -t $PKG
 
 # Run tests
