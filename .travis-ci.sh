@@ -12,7 +12,7 @@ RUN sudo apt-get update -qq
 RUN sudo apt-get install -qq cmake "llvm-$LLVM_VERSION" libgc-dev
 
 # Check OPAM package description
-RUN opam lint *.opam
+RUN opam lint --warn=-48-21-32 *.opam
 
 # Install & tests
 RUN opam pin add -y --no-action --kind=git cervoise .
