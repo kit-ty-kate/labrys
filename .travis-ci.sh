@@ -17,6 +17,6 @@ RUN opam lint --warn=-48-21-32 *.opam
 # Install & tests
 RUN opam pin add -y --no-action --kind=git cervoise .
 RUN opam pin add -y --no-action --kind=version llvm "${LLVM_VERSION}${LLVM_VERSION_MICRO}"
-RUN opam install -y -t cervoise
+RUN OPAMBUILDTEST=1 opam depext -yi cervoise
 EOF
 docker build .
