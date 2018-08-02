@@ -1,6 +1,10 @@
 (alias
   (name runtest)
-  (deps (:test basic.t) (glob_files *.sfw) (glob_files *.sfwi))
+  (deps
+    (:test basic.t)
+    (glob_files *.sfw)
+    (glob_files *.sfwi)
+    %{project_root}/stdlib/Prelude.bc)
   (action
     (progn
       (setenv CERVOISE %{exe:../../src/main.exe}
