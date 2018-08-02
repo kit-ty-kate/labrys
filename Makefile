@@ -1,6 +1,6 @@
 DOC = doc
 
-LLVM_VERSION ?= 3.8
+LLVM_VERSION ?= $(shell opam var llvm:version | sed -E 's/(.\..)\..$$/\1/')
 
 DOCS = \
     $(DOC)/semantics.pdf \
@@ -31,7 +31,7 @@ clean-docs:
 	@$(RM) $(DOCS)
 
 tests:
-	LLVM_VERSION="$(LLVM_VERSION)" dune runtest $(TESTS)
+	LLVM_VERSION=$(LLVM_VERSION) dune runtest -f
 
 check:
 	dead_code_analyzer.opt --all -S -bind-seq --exclude _build/src/parsing/parser.ml _build/src
