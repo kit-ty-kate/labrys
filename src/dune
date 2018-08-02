@@ -47,10 +47,3 @@
   (targets config.ml)
   (deps ../config.ml)
   (action (with-stdout-to %{targets} (run ocaml %{deps} %{version:cervoise}))))
-
-(install
-  (section lib)
-  (files
-     ../stdlib/Prelude.sfwi
-     ../stdlib/Prelude.bc
-     ../stdlib/Prelude.csfw))

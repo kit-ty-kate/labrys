@@ -1,0 +1,9 @@
+(rule
+  (targets Prelude.bc Prelude.csfw)
+  (deps Prelude.sfw Prelude.sfwi)
+  (mode promote)
+  (action (run cervoise build-module --no-prelude --build-dir . Prelude)))
+
+(install
+  (section lib)
+  (files Prelude.sfwi Prelude.bc Prelude.csfw))

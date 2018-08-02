@@ -16,7 +16,6 @@ RUN opam lint --warn=-48-21-32 *.opam
 
 # Install & tests
 RUN opam repository set-url default https://opam.ocaml.org/2.0
-RUN opam update
 RUN opam pin add -y --no-action --kind=git cervoise .
 RUN opam pin add -y --no-action --kind=version llvm "${LLVM_VERSION}${LLVM_VERSION_MICRO}"
 RUN opam install -y opam-depext

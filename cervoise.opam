@@ -7,11 +7,7 @@ authors: "Kate <kit.ty.kate@disroot.org>"
 homepage: "https://github.com/kit-ty-kate/cervoise"
 dev-repo: "https://github.com/kit-ty-kate/cervoise.git"
 bug-reports: "https://github.com/kit-ty-kate/cervoise/issues"
-build: [
-  ["dune" "build" "-p" name "-j" jobs]
-  ["dune" "exec" "--"
-   "cervoise" "build-module" "--no-prelude" "--build-dir" "." "--src-dir" "stdlib" "Prelude"]
-]
+build: ["dune" "build" "-p" name "-j" jobs]
 build-test: ["dune" "runtest" "-p" name "-j" jobs]
 depends: [
   "dune" {build}
