@@ -1,25 +1,21 @@
-# Init OPAM
-source .travis-opam-init.sh
+cat << EOF > Dockerfile
+FROM ocaml/opam2:debian-unstable
+ADD .
+RUN opam switch $OCAML_VERSION
+RUN eval $(opam env)
 
 # Install Ubuntu packages
-sudo add-apt-repository --yes ppa:likemartinma/devel # cmake
-sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-$LLVM_VERSION main"
-wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
-sudo apt-get update -qq
-sudo apt-get install -qq cmake "llvm-$LLVM_VERSION" libgc-dev
+RUN echo "deb http://llvm.org/apt/unstable/ llvm-toolchain-$LLVM_VERSION main" | sudo tee -a /etc/apt/sources.list
+RUN curl -L http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+RUN sudo apt-get update -qq
+RUN sudo apt-get install -qq cmake "llvm-$LLVM_VERSION" libgc-dev
 
 # Check OPAM package description
-opam lint *.opam
+RUN opam lint *.opam
 
-# Install
-PKG=cervoise
-opam pin add -y --no-action --kind=git $PKG .
-opam pin add -y --no-action --kind=version llvm "${LLVM_VERSION}${LLVM_VERSION_MICRO}"
-opam install -y -t $PKG
-
-# Run tests
-make
-make LLVM_VERSION="$LLVM_VERSION" tests
-
-# Uninstall
-opam remove -y $PKG
+# Install & tests
+RUN opam pin add -y --no-action --kind=git cervoise .
+RUN opam pin add -y --no-action --kind=version llvm "${LLVM_VERSION}${LLVM_VERSION_MICRO}"
+RUN opam install -y -t cervoise
+EOF
+docker build .

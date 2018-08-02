@@ -1,6 +1,7 @@
 language: c
 sudo: required
-dist: trusty
+services:
+  - docker
 script: bash -ex .travis-ci.sh
 env:
   matrix:
@@ -14,7 +15,3 @@ env:
     - OCAML_VERSION=4.05.0 LLVM_VERSION=6.0 LLVM_VERSION_MICRO=.0
     - OCAML_VERSION=4.06.1 LLVM_VERSION=6.0 LLVM_VERSION_MICRO=.0
     - OCAML_VERSION=4.07.0 LLVM_VERSION=6.0 LLVM_VERSION_MICRO=.0
-cache:
-  directories:
-    - $HOME/opam-cache
-    - $HOME/opam-bin
