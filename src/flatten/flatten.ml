@@ -16,14 +16,11 @@ let rec propagate' env = function
   | Abs (name, t) ->
       let t = propagate env t in
       ([], Abs (name, t))
-  | Rec (name, t) ->
-      let (lets, t) = propagate' env t in
-      (lets, Rec (name, t))
   | App (x, y) ->
       let x = rename env x in
       let y = rename env y in
       begin match LIdent.Map.find_opt x env with
-      | Some (Abstr (name, (lets, t))) -> propagate env ((name, Val y) :: lets, t)
+      | Some (Abstr (name, (lets, t))) -> propagate env ((name, false, Val y) :: lets, t)
       | Some (Name _) | None -> ([], App (x, y))
       end
   | Val name ->
@@ -53,15 +50,16 @@ let rec propagate' env = function
 
 and propagate env (lets, t) =
   let rec aux env = function
-    | (name, x)::xs ->
+    | (name, is_rec, x)::xs ->
         let (lets1, x) = propagate' env x in
         let env = match x with
           | Val x -> LIdent.Map.add name (Name x) env
+          | Abs _ when is_rec -> env
           | Abs x -> LIdent.Map.add name (Abstr x) env
           | _ -> env
         in
         let (env, lets2) = aux env xs in
-        (env, lets1 @ [(name, x)] @ lets2)
+        (env, lets1 @ [(name, is_rec, x)] @ lets2)
     | [] ->
         (env, [])
   in
@@ -87,11 +85,11 @@ let rec of_term = function
   | LambdaTree.Let (name, x, t) ->
       let (lets_x, x) = of_term x in
       let (lets_t, t) = of_term t in
-      (lets_x @ [(name, x)] @ lets_t, t)
+      (lets_x @ [(name, false, x)] @ lets_t, t)
   | LambdaTree.LetRec (name, x, t) ->
       let (lets_x, x) = of_term x in
       let (lets_t, t) = of_term t in
-      (lets_x @ [(name, Rec (name, x))] @ lets_t, t)
+      (lets_x @ [(name, true, x)] @ lets_t, t)
   | LambdaTree.Fail name ->
       ([], Fail name)
   | LambdaTree.Try (t, (name, t')) ->

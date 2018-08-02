@@ -57,8 +57,6 @@ let rec dump_branch t =
 and dump_t' = function
   | Abs (name, fv, t) ->
       parens (str "λ" ^^^ dump_name name ^^^ dump_fv fv ^^^ str "->" ^//^ dump_t t)
-  | Rec (name, t) ->
-      str "Rec" ^^^ parens (dump_name name ^^^ colon ^^^ dump_t' t)
   | App (f, x) ->
       parens (dump_name f ^//^ dump_name x)
   | Val name ->

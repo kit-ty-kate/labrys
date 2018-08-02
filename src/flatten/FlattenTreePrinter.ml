@@ -54,8 +54,6 @@ let rec dump_branch t =
 and dump_t' = function
   | Abs (name, t) ->
       parens (str "λ" ^^^ dump_name name ^^^ str "->" ^//^ dump_t t)
-  | Rec (name, t) ->
-      str "Rec" ^^^ parens (dump_name name ^^^ colon ^^^ dump_t' t)
   | App (f, x) ->
       parens (dump_name f ^//^ dump_name x)
   | Val name ->
@@ -90,7 +88,7 @@ and dump_t' = function
   | Unreachable ->
       str "Unreachable"
 
-and dump_binding (name, t) =
+and dump_binding (name, _, t) =
   dump_name name ^^^ equals ^//^ dump_t' t
 
 and dump_t (vars, t) =

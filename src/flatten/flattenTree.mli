@@ -24,7 +24,6 @@ type tree = LambdaTree.tree =
 
 type t' =
   | Abs of (name * t)
-  | Rec of (name * t') (* TODO: Remove this case (LIdent should be sufficiant) *)
   | App of (name * name)
   | Val of name
   | Datatype of (constr_rep option * name list)
@@ -36,7 +35,8 @@ type t' =
   | Const of const
   | Unreachable
 
-and t = ((name * t') list * t')
+and t = ((name * bool * t') list * t')
+(* NOTE: Please ignore the boolean outside of flatten.ml *)
 
 type linkage = LambdaTree.linkage = Public | Private
 

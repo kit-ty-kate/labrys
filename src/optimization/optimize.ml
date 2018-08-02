@@ -23,10 +23,6 @@ let rec of_term' = function
       let (branches, fv) = of_branches branches in
       let fv = List.fold_left Set.remove_all fv vars in
       (PatternMatching (name, vars, branches, tree), Set.add fv name)
-  | FlattenTree.Rec (name, t) ->
-      let (t, fv) = of_term' t in
-      let fv = Set.remove_all fv name in
-      (Rec (name, t), fv)
   | FlattenTree.Fail name ->
       (Fail name, Set.singleton name)
   | FlattenTree.Try (t, (name, t')) ->
@@ -43,14 +39,14 @@ let rec of_term' = function
 
 and of_term (lets, t) =
   let rec aux = function
-    | (name, x)::xs ->
+    | (name, _, x)::xs ->
         let (x, fv1) = of_term' x in
         let (lets, t, fv2) = aux xs in
         begin match x, Set.count fv2 name with
-        | (Abs _ | Rec _ | Val _ | Datatype _ | Const _), 0 ->
-            (lets, t, Set.remove_all fv2 name)
+        | (Abs _ | Val _ | Datatype _ | Const _), 0 ->
+            (lets, t, fv2)
         | _ ->
-            let fv = Set.union fv1 (Set.remove_all fv2 name) in
+            let fv = Set.remove_all (Set.union fv1 fv2) name in
             ((name, x) :: lets, t, fv)
         end
     | [] ->

@@ -402,9 +402,6 @@ module Make (I : I) = struct
         let f = Llvm.declare_function name ty m in
         let args = map_args env builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret
-    | OptimizedTree.Rec (name, t) ->
-        let last_bind = (name, None) in
-        lambda' ~last_bind ~jmp_buf env builder t
     | OptimizedTree.Fail name ->
         let v = get_value env builder name in
         Llvm.build_store v exn_var builder;
@@ -447,6 +444,7 @@ module Make (I : I) = struct
   and lambda ~last_bind ~jmp_buf env builder (lets, t) =
     let rec aux env builder = function
       | (name, x)::xs ->
+          let last_bind = (name, None) in
           let (t, builder) = lambda' ~last_bind ~jmp_buf env builder x in
           let env = LIdent.Map.add name (Value t) env in
           aux env builder xs

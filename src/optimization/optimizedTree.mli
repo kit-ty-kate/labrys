@@ -25,7 +25,6 @@ type tree = FlattenTree.tree =
 
 type t' =
   | Abs of (name * free_vars * t)
-  | Rec of (name * t')
   | App of (name * name)
   | Val of name
   | Datatype of (constr_rep option * name list)
