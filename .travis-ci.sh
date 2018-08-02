@@ -2,6 +2,7 @@ cat << EOF > Dockerfile
 FROM ocaml/opam2:debian-unstable
 ADD . /home/opam/cervoise
 WORKDIR /home/opam/cervoise
+RUN sudo chown -R opam:opam .
 RUN opam switch $OCAML_VERSION
 
 # Install Ubuntu packages
