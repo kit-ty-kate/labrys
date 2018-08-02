@@ -3,7 +3,6 @@ FROM ocaml/opam2:debian-unstable
 ADD . /home/opam/cervoise
 WORKDIR /home/opam/cervoise
 RUN opam switch $OCAML_VERSION
-RUN eval \$(opam env)
 
 # Install Ubuntu packages
 RUN echo "deb http://llvm.org/apt/unstable/ llvm-toolchain-$LLVM_VERSION main" | sudo tee -a /etc/apt/sources.list
@@ -22,6 +21,6 @@ RUN opam install -y opam-depext
 RUN opam depext -y cervoise
 RUN opam install -yt --deps-only cervoise
 RUN opam install -yvt cervoise
-RUN make tests
+RUN eval \$(opam env) && make tests
 EOF
 docker build .
