@@ -74,49 +74,49 @@ Normal compilation
 
 Test compiling printed LLVM-IR code
 
-  $ $CERVOISE print-early-llvm Nat | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Nat | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Nat
-  $ $CERVOISE print-early-llvm TestImports | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm TestImports | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking TestImports
-  $ $CERVOISE print-early-llvm YetAnotherBug | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm YetAnotherBug | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking YetAnotherBug
-  $ $CERVOISE print-early-llvm Bug | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Bug | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Bug
-  $ $CERVOISE print-early-llvm CombS | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm CombS | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking CombS
-  $ $CERVOISE print-early-llvm Exn | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Exn | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Compiling Exn
   Error in 'Exn.sfw' from line 9 column 4 to line 9 column 8:
       Effects are not allowed on toplevel
-  $ $CERVOISE print-early-llvm Fact | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Fact | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Fact
-  $ $CERVOISE print-early-llvm TailFact | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm TailFact | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking TailFact
-  $ $CERVOISE print-early-llvm NativeFact | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm NativeFact | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking NativeFact
-  $ $CERVOISE print-early-llvm GrosGrosBug | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm GrosGrosBug | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking GrosGrosBug
-  $ $CERVOISE print-early-llvm LetRecIn | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm LetRecIn | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking LetRecIn
-  $ $CERVOISE print-early-llvm MultiTypes | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm MultiTypes | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking MultiTypes
-  $ $CERVOISE print-early-llvm Print | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Print | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Print
-  $ $CERVOISE print-early-llvm Rec | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Rec | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Rec
-  $ $CERVOISE print-early-llvm Simple | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Simple | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Simple
-  $ $CERVOISE print-early-llvm SystemFOmega | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm SystemFOmega | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking SystemFOmega
-  $ $CERVOISE print-early-llvm SystemF | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm SystemF | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking SystemF
-  $ $CERVOISE print-early-llvm Test | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Test | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Test
-  $ $CERVOISE print-early-llvm UselessEnv | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm UselessEnv | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking UselessEnv
-  $ $CERVOISE print-early-llvm Variants | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Variants | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Variants
-  $ $CERVOISE print-early-llvm ExnVar | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm ExnVar | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking ExnVar
-  $ $CERVOISE print-early-llvm Lol | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Lol | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Lol

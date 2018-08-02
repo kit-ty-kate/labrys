@@ -30,13 +30,10 @@ docs: $(DOCS)
 clean-docs:
 	@$(RM) $(DOCS)
 
-stdlib:
-	dune exec -- cervoise build-module --no-prelude --build-dir . --src-dir stdlib Prelude
-
 tests:
 	LLVM_VERSION="$(LLVM_VERSION)" dune runtest $(TESTS)
 
 check:
 	dead_code_analyzer.opt --all -S -bind-seq --exclude _build/src/parsing/parser.ml _build/src
 
-.PHONY: all clean docs clean-docs stdlib tests check
+.PHONY: all clean docs clean-docs tests check

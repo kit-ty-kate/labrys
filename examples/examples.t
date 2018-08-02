@@ -19,15 +19,15 @@ Normal compilation
 
 Test compiling printed LLVM-IR code
 
-  $ $CERVOISE print-early-llvm Hello | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Hello | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Hello
-  $ $CERVOISE print-early-llvm Fact | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Fact | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Fact
-  $ $CERVOISE print-early-llvm TailFact | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm TailFact | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking TailFact
-  $ $CERVOISE print-early-llvm NativeFact | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm NativeFact | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking NativeFact
-  $ $CERVOISE print-early-llvm PolyFact | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm PolyFact | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking PolyFact
 
 Test behaviours

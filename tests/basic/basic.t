@@ -6,5 +6,5 @@ Normal compilation
 
 Test compiling printed LLVM-IR code
 
-  $ $CERVOISE print-early-llvm Basic | llc-$LLVM_VERSION - -o /dev/null
+  $ $CERVOISE print-early-llvm Basic | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
   Linking Basic
