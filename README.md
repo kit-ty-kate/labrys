@@ -4,6 +4,13 @@ The git repository is located at: https://github.com/kit-ty-kate/labrys
 
 [![Build Status](https://travis-ci.org/kit-ty-kate/labrys.png?branch=master)](https://travis-ci.org/kit-ty-kate/labrys)
 
+### Features
+
+* Effects
+* Checked exceptions (via effects)
+* LLVM backend
+* Higher-order polymorphism
+
 ### Runtime requirements
 
 * Boehm GC: `libgc-dev` on debian.
