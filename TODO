@@ -1,7 +1,6 @@
 == 0.1 ==
 
-* Temporary remove type-classes
-* Write down in HACKING, the syntactic sugars used in Cervoise and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
+* Write down in HACKING, the syntactic sugars used in Labrys and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
 
 
 == 0.2 ==
@@ -37,7 +36,7 @@
 * Have a real custom GC
 * Prove type soundness of Fcω (see tapl p.86 or software fundation)
   * See sf solutions to Stlc
-* Write the Cervoise complete semantics (pretyped-tree)
+* Write the Labrys complete semantics (pretyped-tree)
 * Create a new compilation phase: FirstOrderTree
   * Abs (name * {fv} * t) --> Value (fresh, Abs (name * {fv} * t))
   * Datatype [c1 .. cn] --> ConstAlloc [c1 .. cn]

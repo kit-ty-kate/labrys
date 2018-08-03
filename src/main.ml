@@ -1,4 +1,4 @@
-(* Copyright (c) 2013-2017 The Cervoise developers. *)
+(* Copyright (c) 2013-2017 The Labrys developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
 module Term = Cmdliner.Term
@@ -176,7 +176,7 @@ let print_llvm =
   (args, Term.info "print-llvm")
 
 let default_cmd =
-  (Term.pure Fun.id, Term.info ~version:Config.version "cervoise")
+  (Term.pure Fun.id, Term.info ~version:Config.version "labrys")
 
 let cmds =
   [ program

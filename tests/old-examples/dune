@@ -9,7 +9,7 @@
     %{project_root}/stdlib/Prelude.bc)
   (action
     (progn
-      (setenv CERVOISE %{exe:../../src/main.exe}
-        (setenv CERVOISE_LIBDIR %{project_root}/stdlib
+      (setenv LABRYS %{exe:../../src/main.exe}
+        (setenv LABRYS_LIBDIR %{project_root}/stdlib
           (run craml %{test})))
       (diff? %{test} %{test}.corrected))))

@@ -13,8 +13,8 @@ let printInt (n : Int) =
   fmt buf "%d" n;
   println buf
 
-foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
-foreign ".cervoise.mul" mul : Int -> Int -[IO]-> Int
+foreign ".labrys.add" add : Int -> Int -[IO]-> Int
+foreign ".labrys.mul" mul : Int -> Int -[IO]-> Int
 
 let natToInt =
   let rec aux (acc : Int) (n : Nat) : IO # Int =

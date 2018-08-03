@@ -8,7 +8,7 @@ foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
 
 foreign "puts" println : String -[IO]-> Unit
 
-foreign ".cervoise.add" add : Int -> Int -[IO]-> Int
+foreign ".labrys.add" add : Int -> Int -[IO]-> Int
 
 let natToInt =
   let rec aux (acc : Int) (n : T) : IO # Int =

@@ -1,7 +1,7 @@
 cat << EOF > Dockerfile
 FROM ocaml/opam2:debian-unstable
-ADD . /home/opam/cervoise
-WORKDIR /home/opam/cervoise
+ADD . /home/opam/labrys
+WORKDIR /home/opam/labrys
 RUN sudo chown -R opam:opam .
 RUN opam switch $OCAML_VERSION
 
@@ -16,12 +16,12 @@ RUN opam lint --warn=-48-21-32 *.opam
 
 # Install & tests
 RUN opam repository set-url default https://opam.ocaml.org/2.0
-RUN opam pin add -y --no-action --kind=git cervoise .
+RUN opam pin add -y --no-action --kind=git labrys .
 RUN opam pin add -y --no-action --kind=version llvm "${LLVM_VERSION}${LLVM_VERSION_MICRO}"
 RUN opam install -y opam-depext
-RUN opam depext -y cervoise
-RUN opam install -yt --deps-only cervoise
-RUN opam install -yvt cervoise
+RUN opam depext -y labrys
+RUN opam install -yt --deps-only labrys
+RUN opam install -yvt labrys
 RUN eval \$(opam env) && make tests
 EOF
 docker build .

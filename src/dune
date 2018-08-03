@@ -12,7 +12,7 @@
 
 (executable
   (name main)
-  (public_name cervoise)
+  (public_name labrys)
   (flags (:standard -safe-string -warn-error -A -w A-44-33-4 -open Containers))
   (modules_without_implementation
      options
@@ -46,4 +46,4 @@
 (rule
   (targets config.ml)
   (deps ../config.ml)
-  (action (with-stdout-to %{targets} (run ocaml %{deps} %{version:cervoise}))))
+  (action (with-stdout-to %{targets} (run ocaml %{deps} %{version:labrys}))))

@@ -1,4 +1,4 @@
-% Cervoise's semantics
+% Labrys's semantics
 
 metavar termvar, x ::=
   {{ tex \mathit{[[termvar]]} }} {{ com term variable }}

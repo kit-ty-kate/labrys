@@ -1,8 +1,8 @@
-Cervoise is a toy language based on LLVM that implements the System Fω type-system.
+Labrys is a toy language based on LLVM that implements the System Fω type-system.
 
-The git repository is located at: https://github.com/kit-ty-kate/cervoise
+The git repository is located at: https://github.com/kit-ty-kate/labrys
 
-[![Build Status](https://travis-ci.org/kit-ty-kate/cervoise.png?branch=master)](https://travis-ci.org/kit-ty-kate/cervoise)
+[![Build Status](https://travis-ci.org/kit-ty-kate/labrys.png?branch=master)](https://travis-ci.org/kit-ty-kate/labrys)
 
 ### Runtime requirements
 
@@ -18,7 +18,7 @@ The git repository is located at: https://github.com/kit-ty-kate/cervoise
 ### Installation
 
 ```
-$ opam pin add cervoise .
+$ opam pin add labrys .
 ```
 
 ### Usage
@@ -28,7 +28,7 @@ Examples of the syntax or features can be seen in the `examples` directory
 To compile an example you have to use the following command:
 
 ```
-$ cervoise build-program --src-dir examples Hello
+$ labrys build-program --src-dir examples Hello
 ```
 
 Just replace `Hello` by the name of the module you want to compile (such as `NativeFact` or `Fact`)
@@ -42,8 +42,8 @@ $ ./a.out
 To know more about the compiler options, use the `--help` argument like:
 
 ```
-$ cervoise --help
-$ cervoise build-program --help
+$ labrys --help
+$ labrys build-program --help
 ```
 
 

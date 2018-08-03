@@ -13,8 +13,8 @@ let lib = List.hd (cmd "opam config var lib")
 let l = [
   fmt "let version = \"%s\"" (String.escaped version);
   "let lib =";
-  "  try Sys.getenv \"CERVOISE_LIBDIR\"";
-  fmt "  with Not_found -> \"%s/cervoise\"" (String.escaped lib);
+  "  try Sys.getenv \"LABRYS_LIBDIR\"";
+  fmt "  with Not_found -> \"%s/labrys\"" (String.escaped lib);
 ]
 
 let () = CCIO.write_lines_l stdout l

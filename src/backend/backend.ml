@@ -1,4 +1,4 @@
-(* Copyright (c) 2013-2017 The Cervoise developers. *)
+(* Copyright (c) 2013-2017 The Labrys developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
 module Set = LIdent.MSet
@@ -84,7 +84,7 @@ module Main (I : sig val main_module : Module.t end) = struct
 
   let create_builtin_instruction ty name g =
     let ty = Llvm.function_type ty [|ty; ty|] in
-    let (f, builder) = Llvm.define_function `External c (fmt ".cervoise.%s" name) ty m in
+    let (f, builder) = Llvm.define_function `External c (fmt ".labrys.%s" name) ty m in
     let v = g (Llvm.param f 0) (Llvm.param f 1) "" builder in
     Llvm.build_ret v builder
 

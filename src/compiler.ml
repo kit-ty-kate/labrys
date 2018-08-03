@@ -1,4 +1,4 @@
-(* Copyright (c) 2013-2017 The Cervoise developers. *)
+(* Copyright (c) 2013-2017 The Labrys developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
 type module_name = string
@@ -15,7 +15,7 @@ let link ~cc ~tmp ~o =
   end
 
 let with_tmp_file f =
-  let tmp = Filename.temp_file "cervoise" "" in
+  let tmp = Filename.temp_file "labrys" "" in
   f tmp;
   Sys.remove tmp
 
