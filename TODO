@@ -1,6 +1,6 @@
 == 0.1 ==
 
-* Write down in HACKING, the syntactic sugars used in Labrys and what they are translated to in *pure* System Fcω with effects and exceptions and typeclasses (yes, even data construtors, ...)
+* Improve documentation
 
 
 == 0.2 ==

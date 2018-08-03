@@ -8,8 +8,8 @@ let fmt = Printf.sprintf
 let print_error () =
   prerr_endline "\nThe compilation processes exited abnormally"
 
-let link ~cc ~tmp ~o =
-  let ld = Utils.exec_command cc [tmp; "-lgc"; "-o"; o] in
+let link ~cc ~tmp ~o ~linkflags =
+  let ld = Utils.exec_command cc ([tmp; "-o"; o]@linkflags@["-lgc"])  in
   if Int.(ld <> 0) then begin
     print_error ();
   end
@@ -19,10 +19,10 @@ let with_tmp_file f =
   f tmp;
   Sys.remove tmp
 
-let write ~cc ~o result =
+let write ~cc ~o ~linkflags result =
   let aux tmp =
     Backend.emit_object_file ~tmp result;
-    link ~cc ~tmp ~o;
+    link ~cc ~tmp ~o ~linkflags;
   in
   with_tmp_file aux
 
@@ -148,7 +148,7 @@ let get_optimized_code options modul =
 let compile_program modul options =
   let modul = Module.from_string options modul in
   let code = get_optimized_code options modul in
-  write ~cc:options#cc ~o:options#o code
+  write ~cc:options#cc ~o:options#o ~linkflags:options#linkflags code
 
 let compile_module modul options =
   let modul = Module.from_string options modul in

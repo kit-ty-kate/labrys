@@ -31,6 +31,7 @@ class type program = object
   inherit optimization
   method o : file
   method cc : program_name
+  method linkflags : string list
 end
 
 class type modul = object
