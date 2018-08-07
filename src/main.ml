@@ -104,81 +104,109 @@ let print_llvm modul src_dir build_dir lib_dir no_prelude debug lto opt () =
   end)
 
 let restrained_base args =
-  let args = args $ Arg.(required & pos 0 (some string) None & info []) in
-  let args = args $ Arg.(value & opt dir "" & info ["src-dir"]) in
-  let args = args $ Arg.(value & opt dir "dest" & info ["build-dir"]) in
+  let doc_srcdir = "Will look for local modules to compile in DIR." in
+  let doc_builddir = "Will put intermediate compiled modules in DIR." in
+  let args = args $ Arg.(required & pos 0 (some string) None & info ~docv:"ModuleName" []) in
+  let args = args $ Arg.(value & opt dir "" & info ~docv:"DIR" ~doc:doc_srcdir["src-dir"]) in
+  let args = args $ Arg.(value & opt dir "dest" & info ~docv:"DIR" ~doc:doc_builddir ["build-dir"]) in
   args
 
 let base args =
+  let doc_libdir = "Imported library modules will be looked for in DIR." in
+  let doc_noprelude =
+    "Do not automatically import or open the Prelude module \
+     from the standard library."
+  in
   let args = restrained_base args in
-  let args = args $ Arg.(value & opt dir Config.lib & info ["lib-dir"]) in
-  let args = args $ Arg.(value & flag & info ["no-prelude"]) in
+  let args = args $ Arg.(value & opt dir Config.lib & info ~docv:"DIR" ~doc:doc_libdir ["lib-dir"]) in
+  let args = args $ Arg.(value & flag & info ~doc:doc_noprelude ["no-prelude"]) in
   args
 
 let base_llvm args =
+  let doc_debug =
+    "Add debugging information. Some information might \
+     disable some optimizations."
+  in
   let args = base args in
-  let args = args $ Arg.(value & flag & info ["debug"]) in
+  let args = args $ Arg.(value & flag & info ~doc:doc_debug ["debug"]) in
   args
 
 let optimization args =
+  let doc_lto = "Enable the LLVM Link Time Optimizations." in
+  let doc_opt = "Enable the LLVM optimizations." in
   let args = base_llvm args in
-  let args = args $ Arg.(value & flag & info ["lto"]) in
-  let args = args $ Arg.(value & opt int 0 & info ["opt"]) in
+  let args = args $ Arg.(value & flag & info ~doc:doc_lto ["lto"]) in
+  let args = args $ Arg.(value & opt int 0 & info ~doc:doc_opt ["opt"]) in
   args
 
 let output args =
+  let doc_output = "Write output program to FILE." in
+  let doc_cc = "Use CCOMP as C linker to link your output program." in
+  let doc_linkflag = "Adds a custom argument to the C linker." in
   let args = optimization args in
-  let args = args $ Arg.(value & opt file "a.out" & info ["o"]) in
-  let args = args $ Arg.(value & opt string "cc" & info ["cc"]) in
-  let args = args $ Arg.(value & opt_all string [] & info ["linkflag"]) in
+  let args = args $ Arg.(value & opt file "a.out" & info ~docv:"FILE" ~doc:doc_output ["o"]) in
+  let args = args $ Arg.(value & opt string "cc" & info ~docv:"CCOMP" ~doc:doc_cc ["cc"]) in
+  let args = args $ Arg.(value & opt_all string [] & info ~docv:"FLAG" ~doc:doc_linkflag ["linkflag"]) in
   args
 
 let program =
+  let doc = "Creates an executable." in
   let args = Term.pure program |> output in
-  (args, Term.info "build-program")
+  (args, Term.info ~doc "build-program")
 
 let library =
+  let doc = "Builds a single module and its dependencies." in
   let args = Term.pure modul |> base_llvm in
-  (args, Term.info "build-module")
+  (args, Term.info ~doc "build-module")
 
 let print_parse_tree =
+  let doc = "Prints parse-tree. (output unspecified)" in
   let args = Term.pure print_parse_tree |> restrained_base in
-  (args, Term.info "print-parse-tree")
+  (args, Term.info ~doc "print-parse-tree")
 
 let print_desugared_tree =
+  let doc = "Prints desugared-tree. (output unspecified)" in
   let args = Term.pure print_desugared_tree |> base in
-  (args, Term.info "print-desugared-tree")
+  (args, Term.info ~doc "print-desugared-tree")
 
 let print_pretyped_tree =
+  let doc = "Prints pretyped-tree. (output unspecified)" in
   let args = Term.pure print_pretyped_tree |> base in
-  (args, Term.info "print-pretyped-tree")
+  (args, Term.info ~doc "print-pretyped-tree")
 
 let print_untyped_tree =
+  let doc = "Prints untyped-tree. (output unspecified)" in
   let args = Term.pure print_untyped_tree |> base in
-  (args, Term.info "print-untyped-tree")
+  (args, Term.info ~doc "print-untyped-tree")
 
 let print_lambda_tree =
+  let doc = "Prints lambda-tree. (output unspecified)" in
   let args = Term.pure print_lambda_tree |> base in
-  (args, Term.info "print-lambda-tree")
+  (args, Term.info ~doc "print-lambda-tree")
 
 let print_flatten_tree =
+  let doc = "Prints flatten-tree. (output unspecified)" in
   let args = Term.pure print_flatten_tree |> base in
-  (args, Term.info "print-flatten-tree")
+  (args, Term.info ~doc "print-flatten-tree")
 
 let print_optimized_tree =
+  let doc = "Prints optimized-tree. (output unspecified)" in
   let args = Term.pure print_optimized_tree |> base in
-  (args, Term.info "print-optimized-tree")
+  (args, Term.info ~doc "print-optimized-tree")
 
 let print_early_llvm =
+  let doc = "Prints LLVM-IR as generated by the backend before any optimizations." in
   let args = Term.pure print_early_llvm |> base_llvm in
-  (args, Term.info "print-early-llvm")
+  (args, Term.info ~doc "print-early-llvm")
 
 let print_llvm =
+  let doc = "Prints LLVM-IR after optimizations." in
   let args = Term.pure print_llvm |> optimization in
-  (args, Term.info "print-llvm")
+  (args, Term.info ~doc "print-llvm")
 
 let default_cmd =
-  (Term.pure Fun.id, Term.info ~version:Config.version "labrys")
+  let doc = "A toy language based on LLVM that implements the System F(w) type-system." in
+  (Term.pure Fun.id, Term.info ~doc ~version:Config.version "labrys")
 
 let cmds =
   [ program
