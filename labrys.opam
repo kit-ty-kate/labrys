@@ -21,6 +21,21 @@ depends: [
   "containers" {>= "2.0"}
   "craml" {test}
 ]
+depexts: [
+  [["debian"] ["libgc-dev"]]
+  [["ubuntu"] ["libgc-dev"]]
+  [["centos"] ["gc-devel"]]
+  [["fedora"] ["gc-devel"]]
+  [["opensuse"] ["gc-devel"]]
+  [["archlinux"] ["gc"]]
+  [["alpine"] ["gc-dev"]]
+  [["macports" "osx"] ["boehmgc"]]
+  [["homebrew" "osx"] ["bdw-gc"]]
+  [["gentoo"] ["boehm-gc"]]
+  [["netbsd"] ["devel/boehm-gc"]]
+  [["openbsd"] ["devel/boehm-gc"]]
+  [["freebsd"] ["devel/boehm-gc"]]
+]
 tags: [
   "compiler"
   "System F"
