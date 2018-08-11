@@ -1,8 +1,8 @@
 Labrys is a toy language based on LLVM that implements the System Fω type-system.
 
-The git repository is located at: https://github.com/kit-ty-kate/labrys
-
 [![Build Status](https://travis-ci.org/kit-ty-kate/labrys.png?branch=master)](https://travis-ci.org/kit-ty-kate/labrys)
+
+![Labrys logo](doc/logo.png)
 
 ### Features
 
