@@ -13,7 +13,6 @@ Labrys is a toy language based on LLVM that implements the System Fω type-syste
 
 ### Runtime requirements
 
-* Boehm GC: `libgc-dev` on debian.
 * A C compiler: `cc` is used by default
 
 ### Build-time requirements
