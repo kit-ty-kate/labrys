@@ -585,3 +585,5 @@ let emit_object_file ~tmp m =
     Llvm_target.CodeGenFileType.ObjectFile
     tmp
     target
+
+let default_heap_size = 4096

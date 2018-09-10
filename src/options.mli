@@ -32,6 +32,7 @@ class type program = object
   method o : file
   method cc : program_name
   method linkflags : string list
+  method initial_heap_size : int
 end
 
 class type modul = object

@@ -6,7 +6,7 @@ module Arg = Cmdliner.Arg
 
 let ($) = Term.($)
 
-let program modul src_dir build_dir lib_dir no_prelude debug lto opt o cc linkflags () =
+let program modul src_dir build_dir lib_dir no_prelude debug lto opt o cc linkflags initial_heap_size () =
   Compiler.compile_program modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -18,6 +18,7 @@ let program modul src_dir build_dir lib_dir no_prelude debug lto opt o cc linkfl
     method o = o
     method cc = cc
     method linkflags = linkflags
+    method initial_heap_size = initial_heap_size
   end)
 
 let modul modul src_dir build_dir lib_dir no_prelude debug () =
@@ -143,10 +144,13 @@ let output args =
   let doc_output = "Write output program to FILE." in
   let doc_cc = "Use CCOMP as C linker to link your output program." in
   let doc_linkflag = "Adds a custom argument to the C linker." in
+  let doc_initial_heap_size = "Defines the initial heap sized allocated on startup. \
+                               Default: "^string_of_int Backend.default_heap_size in
   let args = optimization args in
   let args = args $ Arg.(value & opt file "a.out" & info ~docv:"FILE" ~doc:doc_output ["o"]) in
   let args = args $ Arg.(value & opt string "cc" & info ~docv:"CCOMP" ~doc:doc_cc ["cc"]) in
   let args = args $ Arg.(value & opt_all string [] & info ~docv:"FLAG" ~doc:doc_linkflag ["linkflag"]) in
+  let args = args $ Arg.(value & opt int Backend.default_heap_size & info ~docv:"SIZE" ~doc:doc_initial_heap_size ["initial-heap-size"]) in
   args
 
 let program =
