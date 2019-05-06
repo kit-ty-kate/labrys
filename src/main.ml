@@ -6,28 +6,29 @@ module Arg = Cmdliner.Arg
 
 let ($) = Term.($)
 
-let program modul src_dir build_dir lib_dir no_prelude debug lto opt o cc linkflags initial_heap_size () =
+let program modul src_dir build_dir lib_dir no_prelude debug initial_heap_size lto opt o cc linkflags () =
   Compiler.compile_program modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
     method debug = debug
+    method initial_heap_size = initial_heap_size
     method lto = lto
     method opt = opt
     method o = o
     method cc = cc
     method linkflags = linkflags
-    method initial_heap_size = initial_heap_size
   end)
 
-let modul modul src_dir build_dir lib_dir no_prelude debug () =
+let modul modul src_dir build_dir lib_dir no_prelude debug initial_heap_size () =
   Compiler.compile_module modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
     method debug = debug
+    method initial_heap_size = initial_heap_size
   end)
 
 let print_parse_tree modul src_dir build_dir () =
@@ -84,22 +85,24 @@ let print_optimized_tree modul src_dir build_dir lib_dir no_prelude () =
     method no_prelude = no_prelude
   end)
 
-let print_early_llvm modul src_dir build_dir lib_dir no_prelude debug () =
+let print_early_llvm modul src_dir build_dir lib_dir no_prelude debug initial_heap_size () =
   Compiler.print_early_llvm modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
     method debug = debug
+    method initial_heap_size = initial_heap_size
   end)
 
-let print_llvm modul src_dir build_dir lib_dir no_prelude debug lto opt () =
+let print_llvm modul src_dir build_dir lib_dir no_prelude debug initial_heap_size lto opt () =
   Compiler.print_llvm modul (object
     method src_dir = src_dir
     method build_dir = build_dir
     method lib_dir = lib_dir
     method no_prelude = no_prelude
     method debug = debug
+    method initial_heap_size = initial_heap_size
     method lto = lto
     method opt = opt
   end)
@@ -128,8 +131,11 @@ let base_llvm args =
     "Add debugging information. Some information might \
      disable some optimizations."
   in
+  let doc_initial_heap_size = "Defines the initial heap sized allocated on startup. \
+                               Default: "^string_of_int Backend.default_heap_size in
   let args = base args in
   let args = args $ Arg.(value & flag & info ~doc:doc_debug ["debug"]) in
+  let args = args $ Arg.(value & opt int Backend.default_heap_size & info ~docv:"SIZE" ~doc:doc_initial_heap_size ["initial-heap-size"]) in
   args
 
 let optimization args =
@@ -144,13 +150,10 @@ let output args =
   let doc_output = "Write output program to FILE." in
   let doc_cc = "Use CCOMP as C linker to link your output program." in
   let doc_linkflag = "Adds a custom argument to the C linker." in
-  let doc_initial_heap_size = "Defines the initial heap sized allocated on startup. \
-                               Default: "^string_of_int Backend.default_heap_size in
   let args = optimization args in
   let args = args $ Arg.(value & opt file "a.out" & info ~docv:"FILE" ~doc:doc_output ["o"]) in
   let args = args $ Arg.(value & opt string "cc" & info ~docv:"CCOMP" ~doc:doc_cc ["cc"]) in
   let args = args $ Arg.(value & opt_all string [] & info ~docv:"FLAG" ~doc:doc_linkflag ["linkflag"]) in
-  let args = args $ Arg.(value & opt int Backend.default_heap_size & info ~docv:"SIZE" ~doc:doc_initial_heap_size ["initial-heap-size"]) in
   args
 
 let program =

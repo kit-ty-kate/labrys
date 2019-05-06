@@ -10,7 +10,7 @@ val make :
   OptimizedTree.top list ->
   t
 
-val link : main_module_name:Module.t -> main_module:t -> t Module.Map.t -> t
+val link : <initial_heap_size : int; ..> -> main_module_name:Module.t -> main_module:t -> t Module.Map.t -> t
 
 val optimize : <lto : bool; opt : int; ..> -> t -> t
 

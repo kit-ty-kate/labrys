@@ -140,7 +140,7 @@ let get_code options modul =
     compile ~with_main:true Module.Map.empty Env.empty options modul
   in
   prerr_endline (fmt "Linking %s" (Module.to_string modul));
-  Backend.link ~main_module_name:modul ~main_module:code imports_code
+  Backend.link options ~main_module_name:modul ~main_module:code imports_code
 
 let get_optimized_code options modul =
   Backend.optimize options (get_code options modul)

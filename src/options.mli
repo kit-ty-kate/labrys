@@ -19,6 +19,7 @@ end
 class type base_llvm = object
   inherit base
   method debug : bool
+  method initial_heap_size : int
 end
 
 class type optimization = object
@@ -32,7 +33,6 @@ class type program = object
   method o : file
   method cc : program_name
   method linkflags : string list
-  method initial_heap_size : int
 end
 
 class type modul = object
