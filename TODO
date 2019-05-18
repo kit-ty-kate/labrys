@@ -117,4 +117,6 @@
 * Mutually recursive functions
 * Document the different passes and optimizations
 * Use LLD (still experimental) as library to avoid relying on an external tool (Clang & implicitly LD)
+  * Requires either to not use libc at all (meaning no bindings) or to implement the C runtime in assembly for all platforms
+  * Can work for an opt-out by default option to disable C runtime
 * Create a test tool to create correct (or incorrect) terms and check them
