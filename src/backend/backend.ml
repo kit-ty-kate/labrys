@@ -94,6 +94,7 @@ module Main (I : sig val initial_heap_size : int val main_module : Module.t end)
     let initial_heap_size = Llvm.const_int Type.i32 I.initial_heap_size in
     let new_heap = Llvm.build_call Generic.gc_malloc [|initial_heap_size|] "" builder in
     Llvm.build_store new_heap gc_heap builder;
+    Llvm.build_store initial_heap_size gc_heap_size builder;
     Llvm.build_ret_void builder
 
   let create_builtin_instruction ty name g =
