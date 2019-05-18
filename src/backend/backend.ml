@@ -24,7 +24,6 @@ module Type = struct
   let i32 = Llvm.i32_type c
   let float = Llvm.float_type c
   let star = Llvm.pointer_type i8
-  let star_ptr = Llvm.pointer_type star
   let array = Llvm.array_type star
   let exn_glob = star
   let array_ptr size = Llvm.pointer_type (array size)
@@ -72,7 +71,6 @@ module Generic (I : sig val m : t end) = struct
     jmp_buf
 
   let malloc_type = Llvm.function_type Type.star [|Type.i32|]
-  let gc_malloc = Llvm.declare_function "GC_malloc" malloc_type m
 end
 
 module Main (I : sig val initial_heap_size : int val main_module : Module.t end) = struct
@@ -82,7 +80,7 @@ module Main (I : sig val initial_heap_size : int val main_module : Module.t end)
 
   let malloc = Llvm.declare_function "malloc" Generic.malloc_type m
 
-  let gc_heap = Llvm.define_global "GC_heap" (Llvm.const_null Type.star_ptr) m
+  let gc_heap = Llvm.define_global "GC_heap" (Llvm.const_null Type.star) m
   let gc_heap_cursor = Llvm.define_global "GC_heap_cursor" (Llvm.const_int Type.i32 0) m
   let gc_heap_size = Llvm.define_global "GC_heap_size" (Llvm.const_int Type.i32 0) m
 
@@ -168,7 +166,9 @@ module Make (I : I) = struct
   let build_gc_malloc ty name builder =
     let size = Llvm.size_of ty in
     let size = Llvm.const_trunc_or_bitcast size Type.i32 in
-    Llvm.build_call Generic.gc_malloc [|size|] name builder
+    let gc_malloc = Llvm.declare_function "GC_malloc" Generic.malloc_type m in
+    let ret = Llvm.build_call gc_malloc [|size|] name builder in
+    Llvm.build_bitcast ret (Llvm.pointer_type ty) "" builder
 
   let init ptr ty values builder =
     let aux acc i x = Llvm.build_insertvalue acc x i "" builder in
