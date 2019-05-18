@@ -80,19 +80,44 @@ module Main (I : sig val initial_heap_size : int val main_module : Module.t end)
 
   module Generic = Generic (struct let m = m end)
 
-  let malloc = Llvm.declare_function "malloc"
+  let malloc = Llvm.declare_function "malloc" Generic.malloc_type m
 
   let gc_heap = Llvm.define_global "GC_heap" (Llvm.const_null Type.star_ptr) m
   let gc_heap_cursor = Llvm.define_global "GC_heap_cursor" (Llvm.const_int Type.i32 0) m
   let gc_heap_size = Llvm.define_global "GC_heap_size" (Llvm.const_int Type.i32 0) m
 
   let fill_gc_malloc builder =
-    assert false; (* TODO *)
-    Llvm.build_ret (Llvm.const_null Type.star) builder
+    (* TODO: Implement the GC (free!!) *)
+    let size = Llvm.current_param builder 0 in
+    let current_heap_cursor = Llvm.build_load gc_heap_cursor "" builder in
+    let current_heap_size = Llvm.build_load gc_heap_size "" builder in
+    let new_heap_cursor = Llvm.build_add current_heap_cursor size "" builder in
+    let enough_space = Llvm.build_icmp Llvm.Icmp.Ule new_heap_cursor current_heap_size "" builder in
+    let return =
+      let (block, builder) = Llvm.create_block c builder in
+      let current_heap = Llvm.build_load gc_heap "" builder in
+      let ptr = Llvm.build_gep current_heap [|current_heap_cursor|] "" builder in
+      Llvm.build_store new_heap_cursor gc_heap_cursor builder;
+      Llvm.build_ret ptr builder;
+      block
+    in
+    let extend_space =
+      let (block, builder) = Llvm.create_block c builder in
+      let new_heap_size = Llvm.build_add current_heap_size size "" builder in
+      let new_heap = Llvm.build_call malloc [|new_heap_size|] "" builder in
+      (* TODO: Handle malloc failures *)
+      Llvm.build_store new_heap gc_heap builder;
+      Llvm.build_store size gc_heap_cursor builder;
+      Llvm.build_store new_heap_size gc_heap_size builder;
+      Llvm.build_ret new_heap builder;
+      block
+    in
+    Llvm.build_cond_br enough_space return extend_space builder
 
   let fill_gc_init builder =
     let initial_heap_size = Llvm.const_int Type.i32 I.initial_heap_size in
-    let new_heap = Llvm.build_call Generic.gc_malloc [|initial_heap_size|] "" builder in
+    let new_heap = Llvm.build_call malloc [|initial_heap_size|] "" builder in
+    (* TODO: Handle malloc failures *)
     Llvm.build_store new_heap gc_heap builder;
     Llvm.build_store initial_heap_size gc_heap_size builder;
     Llvm.build_ret_void builder
