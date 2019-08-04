@@ -32,7 +32,7 @@ let matches_module_name =
   let regexp = whole_string (seq [upper; rep (alt [lower; upper])]) in
   let regexp = compile regexp in
   fun modul ->
-    test (exec regexp modul) 0
+    Group.test (exec regexp modul) 0
 
 let module_from_string modul =
   let modul = String.Split.list_cpy modul ~by:"." in

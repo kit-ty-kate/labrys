@@ -14,7 +14,7 @@ depends: [
   "base-unix"
   "cmdliner"
   "pprint"
-  "re"
+  "re" {>= "1.9.0"}
   "msgpack"
   "uutf" {>= "1.0.0"}
   "llvm" {>= "3.8"}
