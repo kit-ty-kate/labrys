@@ -1,14 +1,16 @@
-opam-version: "1.2"
+opam-version: "2.0"
 version: "0.1"
+synopsis: "A toy language based on LLVM that implements the System Fω type-system"
 license: "MIT"
 maintainer: "Kate <kit.ty.kate@disroot.org>"
 authors: "Kate <kit.ty.kate@disroot.org>"
 homepage: "https://github.com/kit-ty-kate/labrys"
-dev-repo: "https://github.com/kit-ty-kate/labrys.git"
+dev-repo: "git://github.com/kit-ty-kate/labrys.git"
 bug-reports: "https://github.com/kit-ty-kate/labrys/issues"
 build: ["dune" "build" "-p" name "-j" jobs]
-build-test: ["dune" "runtest" "-p" name "-j" jobs]
+run-test: ["dune" "runtest" "-p" name "-j" jobs]
 depends: [
+  "ocaml" {>= "4.04"}
   "dune" {>= "1.10"}
   "menhir"
   "base-unix"
@@ -19,22 +21,21 @@ depends: [
   "uutf" {>= "1.0.0"}
   "llvm" {>= "3.8"}
   "containers" {>= "2.0"}
-  "craml" {test}
+  "craml" {with-test}
 ]
 depexts: [
-  [["debian"] ["libgc-dev"]]
-  [["ubuntu"] ["libgc-dev"]]
-  [["centos"] ["gc-devel"]]
-  [["fedora"] ["gc-devel"]]
-  [["opensuse"] ["gc-devel"]]
-  [["archlinux"] ["gc"]]
-  [["alpine"] ["gc-dev"]]
-  [["macports" "osx"] ["boehmgc"]]
-  [["homebrew" "osx"] ["bdw-gc"]]
-  [["gentoo"] ["boehm-gc"]]
-  [["netbsd"] ["devel/boehm-gc"]]
-  [["openbsd"] ["devel/boehm-gc"]]
-  [["freebsd"] ["devel/boehm-gc"]]
+  ["libgc-dev"] {os-family = "debian"}
+  ["gc-devel"] {os-distribution = "centos"}
+  ["gc-devel"] {os-distribution = "fedora"}
+  ["gc-devel"] {os-family = "suse"}
+  ["gc"] {os-distribution = "arch"}
+  ["gc-dev"] {os-distribution = "alpine"}
+  ["boehmgc"] {os-distribution = "macports" & os = "macos"}
+  ["bdw-gc"] {os-distribution = "homebrew" & os = "macos"}
+  ["boehm-gc"] {os-distribution = "gentoo"}
+  ["devel/boehm-gc"] {os = "netbsd"}
+  ["devel/boehm-gc"] {os = "openbsd"}
+  ["devel/boehm-gc"] {os = "freebsd"}
 ]
 tags: [
   "compiler"
@@ -44,4 +45,3 @@ tags: [
   "type-system"
   "language"
 ]
-available: [ocaml-version >= "4.04"]
