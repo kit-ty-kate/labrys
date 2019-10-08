@@ -20,6 +20,7 @@ depends: [
   "msgpack"
   "uutf" {>= "1.0.0"}
   "llvm" {>= "3.8"}
+  "llvm" {with-test & = "8.0.0"}
   "containers" {>= "2.0"}
   "craml" {with-test}
 ]
