@@ -43,7 +43,7 @@ let get_const options = function
   | PretypedTree.Int n -> (`Int n, Builtins.int options)
   | PretypedTree.Float n -> (`Float n, Builtins.float options)
   | PretypedTree.Char c -> (`Char c, Builtins.char options)
-  | PretypedTree.String s -> (`String s, Builtins.string options)
+  | PretypedTree.Bytes s -> (`Bytes s, Builtins.bytes options)
 
 let get_rep name = function
   | TypedEnv.Index idx -> Index idx
@@ -412,7 +412,7 @@ let rec get_foreign_type map options = function
         [ (Builtins.int options, `Int ())
         ; (Builtins.float options, `Float ())
         ; (Builtins.char options, `Char ())
-          (* NOTE: String is not present because it is a pointer *)
+          (* NOTE: Bytes is not present because it is a pointer *)
         ]
       in
       let arg_ty_map = arg_ty_map @ map in

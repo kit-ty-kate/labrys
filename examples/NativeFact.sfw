@@ -4,9 +4,9 @@ open Nat
 
 type alias Nat = Nat.T
 
-foreign "puts" println : String -[IO]-> Unit
-foreign "GC_malloc" alloc : Int -[IO]-> String
-foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
+foreign "puts" println : Bytes -[IO]-> Unit
+foreign "GC_malloc" alloc : Int -[IO]-> Bytes
+foreign "sprintf" fmt : Bytes -> Bytes -> Int -[IO]-> Unit
 
 let printInt (n : Int) =
   let buf = alloc 512 in

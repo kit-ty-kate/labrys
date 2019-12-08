@@ -79,7 +79,7 @@ and dump_t = function
       OCaml.float n
   | Const (`Char c) ->
       squotes (str (Utils.string_of_uchar c))
-  | Const (`String s) ->
+  | Const (`Bytes s) ->
       dquotes (str s)
 
 and dump_cases : type a. (a -> _) -> (a * _) list -> _ = fun f cases ->
@@ -97,7 +97,7 @@ let dump_tag_ty = function
   | `Int () -> str "Int"
   | `Float () -> str "Float"
   | `Char () -> str "Char"
-  | `String () -> str "String"
+  | `Bytes () -> str "Bytes"
   | `Custom -> str "Custom"
   | `Void -> str "Void"
 

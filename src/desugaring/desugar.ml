@@ -183,7 +183,7 @@ let desugar_uchar_list ~loc s =
   in
   aux [] (List.map Uchar.to_int (desugar_uchar_list ~loc s))
 
-let desugar_string ~loc s =
+let desugar_bytes ~loc s =
   let s = desugar_uchar_list ~loc s in
   let buf = Buffer.create 64 in
   List.iter (Uutf.Buffer.add_utf_8 buf) s;
@@ -199,7 +199,7 @@ let desugar_const ~loc = function
   | ParseTree.Int n -> Int (int_of_string n)
   | ParseTree.Float n -> Float (float_of_string n)
   | ParseTree.Char c -> Char (desugar_char ~loc c)
-  | ParseTree.String s -> String (desugar_string ~loc s)
+  | ParseTree.Bytes s -> Bytes (desugar_bytes ~loc s)
 
 let desugar_try_arg_to_name = function
   | ParseTree.TyConstr (loc, _, _) ->
@@ -404,7 +404,7 @@ let create ~current_module options mimports =
         let ty = desugar_ty imports ty in
         Type (name, ty) :: aux imports xs
     | ParseTree.Foreign (cname, name, ty) :: xs ->
-        let cname = desugar_string ~loc:(fst name) cname in
+        let cname = desugar_bytes ~loc:(fst name) cname in
         let imports' = Imports.add_value ~export:false name current_module imports in
         let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
         let ty = desugar_ty imports ty in

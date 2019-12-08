@@ -7,11 +7,11 @@ type index = int
 type length = int
 type branch = int
 
-type ('int, 'float, 'char, 'string) ty = [
+type ('int, 'float, 'char, 'bytes) ty = [
   | `Int of 'int
   | `Float of 'float
   | `Char of 'char
-  | `String of 'string
+  | `Bytes of 'bytes
 ]
 
 type tag_ty = [(unit, unit, unit, unit) ty | `Custom]

@@ -171,7 +171,7 @@ termClosed:
   | c = Char
       { (loc $startpos $endpos, ParseTree.Const (ParseTree.Char c)) }
   | s = String
-      { (loc $startpos $endpos, ParseTree.Const (ParseTree.String s)) }
+      { (loc $startpos $endpos, ParseTree.Const (ParseTree.Bytes s)) }
   | LParen x = term RParen
       { x }
 

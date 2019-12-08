@@ -8,8 +8,8 @@ type constr = int
 type length = int
 type branch = int
 
-type ('int, 'float, 'char, 'string) ty =
-  ('int, 'float, 'char, 'string) FlattenTree.ty
+type ('int, 'float, 'char, 'bytes) ty =
+  ('int, 'float, 'char, 'bytes) FlattenTree.ty
 
 type tag_ty = [(unit, unit, unit, unit) ty | `Custom]
 type ret_ty = [tag_ty | `Void]

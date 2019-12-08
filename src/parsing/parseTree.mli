@@ -65,7 +65,7 @@ type const =
   | Int of string
   | Float of string
   | Char of char list
-  | String of char list
+  | Bytes of char list
 
 type value = (new_lower_name * is_rec * (arg list * (ty_annot option * t)))
 

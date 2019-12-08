@@ -19,8 +19,8 @@ let float options =
   Ident.Type.create ~loc:unknown_loc (prelude options) "Float"
 let char options =
   Ident.Type.create ~loc:unknown_loc (prelude options) "Char"
-let string options =
-  Ident.Type.create ~loc:unknown_loc (prelude options) "String"
+let bytes options =
+  Ident.Type.create ~loc:unknown_loc (prelude options) "Bytes"
 
 let underscore_loc loc =
   Ident.Name.local_create ~loc "_"

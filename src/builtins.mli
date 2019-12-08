@@ -7,7 +7,7 @@ val unit : <lib_dir : string; ..> -> Ident.Type.t
 val int : <lib_dir : string; ..> -> Ident.Type.t
 val float : <lib_dir : string; ..> -> Ident.Type.t
 val char : <lib_dir : string; ..> -> Ident.Type.t
-val string : <lib_dir : string; ..> -> Ident.Type.t
+val bytes : <lib_dir : string; ..> -> Ident.Type.t
 
 val underscore : Ident.Name.t
 val underscore_loc : Location.t -> Ident.Name.t

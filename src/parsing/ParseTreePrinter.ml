@@ -157,7 +157,7 @@ and dump_t = function
       str n
   | (_, Const (Char c)) ->
       squotes (str (String.of_list c))
-  | (_, Const (String s)) ->
+  | (_, Const (Bytes s)) ->
       dquotes (str (String.of_list s))
 
 and dump_cases cases =

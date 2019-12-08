@@ -50,7 +50,7 @@ type const =
   | Int of int
   | Float of float
   | Char of Uchar.t
-  | String of string
+  | Bytes of string
 
 type t' =
   | Abs of ((name * ty) * t)

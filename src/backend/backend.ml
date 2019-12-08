@@ -205,13 +205,13 @@ module Make (I : I) = struct
     | `Int n -> Llvm.const_int Type.i32 n
     | `Float n -> Llvm.const_float Type.float n
     | `Char n -> Llvm.const_int Type.i32 (Uchar.to_int n)
-    | `String s -> Llvm.const_string c (s ^ "\x00")
+    | `Bytes s -> Llvm.const_string c (s ^ "\x00")
 
   let llvm_ty_of_ty = function
     | `Int () -> Type.i32
     | `Float () -> Type.float
     | `Char () -> Type.i32
-    | `String () -> Type.star
+    | `Bytes () -> Type.star
     | `Custom -> Type.star
     | `Void -> Type.void
 

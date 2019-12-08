@@ -134,7 +134,7 @@ and dump_t = function
       OCaml.float n
   | (_, Const (Char c)) ->
       squotes (str (Utils.string_of_uchar c))
-  | (_, Const (String s)) ->
+  | (_, Const (Bytes s)) ->
       dquotes (str s)
 
 and dump_cases : type a. (a -> _) -> (a * _) list -> _ = fun f cases ->

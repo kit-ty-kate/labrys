@@ -8,8 +8,8 @@ type length = int
 type branch = int
 type is_rec = bool
 
-type ('int, 'float, 'char, 'string) ty =
-  ('int, 'float, 'char, 'string) UntypedTree.ty
+type ('int, 'float, 'char, 'bytes) ty =
+  ('int, 'float, 'char, 'bytes) UntypedTree.ty
 
 type tag_ty = [(unit, unit, unit, unit) ty | `Custom]
 type ret_ty = [tag_ty | `Void]
