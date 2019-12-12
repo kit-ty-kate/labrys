@@ -9,7 +9,7 @@ module Make (Filename : sig val get : string end) = struct
 }
 
 let prime = '\''
-let alpha = ['a'-'z' 'A'-'Z' '0'-'9']
+let alpha = ['a'-'z' 'A'-'Z' '0'-'9' '_']
 let num = ['0'-'9']
 (*let hexa = [num 'a'-'f' 'A'-'F']*)
 let term_name = (['a'-'z'] alpha* prime*)
