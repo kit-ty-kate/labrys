@@ -34,6 +34,8 @@ tests:
 	LLVM_VERSION=$(LLVM_VERSION) dune runtest -f
 
 check:
-	dead_code_analyzer.opt --all -S -bind-seq --exclude _build/src/parsing/parser.ml _build/src
+	dune build @check @all
+	reanalyze.exe -dce-cmt _build/default/src/.main.eobjs/byte
+	reanalyze.exe -exception-cmt _build/default/src/.main.eobjs/byte
 
 .PHONY: all clean docs clean-docs tests check
