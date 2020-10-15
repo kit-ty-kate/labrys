@@ -570,12 +570,14 @@ let write_bitcode ~o m =
   if not (Llvm_bitwriter.write_bitcode_file m o) then
     Err.fail_module "File '%s' cannot be created" o
 
+exception BitcodeFailure
+
 let read_bitcode file =
   try
     let buf = Llvm.MemoryBuffer.of_file file in
     Llvm_bitreader.parse_bitcode c buf
   with
-  | _ -> raise BuildSystem.Failure
+  | _ -> raise BitcodeFailure
 
 let emit_object_file ~tmp m =
   let triple = get_triple () in

@@ -16,6 +16,8 @@ val optimize : <lto : bool; opt : int; ..> -> t -> t
 
 val to_string : t -> string
 
+exception BitcodeFailure
+
 val write_bitcode : o:string -> t -> unit
 val read_bitcode : string -> t
 

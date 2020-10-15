@@ -1,0 +1,7 @@
+(library
+  (name labrys_lambda)
+  (modules_without_implementation lambdaTree)
+  (wrapped false)
+  (libraries
+     labrys_typing
+     containers))

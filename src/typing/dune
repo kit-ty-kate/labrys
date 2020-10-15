@@ -1,0 +1,7 @@
+(library
+  (name labrys_typing)
+  (modules_without_implementation typedEnv untypedTree)
+  (wrapped false)
+  (libraries
+     labrys_pretyping
+     containers))

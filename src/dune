@@ -1,45 +1,24 @@
-(copy_files# backend/*)
-(copy_files# desugaring/*)
-(copy_files# flatten/*)
-(copy_files# lambda/*)
-(copy_files# optimization/*)
-(copy_files# pre-typing/*)
-(copy_files# typing/*)
+(env
+  (_ (flags (:standard -open Containers))))
 
 (executable
   (name main)
   (public_name labrys)
-  (flags (:standard -safe-string -warn-error -A -w A-44-33-4 -open Containers))
-  (modules_without_implementation
-     options
-     desugaredTree
-     flattenTree
-     lambdaTree
-     optimizedTree
-     pretypedTree
-     typedEnv
-     untypedTree)
+  (modules_without_implementation options)
   (libraries
+     labrys_common
      labrys_parsing
-     unix
+     labrys_desugaring
+     labrys_pretyping
+     labrys_typing
+     labrys_lambda
+     labrys_flatten
+     labrys_optimization
+     labrys_backend
      cmdliner
-     pprint
-     re
-     msgpack
-     uutf
-     llvm
-     llvm.passmgr_builder
-     llvm.target
-     llvm.bitwriter
-     llvm.bitreader
-     llvm.all_backends
-     llvm.linker
-     llvm.scalar_opts
-     containers
-     containers.unix
-     containers-data))
+     msgpack))
 
 (rule
   (targets config.ml)
-  (deps ../config.ml)
+  (deps config.ml.in)
   (action (with-stdout-to %{targets} (run ocaml %{deps} %{version:labrys}))))

@@ -120,7 +120,7 @@ and compile ?(with_main=false) imports_code interface options modul =
     let code = Backend.read_bitcode cimpl in
     (imports_code, code)
   with
-  | BuildSystem.Failure ->
+  | BuildSystem.Failure | Backend.BitcodeFailure ->
       if Module.is_library modul then
         Err.fail_module
           "The library %s cannot be collected"

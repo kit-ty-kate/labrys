@@ -3,13 +3,8 @@
 
 (library
   (name labrys_parsing)
-  (flags (:standard -safe-string -warn-error -A -w A-44-33-4 -open Containers))
-  (modules_without_implementation location parseTree)
+  (modules_without_implementation parseTree)
   (wrapped false)
   (libraries
-     unix
-     re
-     uutf
-     containers
-     containers-data
-     pprint))
+     labrys_common
+     containers))
