@@ -38,6 +38,4 @@ let main =
   Nat.print (fact (S (S (S (S (S (S O))))))); -- 720
   Nat.print (fact (S (S (S (S (S (S (S O)))))))); -- 5040
   Nat.print (fact (S (S (S (S (S (S (S (S O))))))))); -- 40320
-  Nat.print (fact (S (S (S (S (S (S (S (S (S O)))))))))); -- 362880
-  Nat.print (fact (S (S (S (S (S (S (S (S (S (S O))))))))))) -- 3628800
---  Nat.print (fact (S (S (S (S (S (S (S (S (S (S (S O)))))))))))) -- 29916800 (Too much RAM but works)
+  Unit

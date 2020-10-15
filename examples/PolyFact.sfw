@@ -38,8 +38,7 @@ let main =
   print (fact (Cons [Unit] Unit (Cons [Unit] Unit (Nil [Unit])))); -- 2
   print (fact (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Nil [Unit]))))); -- 6
   print (fact (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Nil [Unit])))))); -- 24
-  print (fact (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Nil [Unit]))))))); -- 120
   print (fact (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Nil [Unit])))))))); -- 720
   print (fact (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Nil [Unit]))))))))); -- 5040
   print (fact (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Nil [Unit])))))))))); -- 40320
-  print (fact (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Cons [Unit] Unit (Nil [Unit]))))))))))) -- 362880
+  Unit

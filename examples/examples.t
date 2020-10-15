@@ -45,7 +45,7 @@ Test behaviours
   6
   24
   120
-  362880
+  40320
   $ $LABRYS build-program TailFact
   Linking TailFact
   $ ./a.out
@@ -58,8 +58,6 @@ Test behaviours
   720
   5040
   40320
-  362880
-  3628800
   $ $LABRYS build-program NativeFact
   Linking NativeFact
   $ ./a.out
@@ -69,12 +67,8 @@ Test behaviours
   6
   24
   120
-  720
   5040
   40320
-  362880
-  3628800
-  39916800
   $ $LABRYS build-program PolyFact
   Linking PolyFact
   $ ./a.out
@@ -83,8 +77,6 @@ Test behaviours
   2
   6
   24
-  120
   720
   5040
   40320
-  362880

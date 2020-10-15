@@ -27,4 +27,5 @@ let main =
   Nat.print (fact (S (S (S O)))); -- 6
   Nat.print (fact (S (S (S (S O))))); -- 24
   Nat.print (fact (S (S (S (S (S O)))))); -- 120
-  Nat.print (fact (S (S (S (S (S (S (S (S (S O)))))))))) -- 362880
+  Nat.print (fact (S (S (S (S (S (S (S (S O))))))))); -- 362880
+  Unit

@@ -38,10 +38,6 @@ let main =
   printInt (fact (S (S (S O)))); -- 6
   printInt (fact (S (S (S (S O))))); -- 24
   printInt (fact (S (S (S (S (S O)))))); -- 120
-  printInt (fact (S (S (S (S (S (S O))))))); -- 720
   printInt (fact (S (S (S (S (S (S (S O)))))))); -- 5040
   printInt (fact (S (S (S (S (S (S (S (S O))))))))); -- 40320
-  printInt (fact (S (S (S (S (S (S (S (S (S O)))))))))); -- 362880
-  printInt (fact (S (S (S (S (S (S (S (S (S (S O))))))))))); -- 3628800
-  printInt (fact (S (S (S (S (S (S (S (S (S (S (S O)))))))))))); -- 29916800
   Unit
