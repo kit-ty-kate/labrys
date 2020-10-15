@@ -92,7 +92,7 @@ let vdiff_type env name aty = match EnvMap.Type.get name env with
   | Some aty' when NType.aty_is_subset_of aty' aty -> ()
   | Some aty' -> fail_type_mismatch name ~intf:aty ~impl:aty'
 
-let check_vdiff TypedEnv.{values; constrs; types} y =
+let check_vdiff {TypedEnv.values; constrs; types} y =
   EnvMap.Value.iter (vdiff_value y.TypedEnv.values) values;
   EnvMap.Type.iter (vdiff_type y.TypedEnv.types) types;
   EnvMap.Constr.iter (vdiff_constr y.TypedEnv.constrs) constrs
