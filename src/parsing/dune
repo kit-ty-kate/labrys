@@ -1,0 +1,15 @@
+(menhir (modules parser))
+(ocamllex lexer)
+
+(library
+  (name labrys_parsing)
+  (flags (:standard -safe-string -warn-error -A -w A-44-33-4 -open Containers))
+  (modules_without_implementation location parseTree)
+  (wrapped false)
+  (libraries
+     unix
+     re
+     uutf
+     containers
+     containers-data
+     pprint))

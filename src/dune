@@ -1,14 +1,10 @@
-(copy_files backend/*)
-(copy_files desugaring/*)
-(copy_files flatten/*)
-(copy_files lambda/*)
-(copy_files optimization/*)
-(copy_files parsing/*)
-(copy_files pre-typing/*)
-(copy_files typing/*)
-
-(menhir (modules parser))
-(ocamllex lexer)
+(copy_files# backend/*)
+(copy_files# desugaring/*)
+(copy_files# flatten/*)
+(copy_files# lambda/*)
+(copy_files# optimization/*)
+(copy_files# pre-typing/*)
+(copy_files# typing/*)
 
 (executable
   (name main)
@@ -19,13 +15,12 @@
      desugaredTree
      flattenTree
      lambdaTree
-     location
      optimizedTree
-     parseTree
      pretypedTree
      typedEnv
      untypedTree)
   (libraries
+     labrys_parsing
      unix
      cmdliner
      pprint
@@ -41,7 +36,8 @@
      llvm.linker
      llvm.scalar_opts
      containers
-     containers.data))
+     containers.unix
+     containers-data))
 
 (rule
   (targets config.ml)

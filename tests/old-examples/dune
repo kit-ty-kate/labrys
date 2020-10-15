@@ -1,5 +1,5 @@
-(alias
-  (name runtest)
+(rule
+  (alias runtest)
   (deps
     (:test old-examples.t)
     (glob_files *.sfw)
