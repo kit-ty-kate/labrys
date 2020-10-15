@@ -2,11 +2,11 @@ type T =
   | O
   | S T
 
-foreign "GC_malloc" alloc : Int -[IO]-> String
+foreign "GC_malloc" alloc : Int -[IO]-> Bytes
 
-foreign "sprintf" fmt : String -> String -> Int -[IO]-> Unit
+foreign "sprintf" fmt : Bytes -> Bytes -> Int -[IO]-> Unit
 
-foreign "puts" println : String -[IO]-> Unit
+foreign "puts" println : Bytes -[IO]-> Unit
 
 foreign ".labrys.add" add : Int -> Int -[IO]-> Int
 

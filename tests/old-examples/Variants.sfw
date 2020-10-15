@@ -3,7 +3,7 @@ type Nat =
   | S Nat
   | D Nat Nat
 
-foreign "puts" println : String -[IO]-> Unit
+foreign "puts" println : Bytes -[IO]-> Unit
 
 let printZero () = println "0"
 let printOne () = println "1"
