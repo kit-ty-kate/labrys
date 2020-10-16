@@ -26,20 +26,6 @@ depends: [
   "containers-data" {>= "3.0"}
   "craml" {with-test}
 ]
-depexts: [
-  ["libgc-dev"] {os-family = "debian"}
-  ["gc-devel"] {os-distribution = "centos"}
-  ["gc-devel"] {os-distribution = "fedora"}
-  ["gc-devel"] {os-family = "suse"}
-  ["gc"] {os-distribution = "arch"}
-  ["gc-dev"] {os-distribution = "alpine"}
-  ["boehmgc"] {os-distribution = "macports" & os = "macos"}
-  ["bdw-gc"] {os-distribution = "homebrew" & os = "macos"}
-  ["boehm-gc"] {os-distribution = "gentoo"}
-  ["devel/boehm-gc"] {os = "netbsd"}
-  ["devel/boehm-gc"] {os = "openbsd"}
-  ["devel/boehm-gc"] {os = "freebsd"}
-]
 tags: [
   "compiler"
   "System F"
