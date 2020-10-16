@@ -19,6 +19,7 @@ end
 class type base_llvm = object
   inherit base
   method debug : bool
+  method initial_heap_size : int
 end
 
 class type optimization = object

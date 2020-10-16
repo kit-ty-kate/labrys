@@ -9,7 +9,7 @@ let print_error () =
   prerr_endline "\nThe compilation processes exited abnormally"
 
 let link ~cc ~tmp ~o ~linkflags =
-  let ld = Utils.exec_command cc ([tmp; "-o"; o]@linkflags@["-lgc"])  in
+  let ld = Utils.exec_command cc ([tmp; "-o"; o]@linkflags) in
   if Int.(ld <> 0) then begin
     print_error ();
   end
@@ -140,7 +140,7 @@ let get_code options modul =
     compile ~with_main:true Module.Map.empty Env.empty options modul
   in
   prerr_endline (fmt "Linking %s" (Module.to_string modul));
-  Backend.link ~main_module_name:modul ~main_module:code imports_code
+  Backend.link options ~main_module_name:modul ~main_module:code imports_code
 
 let get_optimized_code options modul =
   Backend.optimize options (get_code options modul)

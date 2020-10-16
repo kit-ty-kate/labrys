@@ -69,18 +69,56 @@ module Generic (I : sig val m : t end) = struct
     let v = Llvm.build_insertvalue v sp 2 "" builder in
     Llvm.build_store v jmp_buf builder;
     jmp_buf
+
+  let malloc_type = Llvm.function_type Type.star [|Type.i32|]
 end
 
-module Main (I : sig val main_module : Module.t end) = struct
+module Main (I : sig val initial_heap_size : int val main_module : Module.t end) = struct
   let m = Llvm.create_module c "_main_"
 
   module Generic = Generic (struct let m = m end)
 
-  let () =
-    let malloc_type = Llvm.function_type Type.star [|Type.i32|] in
-    let (malloc, builder) = Llvm.define_function `External c "malloc" malloc_type m in
-    let gc_malloc = Llvm.declare_function "GC_malloc" malloc_type m in
-    Llvm.build_ret (Llvm.build_call gc_malloc (Llvm.params malloc) "" builder) builder
+  let malloc = Llvm.declare_function "malloc" Generic.malloc_type m
+
+  let gc_heap = Llvm.define_global "GC_heap" (Llvm.const_null Type.star) m
+  let gc_heap_cursor = Llvm.define_global "GC_heap_cursor" (Llvm.const_int Type.i32 0) m
+  let gc_heap_size = Llvm.define_global "GC_heap_size" (Llvm.const_int Type.i32 0) m
+
+  let fill_gc_malloc builder =
+    (* TODO: Implement the GC (free!!) *)
+    let size = Llvm.current_param builder 0 in
+    let current_heap_cursor = Llvm.build_load gc_heap_cursor "" builder in
+    let current_heap_size = Llvm.build_load gc_heap_size "" builder in
+    let new_heap_cursor = Llvm.build_add current_heap_cursor size "" builder in
+    let enough_space = Llvm.build_icmp Llvm.Icmp.Ule new_heap_cursor current_heap_size "" builder in
+    let return =
+      let (block, builder) = Llvm.create_block c builder in
+      let current_heap = Llvm.build_load gc_heap "" builder in
+      let ptr = Llvm.build_gep current_heap [|current_heap_cursor|] "" builder in
+      Llvm.build_store new_heap_cursor gc_heap_cursor builder;
+      Llvm.build_ret ptr builder;
+      block
+    in
+    let extend_space =
+      let (block, builder) = Llvm.create_block c builder in
+      let new_heap_size = Llvm.build_add current_heap_size size "" builder in
+      let new_heap = Llvm.build_call malloc [|new_heap_size|] "" builder in
+      (* TODO: Handle malloc failures *)
+      Llvm.build_store new_heap gc_heap builder;
+      Llvm.build_store size gc_heap_cursor builder;
+      Llvm.build_store new_heap_size gc_heap_size builder;
+      Llvm.build_ret new_heap builder;
+      block
+    in
+    Llvm.build_cond_br enough_space return extend_space builder
+
+  let fill_gc_init builder =
+    let initial_heap_size = Llvm.const_int Type.i32 I.initial_heap_size in
+    let new_heap = Llvm.build_call malloc [|initial_heap_size|] "" builder in
+    (* TODO: Handle malloc failures *)
+    Llvm.build_store new_heap gc_heap builder;
+    Llvm.build_store initial_heap_size gc_heap_size builder;
+    Llvm.build_ret_void builder
 
   let create_builtin_instruction ty name g =
     let ty = Llvm.function_type ty [|ty; ty|] in
@@ -98,7 +136,10 @@ module Main (I : sig val main_module : Module.t end) = struct
     Llvm.declare_function (Generic.init_name I.main_module) ty m
 
   let init_gc builder =
-    let gc_init = Llvm.declare_function "GC_init" Type.unit_function m in
+    let (_, gc_builder) = Llvm.define_function `External c "GC_malloc" Generic.malloc_type m in
+    fill_gc_malloc gc_builder;
+    let (gc_init, gc_builder) = Llvm.define_function `External c "GC_init" Type.unit_function m in
+    fill_gc_init gc_builder;
     Llvm.build_call_void gc_init [||] builder
 
   let make () =
@@ -122,6 +163,13 @@ module Make (I : I) = struct
 
   module Generic = Generic (struct let m = m end)
 
+  let build_gc_malloc ty name builder =
+    let size = Llvm.size_of ty in
+    let size = Llvm.const_trunc_or_bitcast size Type.i32 in
+    let gc_malloc = Llvm.declare_function "GC_malloc" Generic.malloc_type m in
+    let ret = Llvm.build_call gc_malloc [|size|] name builder in
+    Llvm.build_bitcast ret (Llvm.pointer_type ty) "" builder
+
   let init ptr ty values builder =
     let aux acc i x = Llvm.build_insertvalue acc x i "" builder in
     let values = List.foldi aux (Llvm.undef ty) values in
@@ -129,7 +177,7 @@ module Make (I : I) = struct
 
   let malloc_and_init size values builder =
     let ty = Type.array size in
-    let allocated = Llvm.build_malloc ty "" builder in
+    let allocated = build_gc_malloc ty "" builder in
     init allocated ty values builder;
     Llvm.build_bitcast allocated Type.star "" builder
 
@@ -323,7 +371,7 @@ module Make (I : I) = struct
         (t, builder)
     | ty ->
         let ty = llvm_ty_of_ty ty in
-        let value = Llvm.build_malloc ty "" builder in
+        let value = build_gc_malloc ty "" builder in
         Llvm.build_store t value builder;
         let value = Llvm.build_bitcast value Type.star "" builder in
         (value, builder)
@@ -515,18 +563,23 @@ let make ~modul ~imports options x =
   in
   Module.make ~imports x
 
-let main main_module =
-  let module Module = Main(struct let main_module = main_module end) in
+let main options main_module =
+  let module Module =
+    Main(struct
+      let initial_heap_size = options#initial_heap_size
+      let main_module = main_module
+    end)
+  in
   Module.make ()
 
-let link ~main_module_name ~main_module imports =
+let link options ~main_module_name ~main_module imports =
   let aux _ x dst =
     Llvm_linker.link_modules' dst x;
     dst
   in
   let dst = main_module in
   let () =
-    let src = main main_module_name in
+    let src = main options main_module_name in
     Llvm_linker.link_modules' dst src;
   in
   Module.Map.fold aux imports dst
@@ -587,3 +640,5 @@ let emit_object_file ~tmp m =
     Llvm_target.CodeGenFileType.ObjectFile
     tmp
     target
+
+let default_heap_size = 4096
