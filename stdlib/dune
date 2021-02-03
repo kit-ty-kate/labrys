@@ -5,5 +5,5 @@
   (action (run ../src/main.exe build-module --no-prelude --build-dir . Prelude)))
 
 (install
-  (section lib)
+  (section (site (labrys labrys)))
   (files Prelude.sfwi Prelude.bc Prelude.csfw))

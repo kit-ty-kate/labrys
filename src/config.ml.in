@@ -8,13 +8,12 @@ let fmt = Printf.sprintf
 let cmd x = CCUnix.with_process_in x ~f:CCIO.read_lines_l
 
 let version = Sys.argv.(1)
-let lib = List.hd (cmd "opam config var lib")
 
 let l = [
   fmt "let version = \"%s\"" (String.escaped version);
   "let lib =";
   "  try Sys.getenv \"LABRYS_LIBDIR\"";
-  fmt "  with Not_found -> \"%s/labrys\"" (String.escaped lib);
+  fmt "  with Not_found -> List.hd Labrys_libdir.Sites.labrys";
 ]
 
 let () = CCIO.write_lines_l stdout l

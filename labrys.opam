@@ -1,5 +1,4 @@
 opam-version: "2.0"
-version: "0.1"
 synopsis: "A toy language based on LLVM that implements the System Fω type-system"
 license: "MIT"
 maintainer: "Kate <kit.ty.kate@disroot.org>"
@@ -11,7 +10,8 @@ build: ["dune" "build" "-p" name "-j" jobs]
 run-test: ["dune" "runtest" "-p" name "-j" jobs]
 depends: [
   "ocaml" {>= "4.04"}
-  "dune" {>= "2.7"}
+  "dune" {>= "2.8"}
+  "dune-site" {>= "2.8"}
   "menhir"
   "base-unix"
   "cmdliner"

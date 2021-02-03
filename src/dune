@@ -16,7 +16,12 @@
      labrys_optimization
      labrys_backend
      cmdliner
+     dune-site
      msgpack))
+
+(generate_sites_module
+ (module labrys_libdir)
+ (sites labrys))
 
 (rule
   (targets config.ml)
