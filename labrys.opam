@@ -24,7 +24,6 @@ depends: [
   "llvm" {with-test & = "10.0.0" & os-distribution = "alpine"}
   "containers" {>= "3.0"}
   "containers-data" {>= "3.0"}
-  "craml" {with-test}
 ]
 tags: [
   "compiler"

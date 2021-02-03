@@ -1,29 +1,29 @@
 (env
-  (_ (flags (:standard -open Containers))))
+ (_ (flags (:standard -open Containers))))
 
 (executable
-  (name main)
-  (public_name labrys)
-  (modules_without_implementation options)
-  (libraries
-     labrys_common
-     labrys_parsing
-     labrys_desugaring
-     labrys_pretyping
-     labrys_typing
-     labrys_lambda
-     labrys_flatten
-     labrys_optimization
-     labrys_backend
-     cmdliner
-     dune-site
-     msgpack))
+ (name main)
+ (public_name labrys)
+ (modules_without_implementation options)
+ (libraries
+   labrys_common
+   labrys_parsing
+   labrys_desugaring
+   labrys_pretyping
+   labrys_typing
+   labrys_lambda
+   labrys_flatten
+   labrys_optimization
+   labrys_backend
+   cmdliner
+   dune-site
+   msgpack))
 
 (generate_sites_module
  (module labrys_libdir)
  (sites labrys))
 
 (rule
-  (targets config.ml)
-  (deps config.ml.in)
-  (action (with-stdout-to %{targets} (run ocaml %{deps} %{version:labrys}))))
+ (targets config.ml)
+ (deps config.ml.in)
+ (action (with-stdout-to %{targets} (run ocaml %{deps} %{version:labrys}))))

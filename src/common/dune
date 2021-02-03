@@ -1,11 +1,11 @@
 (library
-  (name labrys_common)
-  (modules_without_implementation location)
-  (wrapped false)
-  (libraries
-     containers
-     containers.unix
-     containers-data
-     pprint
-     uutf
-     re))
+ (name labrys_common)
+ (modules_without_implementation location)
+ (wrapped false)
+ (libraries
+   containers
+   containers.unix
+   containers-data
+   pprint
+   uutf
+   re))

@@ -1,7 +1,7 @@
 (library
-  (name labrys_desugaring)
-  (modules_without_implementation desugaredTree)
-  (wrapped false)
-  (libraries
-     labrys_parsing
-     containers))
+ (name labrys_desugaring)
+ (modules_without_implementation desugaredTree)
+ (wrapped false)
+ (libraries
+   labrys_parsing
+   containers))

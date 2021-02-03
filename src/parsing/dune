@@ -2,9 +2,9 @@
 (ocamllex lexer)
 
 (library
-  (name labrys_parsing)
-  (modules_without_implementation parseTree)
-  (wrapped false)
-  (libraries
-     labrys_common
-     containers))
+ (name labrys_parsing)
+ (modules_without_implementation parseTree)
+ (wrapped false)
+ (libraries
+   labrys_common
+   containers))

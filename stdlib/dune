@@ -1,9 +1,9 @@
 (rule
-  (targets Prelude.bc Prelude.csfw)
-  (deps Prelude.sfw Prelude.sfwi)
-  (mode (promote (until-clean) (only *)))
-  (action (run ../src/main.exe build-module --no-prelude --build-dir . Prelude)))
+ (targets Prelude.bc Prelude.csfw)
+ (deps Prelude.sfw Prelude.sfwi)
+ (mode (promote (until-clean) (only *)))
+ (action (run ../src/main.exe build-module --no-prelude --build-dir . Prelude)))
 
 (install
-  (section (site (labrys labrys)))
-  (files Prelude.sfwi Prelude.bc Prelude.csfw))
+ (section (site (labrys labrys)))
+ (files Prelude.sfwi Prelude.bc Prelude.csfw))

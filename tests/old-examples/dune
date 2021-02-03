@@ -1,15 +1,7 @@
-(rule
-  (alias runtest)
-  (deps
-    (:test old-examples.t)
-    (glob_files *.sfw)
-    (glob_files *.sfwi)
-    (glob_files Test/*.sfw)
-    (glob_files Test/*.sfwi)
-    %{project_root}/stdlib/Prelude.bc)
-  (action
-    (progn
-      (setenv LABRYS %{exe:../../src/main.exe}
-        (setenv LABRYS_LIBDIR %{project_root}/stdlib
-          (run craml %{test})))
-      (diff? %{test} %{test}.corrected))))
+(cram
+ (deps
+  (package labrys)
+  (glob_files *.sfw)
+  (glob_files *.sfwi)
+  (glob_files Test/*.sfw)
+  (glob_files Test/*.sfwi)))
