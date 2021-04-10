@@ -192,13 +192,17 @@ let dump_class name params =
 let dump_instance name tyclass =
   dump_instance_name name ^^^ dump_tyclass_instance tyclass
 
+let rec dump_foreign_options = function
+  | [] -> empty
+  | (name, arg)::xs -> dump_name name ^^ str "(" ^^ str arg ^^ str ")" ^^^ dump_foreign_options xs
+
 let dump_top = function
   | Value x ->
       dump_let x
   | Type (name, ty) ->
       str "type alias" ^^^ dump_name name ^^^ equals ^//^ dump_ty ty
-  | Foreign (cname, name, ty) ->
-      str "foreign" ^^^ dump_cname cname ^^^ dump_name name ^^^ colon ^//^
+  | Foreign (cname, options, name, ty) ->
+      str "foreign" ^^^ dump_cname cname ^^^ dump_foreign_options options ^^^ dump_name name ^^^ colon ^//^
       dump_ty ty
   | AbstractType (name, k) ->
       str "type" ^^^ dump_name name ^^^ dump_kind_opt k

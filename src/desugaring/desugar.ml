@@ -398,24 +398,25 @@ let desugar_cname ~loc cname =
       try Uchar.to_char c with Invalid_argument _ -> assert false (* TODO *)
     ) cname
   in
-  let buf = Buffer.create 64 in
   (* According to https://llvm.org/docs/LangRef.html#id1296 *)
-  let rec iter_correct_c_ident i = function
+  let rec fold_correct_c_ident buf i = function
     | (('-' | 'a'..'z' | 'A'..'Z' | '$' | '.' | '_') as c)::cs ->
         Buffer.add_char buf c;
-        iter_correct_c_ident (succ i) cs
+        fold_correct_c_ident buf (succ i) cs
     | (('0'..'9') as c)::cs when i > 0 ->
         Buffer.add_char buf c;
-        iter_correct_c_ident (succ i) cs
-    | ['/'; ('0'..'9') as n] when i > 0 ->
-        Some (int_of_char n - int_of_char '0')
+        fold_correct_c_ident buf (succ i) cs
     | _c::_ ->
         assert false (* TODO *)
     | [] ->
-        None
+        Buffer.contents buf
   in
-  let va_arg = iter_correct_c_ident 0 cname in
-  (Buffer.contents buf, {va_arg})
+  fold_correct_c_ident (Buffer.create 64) 0 cname
+
+let desugar_foreign_options = function
+  | [((_, `NewLowerName "va_arg"), va_arg)] -> { va_arg = Some (int_of_string va_arg) }
+  | ((_loc, _name), _)::_ -> assert false (* TODO *)
+  | [] -> { va_arg = None }
 
 let create ~current_module options mimports =
   let rec aux imports = function
@@ -432,12 +433,13 @@ let create ~current_module options mimports =
         let name = new_upper_name_to_type ~current_module name in
         let ty = desugar_ty imports ty in
         Type (name, ty) :: aux imports xs
-    | ParseTree.Foreign (cname, name, ty) :: xs ->
-        let (cname, options) = desugar_cname ~loc:(fst name) cname in
+    | ParseTree.Foreign (cname, foreign_options, name, ty) :: xs ->
+        let cname = desugar_cname ~loc:(fst name) cname in
+        let foreign_options = desugar_foreign_options foreign_options in
         let imports' = Imports.add_value ~export:false name current_module imports in
         let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
         let ty = desugar_ty imports ty in
-        Foreign (cname, options, name, ty) :: aux imports' xs
+        Foreign (cname, foreign_options, name, ty) :: aux imports' xs
     | ParseTree.AbstractType (name, kind) :: xs ->
         let imports = Imports.add_type ~export:false name current_module imports in
         let name = new_upper_name_to_type ~current_module name in

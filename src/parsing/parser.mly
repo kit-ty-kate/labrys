@@ -75,8 +75,8 @@ body:
       { ParseTree.Value x }
   | typeAlias = typeAlias
       { ParseTree.Type typeAlias }
-  | Foreign cname = String name = newLowerName Colon ty = typeExpr
-      { ParseTree.Foreign (cname, name, ty) }
+  | Foreign options = foreign_options cname = String name = newLowerName Colon ty = typeExpr
+      { ParseTree.Foreign (cname, options, name, ty) }
   | Type name = newUpperName k = kindopt
       { ParseTree.AbstractType (name, k) }
   | datatype = datatype
@@ -89,6 +89,10 @@ body:
       { ParseTree.Class (name, params, sigs) }
   | Instance name = instanceName x = tyclassInstance Equal values = let_case+ End
       { ParseTree.Instance (x, name, values) }
+
+foreign_options:
+  | { [] }
+  | name = newLowerName LParen va_arg = Int RParen { [(name, va_arg)] }
 
 instanceName:
   | { None }
