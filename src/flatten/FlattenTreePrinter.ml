@@ -51,7 +51,7 @@ let dump_foreign_ty args ret =
 let dump_foreign_options {va_arg} =
   match va_arg with
   | None -> empty
-  | Some va_arg -> str "va_arg(" ^^^ OCaml.int va_arg ^^^ str ")"
+  | Some va_arg -> str "va_arg(" ^^ OCaml.int va_arg ^^ str ")"
 
 let rec dump_branch t =
   bar ^^^ dump_t t

@@ -172,7 +172,7 @@ let dump_instance name tyclass =
 let dump_foreign_options {va_arg} =
   match va_arg with
   | None -> empty
-  | Some va_arg -> str "va_arg(" ^^^ OCaml.int va_arg ^^^ str ")"
+  | Some va_arg -> str "va_arg(" ^^ OCaml.int va_arg ^^ str ")"
 
 let dump_top = function
   | Value x ->
@@ -180,7 +180,7 @@ let dump_top = function
   | Type (name, ty) ->
       str "type alias" ^^^ dump_ty_name name ^^^ equals ^//^ dump_ty ty
   | Foreign (cname, options, name, ty) ->
-      str "foreign" ^^^ dump_cname cname ^^^ dump_foreign_options options ^^^ dump_name name ^^^ colon ^//^
+      str "foreign" ^^^ dump_foreign_options options ^^^ dump_cname cname ^^^ dump_name name ^^^ colon ^//^
       dump_ty ty
   | Datatype (name, k, variants) ->
       str "type" ^^^ dump_ty_name name ^^^ colon ^^^ dump_kind k ^^^ equals ^//^

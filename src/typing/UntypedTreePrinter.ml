@@ -107,13 +107,13 @@ let dump_args_ty args =
 let dump_foreign_options {va_arg} =
   match va_arg with
   | None -> empty
-  | Some va_arg -> str "va_arg(" ^^^ OCaml.int va_arg ^^^ str ")"
+  | Some va_arg -> str "va_arg(" ^^ OCaml.int va_arg ^^ str ")"
 
 let dump_top = function
   | Value x ->
       dump_let x
   | Foreign (cname, options, name, (ret, args)) ->
-      str "foreign" ^^^ dump_cname cname ^^^ dump_foreign_options options ^^^ dump_name name ^^^ colon ^//^
+      str "foreign" ^^^ dump_foreign_options options ^^^ dump_cname cname ^^^ dump_name name ^^^ colon ^//^
       dump_args_ty args ^^^ str "->" ^^^ dump_tag_ty ret
   | Exception name ->
       str "exception" ^^^ dump_name name
