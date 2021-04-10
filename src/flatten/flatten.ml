@@ -28,8 +28,8 @@ let rec propagate' env = function
       ([], Val name)
   | Datatype (idx, args) ->
       ([], Datatype (idx, args))
-  | CallForeign (name, ret, args) ->
-      ([], CallForeign (name, ret, args))
+  | CallForeign (name, options, ret, args) ->
+      ([], CallForeign (name, options, ret, args))
   | PatternMatching (name, vars, branches, tree) ->
       let name = rename env name in
       let branches = List.map (propagate env) branches in
@@ -77,8 +77,8 @@ let rec of_term = function
       ([], Val name)
   | LambdaTree.Datatype (idx, args) ->
       ([], Datatype (idx, args))
-  | LambdaTree.CallForeign (name, ret, args) ->
-      ([], CallForeign (name, ret, args))
+  | LambdaTree.CallForeign (name, options, ret, args) ->
+      ([], CallForeign (name, options, ret, args))
   | LambdaTree.PatternMatching (name, vars, branches, tree) ->
       let branches = List.map of_term branches in
       ([], PatternMatching (name, vars, branches, tree))

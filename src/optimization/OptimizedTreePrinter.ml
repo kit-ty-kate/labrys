@@ -51,6 +51,11 @@ let dump_foreign_ty args ret =
 let dump_fv fv =
   dump_list (List.map dump_name (LIdent.MSet.to_list fv))
 
+let dump_foreign_options {va_arg} =
+  match va_arg with
+  | None -> empty
+  | Some va_arg -> str "va_arg(" ^^^ OCaml.int va_arg ^^^ str ")"
+
 let rec dump_branch t =
   bar ^^^ dump_t t
 
@@ -63,8 +68,8 @@ and dump_t' = function
       dump_name name
   | Datatype (rep, args) ->
       dump_list (dump_constr_rep_opt rep @ List.map dump_name args)
-  | CallForeign (name, ret, args) ->
-      str "Call" ^^^ parens (str name ^^^ colon ^^^ dump_foreign_ty args ret)
+  | CallForeign (name, options, ret, args) ->
+      str "Call" ^^^ dump_foreign_options options ^^^ parens (str name ^^^ colon ^^^ dump_foreign_ty args ret)
   | PatternMatching (t, vars, branches, tree) ->
       str "match" ^^^ dump_name t ^^^ str "with" ^/^
       braces (separate_map space dump_name vars) ^^^ str "in" ^/^

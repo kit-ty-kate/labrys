@@ -7,6 +7,10 @@ type constr = int
 type length = int
 type branch = int
 
+type foreign_options = LambdaTree.foreign_options = {
+  va_arg : index option;
+}
+
 type ('int, 'float, 'char, 'bytes) ty =
   ('int, 'float, 'char, 'bytes) LambdaTree.ty
 
@@ -27,7 +31,7 @@ type t' =
   | App of (name * name)
   | Val of name
   | Datatype of (constr_rep option * name list)
-  | CallForeign of (string * ret_ty * (tag_ty * name) list)
+  | CallForeign of (string * foreign_options * ret_ty * (tag_ty * name) list)
   | PatternMatching of (name * name list * t list * tree)
   | Fail of name
   | Try of (t * (name * t))

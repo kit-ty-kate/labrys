@@ -376,7 +376,14 @@ module Make (I : I) = struct
         let value = Llvm.build_bitcast value Type.star "" builder in
         (value, builder)
 
-  let rec create_results ~last_bind ~jmp_buf ~next_block vars env builder =
+  let llvm_ty_of_foreign {OptimizedTree.va_arg} ret args =
+    let ret = llvm_ty_of_ty ret in
+    let args = args_type args in
+    match va_arg with
+    | None -> Llvm.function_type ret args
+    | Some idx -> Llvm.var_arg_function_type ret (Array.sub args 0 idx)
+
+   let rec create_results ~last_bind ~jmp_buf ~next_block vars env builder =
     let aux (env, results) result =
       let (block, builder') = Llvm.create_block c builder in
       let env = load_vars builder' env vars in
@@ -445,8 +452,8 @@ module Make (I : I) = struct
           let v = malloc_and_init values builder in
           (v, builder)
         end
-    | OptimizedTree.CallForeign (name, ret, args) ->
-        let ty = Llvm.function_type (llvm_ty_of_ty ret) (args_type args) in
+    | OptimizedTree.CallForeign (name, options, ret, args) ->
+        let ty = llvm_ty_of_foreign options ret args in
         let f = Llvm.declare_function name ty m in
         let args = map_args env builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret

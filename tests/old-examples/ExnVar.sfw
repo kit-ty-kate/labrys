@@ -8,7 +8,7 @@ exception EndOfFile
 
 foreign "GC_malloc" alloc : Int -[IO]-> Bytes
 
-foreign "sprintf" fmt : Bytes -> Bytes -> Int -[IO]-> Unit
+foreign "sprintf/2" fmt : Bytes -> Bytes -> Int -[IO]-> Unit
 
 foreign "puts" println : Bytes -[IO]-> Unit
 

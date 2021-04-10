@@ -8,6 +8,11 @@ type tyclass_name = Ident.TyClass.t
 type instance_name = Ident.Instance.t
 type module_name = Module.t
 type loc = Location.t
+type index = int
+
+type foreign_options = DesugaredTree.foreign_options = {
+  va_arg : index option;
+}
 
 type kind = DesugaredTree.kind =
   | KStar
@@ -76,7 +81,7 @@ type variant = (constr_name * ty)
 type top =
   | Value of (name * t)
   | Type of (t_name * ty)
-  | Foreign of (string * name * ty)
+  | Foreign of (string * foreign_options * name * ty)
   | Datatype of (t_name * kind * variant list)
   | Exception of (constr_name * ty)
   | Class of (tyclass_name * t_value list * (name * ty) list)

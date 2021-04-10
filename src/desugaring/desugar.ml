@@ -388,6 +388,35 @@ let rec desugar_kind_from_args = function
   | [] -> KStar
   | (_, k)::ks -> KFun (desugar_kind k, desugar_kind_from_args ks)
 
+let desugar_cname ~loc cname =
+  let cname = desugar_uchar_list ~loc cname in
+  if List.is_empty cname then begin
+    assert false; (* TODO *)
+  end;
+  let cname =
+    List.map (fun c ->
+      try Uchar.to_char c with Invalid_argument _ -> assert false (* TODO *)
+    ) cname
+  in
+  let buf = Buffer.create 64 in
+  (* According to https://llvm.org/docs/LangRef.html#id1296 *)
+  let rec iter_correct_c_ident i = function
+    | (('-' | 'a'..'z' | 'A'..'Z' | '$' | '.' | '_') as c)::cs ->
+        Buffer.add_char buf c;
+        iter_correct_c_ident (succ i) cs
+    | (('0'..'9') as c)::cs when i > 0 ->
+        Buffer.add_char buf c;
+        iter_correct_c_ident (succ i) cs
+    | ['/'; ('0'..'9') as n] when i > 0 ->
+        Some (int_of_char n - int_of_char '0')
+    | _c::_ ->
+        assert false (* TODO *)
+    | [] ->
+        None
+  in
+  let va_arg = iter_correct_c_ident 0 cname in
+  (Buffer.contents buf, {va_arg})
+
 let create ~current_module options mimports =
   let rec aux imports = function
     | ParseTree.Value ((name, ParseTree.NonRec, _) as value) :: xs ->
@@ -404,11 +433,11 @@ let create ~current_module options mimports =
         let ty = desugar_ty imports ty in
         Type (name, ty) :: aux imports xs
     | ParseTree.Foreign (cname, name, ty) :: xs ->
-        let cname = desugar_bytes ~loc:(fst name) cname in
+        let (cname, options) = desugar_cname ~loc:(fst name) cname in
         let imports' = Imports.add_value ~export:false name current_module imports in
         let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
         let ty = desugar_ty imports ty in
-        Foreign (cname, name, ty) :: aux imports' xs
+        Foreign (cname, options, name, ty) :: aux imports' xs
     | ParseTree.AbstractType (name, kind) :: xs ->
         let imports = Imports.add_type ~export:false name current_module imports in
         let name = new_upper_name_to_type ~current_module name in

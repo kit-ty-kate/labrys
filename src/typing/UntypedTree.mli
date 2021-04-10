@@ -7,6 +7,10 @@ type index = int
 type length = int
 type branch = int
 
+type foreign_options = PretypedTree.foreign_options = {
+  va_arg : index option;
+}
+
 type ('int, 'float, 'char, 'bytes) ty = [
   | `Int of 'int
   | `Float of 'float
@@ -45,6 +49,6 @@ type foreign_fun_type = (ret_ty * tag_ty list)
 
 type top =
   | Value of (name * t)
-  | Foreign of (string * name * foreign_fun_type)
+  | Foreign of (string * foreign_options * name * foreign_fun_type)
   | Exception of name
   | Instance of (name * (name * t) list)
