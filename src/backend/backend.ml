@@ -391,7 +391,7 @@ module Make (I : I) = struct
         let args = try Array.sub args 0 idx with Invalid_argument _ -> assert false in
         Llvm.var_arg_function_type ret args
 
-   let rec create_results ~last_bind ~jmp_buf ~next_block vars env builder =
+  let rec create_results ~last_bind ~jmp_buf ~next_block vars env builder =
     let aux (env, results) result =
       let (block, builder') = Llvm.create_block c builder in
       let env = load_vars builder' env vars in
@@ -607,8 +607,9 @@ let get_triple () =
 
 let get_target ~triple =
   let target = Llvm_target.Target.by_triple triple in
-  let reloc_mode = Llvm_target.RelocMode.PIC in
-  Llvm_target.TargetMachine.create ~triple ~reloc_mode target
+  let reloc_mode = Llvm_target.RelocMode.PIC in (* TODO: Is this really what i want? *)
+  let level = Llvm_target.CodeGenOptLevel.Default in (* TODO: This is -O2. Make it dependent on options#opt instead *)
+  Llvm_target.TargetMachine.create ~triple ~reloc_mode ~level target
 
 let privatize_identifiers m =
   let aux f v =
