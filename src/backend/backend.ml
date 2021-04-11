@@ -377,11 +377,19 @@ module Make (I : I) = struct
         (value, builder)
 
   let llvm_ty_of_foreign {OptimizedTree.va_arg} ret args =
-    let ret = llvm_ty_of_ty ret in
-    let args = args_type args in
     match va_arg with
-    | None -> Llvm.function_type ret args
-    | Some idx -> Llvm.var_arg_function_type ret (Array.sub args 0 idx)
+    | None ->
+        Llvm.function_type ret args
+    | Some (loc, idx) ->
+        if idx > Array.length args then begin
+          Err.fail ~loc
+            "The va_arg() foreign option cannot contain a number superior \
+             to the number of arguments";
+        end else if idx < 0 then begin
+          Err.fail ~loc "The va_arg() foreign option cannot contain negative numbers";
+        end;
+        let args = try Array.sub args 0 idx with Invalid_argument _ -> assert false in
+        Llvm.var_arg_function_type ret args
 
    let rec create_results ~last_bind ~jmp_buf ~next_block vars env builder =
     let aux (env, results) result =
@@ -453,7 +461,7 @@ module Make (I : I) = struct
           (v, builder)
         end
     | OptimizedTree.CallForeign (name, options, ret, args) ->
-        let ty = llvm_ty_of_foreign options ret args in
+        let ty = llvm_ty_of_foreign options (llvm_ty_of_ty ret) (args_type args) in
         let f = Llvm.declare_function name ty m in
         let args = map_args env builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret

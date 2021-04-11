@@ -11,7 +11,7 @@ type loc = Location.t
 type index = int
 
 type foreign_options = DesugaredTree.foreign_options = {
-  va_arg : index option;
+  va_arg : (loc * index) option;
 }
 
 type kind = DesugaredTree.kind =

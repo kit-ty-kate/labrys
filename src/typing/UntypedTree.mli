@@ -6,9 +6,10 @@ type pat_vars = Ident.Name.Set.t
 type index = int
 type length = int
 type branch = int
+type loc = Location.t
 
 type foreign_options = PretypedTree.foreign_options = {
-  va_arg : index option;
+  va_arg : (loc * index) option;
 }
 
 type ('int, 'float, 'char, 'bytes) ty = [

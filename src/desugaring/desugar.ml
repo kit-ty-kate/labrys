@@ -391,11 +391,13 @@ let rec desugar_kind_from_args = function
 let desugar_cname ~loc cname =
   let cname = desugar_uchar_list ~loc cname in
   if List.is_empty cname then begin
-    assert false; (* TODO *)
+    Err.fail ~loc "An empty string isn't a valid foreign function identifier";
   end;
   let cname =
     List.map (fun c ->
-      try Uchar.to_char c with Invalid_argument _ -> assert false (* TODO *)
+      try Uchar.to_char c with
+      | Invalid_argument _ ->
+          Err.fail ~loc "UTF-8 characters aren't allowed as foreign function indentifier"
     ) cname
   in
   (* According to https://llvm.org/docs/LangRef.html#id1296 *)
@@ -406,16 +408,17 @@ let desugar_cname ~loc cname =
     | (('0'..'9') as c)::cs when i > 0 ->
         Buffer.add_char buf c;
         fold_correct_c_ident buf (succ i) cs
-    | _c::_ ->
-        assert false (* TODO *)
+    | c::_ ->
+        Err.fail ~loc "Character '%c' isn't allowed in a foreign function identifier" c
     | [] ->
         Buffer.contents buf
   in
   fold_correct_c_ident (Buffer.create 64) 0 cname
 
 let desugar_foreign_options = function
-  | [((_, `NewLowerName "va_arg"), va_arg)] -> { va_arg = Some (int_of_string va_arg) }
-  | ((_loc, _name), _)::_ -> assert false (* TODO *)
+  | [((loc, `NewLowerName "va_arg"), va_arg)] -> { va_arg = Some (loc, int_of_string va_arg) }
+  | ((loc, `NewLowerName name), _)::_ -> Err.fail ~loc "%s isn't a valid foreign option" name
+  | ((loc, `Underscore), _)::_ -> Err.fail ~loc "_ isn't a valid foreign option"
   | [] -> { va_arg = None }
 
 let create ~current_module options mimports =

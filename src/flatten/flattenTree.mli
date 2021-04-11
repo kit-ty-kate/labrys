@@ -6,9 +6,10 @@ type index = int
 type constr = int
 type length = int
 type branch = int
+type loc = Location.t
 
 type foreign_options = LambdaTree.foreign_options = {
-  va_arg : index option;
+  va_arg : (loc * index) option;
 }
 
 type ('int, 'float, 'char, 'bytes) ty =

@@ -107,7 +107,7 @@ let dump_args_ty args =
 let dump_foreign_options {va_arg} =
   match va_arg with
   | None -> empty
-  | Some va_arg -> str "va_arg(" ^^ OCaml.int va_arg ^^ str ")"
+  | Some (_loc, va_arg) -> str "va_arg(" ^^ OCaml.int va_arg ^^ str ")"
 
 let dump_top = function
   | Value x ->
