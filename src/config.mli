@@ -2,4 +2,6 @@
 (* See the LICENSE file at the top-level directory. *)
 
 val version : string
-val lib : string
+val lib : string Lazy.t
+
+val parse_dir : string -> (string, [`Msg of string]) result

@@ -10,7 +10,7 @@ let program modul src_dir build_dir lib_dir no_prelude debug initial_heap_size l
   Compiler.compile_program modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-    method lib_dir = lib_dir
+    method lib_dir = Lazy.force lib_dir
     method no_prelude = no_prelude
     method debug = debug
     method initial_heap_size = initial_heap_size
@@ -25,7 +25,7 @@ let modul modul src_dir build_dir lib_dir no_prelude debug initial_heap_size () 
   Compiler.compile_module modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-    method lib_dir = lib_dir
+    method lib_dir = Lazy.force lib_dir
     method no_prelude = no_prelude
     method debug = debug
     method initial_heap_size = initial_heap_size
@@ -41,7 +41,7 @@ let print_desugared_tree modul src_dir build_dir lib_dir no_prelude () =
   Compiler.print_desugared_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-    method lib_dir = lib_dir
+    method lib_dir = Lazy.force lib_dir
     method no_prelude = no_prelude
   end)
 
@@ -49,7 +49,7 @@ let print_pretyped_tree modul src_dir build_dir lib_dir no_prelude () =
   Compiler.print_pretyped_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-    method lib_dir = lib_dir
+    method lib_dir = Lazy.force lib_dir
     method no_prelude = no_prelude
   end)
 
@@ -57,7 +57,7 @@ let print_untyped_tree modul src_dir build_dir lib_dir no_prelude () =
   Compiler.print_untyped_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-    method lib_dir = lib_dir
+    method lib_dir = Lazy.force lib_dir
     method no_prelude = no_prelude
   end)
 
@@ -65,7 +65,7 @@ let print_flatten_tree modul src_dir build_dir lib_dir no_prelude () =
   Compiler.print_flatten_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-    method lib_dir = lib_dir
+    method lib_dir = Lazy.force lib_dir
     method no_prelude = no_prelude
   end)
 
@@ -73,7 +73,7 @@ let print_lambda_tree modul src_dir build_dir lib_dir no_prelude () =
   Compiler.print_lambda_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-    method lib_dir = lib_dir
+    method lib_dir = Lazy.force lib_dir
     method no_prelude = no_prelude
   end)
 
@@ -81,7 +81,7 @@ let print_optimized_tree modul src_dir build_dir lib_dir no_prelude () =
   Compiler.print_optimized_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-    method lib_dir = lib_dir
+    method lib_dir = Lazy.force lib_dir
     method no_prelude = no_prelude
   end)
 
@@ -89,7 +89,7 @@ let print_early_llvm modul src_dir build_dir lib_dir no_prelude debug initial_he
   Compiler.print_early_llvm modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-    method lib_dir = lib_dir
+    method lib_dir = Lazy.force lib_dir
     method no_prelude = no_prelude
     method debug = debug
     method initial_heap_size = initial_heap_size
@@ -99,7 +99,7 @@ let print_llvm modul src_dir build_dir lib_dir no_prelude debug initial_heap_siz
   Compiler.print_llvm modul (object
     method src_dir = src_dir
     method build_dir = build_dir
-    method lib_dir = lib_dir
+    method lib_dir = Lazy.force lib_dir
     method no_prelude = no_prelude
     method debug = debug
     method initial_heap_size = initial_heap_size
@@ -111,9 +111,14 @@ let restrained_base args =
   let doc_srcdir = "Will look for local modules to compile in DIR." in
   let doc_builddir = "Will put intermediate compiled modules in DIR." in
   let args = args $ Arg.(required & pos 0 (some string) None & info ~docv:"ModuleName" []) in
-  let args = args $ Arg.(value & opt dir "" & info ~docv:"DIR" ~doc:doc_srcdir["src-dir"]) in
+  let args = args $ Arg.(value & opt dir "" & info ~docv:"DIR" ~doc:doc_srcdir ["src-dir"]) in
   let args = args $ Arg.(value & opt dir "dest" & info ~docv:"DIR" ~doc:doc_builddir ["build-dir"]) in
   args
+
+let lazy_dir =
+  let parse s = Result.map Lazy.from_val (Config.parse_dir s) in
+  let print fmt dir = Format.pp_print_string fmt (Lazy.force dir) in
+  Arg.conv (parse, print)
 
 let base args =
   let doc_libdir = "Imported library modules will be looked for in DIR." in
@@ -122,7 +127,7 @@ let base args =
      from the standard library."
   in
   let args = restrained_base args in
-  let args = args $ Arg.(value & opt dir Config.lib & info ~docv:"DIR" ~doc:doc_libdir ["lib-dir"]) in
+  let args = args $ Arg.(value & opt lazy_dir Config.lib & info ~docv:"DIR" ~doc:doc_libdir ["lib-dir"]) in
   let args = args $ Arg.(value & flag & info ~doc:doc_noprelude ["no-prelude"]) in
   args
 
