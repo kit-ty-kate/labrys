@@ -388,6 +388,39 @@ let rec desugar_kind_from_args = function
   | [] -> KStar
   | (_, k)::ks -> KFun (desugar_kind k, desugar_kind_from_args ks)
 
+let desugar_cname ~loc cname =
+  let cname = desugar_uchar_list ~loc cname in
+  if List.is_empty cname then begin
+    Err.fail ~loc "An empty string isn't a valid foreign function identifier";
+  end;
+  let cname =
+    List.map (fun c ->
+      try Uchar.to_char c with
+      | Invalid_argument _ ->
+          Err.fail ~loc "UTF-8 characters aren't allowed as foreign function indentifier"
+    ) cname
+  in
+  (* According to https://llvm.org/docs/LangRef.html#id1296 *)
+  let rec fold_correct_c_ident buf i = function
+    | (('-' | 'a'..'z' | 'A'..'Z' | '$' | '.' | '_') as c)::cs ->
+        Buffer.add_char buf c;
+        fold_correct_c_ident buf (succ i) cs
+    | (('0'..'9') as c)::cs when i > 0 ->
+        Buffer.add_char buf c;
+        fold_correct_c_ident buf (succ i) cs
+    | c::_ ->
+        Err.fail ~loc "Character '%c' isn't allowed in a foreign function identifier" c
+    | [] ->
+        Buffer.contents buf
+  in
+  fold_correct_c_ident (Buffer.create 64) 0 cname
+
+let desugar_foreign_options = function
+  | [((loc, `NewLowerName "va_arg"), va_arg)] -> { va_arg = Some (loc, int_of_string va_arg) }
+  | ((loc, `NewLowerName name), _)::_ -> Err.fail ~loc "%s isn't a valid foreign option" name
+  | ((loc, `Underscore), _)::_ -> Err.fail ~loc "_ isn't a valid foreign option"
+  | [] -> { va_arg = None }
+
 let create ~current_module options mimports =
   let rec aux imports = function
     | ParseTree.Value ((name, ParseTree.NonRec, _) as value) :: xs ->
@@ -403,12 +436,13 @@ let create ~current_module options mimports =
         let name = new_upper_name_to_type ~current_module name in
         let ty = desugar_ty imports ty in
         Type (name, ty) :: aux imports xs
-    | ParseTree.Foreign (cname, name, ty) :: xs ->
-        let cname = desugar_bytes ~loc:(fst name) cname in
+    | ParseTree.Foreign (cname, foreign_options, name, ty) :: xs ->
+        let cname = desugar_cname ~loc:(fst name) cname in
+        let foreign_options = desugar_foreign_options foreign_options in
         let imports' = Imports.add_value ~export:false name current_module imports in
         let name = new_lower_name_to_value ~current_module ~allow_underscore:false name in
         let ty = desugar_ty imports ty in
-        Foreign (cname, name, ty) :: aux imports' xs
+        Foreign (cname, foreign_options, name, ty) :: aux imports' xs
     | ParseTree.AbstractType (name, kind) :: xs ->
         let imports = Imports.add_type ~export:false name current_module imports in
         let name = new_upper_name_to_type ~current_module name in

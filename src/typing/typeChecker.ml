@@ -453,12 +453,12 @@ let check_top ~current_module options (acc, has_main, env) = function
   | PretypedTree.Type (name, ty) ->
       let env = Env.add_type_alias name ty env in
       (acc, has_main, env)
-  | PretypedTree.Foreign (cname, name, ty) ->
+  | PretypedTree.Foreign (cname, foreign_options, name, ty) ->
       let ty = NType.check ~pure_arrow:`Allow env ty in
       let rty =
         check_foreign_type ~loc:(Ident.Name.loc name) options env (NType.monomorphic_split ty)
       in
-      let acc = acc @ [Foreign (cname, name, rty)] in
+      let acc = acc @ [Foreign (cname, foreign_options, name, rty)] in
       let env = Env.add_value name ty env in
       (acc, has_main, env)
   | PretypedTree.Datatype (name, k, variants) ->

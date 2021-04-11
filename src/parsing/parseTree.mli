@@ -9,6 +9,8 @@ type new_upper_name = (loc * [`NewUpperName of string])
 type lower_name = (loc * [`LowerName of string list])
 type upper_name = (loc * [`UpperName of string list])
 
+type foreign_options = (new_lower_name * string) list
+
 type kind =
   | KStar
   | KEff
@@ -96,7 +98,7 @@ type top =
   | Value of value
   | Type of (new_upper_name * ty)
   | AbstractType of (new_upper_name * kind option)
-  | Foreign of (char list * new_lower_name * ty)
+  | Foreign of (char list * foreign_options * new_lower_name * ty)
   | Datatype of (new_upper_name * ty_arg list * variant list)
   | Exception of (new_upper_name * ty list)
   | Open of import

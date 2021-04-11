@@ -163,7 +163,7 @@ and of_typed_term env = function
   | UntypedTree.Const const ->
       Const const
 
-let create_dyn_functions cname (ret, args) =
+let create_dyn_functions cname options (ret, args) =
   match args with
   | [] ->
       (* TODO: See TypeChecker.get_foreign_type *)
@@ -175,7 +175,7 @@ let create_dyn_functions cname (ret, args) =
             let t = aux ((ty, name) :: args) (succ n) xs in
             Abs (name, t)
         | [] ->
-            CallForeign (cname, ret, List.rev args)
+            CallForeign (cname, options, ret, List.rev args)
       in
       let name = LIdent.create (string_of_int 0) in
       let t = aux [(ty, name)] 1 args in
@@ -197,10 +197,10 @@ let rec of_typed_tree mset env = function
       let (name, mset, env, linkage) = env_add mset name env in
       let xs = of_typed_tree mset env xs in
       Value (name, t, linkage) :: xs
-  | UntypedTree.Foreign (cname, name, ty) :: xs ->
+  | UntypedTree.Foreign (cname, options, name, ty) :: xs ->
       let (name, mset, env, linkage) = env_add mset name env in
       let xs = of_typed_tree mset env xs in
-      Value (name, create_dyn_functions cname ty, linkage) :: xs
+      Value (name, create_dyn_functions cname options ty, linkage) :: xs
   | UntypedTree.Exception name :: xs ->
       let (name, mset, env, _) = env_add mset name env in
       let xs = of_typed_tree mset env xs in
@@ -219,7 +219,7 @@ let rec of_typed_tree mset env = function
 
 let rec scan mset = function
   | UntypedTree.Value (name, _) :: xs
-  | UntypedTree.Foreign (_, name, _) :: xs
+  | UntypedTree.Foreign (_, _, name, _) :: xs
   | UntypedTree.Instance (name, _) :: xs ->
       scan (Set.add mset name) xs
   | UntypedTree.Exception _ :: xs ->

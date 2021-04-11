@@ -6,7 +6,7 @@ type alias Nat = Nat.T
 
 foreign "GC_malloc" alloc : Int -[IO]-> Bytes
 
-foreign "sprintf" fmt : Bytes -> Bytes -> Int -[IO]-> Unit
+foreign va_arg(2) "sprintf" fmt : Bytes -> Bytes -> Int -[IO]-> Unit
 
 foreign "puts" println : Bytes -[IO]-> Unit
 

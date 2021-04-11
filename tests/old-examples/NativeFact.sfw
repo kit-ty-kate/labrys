@@ -6,7 +6,7 @@ type alias Nat = Nat.T
 
 foreign "puts" println : Bytes -[IO]-> Unit
 foreign "GC_malloc" alloc : Int -[IO]-> Bytes
-foreign "sprintf" fmt : Bytes -> Bytes -> Int -[IO]-> Unit
+foreign va_arg(2) "sprintf" fmt : Bytes -> Bytes -> Int -[IO]-> Unit
 
 let printInt (n : Int) =
   let buf = alloc 512 in

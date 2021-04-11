@@ -376,6 +376,21 @@ module Make (I : I) = struct
         let value = Llvm.build_bitcast value Type.star "" builder in
         (value, builder)
 
+  let llvm_ty_of_foreign {OptimizedTree.va_arg} ret args =
+    match va_arg with
+    | None ->
+        Llvm.function_type ret args
+    | Some (loc, idx) ->
+        if idx > Array.length args then begin
+          Err.fail ~loc
+            "The va_arg() foreign option cannot contain a number superior \
+             to the number of arguments";
+        end else if idx < 0 then begin
+          Err.fail ~loc "The va_arg() foreign option cannot contain negative numbers";
+        end;
+        let args = try Array.sub args 0 idx with Invalid_argument _ -> assert false in
+        Llvm.var_arg_function_type ret args
+
   let rec create_results ~last_bind ~jmp_buf ~next_block vars env builder =
     let aux (env, results) result =
       let (block, builder') = Llvm.create_block c builder in
@@ -445,8 +460,8 @@ module Make (I : I) = struct
           let v = malloc_and_init values builder in
           (v, builder)
         end
-    | OptimizedTree.CallForeign (name, ret, args) ->
-        let ty = Llvm.function_type (llvm_ty_of_ty ret) (args_type args) in
+    | OptimizedTree.CallForeign (name, options, ret, args) ->
+        let ty = llvm_ty_of_foreign options (llvm_ty_of_ty ret) (args_type args) in
         let f = Llvm.declare_function name ty m in
         let args = map_args env builder args in
         map_ret builder (Llvm.build_call f args "" builder) ret
@@ -592,8 +607,9 @@ let get_triple () =
 
 let get_target ~triple =
   let target = Llvm_target.Target.by_triple triple in
-  let reloc_mode = Llvm_target.RelocMode.PIC in
-  Llvm_target.TargetMachine.create ~triple ~reloc_mode target
+  let reloc_mode = Llvm_target.RelocMode.PIC in (* TODO: Is this really what i want? *)
+  let level = Llvm_target.CodeGenOptLevel.Default in (* TODO: This is -O2. Make it dependent on options#opt instead *)
+  Llvm_target.TargetMachine.create ~triple ~reloc_mode ~level target
 
 let privatize_identifiers m =
   let aux f v =

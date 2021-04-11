@@ -1,6 +1,7 @@
 (* Copyright (c) 2013-2017 The Labrys developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
+type index = int
 type name = Ident.Name.t
 type constr_name = Ident.Constr.t
 type t_name = Ident.Type.t
@@ -8,6 +9,10 @@ type tyclass_name = Ident.TyClass.t
 type instance_name = Ident.Instance.t
 type module_name = Module.t
 type loc = Location.t
+
+type foreign_options = {
+  va_arg : (loc * index) option;
+}
 
 type kind = ParseTree.kind =
   | KStar
@@ -76,7 +81,7 @@ type variant = (constr_name * ty)
 type top =
   | Value of (name * t)
   | Type of (t_name * ty)
-  | Foreign of (string * name * ty)
+  | Foreign of (string * foreign_options * name * ty)
   | Datatype of (t_name * kind * variant list)
   | Exception of (constr_name * ty)
   | Class of (tyclass_name * t_value list * (name * ty) list)

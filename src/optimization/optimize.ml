@@ -16,9 +16,9 @@ let rec of_term' = function
       (Val name, Set.singleton name)
   | FlattenTree.Datatype (idx, args) ->
       (Datatype (idx, args), Set.of_list args)
-  | FlattenTree.CallForeign (name, ty, args) ->
+  | FlattenTree.CallForeign (name, options, ty, args) ->
       let fv = List.fold_right (fun (_, name) fv -> Set.add fv name) args Set.empty in
-      (CallForeign (name, ty, args), fv)
+      (CallForeign (name, options, ty, args), fv)
   | FlattenTree.PatternMatching (name, vars, branches, tree) ->
       let (branches, fv) = of_branches branches in
       let fv = List.fold_left Set.remove_all fv vars in
@@ -66,6 +66,7 @@ and of_branches branches =
 
 let of_flatten_tree tree =
   let aux = function
+    (* TODO: OptimizedTree.Function is unused *)
     | FlattenTree.Value (name, t, linkage) ->
         let (t, _) = of_term t in
         Value (name, t, linkage)

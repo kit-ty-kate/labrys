@@ -6,6 +6,11 @@ type pat_vars = Ident.Name.Set.t
 type index = int
 type length = int
 type branch = int
+type loc = Location.t
+
+type foreign_options = PretypedTree.foreign_options = {
+  va_arg : (loc * index) option;
+}
 
 type ('int, 'float, 'char, 'bytes) ty = [
   | `Int of 'int
@@ -45,6 +50,6 @@ type foreign_fun_type = (ret_ty * tag_ty list)
 
 type top =
   | Value of (name * t)
-  | Foreign of (string * name * foreign_fun_type)
+  | Foreign of (string * foreign_options * name * foreign_fun_type)
   | Exception of name
   | Instance of (name * (name * t) list)
