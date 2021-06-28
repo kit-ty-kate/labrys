@@ -1,6 +1,6 @@
 Labrys is a toy language based on LLVM that implements the System Fω type-system.
 
-![Labrys logo](doc/logo.png)
+<img src="doc/logo.png" alt="Labrys logo" width="25%" height="25%" />
 
 ### Features
 
