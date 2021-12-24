@@ -21,8 +21,10 @@ depends: [
   "llvm" {>= "3.8"}
   "containers" {>= "3.0"}
   "containers-data" {>= "3.0"}
+  "llvm" {with-test & = "11.0.0"}
   "craml" {with-test}
 ]
+available: arch = "x86_64" | arch = "arm32" | arch = "arm64" # boehmGC segfaults on any other platforms
 depexts: [
   ["libgc-dev"] {os-family = "debian"}
   ["gc-devel"] {os-distribution = "centos"}
