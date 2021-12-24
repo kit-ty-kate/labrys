@@ -1,6 +1,6 @@
 /_build
 /labrys.install
-.merlin
+/_opam
 
 /a.out
 /dest
