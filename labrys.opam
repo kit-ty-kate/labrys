@@ -1,16 +1,16 @@
-opam-version: "1.2"
-name: "labrys"
-version: "0.1"
+opam-version: "2.0"
+version: "0.1.1~"
 license: "MIT"
 maintainer: "Kate <kit.ty.kate@disroot.org>"
 authors: "Kate <kit.ty.kate@disroot.org>"
 homepage: "https://github.com/kit-ty-kate/labrys"
-dev-repo: "https://github.com/kit-ty-kate/labrys.git"
+dev-repo: "git+https://github.com/kit-ty-kate/labrys.git"
 bug-reports: "https://github.com/kit-ty-kate/labrys/issues"
 build: ["dune" "build" "-p" name "-j" jobs]
-build-test: ["dune" "runtest" "-p" name "-j" jobs]
+run-test: ["dune" "runtest" "-p" name "-j" jobs]
 depends: [
-  "dune" {build}
+  "ocaml" {>= "4.04"}
+  "dune" {>= "2.0"}
   "menhir"
   "base-unix"
   "cmdliner"
@@ -19,8 +19,9 @@ depends: [
   "msgpack"
   "uutf" {>= "1.0.0"}
   "llvm" {>= "3.8"}
-  "containers" {>= "2.0"}
-  "craml" {test}
+  "containers" {>= "3.0"}
+  "containers-data" {>= "3.0"}
+  "craml" {with-test}
 ]
 tags: [
   "compiler"
@@ -30,4 +31,4 @@ tags: [
   "type-system"
   "language"
 ]
-available: [ocaml-version >= "4.04"]
+synopsis: "A toy language based on LLVM that implements the System Fω type-system"

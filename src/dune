@@ -41,7 +41,7 @@
      llvm.linker
      llvm.scalar_opts
      containers
-     containers.data))
+     containers-data))
 
 (rule
   (targets config.ml)

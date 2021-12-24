@@ -1,3 +1,0 @@
-PKG ocamlbuild-pkg
-S .
-B _build

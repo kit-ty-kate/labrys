@@ -1,8 +1,8 @@
 (rule
   (targets Prelude.bc Prelude.csfw)
   (deps Prelude.sfw Prelude.sfwi)
-  (mode promote-until-clean)
-  (action (run labrys build-module --no-prelude --build-dir . Prelude)))
+  (mode (promote (until-clean) (only *)))
+  (action (run ../src/main.exe build-module --no-prelude --build-dir . Prelude)))
 
 (install
   (section lib)
