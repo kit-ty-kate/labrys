@@ -1,7 +1,7 @@
 (* Copyright (c) 2013-2017 The Labrys developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-module Name : sig
+module type S = sig
   type t
 
   val equal : t -> t -> bool
@@ -19,11 +19,13 @@ module Name : sig
   module MSet : CCMultiSet.S with type elt = t
 end
 
-module Type : module type of Name
+module Name : S
+
+module Type : S
 module Constr : sig
-  include module type of Name
+  include S
   val to_name : t -> Name.t
   val to_type : t -> Type.t
 end
-module TyClass : module type of Name
-module Instance : module type of Name
+module TyClass : S
+module Instance : S

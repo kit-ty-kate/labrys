@@ -9,7 +9,7 @@ module type S = sig
 end
 
 module Make
-    (I : module type of Ident.Name)
+    (I : Ident.S)
     (E : sig val fail : I.t -> 'a end) =
 struct
   include Map.Make(I)

@@ -3,6 +3,24 @@
 
 let fmt = Printf.sprintf
 
+module type S = sig
+  type t
+
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
+
+  val create : loc:Location.t -> Module.t -> string -> t
+  val local_create : loc:Location.t -> string -> t
+  val to_string : t -> string
+
+  val loc : t -> Location.t
+
+  val unique : t -> int -> t
+
+  module Set : Set.S with type elt = t
+  module MSet : CCMultiSet.S with type elt = t
+end
+
 module Name = struct
   type t = (Location.t * Module.t option * string)
 

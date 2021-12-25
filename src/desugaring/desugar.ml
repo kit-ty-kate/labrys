@@ -13,7 +13,7 @@ let new_upper_name_to_type ~current_module (loc, `NewUpperName name) =
 let new_upper_name_to_tyclass ~current_module (loc, `NewUpperName name) =
   Ident.TyClass.create ~loc current_module name
 
-module type ID = module type of Ident.Name
+module type ID = Ident.S
 
 let create_name (type a) imports loc (module Id : ID with type t = a) name =
   match Imports.Imports.find name imports with
