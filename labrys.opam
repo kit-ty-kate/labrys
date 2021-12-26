@@ -24,6 +24,7 @@ depends: [
   "containers" {>= "3.0"}
   "containers-data" {>= "3.0"}
 ]
+available: arch != "s390x" # TODO: Look into why the tests segfault
 tags: [
   "compiler"
   "System F"
