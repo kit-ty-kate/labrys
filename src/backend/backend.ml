@@ -91,26 +91,23 @@ module Main (I : sig val initial_heap_size : int val main_module : Module.t end)
     let current_heap_size = Llvm.build_load gc_heap_size "" builder in
     let new_heap_cursor = Llvm.build_add current_heap_cursor size "" builder in
     let enough_space = Llvm.build_icmp Llvm.Icmp.Ule new_heap_cursor current_heap_size "" builder in
-    let return =
-      let (block, builder) = Llvm.create_block c builder in
-      let current_heap = Llvm.build_load gc_heap "" builder in
-      let ptr = Llvm.build_gep current_heap [|current_heap_cursor|] "" builder in
-      Llvm.build_store new_heap_cursor gc_heap_cursor builder;
-      Llvm.build_ret ptr builder;
-      block
+    let (res, builder) =
+      Llvm.build_if ~c ~builder ~ty:Type.star enough_space begin fun builder ->
+        let current_heap = Llvm.build_load gc_heap "" builder in
+        let ptr = Llvm.build_gep current_heap [|current_heap_cursor|] "" builder in
+        Llvm.build_store new_heap_cursor gc_heap_cursor builder;
+        (ptr, builder)
+      end begin fun builder ->
+        let new_heap_size = Llvm.build_add current_heap_size size "" builder in
+        let new_heap = Llvm.build_call malloc [|new_heap_size|] "" builder in
+        (* TODO: Handle malloc failures *)
+        Llvm.build_store new_heap gc_heap builder;
+        Llvm.build_store size gc_heap_cursor builder;
+        Llvm.build_store new_heap_size gc_heap_size builder;
+        (new_heap, builder)
+      end
     in
-    let extend_space =
-      let (block, builder) = Llvm.create_block c builder in
-      let new_heap_size = Llvm.build_add current_heap_size size "" builder in
-      let new_heap = Llvm.build_call malloc [|new_heap_size|] "" builder in
-      (* TODO: Handle malloc failures *)
-      Llvm.build_store new_heap gc_heap builder;
-      Llvm.build_store size gc_heap_cursor builder;
-      Llvm.build_store new_heap_size gc_heap_size builder;
-      Llvm.build_ret new_heap builder;
-      block
-    in
-    Llvm.build_cond_br enough_space return extend_space builder
+    Llvm.build_ret res builder
 
   let fill_gc_init builder =
     let initial_heap_size = Llvm.const_int Type.i32 I.initial_heap_size in
@@ -316,27 +313,22 @@ module Make (I : I) = struct
     List.init len (fun i -> Llvm.build_extractvalue term (succ i) "" builder)
 
   let rec build_if_chain ~default vars env builder values term results cases =
-    let aux builder (constr, len, tree) =
-      let if_branch =
-        let (block, builder) = Llvm.create_block c builder in
-        let term = try List.hd values with Failure _ -> assert false in
-        let term = Llvm.build_load_cast term (Type.variant_ptr (succ len)) builder in
-        let values = try List.tl values with Failure _ -> assert false in
-        let values = extract_constr_args term len builder @ values in
-        create_tree vars env builder values results tree;
-        block
-      in
-      let (else_branch, else_builder) = Llvm.create_block c builder in
+    let cmp (constr, _len, _tree) builder =
       let constr = match constr with
         | OptimizedTree.Index constr -> const_int_to_star constr
         | OptimizedTree.Exn exn -> get_exn exn
       in
-      let cmp = Llvm.build_icmp Llvm.Icmp.Eq term constr "" builder in
-      Llvm.build_cond_br cmp if_branch else_branch builder;
-      else_builder
+      Llvm.build_icmp Llvm.Icmp.Eq term constr "" builder
     in
-    let builder = List.fold_left aux builder cases in
-    Llvm.build_br default builder
+    Llvm.build_ifs_unit ~c ~builder ~list:cases cmp begin fun (_constr, len, tree) builder ->
+      let term = try List.hd values with Failure _ -> assert false in
+      let term = Llvm.build_load_cast term (Type.variant_ptr (succ len)) builder in
+      let values = try List.tl values with Failure _ -> assert false in
+      let values = extract_constr_args term len builder @ values in
+      create_tree vars env builder values results tree;
+    end begin fun builder ->
+      Llvm.build_br default builder
+    end
 
   and create_tree vars env builder values results = function
     | OptimizedTree.Jump branch ->
@@ -471,27 +463,17 @@ module Make (I : I) = struct
         create_fail jmp_buf builder
     | OptimizedTree.Try (t, (name, t')) ->
         let jmp_buf' = Generic.alloc_jmp_buf builder in
-        let (next_block, next_builder) = Llvm.create_block c builder in
         let jmp_buf_gen = Llvm.build_bitcast jmp_buf' Type.star "" builder in
         let jmp_res = Llvm.build_call setjmp [|jmp_buf_gen|] "" builder in
         let cond = Llvm.build_icmp Llvm.Icmp.Eq jmp_res (i32 0) "" builder in
-        let (try_result, try_block) =
-          let (block, builder) = Llvm.create_block c builder in
-          let (t, builder') = lambda ~last_bind ~jmp_buf:jmp_buf' env builder t in
-          Llvm.build_br next_block builder';
-          ((t, Llvm.insertion_block builder'), block)
-        in
-        let (catch_result, catch_block) =
-          let (block, builder) = Llvm.create_block c builder in
+        Llvm.build_if ~c ~builder ~ty:Type.star cond begin fun builder ->
+          lambda ~last_bind ~jmp_buf:jmp_buf' env builder t
+        end begin fun builder ->
           let exn = Llvm.build_load exn_var "" builder in
           Llvm.build_store (Llvm.undef Type.exn_glob) exn_var builder;
           let env = LIdent.Map.add name (Value exn) env in
-          let (t', builder') = lambda ~last_bind ~jmp_buf env builder t' in
-          Llvm.build_br next_block builder';
-          ((t', Llvm.insertion_block builder'), block)
-        in
-        Llvm.build_cond_br cond try_block catch_block builder;
-        (Llvm.build_phi [try_result; catch_result] "" next_builder, next_builder)
+          lambda ~last_bind ~jmp_buf env builder t'
+        end
     | OptimizedTree.RecordGet (name, n) ->
         let t = get_value env builder name in
         let t = Llvm.build_load_cast t (Type.array_ptr (succ n)) builder in

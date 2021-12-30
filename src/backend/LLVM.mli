@@ -17,6 +17,24 @@ val current_param : llbuilder -> int -> llvalue
 val create_block : llcontext -> llbuilder -> (llbasicblock * llbuilder)
 val build_load_cast : llvalue -> lltype -> llbuilder -> llvalue
 
+val build_ifs_unit :
+  c:llcontext ->
+  builder:llbuilder ->
+  list:'a list ->
+  ('a -> llbuilder -> llvalue) ->
+  ('a -> llbuilder -> unit) ->
+  (llbuilder -> unit) ->
+  unit
+
+val build_if :
+  c:llcontext ->
+  builder:llbuilder ->
+  ty:lltype ->
+  llvalue ->
+  (llbuilder -> (llvalue * llbuilder)) ->
+  (llbuilder -> (llvalue * llbuilder)) ->
+  (llvalue * llbuilder)
+
 val define_function :
   [`External | `Private] ->
   llcontext ->
