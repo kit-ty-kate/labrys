@@ -1,7 +1,7 @@
 (* Copyright (c) 2013-2017 The Labrys developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-open Llvm
+include Llvm
 
 let () = enable_pretty_stacktrace ()
 

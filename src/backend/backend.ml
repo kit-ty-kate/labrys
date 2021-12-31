@@ -2,11 +2,7 @@
 (* See the LICENSE file at the top-level directory. *)
 
 module Set = LIdent.MSet
-
-module Llvm = struct
-  include Llvm
-  include LLVM
-end
+module Llvm = LLVM
 
 type t = Llvm.llmodule
 
