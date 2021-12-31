@@ -328,7 +328,7 @@ module Make (I : I) = struct
 
   and create_tree vars env builder values results = function
     | OptimizedTree.Jump branch ->
-        let (block, _) = List.nth results branch in
+        let block = List.nth results branch in
         Llvm.build_br block builder
     | OptimizedTree.Switch (cases, default) ->
         let term = try List.hd values with Failure _ -> assert false in
@@ -379,13 +379,14 @@ module Make (I : I) = struct
         let args = try Array.sub args 0 idx with Invalid_argument _ -> assert false in
         Llvm.var_arg_function_type ret args
 
-  let rec create_results ~last_bind ~jmp_buf ~next_block vars env builder =
+  let rec create_results ~last_bind ~jmp_buf ~next_block ~res vars env builder =
     let aux (env, results) result =
-      let (block, builder') = Llvm.create_block c builder in
-      let env = load_vars builder' env vars in
-      let (v, builder'') = lambda ~last_bind ~jmp_buf env builder' result in
-      Llvm.build_br next_block builder'';
-      (env, results @ [(block, (v, Llvm.insertion_block builder''))])
+      let (block, builder) = Llvm.create_block c builder in
+      let env = load_vars builder env vars in
+      let (v, builder) = lambda ~last_bind ~jmp_buf env builder result in
+      Llvm.build_store v res builder;
+      Llvm.build_br next_block builder;
+      (env, results @ [block])
     in
     List.fold_left aux (env, [])
 
@@ -423,10 +424,10 @@ module Make (I : I) = struct
         let t = get_value env builder t in
         let (next_block, next_builder) = Llvm.create_block c builder in
         let vars = alloc_vars builder vars in
-        let (env, results) = create_results ~last_bind ~next_block ~jmp_buf vars env builder results in
+        let res = Llvm.build_alloca Type.star "" builder in
+        let (env, results) = create_results ~last_bind ~next_block ~jmp_buf ~res vars env builder results in
         create_tree vars env builder [t] results tree;
-        let results = List.map snd results in
-        (Llvm.build_phi results "" next_builder, next_builder)
+        (Llvm.build_load res "" next_builder, next_builder)
     | OptimizedTree.Val name ->
         (get_value env builder name, builder)
     | OptimizedTree.Datatype (index, params) ->

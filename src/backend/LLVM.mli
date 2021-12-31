@@ -36,7 +36,6 @@ val declare_global : lltype -> string -> llmodule -> llvalue
 val define_global : string -> llvalue -> llmodule -> llvalue
 
 val param : llvalue -> int -> llvalue
-val insertion_block : llbuilder -> llbasicblock
 
 val build_alloca : lltype -> string -> llbuilder -> llvalue
 val build_call : llvalue -> llvalue array -> string -> llbuilder -> llvalue
@@ -48,7 +47,6 @@ val build_icmp : Icmp.t -> llvalue -> llvalue -> string -> llbuilder -> llvalue
 val build_gep : llvalue -> llvalue array -> string -> llbuilder -> llvalue
 val build_bitcast : llvalue -> lltype -> string -> llbuilder -> llvalue
 val build_extractvalue : llvalue -> int -> string -> llbuilder -> llvalue
-val build_phi : (llvalue * llbasicblock) list -> string -> llbuilder -> llvalue
 
 val size_of : lltype -> llvalue
 val set_thread_local : bool -> llvalue -> unit
