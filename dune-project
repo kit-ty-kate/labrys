@@ -3,7 +3,7 @@
 (version 0.2~)
 
 (cram enable)
-(using menhir 1.0)
+(using menhir 2.0)
 (using dune_site 0.1)
 (formatting disabled)
 
