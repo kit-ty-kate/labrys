@@ -21,12 +21,14 @@ depends: [
   "llvm" {>= "3.8"}
   "containers" {>= "3.0"}
   "containers-data" {>= "3.0"}
-  "llvm" {with-test & = "11.0.0" & !(os-distribution = "debian" & os-version < "11") & !(os-distribution = "centos" & os-version < "9")}
+  "llvm" {with-test & = "11.0.0" & !(os-distribution = "debian" & os-version < "11")}
   "llvm" {with-test & = "7.0.0" & os-distribution = "debian" & os-version < "11"}
-  "llvm" {with-test & = "12.0.1" & os-distribution = "centos" & os-version < "9"}
   "craml" {with-test}
 ]
-available: arch = "x86_64" | arch = "arm32" | arch = "arm64" # boehmGC segfaults on any other platforms
+available: [
+  (arch = "x86_64" | arch = "arm32" | arch = "arm64") & # boehmGC segfaults on any other platforms
+  os-distribution != "centos" # TODO: fix conf-llvm.12.0.0 (Unable to find a match: llvm12-devel)
+]
 depexts: [
   ["libgc-dev"] {os-family = "debian"}
   ["gc-devel"] {os-distribution = "centos"}
