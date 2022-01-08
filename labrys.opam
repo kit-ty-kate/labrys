@@ -20,13 +20,15 @@ depends: [
   "msgpack"
   "uutf" {>= "1.0.0"}
   "llvm" {>= "3.8"}
-  "llvm" {with-test & = "11.0.0" & !(os-distribution = "debian" & os-version < "11") & !(os-distribution = "centos" & os-version < "9")}
+  "llvm" {with-test & = "11.0.0" & !(os-distribution = "debian" & os-version < "11")}
   "llvm" {with-test & = "7.0.0" & os-distribution = "debian" & os-version < "11"}
-  "llvm" {with-test & = "12.0.1" & os-distribution = "centos" & os-version < "9"}
   "containers" {>= "3.0"}
   "containers-data" {>= "3.0"}
 ]
-available: arch != "s390x" # TODO: Look into why the tests segfault
+available: [
+  arch != "s390x" & # TODO: Look into why the tests segfault
+  os-distribution != "centos" # TODO: fix conf-llvm.12.0.0 (Unable to find a match: llvm12-devel)
+]
 tags: [
   "compiler"
   "System F"
