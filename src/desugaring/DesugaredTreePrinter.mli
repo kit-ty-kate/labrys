@@ -1,4 +1,4 @@
 (* Copyright (c) 2013-2017 The Labrys developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-val dump : DesugaredTree.top list -> PPrint.document
+val dump : DesugaredTree.top list -> Utils.PPrint.document

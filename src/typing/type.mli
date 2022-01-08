@@ -28,5 +28,5 @@ val app : TypedEnv.ty -> TypedEnv.ty -> TypedEnv.ty
 val replace : Ident.Type.t -> by:TypedEnv.ty -> TypedEnv.ty -> TypedEnv.ty
 val head : TypedEnv.ty -> Ident.Type.t option
 
-val dump : TypedEnv.ty -> PPrint.document
-val dump_eff : TypedEnv.effects -> PPrint.document
+val dump : TypedEnv.ty -> Utils.PPrint.document
+val dump_eff : TypedEnv.effects -> Utils.PPrint.document

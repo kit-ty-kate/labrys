@@ -30,8 +30,8 @@ val monomorphic_split :
   TypedEnv.nty ->
   ((TypedEnv.nty * TypedEnv.neffects) list * TypedEnv.nty)
 
-val dump : TypedEnv.nty -> PPrint.document
-val dump_eff : TypedEnv.neffects -> PPrint.document
-val dump_aty : Ident.Type.t -> TypedEnv.aty -> PPrint.document
+val dump : TypedEnv.nty -> Utils.PPrint.document
+val dump_eff : TypedEnv.neffects -> Utils.PPrint.document
+val dump_aty : Ident.Type.t -> TypedEnv.aty -> Utils.PPrint.document
 val dump_constr :
-  Ident.Constr.t -> (TypedEnv.constr_rep * TypedEnv.nty) -> PPrint.document
+  Ident.Constr.t -> (TypedEnv.constr_rep * TypedEnv.nty) -> Utils.PPrint.document
