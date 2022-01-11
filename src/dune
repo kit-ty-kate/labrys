@@ -25,5 +25,5 @@
 
 (rule
  (targets config.ml)
- (deps config.ml.in)
- (action (with-stdout-to %{targets} (run ocaml %{deps} %{version:labrys}))))
+ (deps (universe) (sandbox none)) ; Uses the .git directory
+ (action (with-stdout-to %{targets} (run ./config/create.exe %{version:labrys} %{project_root}))))

@@ -217,8 +217,15 @@ let print_llvm =
   (args, Term.info ~doc "print-llvm")
 
 let default_cmd =
+  let aux git_version () =
+    if git_version then
+      print_endline Config.git_version;
+  in
   let doc = "A toy language based on LLVM that implements the System F(w) type-system." in
-  (Term.pure Fun.id, Term.info ~doc ~version:Config.version "labrys")
+  let doc_git_version = "Print the git version of labrys, if set, and exit." in
+  let args = Term.pure aux in
+  let args = args $ Arg.(value & flag & info ~doc:doc_git_version ["git-version"]) in
+  (args, Term.info ~doc ~version:Config.version "labrys")
 
 let cmds =
   [ program

@@ -1,9 +1,36 @@
-let () = if Array.length Sys.argv <> 2 then assert false
+let () = if Array.length Sys.argv <> 3 then assert false
+
+let ( // ) = Filename.concat
+
+let run_one_line_process exe args =
+  let ic = Unix.open_process_args_in exe (Array.of_list (exe :: args)) in
+  let output = try Stdlib.input_line ic with Stdlib.End_of_file -> "" in
+  match Unix.close_process_in ic with
+  | Unix.WEXITED 0 -> Some output
+  | Unix.WEXITED _ | Unix.WSIGNALED _ | Unix.WSTOPPED _ -> None
 
 let version = Sys.argv.(1)
+let project_root = Sys.argv.(2)
+
+let git_root = project_root // ".." // ".." // ".git"
+
+let git_version =
+  match Sys.is_directory git_root with
+  | true ->
+      begin match run_one_line_process "git" ["-C"; git_root; "rev-parse"; "--is-inside-git-dir"] with
+      | Some "true" ->
+          begin match run_one_line_process "git" ["describe"; "--always"; "--dirty"; "--abbrev=0"] with
+          | Some hash -> hash
+          | None -> failwith "git describe should never fail"
+          end
+      | Some _ | None -> failwith "git rev-parse should never fail"
+      end
+  | false -> failwith ".git should be a directory"
+  | exception Stdlib.Sys_error _ -> "(unknown)"
 
 let file_content = Printf.sprintf {|
 let version = "%s"
+let git_version = "%s"
 
 type kind = Env | Dune_site | Custom
 
@@ -46,6 +73,6 @@ let lib = lazy begin
       prerr_endline ("Reason: "^msg);
       exit 1
 end
-|} (String.escaped version)
+|} (String.escaped version) (String.escaped git_version)
 
 let () = print_endline file_content
