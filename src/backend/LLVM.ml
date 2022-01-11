@@ -1,7 +1,7 @@
 (* Copyright (c) 2013-2017 The Labrys developers. *)
 (* See the LICENSE file at the top-level directory. *)
 
-open Llvm
+include Llvm
 
 let () = enable_pretty_stacktrace ()
 
@@ -25,6 +25,44 @@ let create_block c builder =
 let build_load_cast v ty builder =
   let v = build_bitcast v ty "" builder in
   build_load v "" builder
+
+let build_if_unit ~c ~builder cmp if_ else_ =
+  let if_ =
+    let (block, builder) = create_block c builder in
+    if_ builder;
+    block
+  and else_ =
+    let (block, builder) = create_block c builder in
+    else_ builder;
+    block
+  in
+  build_cond_br cmp if_ else_ builder
+
+let build_ifs_unit ~c ~builder ~list cmp if_ default =
+  let rec aux builder = function
+    | [] ->
+        default builder
+    | x::xs ->
+        build_if_unit ~c ~builder (cmp x builder)
+          (fun builder -> if_ x builder)
+          (fun builder -> aux builder xs)
+  in
+  aux builder list
+
+let build_if ~c ~builder ~ty cmp if_ else_ =
+  let res = build_alloca ty "" builder in
+  let (res_block, res_builder) = create_block c builder in
+  let if_ builder =
+    let (v, builder) = if_ builder in
+    build_store v res builder;
+    build_br res_block builder;
+  and else_ builder =
+    let (v, builder) = else_ builder in
+    build_store v res builder;
+    build_br res_block builder;
+  in
+  build_if_unit ~c ~builder cmp if_ else_;
+  (Llvm.build_load res "" res_builder, res_builder)
 
 let define_function linkage c s ty m =
   let linkage = match linkage with
