@@ -14,7 +14,7 @@ depends: [
   "dune-site" {>= "2.8"}
   "menhir"
   "base-unix"
-  "cmdliner"
+  "cmdliner" {>= "1.1.0"}
   "pprint"
   "re" {>= "1.9.0"}
   "msgpack"
