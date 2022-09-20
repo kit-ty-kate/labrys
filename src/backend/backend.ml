@@ -76,9 +76,46 @@ module Main (I : sig val initial_heap_size : int val main_module : Module.t end)
 
   let malloc = Llvm.declare_function "malloc" Generic.malloc_type m
 
+  (* ---------------------------------- *)
+  (* | 1ptr | \\\\\                   | *)
+  (* | prev |   <-- GC_heap_size -->  | *)
+  (* |      |                   \\\\\ | *)
+  (* ---------------------------------- *)
   let gc_heap = Llvm.define_global "GC_heap" (Llvm.const_null Type.star) m
   let gc_heap_cursor = Llvm.define_global "GC_heap_cursor" (Llvm.const_int Type.i32 0) m
   let gc_heap_size = Llvm.define_global "GC_heap_size" (Llvm.const_int Type.i32 0) m
+  
+  (* ---------------------------------- *)
+  (* | 1ptr | \\\\\                   | *)
+  (* | prev |   <-- GC_heap_size -->  | *)
+  (* |      |                   \\\\\ | *)
+  (* ---------------------------------- *)
+  (*
+      let f x =
+        CAMLparam x;
+        for y in env:
+          CAMLparam env;
+        CAMLalloc z;
+        ...
+        CAMLreturn z;
+
+      where
+        CAMLparam x =
+          caml_local_roots_ptr = gc_local_roots;
+          caml_frame = *gc_local_roots;
+          alloca local_root_block;
+          local_root_block.ptr = &x;
+          local_root_block.next = *caml_local_roots_ptr;
+          caml_local_roots_ptr = &local_root_block;
+        CAMLlocal x =
+          alloca x;
+          CAMLparam x; // without the two first lines
+          x = GC_malloc(...);
+        CAMLreturn x =
+          gc_local_roots <- caml_frame;
+  *)
+  (* let gc_roots = Llvm.define_global "GC_roots" (Llvm.const_null Type.star) m *)
+  (* let gc_local_roots = Llvm.define_global "GC_local_roots" (Llvm.const_null Type.star) m *)
 
   let fill_gc_malloc builder =
     (* TODO: Implement the GC (free!!) *)
@@ -224,18 +261,19 @@ module Make (I : I) = struct
           let env = LIdent.Map.add name (Global value) env in
           (i, values, env)
     in
-    let (_, b, c) = LIdent.Map.fold aux env (1, [], LIdent.Map.empty) in
-    (List.rev b, c)
+    let (env_size, b, c) = LIdent.Map.fold aux env (1, [], LIdent.Map.empty) in
+    (env_size, List.rev b, c)
 
   let create_closure ~free_vars env builder =
     let env = LIdent.Map.filter (fun x _ -> Set.mem free_vars x) env in
-    let (values, env) = fold_rt_env env builder in
+    let (env_size, values, env) = fold_rt_env env builder in
     let rt_env_size = List.length values in
     let rt_env_size = succ rt_env_size in
     let (f, builder') = Llvm.define_function `Private c "__lambda" (Type.lambda ~rt_env_size) m in
     Llvm.set_linkage Llvm.Linkage.Private f;
     let f = Llvm.build_bitcast f Type.star "" builder in
     let closure = malloc_and_init (f :: values) builder in
+    Llvm.build_call "GC_param" [Llvm.param 0; Llvm.param 1; i32 env_size];
     (builder', closure, env)
 
   let get_exn name =

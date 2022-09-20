@@ -12,3 +12,13 @@
    llvm.all_backends
    llvm.linker
    llvm.scalar_opts))
+
+(rule
+ (targets runtime.ml)
+ (deps runtime.c)
+ (action
+  (with-stout-to %{targets}
+   (progn
+    (echo "let content = {|")
+    (cat runtime.c)
+    (echo "|}")))))
