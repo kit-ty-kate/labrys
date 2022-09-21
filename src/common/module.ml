@@ -55,10 +55,8 @@ let from_module_name options modul =
 
 let from_filename options modul =
   match String.chop_suffix ~suf:".sfw" modul with
-  | None ->
-      raise (Error "The expected suffix for a labrys module is .sfw")
-  | Some modul ->
-      from_module_name options (String.capitalize_ascii modul)
+  | None -> raise (Error "The expected suffix for a labrys module is .sfw")
+  | Some modul -> from_module_name options modul
 
 let library_from_module_name options modul =
   let library = true in
