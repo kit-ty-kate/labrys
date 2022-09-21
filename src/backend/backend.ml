@@ -8,6 +8,7 @@ type t = Llvm.llmodule
 
 let fmt = Printf.sprintf
 let c = Llvm.global_context ()
+let runtime_module = Llvm_bitreader.get_module c (Llvm.MemoryBuffer.of_string Runtime.content)
 
 module type I = sig
   val name : Module.t
@@ -70,85 +71,9 @@ module Generic (I : sig val m : t end) = struct
 end
 
 module Main (I : sig val initial_heap_size : int val main_module : Module.t end) = struct
-  let m = Llvm.create_module c "_main_"
+  let m = runtime_module
 
   module Generic = Generic (struct let m = m end)
-
-  let malloc = Llvm.declare_function "malloc" Generic.malloc_type m
-
-  (* ---------------------------------- *)
-  (* | 1ptr | \\\\\                   | *)
-  (* | prev |   <-- GC_heap_size -->  | *)
-  (* |      |                   \\\\\ | *)
-  (* ---------------------------------- *)
-  let gc_heap = Llvm.define_global "GC_heap" (Llvm.const_null Type.star) m
-  let gc_heap_cursor = Llvm.define_global "GC_heap_cursor" (Llvm.const_int Type.i32 0) m
-  let gc_heap_size = Llvm.define_global "GC_heap_size" (Llvm.const_int Type.i32 0) m
-  
-  (* ---------------------------------- *)
-  (* | 1ptr | \\\\\                   | *)
-  (* | prev |   <-- GC_heap_size -->  | *)
-  (* |      |                   \\\\\ | *)
-  (* ---------------------------------- *)
-  (*
-      let f x =
-        CAMLparam x;
-        for y in env:
-          CAMLparam env;
-        CAMLalloc z;
-        ...
-        CAMLreturn z;
-
-      where
-        CAMLparam x =
-          caml_local_roots_ptr = gc_local_roots;
-          caml_frame = *gc_local_roots;
-          alloca local_root_block;
-          local_root_block.ptr = &x;
-          local_root_block.next = *caml_local_roots_ptr;
-          caml_local_roots_ptr = &local_root_block;
-        CAMLlocal x =
-          alloca x;
-          CAMLparam x; // without the two first lines
-          x = GC_malloc(...);
-        CAMLreturn x =
-          gc_local_roots <- caml_frame;
-  *)
-  (* let gc_roots = Llvm.define_global "GC_roots" (Llvm.const_null Type.star) m *)
-  (* let gc_local_roots = Llvm.define_global "GC_local_roots" (Llvm.const_null Type.star) m *)
-
-  let fill_gc_malloc builder =
-    (* TODO: Implement the GC (free!!) *)
-    let size = Llvm.current_param builder 0 in
-    let current_heap_cursor = Llvm.build_load gc_heap_cursor "" builder in
-    let current_heap_size = Llvm.build_load gc_heap_size "" builder in
-    let new_heap_cursor = Llvm.build_add current_heap_cursor size "" builder in
-    let enough_space = Llvm.build_icmp Llvm.Icmp.Ule new_heap_cursor current_heap_size "" builder in
-    let (res, builder) =
-      Llvm.build_if ~c ~builder ~ty:Type.star enough_space begin fun builder ->
-        let current_heap = Llvm.build_load gc_heap "" builder in
-        let ptr = Llvm.build_gep current_heap [|current_heap_cursor|] "" builder in
-        Llvm.build_store new_heap_cursor gc_heap_cursor builder;
-        (ptr, builder)
-      end begin fun builder ->
-        let new_heap_size = Llvm.build_add current_heap_size size "" builder in
-        let new_heap = Llvm.build_call malloc [|new_heap_size|] "" builder in
-        (* TODO: Handle malloc failures *)
-        Llvm.build_store new_heap gc_heap builder;
-        Llvm.build_store size gc_heap_cursor builder;
-        Llvm.build_store new_heap_size gc_heap_size builder;
-        (new_heap, builder)
-      end
-    in
-    Llvm.build_ret res builder
-
-  let fill_gc_init builder =
-    let initial_heap_size = Llvm.const_int Type.i32 I.initial_heap_size in
-    let new_heap = Llvm.build_call malloc [|initial_heap_size|] "" builder in
-    (* TODO: Handle malloc failures *)
-    Llvm.build_store new_heap gc_heap builder;
-    Llvm.build_store initial_heap_size gc_heap_size builder;
-    Llvm.build_ret_void builder
 
   let create_builtin_instruction ty name g =
     let ty = Llvm.function_type ty [|ty; ty|] in
@@ -166,11 +91,9 @@ module Main (I : sig val initial_heap_size : int val main_module : Module.t end)
     Llvm.declare_function (Generic.init_name I.main_module) ty m
 
   let init_gc builder =
-    let (_, gc_builder) = Llvm.define_function `External c "GC_malloc" Generic.malloc_type m in
-    fill_gc_malloc gc_builder;
-    let (gc_init, gc_builder) = Llvm.define_function `External c "GC_init" Type.unit_function m in
-    fill_gc_init gc_builder;
-    Llvm.build_call_void gc_init [||] builder
+    let ty = Llvm.function_type Type.void [|Type.i32|] in
+    let gc_init = Llvm.declare_function "GC_init" ty m in
+    Llvm.build_call_void gc_init [|i32 I.initial_heap_size|] builder
 
   let make () =
     let (_, builder) =
@@ -189,7 +112,11 @@ module Make (I : I) = struct
     | Env of int
     | Global of Llvm.llvalue
 
-  let m = Llvm.create_module c (Module.to_string I.name)
+  let m =
+    let m = Llvm.create_module c (Module.to_string I.name) in
+    Llvm.set_target_triple (Llvm.target_triple runtime_module) m;
+    Llvm.set_data_layout (Llvm.data_layout runtime_module) m;
+    m
 
   module Generic = Generic (struct let m = m end)
 
@@ -244,6 +171,10 @@ module Make (I : I) = struct
     Llvm.set_linkage Llvm.Linkage.Link_once_odr v;
     v
 
+(*  let gc_param =
+    let ty = Llvm.function_type Type.i32 [|Type.star; Type.star; Type.i32|] in
+    Llvm.declare_function "GC_param" ty m
+*)
   let fold_rt_env env builder =
     let aux name value (i, values, env) =
       match value with
@@ -266,14 +197,14 @@ module Make (I : I) = struct
 
   let create_closure ~free_vars env builder =
     let env = LIdent.Map.filter (fun x _ -> Set.mem free_vars x) env in
-    let (env_size, values, env) = fold_rt_env env builder in
+    let (_env_size, values, env) = fold_rt_env env builder in
     let rt_env_size = List.length values in
     let rt_env_size = succ rt_env_size in
     let (f, builder') = Llvm.define_function `Private c "__lambda" (Type.lambda ~rt_env_size) m in
     Llvm.set_linkage Llvm.Linkage.Private f;
     let f = Llvm.build_bitcast f Type.star "" builder in
     let closure = malloc_and_init (f :: values) builder in
-    Llvm.build_call "GC_param" [Llvm.param 0; Llvm.param 1; i32 env_size];
+    (*Llvm.build_call_void gc_param [|Llvm.param f 0; Llvm.param f 1; i32 env_size|] builder';*)
     (builder', closure, env)
 
   let get_exn name =
@@ -620,7 +551,7 @@ let init = lazy (Llvm_all_backends.initialize ())
 
 let get_triple () =
   Lazy.force init;
-  Llvm_target.Target.default_triple ()
+  Llvm.target_triple runtime_module
 
 let get_target ~triple =
   let target = Llvm_target.Target.by_triple triple in

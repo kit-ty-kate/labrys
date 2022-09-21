@@ -15,10 +15,15 @@
 
 (rule
  (targets runtime.ml)
- (deps runtime.c)
+ (deps runtime.bc)
  (action
-  (with-stout-to %{targets}
+  (with-stdout-to %{targets}
    (progn
     (echo "let content = {|")
-    (cat runtime.c)
+    (cat runtime.bc)
     (echo "|}")))))
+
+(rule
+ (targets runtime.bc)
+ (deps runtime.c)
+ (action (run clang -emit-llvm -c %{deps})))

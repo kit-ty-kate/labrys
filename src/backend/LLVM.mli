@@ -12,6 +12,9 @@ module MemoryBuffer = MemoryBuffer
 type nonrec llmodule = llmodule
 type nonrec llvalue = llvalue
 
+val target_triple : llmodule -> string
+val data_layout : llmodule -> string
+
 val create_module : llcontext -> string -> llmodule
 val global_context : unit -> llcontext
 
