@@ -11,6 +11,8 @@ let () = Llvm_all_backends.initialize ()
 let fmt = Printf.sprintf
 let c = Llvm.global_context ()
 let runtime_module = Llvm_bitreader.parse_bitcode c (Llvm.MemoryBuffer.of_string ~name:"runtime" Runtime.content)
+let runtime_triple = Llvm.target_triple runtime_module
+let runtime_layout = Llvm.data_layout runtime_module
 
 module type I = sig
   val name : Module.t
@@ -116,8 +118,8 @@ module Make (I : I) = struct
 
   let m =
     let m = Llvm.create_module c (Module.to_string I.name) in
-    Llvm.set_target_triple (Llvm.target_triple runtime_module) m;
-    Llvm.set_data_layout (Llvm.data_layout runtime_module) m;
+    Llvm.set_target_triple runtime_triple m;
+    Llvm.set_data_layout runtime_layout m;
     m
 
   module Generic = Generic (struct let m = m end)
@@ -549,8 +551,7 @@ let link options ~main_module_name ~main_module imports =
   in
   Module.Map.fold aux imports dst
 
-let get_triple () =
-  Llvm.target_triple runtime_module
+let get_triple () = runtime_triple
 
 let get_target ~triple =
   let target = Llvm_target.Target.by_triple triple in
