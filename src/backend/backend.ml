@@ -6,6 +6,8 @@ module Llvm = LLVM
 
 type t = Llvm.llmodule
 
+let () = Llvm_all_backends.initialize ()
+
 let fmt = Printf.sprintf
 let c = Llvm.global_context ()
 let runtime_module = Llvm_bitreader.parse_bitcode c (Llvm.MemoryBuffer.of_string Runtime.content)
@@ -547,10 +549,7 @@ let link options ~main_module_name ~main_module imports =
   in
   Module.Map.fold aux imports dst
 
-let init = lazy (Llvm_all_backends.initialize ())
-
 let get_triple () =
-  Lazy.force init;
   Llvm.target_triple runtime_module
 
 let get_target ~triple =
