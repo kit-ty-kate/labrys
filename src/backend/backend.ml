@@ -8,7 +8,7 @@ type t = Llvm.llmodule
 
 let fmt = Printf.sprintf
 let c = Llvm.global_context ()
-let runtime_module = Llvm_bitreader.get_module c (Llvm.MemoryBuffer.of_string Runtime.content)
+let runtime_module = Llvm_bitreader.parse_bitcode c (Llvm.MemoryBuffer.of_string Runtime.content)
 
 module type I = sig
   val name : Module.t
