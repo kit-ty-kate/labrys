@@ -74,49 +74,51 @@ Normal compilation
 
 Test compiling printed LLVM-IR code
 
-  $ labrys print-early-llvm Nat.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ export LLC=${LLC:-$(command -v llc)}
+  $ export LLC=${LLC:-$(command -v llc-11)}
+  $ labrys print-early-llvm Nat.sfw | "$LLC" - -o /dev/null
   Linking Nat
-  $ labrys print-early-llvm TestImports.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm TestImports.sfw | "$LLC" - -o /dev/null
   Linking TestImports
-  $ labrys print-early-llvm YetAnotherBug.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm YetAnotherBug.sfw | "$LLC" - -o /dev/null
   Linking YetAnotherBug
-  $ labrys print-early-llvm Bug.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm Bug.sfw | "$LLC" - -o /dev/null
   Linking Bug
-  $ labrys print-early-llvm CombS.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm CombS.sfw | "$LLC" - -o /dev/null
   Linking CombS
-  $ labrys print-early-llvm Exn.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm Exn.sfw | "$LLC" - -o /dev/null
   Compiling Exn
   Error in 'Exn.sfw' from line 9 column 4 to line 9 column 8:
       Effects are not allowed on toplevel
-  $ labrys print-early-llvm Fact.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm Fact.sfw | "$LLC" - -o /dev/null
   Linking Fact
-  $ labrys print-early-llvm TailFact.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm TailFact.sfw | "$LLC" - -o /dev/null
   Linking TailFact
-  $ labrys print-early-llvm NativeFact.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm NativeFact.sfw | "$LLC" - -o /dev/null
   Linking NativeFact
-  $ labrys print-early-llvm GrosGrosBug.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm GrosGrosBug.sfw | "$LLC" - -o /dev/null
   Linking GrosGrosBug
-  $ labrys print-early-llvm LetRecIn.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm LetRecIn.sfw | "$LLC" - -o /dev/null
   Linking LetRecIn
-  $ labrys print-early-llvm MultiTypes.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm MultiTypes.sfw | "$LLC" - -o /dev/null
   Linking MultiTypes
-  $ labrys print-early-llvm Print.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm Print.sfw | "$LLC" - -o /dev/null
   Linking Print
-  $ labrys print-early-llvm Rec.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm Rec.sfw | "$LLC" - -o /dev/null
   Linking Rec
-  $ labrys print-early-llvm Simple.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm Simple.sfw | "$LLC" - -o /dev/null
   Linking Simple
-  $ labrys print-early-llvm SystemFOmega.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm SystemFOmega.sfw | "$LLC" - -o /dev/null
   Linking SystemFOmega
-  $ labrys print-early-llvm SystemF.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm SystemF.sfw | "$LLC" - -o /dev/null
   Linking SystemF
-  $ labrys print-early-llvm Test.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm Test.sfw | "$LLC" - -o /dev/null
   Linking Test
-  $ labrys print-early-llvm UselessEnv.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm UselessEnv.sfw | "$LLC" - -o /dev/null
   Linking UselessEnv
-  $ labrys print-early-llvm Variants.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm Variants.sfw | "$LLC" - -o /dev/null
   Linking Variants
-  $ labrys print-early-llvm ExnVar.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm ExnVar.sfw | "$LLC" - -o /dev/null
   Linking ExnVar
-  $ labrys print-early-llvm Lol.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ labrys print-early-llvm Lol.sfw | "$LLC" - -o /dev/null
   Linking Lol
