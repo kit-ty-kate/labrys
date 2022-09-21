@@ -43,14 +43,24 @@ let module_from_string modul =
   List.iter is_correct modul;
   modul
 
-let from_string options modul =
+let from_module_name options modul =
   let library = false in
   let src_dir = options#src_dir in
+  let src_dir =
+    if String.equal src_dir Filename.current_dir_name then "" else src_dir
+  in
   let build_dir = Filename.concat options#build_dir src_dir in
   let modul = module_from_string modul in
   {library; src_dir; build_dir; modul}
 
-let library_from_string options modul =
+let from_filename options modul =
+  match String.chop_suffix ~suf:".sfw" modul with
+  | None ->
+      raise (Error "The expected suffix for a labrys module is .sfw")
+  | Some modul ->
+      from_module_name options (String.capitalize_ascii modul)
+
+let library_from_module_name options modul =
   let library = true in
   let src_dir = options#lib_dir in
   let build_dir = options#lib_dir in

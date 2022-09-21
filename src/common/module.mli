@@ -6,13 +6,17 @@ exception Error of string
 type t
 
 val create : current_module:t -> string list -> t
-val from_string :
+val from_filename :
+  <src_dir : string; build_dir : string; ..> ->
+  string ->
+  t
+val from_module_name :
   <src_dir : string; build_dir : string; ..> ->
   string ->
   t
 
 val library_create : <lib_dir : string; ..> -> string list -> t
-val library_from_string : <lib_dir : string; ..> -> string -> t
+val library_from_module_name : <lib_dir : string; ..> -> string -> t
 
 val impl : t -> string
 val cimpl : t -> string

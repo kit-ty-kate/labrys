@@ -2,7 +2,7 @@
  (targets Prelude.bc Prelude.csfw)
  (deps Prelude.sfw Prelude.sfwi)
  (mode (promote (until-clean) (only *)))
- (action (run ../src/main.exe build-module --no-prelude --build-dir . Prelude)))
+ (action (run ../src/main.exe build-module --no-prelude --build-dir . Prelude.sfw)))
 
 (install
  (section (site (labrys labrys)))

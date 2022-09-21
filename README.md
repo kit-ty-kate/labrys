@@ -32,7 +32,7 @@ Examples of the syntax or features can be seen in the `examples` directory
 To compile an example you have to use the following command:
 
 ```
-$ labrys build-program --src-dir examples Hello
+$ labrys build-program examples/Hello.sfw
 ```
 
 Just replace `Hello` by the name of the module you want to compile (such as `NativeFact` or `Fact`)

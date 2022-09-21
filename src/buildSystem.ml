@@ -63,9 +63,9 @@ let check_imports_hash options =
   let aux (modul, {library; hash_import}) =
     let modul =
       if library then
-        Module.library_from_string options modul
+        Module.library_from_module_name options modul
       else
-        Module.from_string options modul
+        Module.from_module_name options modul
     in
     let hash_file = Digest.file (Module.impl_infos modul) in
     if not (String.equal hash_file hash_import) then
