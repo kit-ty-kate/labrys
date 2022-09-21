@@ -555,7 +555,14 @@ let make ~modul ~imports options x =
       let debug = options#debug
     end)
   in
-  Module.make ~imports x
+  Module.make ~imports x |>
+  Llvm_bitwriter.write_bitcode_to_memory_buffer |>
+  Llvm_bitreader.parse_bitcode c
+  (* TODO: WTF?! Someone please tell me why without this LLVM >= 13 segfaults *)
+  (* I was able to get it not segfault for some of the tests by replacing all
+     uses of Llvm.global_context into Llvm.create_context, but it would
+     duplicate the intrinsics (e.g. @llvm.stacksave & @llvm.stacksave.renamed)
+     and fail at link time if they were used. *)
 
 let main options main_module =
   let module Module =
