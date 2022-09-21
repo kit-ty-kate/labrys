@@ -19,9 +19,9 @@
  (action
   (with-stdout-to %{targets}
    (progn
-    (echo "let content = {|")
+    (echo "let content = {runtime|")
     (cat runtime.bc)
-    (echo "|}")))))
+    (echo "|runtime}")))))
 
 (rule
  (targets runtime.bc)
