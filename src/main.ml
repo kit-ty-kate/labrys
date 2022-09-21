@@ -7,7 +7,9 @@ module Cmd = Cmdliner.Cmd
 
 let ($) = Term.($)
 
-let program modul src_dir build_dir lib_dir no_prelude debug initial_heap_size lto opt o cc linkflags () =
+let program modul build_dir lib_dir no_prelude debug initial_heap_size lto opt o cc linkflags () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.compile_program modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -22,7 +24,9 @@ let program modul src_dir build_dir lib_dir no_prelude debug initial_heap_size l
     method linkflags = linkflags
   end)
 
-let modul modul src_dir build_dir lib_dir no_prelude debug initial_heap_size () =
+let modul modul build_dir lib_dir no_prelude debug initial_heap_size () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.compile_module modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -32,13 +36,17 @@ let modul modul src_dir build_dir lib_dir no_prelude debug initial_heap_size () 
     method initial_heap_size = initial_heap_size
   end)
 
-let print_parse_tree modul src_dir build_dir () =
+let print_parse_tree modul build_dir () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.print_parse_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
   end)
 
-let print_desugared_tree modul src_dir build_dir lib_dir no_prelude () =
+let print_desugared_tree modul build_dir lib_dir no_prelude () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.print_desugared_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -46,7 +54,9 @@ let print_desugared_tree modul src_dir build_dir lib_dir no_prelude () =
     method no_prelude = no_prelude
   end)
 
-let print_pretyped_tree modul src_dir build_dir lib_dir no_prelude () =
+let print_pretyped_tree modul build_dir lib_dir no_prelude () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.print_pretyped_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -54,7 +64,9 @@ let print_pretyped_tree modul src_dir build_dir lib_dir no_prelude () =
     method no_prelude = no_prelude
   end)
 
-let print_untyped_tree modul src_dir build_dir lib_dir no_prelude () =
+let print_untyped_tree modul build_dir lib_dir no_prelude () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.print_untyped_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -62,7 +74,9 @@ let print_untyped_tree modul src_dir build_dir lib_dir no_prelude () =
     method no_prelude = no_prelude
   end)
 
-let print_flatten_tree modul src_dir build_dir lib_dir no_prelude () =
+let print_flatten_tree modul build_dir lib_dir no_prelude () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.print_flatten_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -70,7 +84,9 @@ let print_flatten_tree modul src_dir build_dir lib_dir no_prelude () =
     method no_prelude = no_prelude
   end)
 
-let print_lambda_tree modul src_dir build_dir lib_dir no_prelude () =
+let print_lambda_tree modul build_dir lib_dir no_prelude () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.print_lambda_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -78,7 +94,9 @@ let print_lambda_tree modul src_dir build_dir lib_dir no_prelude () =
     method no_prelude = no_prelude
   end)
 
-let print_optimized_tree modul src_dir build_dir lib_dir no_prelude () =
+let print_optimized_tree modul build_dir lib_dir no_prelude () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.print_optimized_tree modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -86,7 +104,9 @@ let print_optimized_tree modul src_dir build_dir lib_dir no_prelude () =
     method no_prelude = no_prelude
   end)
 
-let print_early_llvm modul src_dir build_dir lib_dir no_prelude debug initial_heap_size () =
+let print_early_llvm modul build_dir lib_dir no_prelude debug initial_heap_size () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.print_early_llvm modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -96,7 +116,9 @@ let print_early_llvm modul src_dir build_dir lib_dir no_prelude debug initial_he
     method initial_heap_size = initial_heap_size
   end)
 
-let print_llvm modul src_dir build_dir lib_dir no_prelude debug initial_heap_size lto opt () =
+let print_llvm modul build_dir lib_dir no_prelude debug initial_heap_size lto opt () =
+  let src_dir = Filename.dirname modul in
+  let modul = Filename.basename modul in
   Compiler.print_llvm modul (object
     method src_dir = src_dir
     method build_dir = build_dir
@@ -109,10 +131,8 @@ let print_llvm modul src_dir build_dir lib_dir no_prelude debug initial_heap_siz
   end)
 
 let restrained_base args =
-  let doc_srcdir = "Will look for local modules to compile in DIR." in
   let doc_builddir = "Will put intermediate compiled modules in DIR." in
-  let args = args $ Arg.(required & pos 0 (some string) None & info ~docv:"ModuleName" []) in
-  let args = args $ Arg.(value & opt dir "" & info ~docv:"DIR" ~doc:doc_srcdir ["src-dir"]) in
+  let args = args $ Arg.(required & pos 0 (some string) None & info ~docv:"FILE" []) in
   let args = args $ Arg.(value & opt dir "dest" & info ~docv:"DIR" ~doc:doc_builddir ["build-dir"]) in
   args
 
