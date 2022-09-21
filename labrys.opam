@@ -24,6 +24,7 @@ depends: [
   "llvm" {with-test & = "7.0.0" & os-distribution = "debian" & os-version < "11"}
   "containers" {>= "3.0"}
   "containers-data" {>= "3.0"}
+  "conf-clang"
 ]
 available: [
   arch != "s390x" & # TODO: Look into why the tests segfault
