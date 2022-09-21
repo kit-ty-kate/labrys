@@ -1,7 +1,5 @@
 DOC = doc
 
-LLVM_VERSION ?= $(shell opam var llvm:version | sed -E 's/(.\..)\..$$/\1/')
-
 DOCS = \
     $(DOC)/semantics.pdf \
     $(DOC)/system-f.pdf \
@@ -31,7 +29,7 @@ clean-docs:
 	@$(RM) $(DOCS)
 
 tests:
-	LLVM_VERSION=$(LLVM_VERSION) dune runtest -f
+	dune runtest -f
 
 check:
 	dune build @check @all

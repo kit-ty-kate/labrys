@@ -6,5 +6,8 @@ Normal compilation
 
 Test compiling printed LLVM-IR code
 
-  $ labrys print-early-llvm Basic.sfw | if [ $LLVM_VERSION ]; then llc-$LLVM_VERSION - -o /dev/null; fi
+  $ export LLC=${LLC:-$(command -v llc)}
+  $ export LLC=${LLC:-$(command -v llc11)}
+  $ export LLC=${LLC:-$(command -v llc-11)}
+  $ labrys print-early-llvm Basic.sfw | "$LLC" - -o /dev/null
   Linking Basic
