@@ -90,12 +90,12 @@ let optimize ~lto ~opt target m =
   Llvm_scalar_opts.add_tail_call_elimination pm;
   Llvm_passmgr_builder.populate_module_pass_manager pm b;
   Llvm_passmgr_builder.populate_function_pass_manager pm_f b; (* TODO Is this useful ? *)
-  if lto then begin
+(*  if lto then begin
     Llvm_passmgr_builder.populate_lto_pass_manager
       ~internalize:true
       ~run_inliner:true
       pm
       b;
-  end;
+  end; *)
   ignore (PassManager.run_module m pm);
   PassManager.dispose pm

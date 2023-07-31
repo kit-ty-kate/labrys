@@ -8,6 +8,7 @@ type t = Llvm.llmodule
 
 let fmt = Printf.sprintf
 let c = Llvm.global_context ()
+let () = Llvm.set_opaque_pointers c false
 
 module type I = sig
   val name : Module.t
