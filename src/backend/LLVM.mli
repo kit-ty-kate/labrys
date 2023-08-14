@@ -14,7 +14,6 @@ type nonrec llvalue = llvalue
 
 val create_module : llcontext -> string -> llmodule
 val global_context : unit -> llcontext
-val set_opaque_pointers : llcontext -> bool -> unit
 
 val void_type : llcontext -> lltype
 val i8_type : llcontext -> lltype
